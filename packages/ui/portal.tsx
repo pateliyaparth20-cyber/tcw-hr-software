@@ -11,7 +11,7 @@ import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
 import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
-import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage} from './settings';
+import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,PlatformProfilePage} from './settings';
 import {SupportPage} from './support';
 const TCW_PRODUCT_LOGO='/tcw-logo.png';
 function PlatformLogo({alt='TCW HR Software',className}:{alt?:string;className?:string}){
@@ -19,7 +19,7 @@ function PlatformLogo({alt='TCW HR Software',className}:{alt?:string;className?:
  useEffect(()=>{let active=true;fetch('/api/branding',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{if(active&&v?.logo)setSrc(String(v.logo))}).catch(()=>{});return()=>{active=false}},[]);
  return <img src={src} alt={alt} className={className}/>;
 }
-const icons:Record<string,any>={dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server};
+const icons:Record<string,any>={dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server,profile:Building2};
 export function Portal({session,page}:{session:Session;page:string}){return <Providers session={session}><Shell page={page}/></Providers>}
 export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';page:string}){
  const router=useRouter();
@@ -99,6 +99,7 @@ function Shell({page}:{page:string}){
  else if(page==='documents')content=<DocumentsPage/>;
  else if(page==='reports')content=<ReportsPage/>;
  else if(page==='audit')content=<AuditPage/>;
+ else if(page==='profile')content=<PlatformProfilePage/>;
  else if(page==='system')content=<SystemPage/>;
  else if(page==='notifications')content=<NotificationsPage/>;
  else if(page==='support')content=<SupportPage/>;
