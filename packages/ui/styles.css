@@ -2068,3 +2068,231 @@ td{padding:14px 16px;line-height:1.45}
   .tenant-shell .digital-kpi-top i{width:32px;height:32px}
   .tenant-shell .hr-welcome-actions{grid-template-columns:1fr}
 }
+
+
+/* v1.5.2 complete mobile auth/signup scale */
+/* Natural mobile flow: do not shrink content to fit viewport */
+@media(max-width:700px){
+  .auth-pro-shell{
+    min-height:100dvh;
+    height:auto;
+    overflow:visible;
+  }
+  .auth-pro-main{
+    min-height:100dvh;
+    height:auto;
+    overflow:visible;
+    align-items:flex-start;
+    padding:18px 12px calc(30px + env(safe-area-inset-bottom));
+  }
+  .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    width:100%;
+    max-width:520px;
+    margin:0 auto;
+    padding:22px 17px 24px;
+    border-radius:18px;
+  }
+  .auth-pro-mobile-brand{
+    margin-bottom:17px;
+    gap:11px;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo{
+    width:48px;
+    height:48px;
+    flex:0 0 48px;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo img{
+    width:42px;
+    height:42px;
+    object-fit:contain;
+  }
+  .auth-pro-mobile-brand strong{
+    font-size:1rem;
+    line-height:1.15;
+  }
+  .auth-pro-mobile-brand small{
+    font-size:.58rem;
+    line-height:1.35;
+    letter-spacing:.11em;
+  }
+  .auth-pro-head{
+    margin-bottom:15px;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .auth-pro-badge{
+    padding:6px 9px;
+    font-size:.62rem;
+  }
+  .auth-pro-secure{
+    font-size:.64rem;
+  }
+  .auth-pro-card h2,
+  .auth-pro-signup .auth-pro-card h2{
+    font-size:1.55rem;
+    line-height:1.16;
+    margin-bottom:7px;
+  }
+  .auth-pro-subtitle{
+    margin-bottom:18px;
+    font-size:.82rem;
+    line-height:1.55;
+  }
+  .auth-pro-form{
+    gap:15px;
+  }
+  .auth-pro-form>label,
+  .auth-pro-form .signup-grid label{
+    gap:7px;
+    font-size:.78rem;
+    line-height:1.35;
+    font-weight:700;
+  }
+  .auth-pro-form input,
+  .auth-pro-form select,
+  .auth-pro-form textarea{
+    min-height:50px;
+    padding:12px 13px;
+    border-radius:11px;
+    font-size:16px; /* prevents mobile browser zoom */
+    line-height:1.35;
+  }
+  .auth-pro-form textarea{
+    min-height:94px;
+  }
+
+  /* Signup must be a normal vertical form on phones */
+  .auth-pro-signup .auth-pro-main{
+    min-height:100dvh;
+    padding:14px 12px calc(34px + env(safe-area-inset-bottom));
+    align-items:flex-start;
+  }
+  .auth-pro-signup .signup-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+    width:100%;
+  }
+  .auth-pro-signup .signup-grid>*{
+    min-width:0;
+    width:100%;
+  }
+
+  /* Helper/example text stays secondary; never larger than field labels */
+  .auth-pro-signup small,
+  .auth-pro-form small,
+  .auth-pro-form .muted,
+  .auth-pro-form .subtle-note,
+  .auth-pro-form .field-help,
+  .auth-pro-form .help-text,
+  .auth-pro-form .example-text{
+    font-size:.69rem!important;
+    line-height:1.45!important;
+    font-weight:500!important;
+  }
+  .auth-pro-signup label small,
+  .auth-pro-form label small{
+    margin-top:1px;
+    color:#8a99aa;
+  }
+
+  /* Consent/checkbox copy must wrap naturally */
+  .auth-pro-signup input[type="checkbox"],
+  .auth-pro-options input[type="checkbox"]{
+    width:17px;
+    height:17px;
+    min-height:17px;
+    flex:0 0 17px;
+    padding:0;
+  }
+  .auth-pro-signup .checkbox-row,
+  .auth-pro-signup .consent-row,
+  .auth-pro-signup label:has(> input[type="checkbox"]){
+    display:flex;
+    flex-direction:row;
+    align-items:flex-start;
+    gap:9px;
+    font-size:.72rem;
+    line-height:1.5;
+  }
+
+  .auth-pro-options{
+    align-items:flex-start;
+    gap:10px;
+    font-size:.72rem;
+    line-height:1.45;
+    flex-wrap:wrap;
+  }
+  .auth-pro-submit{
+    min-height:50px;
+    font-size:.86rem;
+  }
+  .auth-pro-signup-link{
+    margin-top:17px;
+    padding-top:15px;
+    gap:6px;
+    flex-wrap:wrap;
+    text-align:center;
+    font-size:.72rem;
+    line-height:1.45;
+  }
+
+  /* Trial success remains readable and scrollable */
+  .trial-success-panel{
+    width:100%;
+    overflow:visible;
+  }
+  .trial-success-head{
+    align-items:flex-start;
+  }
+  .trial-success-head h3{
+    font-size:1.08rem;
+    line-height:1.3;
+  }
+  .trial-success-head p{
+    font-size:.75rem;
+    line-height:1.5;
+  }
+  .signup-created{
+    grid-template-columns:1fr;
+    gap:9px;
+  }
+  .signup-created>div{
+    min-width:0;
+    padding:12px;
+  }
+  .signup-created span{
+    font-size:.65rem;
+  }
+  .signup-created strong{
+    font-size:.85rem;
+    overflow-wrap:anywhere;
+  }
+  .signup-created-actions{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:9px;
+  }
+  .signup-created-actions .btn{
+    width:100%;
+    min-height:48px;
+  }
+}
+
+@media(max-width:380px){
+  .auth-pro-main,
+  .auth-pro-signup .auth-pro-main{
+    padding-left:9px;
+    padding-right:9px;
+  }
+  .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    padding-left:14px;
+    padding-right:14px;
+  }
+  .auth-pro-card h2,
+  .auth-pro-signup .auth-pro-card h2{
+    font-size:1.42rem;
+  }
+}
