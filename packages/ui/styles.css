@@ -755,3 +755,12 @@ body{font-size:16px}
 .workspace-initials{font-size:.72rem;font-weight:800;letter-spacing:.03em;color:#59718a}
 .brand-upload>div:last-child{min-width:0}
 .brand-upload>div:last-child>p{max-width:620px;line-height:1.5}
+
+
+/* v1.3.13 remember-me and password-reset polish */
+.remember-check-panel{min-height:180px;justify-content:center}
+.auth-pro-options label{cursor:pointer}
+.auth-pro-options input[type=checkbox]{accent-color:#3474ef}
+@media(max-width:700px){
+  .remember-check-panel{min-height:130px;padding:16px 14px}
+}
