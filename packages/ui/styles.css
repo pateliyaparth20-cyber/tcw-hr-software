@@ -2296,3 +2296,374 @@ td{padding:14px 16px;line-height:1.45}
     font-size:1.42rem;
   }
 }
+
+
+/* v1.5.3 premium product visual system */
+/* Shared premium visual language inspired by the approved product mockup */
+.tenant-shell,
+.platform-shell{
+  background:#f5f8fc;
+}
+.tenant-shell .main-shell,
+.platform-shell .main-shell{
+  background:#f5f8fc;
+}
+.tenant-shell .workspace-main,
+.platform-shell .workspace-main{
+  max-width:1600px;
+  margin:0 auto;
+}
+.tenant-shell .topbar,
+.platform-shell .topbar{
+  background:rgba(255,255,255,.94);
+  border-bottom:1px solid #e4eaf1;
+  backdrop-filter:blur(12px);
+  box-shadow:0 1px 0 rgba(30,55,80,.025);
+}
+.tenant-shell .panel,
+.platform-shell .panel,
+.tenant-shell .stat,
+.platform-shell .stat,
+.tenant-shell .record-card,
+.platform-shell .record-card{
+  background:#fff;
+  border:1px solid #e2e8ef;
+  box-shadow:0 8px 24px rgba(31,60,91,.045);
+}
+.tenant-shell .panel,
+.platform-shell .panel{
+  border-radius:16px;
+}
+.tenant-shell .panel-heading h2,
+.platform-shell .panel-heading h2{
+  color:#203a55;
+  font-weight:700;
+}
+.tenant-shell .panel-heading p,
+.platform-shell .panel-heading p{
+  color:#8291a3;
+}
+.tenant-shell .btn.primary,
+.platform-shell .btn.primary{
+  background:linear-gradient(135deg,#2d73ea,#1765db);
+  border-color:#1765db;
+  box-shadow:0 8px 18px rgba(39,111,225,.17);
+}
+.tenant-shell .btn.secondary,
+.platform-shell .btn.secondary{
+  background:#fff;
+  border-color:#dbe4ee;
+  color:#47627e;
+}
+.tenant-shell input,
+.tenant-shell select,
+.tenant-shell textarea,
+.platform-shell input,
+.platform-shell select,
+.platform-shell textarea{
+  border-color:#dce4ed;
+  background:#fff;
+  color:#233c56;
+}
+.tenant-shell input:focus,
+.tenant-shell select:focus,
+.tenant-shell textarea:focus,
+.platform-shell input:focus,
+.platform-shell select:focus,
+.platform-shell textarea:focus{
+  border-color:#71a7ed;
+  box-shadow:0 0 0 4px rgba(52,116,239,.08);
+}
+.tenant-shell table,
+.platform-shell table{
+  background:#fff;
+}
+.tenant-shell th,
+.platform-shell th{
+  background:#f8fafc;
+  color:#728197;
+}
+.tenant-shell td,
+.platform-shell td{
+  color:#60748a;
+}
+.tenant-shell tbody tr:hover,
+.platform-shell tbody tr:hover{
+  background:#f8fbff;
+}
+
+/* HR sidebar closer to the product mockup */
+.tenant-shell .sidebar{
+  background:linear-gradient(180deg,#0f345f 0%,#0d2b4f 100%);
+  border-right:0;
+  box-shadow:10px 0 28px rgba(24,51,83,.05);
+}
+.tenant-shell .brand{
+  min-height:98px;
+  padding:16px 16px 14px;
+}
+.tenant-shell .brand-mark{
+  background:#fff;
+  border:1px solid rgba(255,255,255,.2);
+  box-shadow:0 8px 22px rgba(2,20,38,.2);
+}
+.tenant-shell .brand strong{color:#fff}
+.tenant-shell .brand small{color:#a9c5df}
+.tenant-shell .workspace-switch{
+  background:rgba(255,255,255,.06);
+  border-color:rgba(255,255,255,.08);
+}
+.tenant-shell .workspace-switch strong{color:#eaf4ff}
+.tenant-shell .workspace-switch small{color:#9fb8d0}
+.tenant-shell .nav-group-label{color:#7294b5}
+.tenant-shell .nav-item{
+  color:#c2d4e6;
+  border-radius:9px;
+}
+.tenant-shell .nav-item:hover{
+  background:rgba(255,255,255,.06);
+  color:#fff;
+}
+.tenant-shell .nav-item.selected{
+  background:#1768e5;
+  color:#fff;
+  box-shadow:0 8px 20px rgba(16,92,195,.24);
+}
+.tenant-shell .nav-item.selected svg{color:#fff}
+.tenant-shell .sidebar-bottom{
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.tenant-shell .account strong{color:#eef6ff}
+.tenant-shell .account small{color:#9db5cb}
+
+/* HR dashboard composition */
+.tenant-shell .hr-welcome-card{
+  box-shadow:0 8px 24px rgba(34,68,103,.045);
+}
+.tenant-shell .digital-kpi-card{
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 8px 22px rgba(34,68,103,.04);
+}
+.tenant-shell .digital-kpi-card:after{
+  content:"";
+  position:absolute;
+  width:72px;height:72px;
+  right:-28px;bottom:-28px;
+  border-radius:50%;
+  background:rgba(45,115,234,.045);
+}
+.tenant-shell .digital-kpi-card.blue .digital-kpi-top i{
+  background:#eaf2ff;color:#236ddf;
+}
+.tenant-shell .digital-kpi-card.green .digital-kpi-top i{
+  background:#eaf8f2;color:#2aa36f;
+}
+.tenant-shell .digital-kpi-card.amber .digital-kpi-top i{
+  background:#fff6df;color:#d18a16;
+}
+.tenant-shell .digital-kpi-card.violet .digital-kpi-top i{
+  background:#f2edff;color:#7653df;
+}
+.tenant-shell .trend-chart{
+  padding:0 14px 10px;
+}
+.tenant-shell .digital-health-list>a{
+  border-radius:10px;
+}
+.tenant-shell .digital-health-list>a:hover{
+  background:#f6f9fd;
+}
+.tenant-shell .quick-link{
+  min-height:62px;
+}
+.tenant-shell .dashboard-ai{
+  border:1px solid #e0e7f0;
+  background:linear-gradient(135deg,#fff 0%,#f8fbff 100%);
+}
+
+/* Super Admin: same product family, darker navigation */
+.platform-shell .sidebar{
+  background:linear-gradient(180deg,#102840,#0e2137);
+  border-right:0;
+  box-shadow:10px 0 28px rgba(21,43,67,.06);
+}
+.platform-shell .workspace-switch{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.08);
+}
+.platform-shell .workspace-switch strong{color:#eef6ff}
+.platform-shell .workspace-switch small{color:#9bb3c9}
+.platform-shell .nav-group-label{color:#6f8ca8}
+.platform-shell .nav-item{color:#bdcee0}
+.platform-shell .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.platform-shell .nav-item.selected{
+  background:#1f67c8;
+  color:#fff;
+  box-shadow:0 8px 20px rgba(13,78,161,.22);
+}
+.platform-shell .sidebar-bottom{
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.platform-shell .account strong{color:#edf5ff}
+.platform-shell .account small{color:#9bb2c8}
+.platform-shell .platform-hero{
+  border:1px solid #dfe7ef;
+  background:linear-gradient(135deg,#fff 0%,#f5f9ff 72%,#eaf2ff 100%);
+  box-shadow:0 8px 24px rgba(31,60,91,.045);
+}
+.platform-shell .platform-hero h1{color:#203b56}
+.platform-shell .platform-hero p{color:#75869a}
+.platform-shell .power-stats .stat{
+  border-radius:14px;
+}
+.platform-shell .command-panel{
+  border-radius:16px;
+}
+
+/* Better visual density on large desktop */
+@media(min-width:1200px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding-top:26px;
+    padding-bottom:18px;
+  }
+  .tenant-shell .panel-heading,
+  .platform-shell .panel-heading{
+    padding-top:18px;
+    padding-bottom:13px;
+  }
+}
+
+/* Phone: app-like cards and navigation, natural scrolling */
+@media(max-width:700px){
+  .tenant-shell,
+  .platform-shell{
+    background:#f3f7fb;
+  }
+  .tenant-shell .topbar,
+  .platform-shell .topbar{
+    height:58px;
+    padding-left:12px;
+    padding-right:12px;
+  }
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding:12px 10px calc(94px + env(safe-area-inset-bottom));
+  }
+  .tenant-shell .panel,
+  .platform-shell .panel,
+  .tenant-shell .stat,
+  .platform-shell .stat{
+    border-radius:14px;
+    box-shadow:0 6px 18px rgba(36,66,99,.04);
+  }
+  .tenant-shell .hr-welcome-card{
+    margin-bottom:12px;
+    padding:15px 14px;
+  }
+  .tenant-shell .hr-welcome-copy h1{
+    font-size:1.48rem;
+  }
+  .tenant-shell .hr-welcome-copy>p{
+    margin-bottom:10px;
+  }
+  .tenant-shell .hr-welcome-company{
+    gap:7px;
+  }
+  .tenant-shell .hr-welcome-tools{
+    gap:9px;
+  }
+  .tenant-shell .hr-welcome-actions{
+    grid-template-columns:1fr 1fr;
+  }
+  .tenant-shell .digital-kpi-grid{
+    gap:9px;
+    margin-bottom:12px;
+  }
+  .tenant-shell .digital-kpi-card{
+    min-height:112px;
+    padding:12px;
+    border-radius:13px;
+  }
+  .tenant-shell .digital-kpi-card>strong{
+    font-size:1.32rem;
+  }
+  .tenant-shell .digital-kpi-card>small{
+    font-size:.63rem;
+    line-height:1.4;
+  }
+  .tenant-shell .digital-dashboard-grid,
+  .tenant-shell .digital-lower-grid{
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .tenant-shell .panel-heading,
+  .platform-shell .panel-heading{
+    padding:14px 13px 11px;
+  }
+  .tenant-shell .panel-heading h2,
+  .platform-shell .panel-heading h2{
+    font-size:.94rem;
+  }
+  .tenant-shell .panel-heading p,
+  .platform-shell .panel-heading p{
+    font-size:.67rem;
+  }
+  .tenant-shell .list-row,
+  .platform-shell .list-row{
+    padding-left:13px;
+    padding-right:13px;
+  }
+  .tenant-shell .mobile-bottom-nav{
+    left:8px;
+    right:8px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    width:auto;
+    border:1px solid #dde5ee;
+    border-radius:16px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 14px 38px rgba(29,57,87,.14);
+    backdrop-filter:blur(14px);
+    overflow:hidden;
+  }
+  .tenant-shell .mobile-bottom-nav a{
+    min-height:58px;
+  }
+  .tenant-shell .mobile-bottom-nav a.selected{
+    color:#1768e5;
+    background:#edf4ff;
+  }
+  .platform-shell .platform-hero{
+    padding:17px 15px;
+    border-radius:15px;
+  }
+  .platform-shell .platform-hero h1{
+    font-size:1.55rem;
+  }
+  .platform-shell .stats.four.power-stats{
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+  }
+  .platform-shell .power-stats .stat{
+    min-height:112px;
+    padding:13px;
+  }
+}
+
+@media(max-width:420px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding-left:8px;
+    padding-right:8px;
+  }
+  .tenant-shell .hr-welcome-actions{
+    grid-template-columns:1fr;
+  }
+  .tenant-shell .digital-kpi-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .platform-shell .stats.four.power-stats{
+    grid-template-columns:1fr 1fr;
+  }
+}
