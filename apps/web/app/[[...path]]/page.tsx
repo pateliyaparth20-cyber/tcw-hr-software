@@ -4,7 +4,7 @@ import {AppsPage} from '../../../../packages/ui/apps';
 import {LegalPage} from '../../../../packages/ui/legal';
 export const dynamic='force-dynamic';
 export default async function Page({params,searchParams}:{params:Promise<{path?:string[]}>;searchParams:Promise<Record<string,string|undefined>>}){
- const {path}=await params;const search=await searchParams;const page=path?.[0]??'dashboard';
+ const {path}=await params;const search=await searchParams;const page=path?.[0]??'login';
  if(page==='downloads')return <AppsPage/>;
  if(['privacy','cookies','terms'].includes(page))return <LegalPage kind={page as 'privacy'|'cookies'|'terms'}/>;
  // Super Admin is deliberately isolated in the separate Super Admin application.
