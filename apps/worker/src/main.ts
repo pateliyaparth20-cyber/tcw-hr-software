@@ -9,6 +9,16 @@ const url=new URL(process.env.REDIS_URL??'redis://localhost:6379');
 const connection={host:url.hostname,port:Number(url.port)||6379,password:url.password||undefined,...(url.protocol==='rediss:'?{tls:{}}:{})};
 const queue=new Queue('peopleos-outbox',{connection});
 const transport=process.env.SMTP_HOST?nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT??1025),secure:process.env.SMTP_SECURE==='true',...(process.env.SMTP_USER?{auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD}}:{})}):null;
+async function sendEmail(payload:any){
+  const resendKey=process.env.RESEND_API_KEY?.trim();
+  if(resendKey){
+    const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.SMTP_FROM??'TCW HR Software <noreply@techcyberwarrior.in>',to:[String(payload.to)],subject:String(payload.subject??'TCW HR Software'),text:String(payload.text??'')})});
+    if(!response.ok){let detail='';try{detail=await response.text()}catch{}throw new Error(`Resend API failed (${response.status})${detail?`: ${detail.slice(0,180)}`:''}`);}
+    return;
+  }
+  if(!transport)throw new Error('Email provider is not configured');
+  await transport.sendMail({from:process.env.SMTP_FROM,to:payload.to,subject:payload.subject,text:payload.text});
+}
 
 function normalizeMobile(value:string){
   let digits=String(value??'').replace(/\D/g,'');
@@ -52,8 +62,7 @@ const worker=new Worker('peopleos-outbox',async job=>{
   const payload=row.payload as any;
   try{
     if(row.kind==='EMAIL'){
-      if(!transport)throw new Error('SMTP is not configured');
-      await transport.sendMail({from:process.env.SMTP_FROM,to:payload.to,subject:payload.subject,text:payload.text});
+      await sendEmail(payload);
     }else if(row.kind==='SMS')await sendSms(payload);
     else throw new Error(`Unsupported outbox kind: ${row.kind}`);
     await db.outbox.update({where:{id:row.id},data:{sentAt:new Date(),error:null,payload:redactDeliveredCredential(payload)}});
@@ -63,7 +72,7 @@ const worker=new Worker('peopleos-outbox',async job=>{
     await db.outbox.update({where:{id:row.id},data:{attempts:{increment:1},error:`${row.kind} delivery failed; check provider configuration and service logs.`,...(finalAttempt?{payload:safePayload}:{})}});throw error;
   }
 },{connection,concurrency:4});
-worker.on('failed',(job)=>console.error('Outbox delivery failed for job',job?.id));
+worker.on('failed',(job,error)=>console.error('Outbox delivery failed for job',job?.id,String(error?.message??error??'unknown').slice(0,240)));
 let scanning=false;
 async function scan(){if(scanning)return;scanning=true;try{
   const rows=await db.outbox.findMany({where:{sentAt:null,attempts:{lt:5}},take:100,orderBy:{createdAt:'asc'}});
