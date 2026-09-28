@@ -95,15 +95,26 @@ export class AuthService {
     }
     return {message:'If that account exists, a reset link will be sent.'};
   }
-  async claimReset(body:unknown,res:Response){
+  async claimReset(body:unknown,req:Request,res:Response){
     const input=z.object({token:z.string().min(32).max(100)}).strict().parse(body);
-    const now=new Date(),row=await this.db.passwordReset.findUnique({where:{tokenHash:digest(input.token)}});
-    if(!row||row.usedAt||row.expiresAt<=now)throw new BadRequestException('This reset link is invalid, expired, or has already been opened.');
-    const claimToken=token();
-    const claimed=await this.db.passwordReset.updateMany({where:{id:row.id,usedAt:null,expiresAt:{gt:now}},data:{tokenHash:digest(claimToken),usedAt:now}});
-    if(claimed.count!==1)throw new BadRequestException('This reset link is invalid, expired, or has already been opened.');
-    res.cookie('tcw_reset_claim',claimToken,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:10*60*1000});
-    return {ok:true,expiresInMinutes:10};
+    const now=new Date();
+    const row=await this.db.passwordReset.findUnique({where:{tokenHash:digest(input.token)}});
+    if(row&&!row.usedAt&&row.expiresAt>now){
+      const claimToken=token();
+      const claimed=await this.db.passwordReset.updateMany({where:{id:row.id,usedAt:null,expiresAt:{gt:now}},data:{tokenHash:digest(claimToken),usedAt:now}});
+      if(claimed.count===1){
+        res.cookie('tcw_reset_claim',claimToken,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:10*60*1000});
+        return {ok:true,expiresInMinutes:10};
+      }
+    }
+    // The email URL is single-open. A refresh in the same browser remains usable
+    // through the short-lived HttpOnly claim cookie, without making the URL reusable.
+    const existing=String(req.cookies?.tcw_reset_claim??'');
+    if(existing){
+      const claimedRow=await this.db.passwordReset.findUnique({where:{tokenHash:digest(existing)}});
+      if(claimedRow?.usedAt&&claimedRow.expiresAt>now)return {ok:true,expiresInMinutes:Math.max(1,Math.ceil((claimedRow.expiresAt.getTime()-now.getTime())/60000))};
+    }
+    throw new BadRequestException('This reset link is invalid, expired, or has already been opened.');
   }
   async reset(body:unknown,req:Request,res:Response){
     const input=z.object({password}).strict().parse(body);
