@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useQueryClient} from '@tanstack/react-query';
 import {io} from 'socket.io-client';
-import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,CalendarClock,Wallet,Briefcase,Target,GraduationCap,Package,Receipt,Plane,Files,DoorOpen,BarChart3,Sparkles,Headphones,Settings,ShieldCheck,ScrollText,Search,Bell,ChevronDown,PanelLeft,LogOut,ArrowUpRight,Layers,TrendingUp,CreditCard,Server,LockKeyhole,ArrowRight,Command,X,Download,PhoneCall} from 'lucide-react';
+import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,CalendarClock,Wallet,Briefcase,Target,GraduationCap,Package,Receipt,Plane,Files,DoorOpen,BarChart3,Sparkles,Headphones,Settings,ShieldCheck,ScrollText,Search,Bell,ChevronDown,PanelLeft,LogOut,ArrowUpRight,Layers,TrendingUp,CreditCard,Server,LockKeyhole,ArrowRight,Command,X,PhoneCall} from 'lucide-react';
 import {adminNavigation,navigation,modules,Row} from './config';
 import {api,Providers,useApp,useData,Avatar,Modal,Session,Empty,Loading,Badge,currencyValue,displayDate,getLocalSessionToken,getLocalSessionSnapshot,clearLocalSessionState,isLocalBrowser} from './core';
 import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
@@ -12,9 +12,8 @@ import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
 import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,AIPage} from './settings';
-import {AppsPage} from './apps';
 import {SupportPage} from './support';
-const icons:Record<string,any>={dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,ai:Sparkles,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server,apps:Download};
+const icons:Record<string,any>={dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,ai:Sparkles,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server};
 export function Portal({session,page}:{session:Session;page:string}){return <Providers session={session}><Shell page={page}/></Providers>}
 export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';page:string}){
  const router=useRouter();
@@ -94,7 +93,6 @@ function Shell({page}:{page:string}){
  else if(page==='notifications')content=<NotificationsPage/>;
  else if(page==='ai')content=<AIPage/>;
  else if(page==='support')content=<SupportPage/>;
- else if(page==='apps')content=<AppsPage/>;
  else if(modules[page])content=<ModulePage key={page} name={page}/>;
  else content=<Empty title="Page not found" description="Choose a workspace from the sidebar."/>;
  const isAllowed=page==='notifications'?session.user.scope==='TENANT':!!current;
