@@ -110,7 +110,7 @@ function Shell({page}:{page:string}){
  const searchEmployees=employees.data?.items ?? [];
  if(session.user.mustChangePassword)return <FirstPasswordChange/>;
  if(billingLocked)return <SubscriptionLock/>;
- return <div className="app-shell" style={{'--primary':session.company?.profile?.primaryColor??'#3474ef'} as React.CSSProperties}>
+ return <div className={'app-shell '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')} style={{'--primary':session.company?.profile?.primaryColor??'#3474ef'} as React.CSSProperties}>
  {mobile&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
  <aside className={'sidebar '+(mobile?'open':'')}>
  <Link className="brand" href="/dashboard"><span className="brand-mark brand-logo tcw-default-logo"><PlatformLogo/></span><span><strong>TCW HR <span>Software</span></strong><small>{session.user.scope==='PLATFORM'?'SUPER ADMIN':'HR MANAGEMENT'}</small></span></Link>
