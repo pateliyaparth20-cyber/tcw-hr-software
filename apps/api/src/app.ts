@@ -51,6 +51,11 @@ export class Api {
     const method=req.method;
     if(resource==='health'&&method==='GET')return {status:'ok',service:'tcw-hr-api'};
     if(resource==='version'&&method==='GET')return {version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GIT_COMMIT_SHA??process.env.npm_package_version??'local'};
+    if(resource==='branding'&&method==='GET'){
+      const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});
+      const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};
+      return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};
+    }
     if(resource==='biometric'&&key==='push'&&method==='POST')return this.biometric.genericPush(req.headers as any,req.body);
     if(resource==='biometric'&&key==='biomax'&&action==='push'&&method==='POST')return this.biometric.biomaxPush(req.headers as any,req.body);
     if(!['GET','HEAD','OPTIONS'].includes(method)){
@@ -120,6 +125,22 @@ export class Api {
       if(method==='GET'){const items=await this.db.notification.findMany({where,orderBy:{createdAt:'desc'},take:200});return {items,unread:items.filter(r=>!r.readAt).length};}
       if(method==='PATCH'&&key==='all'){await this.db.notification.updateMany({where:{...where,readAt:null},data:{readAt:new Date()}});return {ok:true};}
       if(method==='PATCH'&&key){await this.db.notification.updateMany({where:{...where,id:id.parse(key)},data:{readAt:new Date()}});return {ok:true};}
+    }
+    
+    if(resource==='system'&&key==='branding'){
+      platform(ctx);
+      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};}
+      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({logo:z.string().max(8_000_000).nullable()}).strict().parse(body);if(input.logo){if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.logo))throw new BadRequestException('Use a PNG or JPEG logo up to 5 MB.');const raw=Buffer.from(input.logo.split(',')[1],'base64');const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG logo up to 5 MB.');}const value={logo:input.logo??'/tcw-logo.png'};const row=await this.db.platformSetting.upsert({where:{key:'branding'},update:{value},create:{key:'branding',value}});await audit(this.db,ctx,'PLATFORM_BRANDING_UPDATED','system');return {logo:(row.value as any)?.logo??'/tcw-logo.png',updatedAt:row.updatedAt};}
+      throw new NotFoundException();
+    }
+    if(resource==='system'&&key==='company-update'){
+      platform(ctx);requirePermission(ctx,'system','EDIT');
+      if(method!=='POST')throw new NotFoundException();
+      const input=z.object({tenantId:id,title:z.string().trim().min(1).max(160),message:z.string().trim().min(1).max(2000)}).strict().parse(body);
+      const company=await this.db.tenant.findUnique({where:{id:input.tenantId}});if(!company)throw new BadRequestException('Company was not found.');
+      const notice=await this.db.notification.create({data:{tenantId:company.id,title:input.title,message:input.message}});
+      await audit(this.db,ctx,'COMPANY_UPDATE_SENT','notifications',notice.id,undefined,{tenantId:company.id,title:input.title});
+      return {ok:true,company:{id:company.id,name:company.name,code:company.code},notice};
     }
     if(resource==='system'&&key==='ai-config'){
       platform(ctx);
