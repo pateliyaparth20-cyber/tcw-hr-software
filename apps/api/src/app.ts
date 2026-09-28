@@ -82,6 +82,16 @@ export class Api {
     }
     if(resource==='auth'){
       if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
+      if(key==='profile'&&method==='GET')return {user:this.auth.publicUser(ctx.user)};
+      if(key==='profile'&&method==='PATCH'){
+        const input=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200)}).strict().parse(body);
+        const before=await this.db.user.findUniqueOrThrow({where:{id:ctx.user.id}});
+        const duplicate=await this.db.user.findFirst({where:{email:input.email,id:{not:ctx.user.id},tenantId:ctx.tenantId??null}});
+        if(duplicate)throw new ConflictException('Another account already uses this email.');
+        const after=await this.db.user.update({where:{id:ctx.user.id},data:input});
+        await audit(this.db,ctx,'ACCOUNT_PROFILE_UPDATED','users',after.id,before,after);
+        return {user:this.auth.publicUser({...after,role:ctx.user.role} as any)};
+      }
       if(key==='logout'&&method==='POST')return this.auth.logout(ctx,res);
       if(key==='change-password'&&method==='POST')return this.auth.change(ctx,body,res);
       if(key==='sessions'&&method==='GET')return {items:await this.db.session.findMany({where:{userId:ctx.user.id},select:{id:true,createdAt:true,expiresAt:true,userAgent:true,ip:true}}),currentId:ctx.session.id};
