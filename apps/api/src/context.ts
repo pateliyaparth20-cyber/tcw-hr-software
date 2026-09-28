@@ -45,7 +45,20 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
     }
   }
   if(!session) throw new UnauthorizedException('Please sign in.');
-  if(session.expiresAt<new Date()||!session.user.active) throw new UnauthorizedException('Your session has expired.');
+  const now=new Date();
+  if(session.expiresAt<now||!session.user.active) throw new UnauthorizedException('Your session has expired.');
+  // Sliding expiry: active users are not interrupted while they are working.
+  // A normal session is renewed when it is within 6 hours of expiry; a long
+  // "Remember me" session is renewed when it is within 7 days of expiry.
+  const remaining=session.expiresAt.getTime()-now.getTime();
+  const remembered=remaining>2*86400000;
+  const ttl=remembered?30*86400000:86400000;
+  const refreshWindow=remembered?7*86400000:6*3600000;
+  if(remaining<refreshWindow){
+    const nextExpiry=new Date(now.getTime()+ttl);
+    await db.session.update({where:{id:session.id},data:{expiresAt:nextExpiry}});
+    session.expiresAt=nextExpiry;
+  }
   if(session.user.tenantId){
     const company=await db.tenant.findUnique({where:{id:session.user.tenantId}});
     if(!company||company.status==='ARCHIVED')throw new ForbiddenException('This company account is unavailable.');
