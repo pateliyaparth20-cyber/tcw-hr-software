@@ -134,7 +134,7 @@ export class Api {
       const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW');
       const recentCutoff=new Date(now.getTime()-24*3600000);
       const [failedMessages,deviceIssues]=await Promise.all([
-        this.db.outbox.count({where:{tenantId:tid,sentAt:null,attempts:{gte:3},createdAt:{gte:recentCutoff}}}),
+        this.db.outbox.count({where:{tenantId:tid,sentAt:null,attempts:{gte:3},createdAt:{gte:recentCutoff},...(process.env.SMS_PROVIDER?{}:{kind:{not:'SMS'}})}}),
         canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
       ]);
       const issues:any[]=[];
@@ -150,7 +150,7 @@ export class Api {
       const company=await this.db.tenant.findUnique({where:{id:tid}});
       const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
       const [failedMessages,deviceIssues,pendingLeave,payrollReview]=await Promise.all([
-        this.db.outbox.count({where:{tenantId:tid,sentAt:null,attempts:{gte:3},createdAt:{gte:new Date(now.getTime()-24*3600000)}}}),
+        this.db.outbox.count({where:{tenantId:tid,sentAt:null,attempts:{gte:3},createdAt:{gte:new Date(now.getTime()-24*3600000)},...(process.env.SMS_PROVIDER?{}:{kind:{not:'SMS'}})}}),
         canDevices?this.db.attendanceDevice.count({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]}}):Promise.resolve(0),
         canLeave?this.db.leaveRequest.count({where:{tenantId:tid,status:'PENDING'}}):Promise.resolve(0),
         canPayroll?this.db.payrollRun.count({where:{tenantId:tid,status:{in:['DRAFT','REVIEW']}}}):Promise.resolve(0)
