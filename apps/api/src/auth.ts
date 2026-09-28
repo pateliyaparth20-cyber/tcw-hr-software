@@ -89,24 +89,38 @@ export class AuthService {
       const url=new URL(user.tenantId?'/reset-password':'/admin-reset-password',user.tenantId?process.env.WEB_URL??'http://localhost:3000':process.env.ADMIN_URL??'http://localhost:3001');url.searchParams.set('token',raw);
       await this.db.$transaction(async tx=>{
         await tx.passwordReset.deleteMany({where:{userId:user.id,usedAt:null}});
-        await tx.passwordReset.create({data:{tenantId:user.tenantId,userId:user.id,tokenHash:digest(raw),expiresAt:new Date(Date.now()+30*60000)}});
-        await tx.outbox.create({data:{tenantId:user.tenantId,kind:'EMAIL',payload:{to:user.email,subject:'Reset your TCW HR Software password',text:`Reset your password within 30 minutes: ${url}. If you did not request this, ignore this email.`}}});
+        await tx.passwordReset.create({data:{tenantId:user.tenantId,userId:user.id,tokenHash:digest(raw),expiresAt:new Date(Date.now()+10*60000)}});
+        await tx.outbox.create({data:{tenantId:user.tenantId,kind:'EMAIL',payload:{to:user.email,subject:'Reset your TCW HR Software password',text:`Create your new password within 10 minutes: ${url}. This reset link can be opened once and cannot be reused. If you did not request this, ignore this email.`}}});
       });
     }
     return {message:'If that account exists, a reset link will be sent.'};
   }
-  async reset(body:unknown){
-    const input=z.object({token:z.string().min(32).max(100),password}).strict().parse(body);
-    const row=await this.db.passwordReset.findUnique({where:{tokenHash:digest(input.token)}});
-    if(!row||row.usedAt||row.expiresAt<new Date())throw new BadRequestException('This reset link is invalid or expired.');
+  async claimReset(body:unknown,res:Response){
+    const input=z.object({token:z.string().min(32).max(100)}).strict().parse(body);
+    const now=new Date(),row=await this.db.passwordReset.findUnique({where:{tokenHash:digest(input.token)}});
+    if(!row||row.usedAt||row.expiresAt<=now)throw new BadRequestException('This reset link is invalid, expired, or has already been opened.');
+    const claimToken=token();
+    const claimed=await this.db.passwordReset.updateMany({where:{id:row.id,usedAt:null,expiresAt:{gt:now}},data:{tokenHash:digest(claimToken),usedAt:now}});
+    if(claimed.count!==1)throw new BadRequestException('This reset link is invalid, expired, or has already been opened.');
+    res.cookie('tcw_reset_claim',claimToken,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:10*60*1000});
+    return {ok:true,expiresInMinutes:10};
+  }
+  async reset(body:unknown,req:Request,res:Response){
+    const input=z.object({password}).strict().parse(body);
+    const claimToken=String(req.cookies?.tcw_reset_claim??'');
+    if(!claimToken)throw new BadRequestException('This reset link is invalid, expired, or has already been used.');
+    const now=new Date(),row=await this.db.passwordReset.findUnique({where:{tokenHash:digest(claimToken)}});
+    if(!row||!row.usedAt||row.expiresAt<=now)throw new BadRequestException('This reset link is invalid, expired, or has already been used.');
     const passwordHash=await hashPassword(input.password);
     await this.db.$transaction(async tx=>{
-      const claim=await tx.passwordReset.updateMany({where:{id:row.id,usedAt:null,expiresAt:{gt:new Date()}},data:{usedAt:new Date()}});
-      if(claim.count!==1)throw new BadRequestException('This reset link is invalid or expired.');
+      const consumed=await tx.passwordReset.deleteMany({where:{id:row.id,tokenHash:digest(claimToken),usedAt:{not:null},expiresAt:{gt:now}}});
+      if(consumed.count!==1)throw new BadRequestException('This reset link is invalid, expired, or has already been used.');
       await tx.user.update({where:{id:row.userId},data:{passwordHash,mustChangePassword:false}});
       await tx.session.deleteMany({where:{userId:row.userId}});
       await tx.auditLog.create({data:{tenantId:row.tenantId,actorId:row.userId,action:'PASSWORD_RESET',entity:'auth'}});
-    });return {message:'Password changed. Sign in with your new password.'};
+    });
+    res.clearCookie('tcw_reset_claim',{path:'/'});
+    return {message:'Password created. Sign in with your new password.'};
   }
   async change(ctx:Context,body:unknown,res:Response){
     const input=z.object({currentPassword:z.string().max(128),password}).strict().parse(body);
