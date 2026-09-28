@@ -1552,3 +1552,59 @@ td{padding:14px 16px;line-height:1.45}
     height:104px;
   }
 }
+
+
+/* v1.4.6 balanced Super Admin brand lockup */
+.platform-shell .brand{
+  min-height:102px;
+  padding:16px 16px;
+  gap:12px;
+}
+.platform-shell .brand-mark.brand-logo{
+  width:74px;
+  height:74px;
+  min-width:74px;
+  border-radius:16px;
+}
+.platform-shell .brand-mark.brand-logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+  padding:2px;
+}
+.platform-shell .brand>span:last-child{
+  min-width:0;
+  max-width:150px;
+}
+.platform-shell .brand strong{
+  font-size:1.06rem;
+  line-height:1.15;
+  font-weight:650;
+  white-space:normal;
+  letter-spacing:0;
+}
+.platform-shell .brand strong span{
+  font-size:inherit;
+}
+.platform-shell .brand small{
+  display:block;
+  margin-top:4px;
+  font-size:.62rem;
+  line-height:1.3;
+  letter-spacing:.045em;
+  white-space:normal;
+}
+@media(max-width:900px){
+  .platform-shell .brand{
+    min-height:92px;
+  }
+  .platform-shell .brand-mark.brand-logo{
+    width:64px;
+    height:64px;
+    min-width:64px;
+  }
+  .platform-shell .brand strong{
+    font-size:1rem;
+  }
+}
