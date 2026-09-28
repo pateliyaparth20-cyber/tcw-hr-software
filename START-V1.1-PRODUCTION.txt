@@ -1,0 +1,105 @@
+TCW HR SOFTWARE v1.1 — PRODUCTION LAUNCH START
+================================================
+
+IMPORTANT
+This is the production-oriented source package. Do NOT expose `npm run demo`
+or the embedded `.local-data` database to the public internet.
+
+A. LOCAL PREVIEW ONLY
+---------------------
+1. Install Node.js 22.12+
+2. Open PowerShell in this folder
+3. Run:
+
+   npm ci
+   npm run setup
+   npm run demo
+
+This creates random LOCAL credentials only. It is useful for QA, not public hosting.
+
+B. PRODUCTION ENVIRONMENT
+-------------------------
+1. Copy `.env.production.example` to `.env` on the production host / secret store.
+2. Replace every CHANGE_ME / YOUR-DOMAIN / GENERATE_* value. You can run `npm run production:secrets` once to generate strong starting secrets, then store them in your production secret manager.
+3. Use:
+
+   NODE_ENV=production
+   COOKIE_SECURE=true
+   SEED_DEMO=false
+   PUBLIC_SIGNUP_ENABLED=true
+
+4. Configure real HTTPS URLs:
+
+   WEB_URL=https://hr.example.com
+   ADMIN_URL=https://admin.example.com
+   APP_ORIGINS=https://hr.example.com,https://admin.example.com
+
+5. Configure PostgreSQL, Redis, SMTP and S3-compatible storage.
+6. Set ADMIN_EMAIL and a unique random ADMIN_PASSWORD (20+ characters recommended).
+7. Check configuration:
+
+   npm run production:check
+
+C. BUILD / VERIFY
+-----------------
+Run in the deployment environment:
+
+   npm ci
+   npm run db:generate
+   npm run typecheck
+   npm test
+   npm run test:integration
+   npm run build
+
+D. DATABASE BOOTSTRAP
+---------------------
+With the production DATABASE_URL configured:
+
+   npm run db:migrate
+   npm run db:seed
+
+Because SEED_DEMO=false, production seed creates platform roles/plans and the
+Super Admin only. It does not create fictional employees or a demo company.
+
+E. START
+-------
+Use the included production compose as a deployment reference:
+
+   docker compose -f docker-compose.production.yml up -d --build
+
+The services bind application ports to localhost. Put an HTTPS reverse proxy /
+load balancer in front of them. Do not publish PostgreSQL or Redis publicly.
+
+F. REAL LOGIN AFTER LAUNCH
+--------------------------
+SUPER ADMIN
+  URL:      https://admin.example.com
+  Email:    the ADMIN_EMAIL you configured
+  Password: the ADMIN_PASSWORD you configured
+
+NEW CLIENT / COMPANY
+  URL: https://hr.example.com/signup
+  The client enters company/owner details and chooses a password.
+  TCW creates a unique Company Code and trial automatically.
+
+RETURNING COMPANY USER
+  URL: https://hr.example.com/login
+  Uses Company Code + email/login ID + password.
+
+G. APP DOWNLOADS
+----------------
+Publish signed native release files and set:
+
+  NEXT_PUBLIC_ANDROID_APK_URL=https://.../TCW-HR-Software.apk
+  NEXT_PUBLIC_WINDOWS_INSTALLER_URL=https://.../TCW-HR-Software-Setup.exe
+
+The `/downloads` page activates those buttons only when release URLs exist.
+
+H. EXTERNAL INTEGRATIONS
+------------------------
+Real payment gateway, unattended bank payouts, SMS/WhatsApp, AI provider and
+public biometric networking require the relevant provider credentials, KYC /
+security settings and live end-to-end testing. Do not treat configuration-ready
+interfaces as completed money movement until that testing is complete.
+
+See: docs/V1.1-PRODUCTION-BLUEPRINT.md

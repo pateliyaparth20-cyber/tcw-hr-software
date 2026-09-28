@@ -1,0 +1,128 @@
+# TCW HR Software backend production blueprint for Render.
+# Optional Render backend blueprint. Use any HTTPS HR and Super Admin frontend hosts.
+# This Blueprint runs the API, worker, PostgreSQL and Render Key Value services.
+services:
+  - type: keyvalue
+    name: tcw-hr-redis
+    region: singapore
+    ipAllowList: []
+
+  - type: web
+    name: tcw-hr-api
+    region: singapore
+    runtime: node
+    buildCommand: npm ci --include=dev && npm run build:backend
+    preDeployCommand: npm run db:migrate && npm run db:seed
+    startCommand: npm run start:api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: PUBLIC_SIGNUP_ENABLED
+        value: "true"
+      - key: TRIAL_DAYS
+        value: "3"
+      - key: AUTO_SUSPEND_OVERDUE
+        value: "true"
+      - key: OVERDUE_GRACE_DAYS
+        value: "3"
+      - key: SEED_DEMO
+        value: "false"
+      - key: WEB_URL
+        sync: false
+      - key: ADMIN_URL
+        sync: false
+      - key: APP_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tcw-hr-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: tcw-hr-redis
+          type: keyvalue
+          property: connectionString
+      - key: CONFIG_ENCRYPTION_KEY
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: ap-south-1
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: PAYMENT_INSTRUCTIONS
+        value: Contact TCW HR Software billing to activate or renew your subscription.
+      - key: BIOMAX_AUTO_MAP_EMPLOYEE_CODE
+        value: "true"
+      - key: BIOMAX_ENFORCE_SOURCE_IP
+        value: "false"
+
+  - type: worker
+    name: tcw-hr-worker
+    region: singapore
+    runtime: node
+    buildCommand: npm ci --include=dev && npm run build:backend
+    startCommand: npm run start:worker
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tcw-hr-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: tcw-hr-redis
+          type: keyvalue
+          property: connectionString
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: AUTO_SUSPEND_OVERDUE
+        value: "true"
+      - key: OVERDUE_GRACE_DAYS
+        value: "3"
+
+databases:
+  - name: tcw-hr-db
+    region: singapore
+    databaseName: tcw_hr
+    user: tcw_hr_app
+    postgresMajorVersion: "17"
+    ipAllowList: []

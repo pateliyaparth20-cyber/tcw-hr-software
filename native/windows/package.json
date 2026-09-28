@@ -1,0 +1,31 @@
+{
+  "name": "tcw-hr-software-windows",
+  "version": "1.3.0",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.tcw.hrsoftware",
+    "productName": "TCW HR Software",
+    "files": [
+      "main.cjs",
+      "tcw.ico"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "tcw.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "artifactName": "TCW-HR-Software-Setup-${version}.${ext}"
+  }
+}

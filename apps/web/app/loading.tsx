@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="route-loading" role="status" aria-live="polite"><div className="route-loading-card"><span className="route-loading-logo"><img src="/tcw-logo.png" alt="TCW HR Software"/></span><div><strong>TCW HR Software</strong><small>Preparing your workspace…</small></div><span className="route-loading-bar"><i/></span></div></main>}

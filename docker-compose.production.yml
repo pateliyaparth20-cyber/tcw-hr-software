@@ -1,0 +1,139 @@
+name: tcw-hr-production
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: infrastructure/docker/Dockerfile
+  env_file:
+    - .env
+  restart: unless-stopped
+  networks:
+    - tcw
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tcw_hr}
+      POSTGRES_USER: ${POSTGRES_USER:-tcw_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - tcw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - tcw
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *app
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tcw_app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tcw_hr}?schema=public
+      REDIS_URL: redis://redis:6379
+    command: sh -c "npm run db:migrate && npm run db:seed"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tcw_app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tcw_hr}?schema=public
+      REDIS_URL: redis://redis:6379
+      API_BIND_HOST: 0.0.0.0
+      API_PORT: 4000
+    command: npm run start:api
+    expose:
+      - "4000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  web:
+    <<: *app
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    command: npm run start:web
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  super-admin:
+    <<: *app
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    command: npm run start:admin
+    ports:
+      - "${ADMIN_PORT:-3001}:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  worker:
+    <<: *app
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tcw_app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tcw_hr}?schema=public
+      REDIS_URL: redis://redis:6379
+    command: npm run start:worker
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    restart: unless-stopped
+    environment:
+      HR_DOMAIN: ${HR_DOMAIN:-}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/anywhere/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - tcw
+    depends_on:
+      - web
+      - super-admin
+
+networks:
+  tcw:
+
+volumes:
+  pg-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

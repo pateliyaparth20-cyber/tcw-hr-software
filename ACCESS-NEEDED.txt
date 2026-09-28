@@ -1,0 +1,43 @@
+TCW HR Software v1.3.0 — EXTERNAL ACCESS NEEDED TO GO LIVE
+============================================================
+
+The software package is prepared. Actual live activation needs these external services/accounts:
+
+1) RAILWAY
+   - Railway project/account authorization.
+   - PostgreSQL + Redis in the Railway project.
+   - Source connected through a private Git repository.
+
+2) DOMAIN / DNS
+   Existing website remains at: https://techcyberwarrior.in
+   Add only:
+   - hr.techcyberwarrior.in
+   - admin.techcyberwarrior.in
+   Use the DNS records Railway gives you.
+
+3) SMS
+   Recommended India option supported by the app: MSG91.
+   Needed in Railway Variables: MSG91_AUTH_KEY and an approved Flow Template ID.
+   Twilio or a private SMS webhook is also supported.
+
+4) EMAIL
+   SMTP host, port, username/password and From address.
+
+5) FILE STORAGE
+   S3-compatible endpoint/bucket/access key/secret for persistent employee documents.
+
+6) AI
+   OpenAI-compatible AI Base URL, Model and API key.
+   Do not paste the key in source. Put it in Railway Variables or save it from Super Admin System Health (encrypted at rest).
+
+7) SALARY PAYOUT (ONLY IF YOU WANT LIVE BANK TRANSFERS)
+   Verified/KYC-enabled RazorpayX business payout account, API key/secret and source account number.
+   Never provide online-banking password, OTP, card PIN or UPI PIN.
+   Live payout remains OFF until PAYROLL_PAYOUTS_ENABLED=true and PAYOUT_COMPANY_CODE matches the company explicitly allowed to pay.
+
+8) ATTENDANCE DEVICE
+   BioMax/ZKTeco: device serial/model and access to set PUSH/ADMS server URL.
+   Other brands: vendor middleware/API/SDK details; connect it to the generic secure TCW attendance webhook.
+
+Recommended activation order:
+Railway -> PostgreSQL/Redis -> domains -> SMTP/S3 -> SMS -> AI -> attendance -> test payroll -> RazorpayX payout last.

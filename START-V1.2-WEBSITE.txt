@@ -1,0 +1,21 @@
+TCW HR Software v1.2 — Public Website + Launch Package
+======================================================
+
+PUBLIC WEBSITE
+1. Open: marketing-site/config.js
+2. Set your live URLs:
+   hrUrl:     https://hr.yourdomain.com
+   signupUrl: https://hr.yourdomain.com/signup
+   adminUrl:  https://admin.yourdomain.com
+3. If you have signed app files, add androidApk and windowsExe URLs.
+4. Upload the contents of marketing-site/ to your main public website host.
+
+LOCAL WEBSITE PREVIEW
+- Double-click marketing-site/index.html
+- or serve the folder with any static web server.
+
+MAIN SOFTWARE
+- Development: npm ci && npm run demo
+- Production: use START-V1.1-PRODUCTION.txt / docs and configure PostgreSQL, Redis, HTTPS, mail, storage and secrets.
+
+The marketing site includes animated desktop and mobile dashboard previews and responsive layouts.

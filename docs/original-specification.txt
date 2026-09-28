@@ -1,0 +1,2016 @@
+PROJECT NAME:
+Tech Cyber Warrior PeopleOS
+
+PROJECT TYPE:
+Next-Generation Multi-Tenant HRMS + Workforce Management + Face Attendance + Payroll + Recruitment + Performance + Sales CRM + AI SaaS Platform
+
+IMPORTANT DESIGN REQUIREMENT:
+The entire software must use LIGHT MODE ONLY.
+Do not use dark mode anywhere.
+The UI must look premium, futuristic, modern, clean, professional, responsive, and suitable for a commercial SaaS product.
+
+COMPANY:
+Tech Cyber Warrior
+
+LOGO:
+Keep a placeholder/logo upload system. I will add the final company logo myself later.
+
+==================================================
+1. MAIN OBJECTIVE
+==================================================
+
+Build a complete browser-based SaaS platform that can be sold to multiple companies.
+
+The system must contain TWO major applications:
+
+1. TECH CYBER WARRIOR MAIN ADMIN SOFTWARE
+2. CLIENT COMPANY HR SOFTWARE
+
+It must not be a static UI or dashboard mockup.
+
+All major buttons, forms, filters, tables, modals, navigation, CRUD operations, settings, permissions, reports, workflows, and modules must actually work.
+
+Use a real backend architecture and database.
+
+==================================================
+2. RECOMMENDED TECHNOLOGY STACK
+==================================================
+
+Frontend:
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Modern component architecture
+- TanStack Query
+- WebSocket for live data
+
+Backend:
+- NestJS
+- TypeScript
+- REST APIs
+- WebSocket Gateway
+- Background Workers
+
+Database:
+- PostgreSQL
+
+ORM:
+- Prisma
+
+Cache / Queue:
+- Redis
+
+File Storage:
+- S3-compatible object storage
+
+Authentication:
+- Secure server-side authentication
+- JWT / secure session architecture
+- Refresh tokens
+- Password hashing
+- RBAC
+
+Infrastructure:
+- Docker
+- Docker Compose
+- Nginx
+- Environment configuration
+- Production-ready deployment structure
+
+AI:
+- Separate AI service layer
+- AI provider must be replaceable
+- AI must NEVER receive unrestricted direct database access
+- Use permission-controlled internal APIs/tools
+
+==================================================
+3. PROJECT STRUCTURE
+==================================================
+
+tech-cyber-warrior-peopleos/
+│
+├── apps/
+│   ├── web/
+│   │   └── Client HR Portal
+│   │
+│   ├── super-admin/
+│   │   └── Tech Cyber Warrior SaaS Admin
+│   │
+│   ├── api/
+│   │   └── Main Backend API
+│   │
+│   ├── worker/
+│   │   └── Background Jobs
+│   │
+│   └── desktop-agent/
+│       └── Workforce Activity Agent
+│
+├── packages/
+│   ├── database/
+│   ├── ui/
+│   ├── auth/
+│   ├── permissions/
+│   ├── validation/
+│   ├── shared/
+│   ├── attendance-engine/
+│   ├── payroll-engine/
+│   ├── reporting-engine/
+│   ├── device-connectors/
+│   │   ├── common/
+│   │   ├── zkteco/
+│   │   ├── essl/
+│   │   ├── hikvision/
+│   │   └── suprema/
+│   └── ai/
+│
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
+│
+├── infrastructure/
+│   ├── docker/
+│   ├── nginx/
+│   ├── postgres/
+│   ├── redis/
+│   └── deployment/
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+│
+├── docs/
+├── docker-compose.yml
+├── package.json
+└── README.md
+
+==================================================
+4. LIGHT MODE DESIGN SYSTEM
+==================================================
+
+LIGHT MODE ONLY.
+
+Design direction:
+
+- White main background
+- Very light gray / blue secondary surfaces
+- Premium SaaS dashboard appearance
+- Modern enterprise sidebar
+- Clean typography
+- Large readable dashboard numbers
+- Modern charts
+- Rounded cards
+- Soft shadows
+- Subtle borders
+- Modern forms
+- Advanced data tables
+- Drawers
+- Modals
+- Dropdowns
+- Tooltips
+- Toast notifications
+- Skeleton loading
+- Empty states
+- Error states
+- Success states
+- Command search
+- Responsive navigation
+- Mobile responsive
+- Tablet responsive
+- Desktop optimized
+
+Primary color:
+Modern blue
+
+Secondary accent:
+Cyan / teal
+
+Success:
+Green
+
+Warning:
+Orange
+
+Error:
+Red
+
+Information:
+Blue
+
+Do not create a dark theme toggle.
+
+==================================================
+5. LOGIN SYSTEM
+==================================================
+
+Nobody should be able to directly open the dashboard without authentication.
+
+FLOW:
+
+Login
+→ Authentication
+→ Tenant Identification
+→ User Verification
+→ Role Verification
+→ Permission Verification
+→ Session Creation
+→ Authorized Dashboard
+
+Features:
+
+- Login
+- Logout
+- Forgot Password
+- Reset Password
+- Change Password
+- Remember Me
+- Session management
+- Failed login protection
+- Login history
+- Device/session history
+- Optional 2FA-ready architecture
+
+==================================================
+6. USER ROLES
+==================================================
+
+TECH CYBER WARRIOR:
+
+- Super Admin
+- Admin
+- Sales Admin
+- Sales Executive
+- Support Admin
+- Support Agent
+- Finance Admin
+
+CLIENT COMPANY:
+
+- Company Owner
+- HR Admin
+- HR Executive
+- Payroll Manager
+- Manager
+- Team Leader
+- Recruiter
+- Finance User
+- Employee
+
+Use permission-based RBAC.
+
+Permissions must support:
+
+VIEW
+CREATE
+EDIT
+DELETE
+APPROVE
+REJECT
+EXPORT
+IMPORT
+MANAGE
+
+==================================================
+7. MULTI-TENANT SAAS
+==================================================
+
+Every customer company must have isolated data.
+
+Every tenant-owned database table must contain:
+
+tenant_id
+
+Request flow:
+
+Authentication
+→ Tenant Resolution
+→ Permission Check
+→ Business Logic
+→ Tenant-filtered Database Query
+
+A customer must never access another customer's data.
+
+==================================================
+8. TECH CYBER WARRIOR MAIN ADMIN
+==================================================
+
+Create a separate Super Admin application.
+
+MAIN MENU:
+
+Dashboard
+
+Companies
+- All Companies
+- Active Companies
+- Trial Companies
+- Suspended Companies
+- Expired Companies
+- Add Company
+
+Subscriptions
+- Plans
+- Active Subscriptions
+- Trials
+- Renewals
+- Expired
+- Usage Limits
+
+Sales CRM
+- Leads
+- Enquiries
+- Demo Requests
+- Opportunities
+- Follow-ups
+- Quotations
+- Sales Orders
+- Invoices
+- Payments
+- Customers
+- Sales Team
+- Pipeline
+- Reports
+
+Finance
+- Revenue
+- Payments
+- Invoices
+- Refunds
+- Taxes
+- Outstanding Payments
+
+Support
+- Tickets
+- Open Tickets
+- SLA
+- Escalations
+- Knowledge Base
+
+Attendance Devices
+- Customer Devices
+- Online Devices
+- Offline Devices
+- Device Errors
+- Sync Status
+
+AI
+- AI Usage
+- Token / Credit Usage
+- Customer Usage
+- AI Logs
+- Limits
+
+System
+- System Health
+- Queue Health
+- Database Health
+- Storage
+- API Health
+- Worker Health
+
+Security
+- Login Logs
+- Audit Logs
+- Suspicious Activity
+- IP Logs
+
+Feature Flags
+
+Global Settings
+
+==================================================
+9. CLIENT COMPANY DASHBOARD
+==================================================
+
+Create a premium HR Command Center.
+
+Show:
+
+- Total Employees
+- Present Today
+- Absent Today
+- Late Today
+- On Leave
+- Working Now
+- Idle Now
+- On Break
+- Offline
+- Overtime
+- Payroll Cost
+- New Joiners
+- Employees Leaving
+- Open Positions
+- Pending Approvals
+- Upcoming Holidays
+- Birthdays
+- Work Anniversaries
+
+Charts:
+
+- Attendance Trend
+- Workforce Productivity
+- Department Distribution
+- Leave Trend
+- Payroll Trend
+- Hiring Trend
+- Overtime Trend
+
+Include:
+
+AI Insights
+Quick Actions
+Notifications
+Recent Activity
+Pending Approvals
+
+==================================================
+10. COMPANY PROFILE
+==================================================
+
+Company Profile must be a fully working screen.
+
+Fields:
+
+- Company Logo
+- Company Name
+- Legal Name
+- Company Code
+- Industry
+- Website
+- Email
+- Phone
+- Address
+- City
+- State
+- Country
+- Postal Code
+- GST / Tax ID
+- PAN
+- Currency
+- Timezone
+- Date Format
+- Time Format
+- Financial Year
+
+Branding:
+
+- Logo
+- Favicon
+- Primary Color
+- Secondary Color
+- Login Branding
+- Email Branding
+- Invoice Branding
+- Payslip Branding
+- Report Branding
+- Letter Branding
+- Footer
+- Support Email
+- Support Phone
+
+==================================================
+11. ORGANIZATION MANAGEMENT
+==================================================
+
+Create:
+
+- Branches
+- Departments
+- Designations
+- Teams
+- Locations
+- Cost Centers
+- Reporting Structure
+- Organization Chart
+
+==================================================
+12. EMPLOYEE MANAGEMENT
+==================================================
+
+Employee Directory
+
+Add Employee
+
+Employee Profile
+
+Employee profile tabs:
+
+Overview
+Personal Information
+Employment
+Job Details
+Attendance
+Workforce Activity
+Leave
+Payroll
+Salary
+Documents
+Assets
+Performance
+Training
+Expenses
+Travel
+Timeline
+Audit History
+
+Employee fields:
+
+- Employee ID
+- Profile Photo
+- First Name
+- Middle Name
+- Last Name
+- Email
+- Phone
+- Gender
+- DOB
+- Blood Group
+- Address
+- Emergency Contact
+- Joining Date
+- Confirmation Date
+- Branch
+- Department
+- Designation
+- Manager
+- Employment Type
+- Work Location
+- Shift
+- Salary
+- Bank Details
+- Tax Details
+- Documents
+
+Support:
+
+- Employee Import
+- Excel Import
+- Export
+- Bulk Update
+- Bulk Assign Shift
+- Bulk Device Sync
+
+==================================================
+13. FACE / BIOMETRIC ATTENDANCE MACHINES
+==================================================
+
+This is a CORE feature.
+
+MENU:
+
+Attendance
+→ Attendance Devices
+
+Device screen must contain:
+
+- Device Cards
+- Online / Offline
+- Last Ping
+- Last Sync
+- Last Punch
+- Employee Count
+- Error Status
+- Branch
+- Location
+- Vendor
+- Model
+- Serial Number
+- IP
+- Port
+
+ADD DEVICE BUTTON
+
+When clicked open:
+
+ADD ATTENDANCE DEVICE
+
+Fields:
+
+Device Name
+Vendor
+
+Supported adapter architecture:
+
+- ZKTeco
+- eSSL
+- Hikvision
+- Suprema
+- Generic API
+
+Fields:
+
+Device Model
+Serial Number
+IP Address
+Port
+Protocol
+Username
+Password
+Communication Key
+Branch
+Location
+Timezone
+Sync Interval
+
+Buttons:
+
+TEST CONNECTION
+SAVE DEVICE
+SYNC USERS
+SYNC EMPLOYEES
+SYNC FACE DATA
+SYNC PUNCHES
+GET DEVICE TIME
+SET DEVICE TIME
+RESTART DEVICE
+VIEW LOGS
+
+Device workflow:
+
+Add Machine
+→ Select Vendor
+→ Enter IP
+→ Enter Port
+→ Enter Credentials
+→ Select Branch
+→ Test Connection
+→ Save
+→ Sync Employees
+→ Download Punches
+→ Normalize Attendance
+
+IMPORTANT:
+
+Do not fake real hardware communication.
+
+Create a device adapter interface.
+
+Actual connection must use the relevant vendor SDK/API or supported network protocol.
+
+Browser frontend must call backend.
+
+Backend/device connector communicates with the machine.
+
+==================================================
+14. DEVICE ADAPTER ARCHITECTURE
+==================================================
+
+Create common interface:
+
+connect()
+disconnect()
+testConnection()
+getDeviceInfo()
+getDeviceTime()
+setDeviceTime()
+getUsers()
+createUser()
+updateUser()
+deleteUser()
+syncUsers()
+getPunches()
+getFaceTemplates()
+restartDevice()
+getStatus()
+
+Each vendor adapter implements this interface.
+
+==================================================
+15. ATTENDANCE RAW DATA
+==================================================
+
+Never directly convert device data without preserving it.
+
+Store raw punches:
+
+attendance_punches
+
+Fields:
+
+id
+tenant_id
+device_id
+employee_id
+device_user_id
+punch_time
+punch_type
+verification_type
+raw_payload
+received_at
+processed_at
+
+Then process raw data using Attendance Engine.
+
+==================================================
+16. ATTENDANCE ENGINE
+==================================================
+
+Calculate:
+
+- Present
+- Absent
+- Late
+- Early Arrival
+- Early Exit
+- Half Day
+- Full Day
+- Overtime
+- Missing Punch
+- Weekend Work
+- Holiday Work
+- Work Duration
+- Break Duration
+- Shift Duration
+
+Rules must be configurable per company.
+
+==================================================
+17. SHIFTS
+==================================================
+
+Create:
+
+- Fixed Shift
+- Flexible Shift
+- Night Shift
+- Rotational Shift
+- Weekly Roster
+- Grace Time
+- Minimum Hours
+- Half Day Rules
+- Overtime Rules
+- Weekly Off
+- Break Rules
+
+==================================================
+18. LIVE WORKFORCE MANAGEMENT
+==================================================
+
+Create LIVE WORKFORCE dashboard.
+
+Statuses:
+
+- Working
+- Meeting
+- Break
+- Idle
+- Offline
+
+Show:
+
+Employee
+Department
+Current Status
+Current Application
+Current Website
+Active Duration
+Idle Duration
+Break Duration
+Check-in
+Total Worked
+Last Activity
+
+==================================================
+19. EMPLOYEE ACTIVITY TIMELINE
+==================================================
+
+Example:
+
+09:02 Check-in
+09:08 Working
+10:34 Idle
+10:43 Working
+11:20 Meeting
+12:42 Break
+13:18 Working
+18:11 Check-out
+
+Provide daily, weekly and monthly timeline views.
+
+==================================================
+20. DESKTOP WORKFORCE AGENT
+==================================================
+
+Create separate desktop-agent architecture.
+
+Responsibilities:
+
+- User login
+- Employee identification
+- Active / idle detection
+- Application usage
+- Website/domain usage
+- Session heartbeat
+- Break tracking
+- Offline buffering
+- Secure event upload
+
+Do not implement invasive monitoring.
+
+Do not collect passwords, message content, personal files, keystrokes, or sensitive content.
+
+==================================================
+21. PRODUCTIVITY RULES
+==================================================
+
+Admin can classify apps/websites as:
+
+PRODUCTIVE
+NEUTRAL
+NON-PRODUCTIVE
+
+Examples:
+
+VS Code → Productive
+Figma → Productive
+CRM → Productive
+YouTube → Configurable
+Social Media → Configurable
+
+Generate:
+
+Productive Time
+Neutral Time
+Non-Productive Time
+Idle Time
+
+==================================================
+22. LEAVE MANAGEMENT
+==================================================
+
+Create:
+
+- Leave Types
+- Leave Policies
+- Leave Balance
+- Leave Requests
+- Approvals
+- Rejections
+- Half Day
+- Comp Off
+- Carry Forward
+- Encashment
+- Holiday Calendar
+
+Employee → Manager → HR approval workflows.
+
+==================================================
+23. CALENDAR
+==================================================
+
+Create a fully working modern calendar.
+
+Views:
+
+- Month
+- Week
+- Day
+
+Show:
+
+- Holidays
+- Leave
+- Birthdays
+- Work Anniversaries
+- Payroll Dates
+- Interviews
+- Training
+- Appraisals
+- HR Events
+
+Functions:
+
+Previous
+Next
+Today
+Add Event
+Edit Event
+Delete Event
+Filter Events
+
+==================================================
+24. PAYROLL
+==================================================
+
+Create full payroll module.
+
+Sections:
+
+Salary Components
+Salary Structure
+Employee Salary
+Payroll Runs
+Payroll Processing
+Bonuses
+Deductions
+Overtime
+Reimbursements
+Loans
+Advances
+Taxes
+Payslips
+Payroll Reports
+
+Workflow:
+
+Attendance Import
+→ Validation
+→ Salary Calculation
+→ Deductions
+→ Statutory Calculation
+→ Review
+→ Approval
+→ Lock Payroll
+→ Payslip Generation
+
+Never modify finalized payroll directly.
+
+Use adjustment/reversal workflows.
+
+==================================================
+25. INDIA PAYROLL READY
+==================================================
+
+Architecture should support:
+
+- PF
+- ESIC
+- Professional Tax
+- TDS
+- Gratuity
+- LOP
+- Bonus
+- Overtime
+
+Rules must be configurable because statutory requirements change.
+
+==================================================
+26. RECRUITMENT / ATS
+==================================================
+
+Create real Recruitment module.
+
+Screens:
+
+- Job Requisitions
+- Jobs
+- Candidates
+- Applications
+- Resume Database
+- Interview Pipeline
+- Interview Scheduling
+- Interview Feedback
+- Offers
+- Hiring
+- Rejection
+- Reports
+
+Pipeline:
+
+Applied
+→ Screening
+→ Shortlisted
+→ Interview
+→ Technical
+→ HR
+→ Offer
+→ Hired
+
+==================================================
+27. AI RECRUITMENT
+==================================================
+
+Features:
+
+- Resume Parsing
+- Skill Extraction
+- Candidate Summary
+- Job Description Generation
+- Interview Question Generation
+- Candidate Search
+- Candidate Comparison
+
+Do not make autonomous hiring decisions.
+
+Final decisions must remain with human HR/recruiters.
+
+==================================================
+28. PERFORMANCE MANAGEMENT
+==================================================
+
+Create:
+
+- KPI
+- KRA
+- Goals
+- OKR
+- Appraisal Cycles
+- Self Review
+- Manager Review
+- HR Review
+- Feedback
+- Ratings
+- Performance Reports
+
+==================================================
+29. TRAINING
+==================================================
+
+Create:
+
+- Courses
+- Training Programs
+- Sessions
+- Trainers
+- Employee Enrollment
+- Completion
+- Certificates
+- Training Reports
+
+==================================================
+30. DOCUMENT MANAGEMENT
+==================================================
+
+Create:
+
+- Employee Documents
+- Company Documents
+- Document Templates
+- Offer Letters
+- Appointment Letters
+- Experience Letters
+- Relieving Letters
+- Salary Letters
+- Warning Letters
+
+Features:
+
+- Upload
+- Download
+- Preview
+- Expiry Alerts
+- Version History
+- Permissions
+
+==================================================
+31. ASSET MANAGEMENT
+==================================================
+
+Create:
+
+- Assets
+- Asset Categories
+- Asset Assignment
+- Asset Return
+- Asset Damage
+- Asset History
+
+Examples:
+
+Laptop
+Desktop
+Mobile
+SIM
+ID Card
+Access Card
+Vehicle
+
+==================================================
+32. EXPENSE MANAGEMENT
+==================================================
+
+Create:
+
+- Expense Claims
+- Expense Categories
+- Receipt Upload
+- Approval
+- Rejection
+- Payment
+- Reports
+
+==================================================
+33. TRAVEL MANAGEMENT
+==================================================
+
+Create:
+
+- Travel Requests
+- Approval
+- Destination
+- Dates
+- Purpose
+- Advance
+- Expenses
+- Settlement
+
+==================================================
+34. EMPLOYEE EXIT
+==================================================
+
+Create:
+
+- Resignation
+- Notice Period
+- Exit Approval
+- Exit Interview
+- Asset Clearance
+- Department Clearance
+- Payroll Clearance
+- Final Settlement
+- Relieving Letter
+- Experience Letter
+
+==================================================
+35. SALES CRM
+==================================================
+
+Sales module must be fully functional.
+
+Create:
+
+Leads
+Customers
+Contacts
+Enquiries
+Demo Requests
+Opportunities
+Follow-ups
+Tasks
+Quotations
+Sales Orders
+Invoices
+Payments
+Products
+SaaS Plans
+Discounts
+Sales Team
+Sales Targets
+Sales Reports
+
+Pipeline:
+
+Lead
+→ Contacted
+→ Demo
+→ Quotation
+→ Negotiation
+→ Won
+→ Payment
+→ Company Created
+→ Subscription Activated
+
+==================================================
+36. QUOTATION SYSTEM
+==================================================
+
+Quotation must contain:
+
+Tech Cyber Warrior Logo
+Company Name
+Customer Details
+Quotation Number
+Date
+Validity
+Plan
+Employee Limit
+Features
+Price
+Discount
+Tax
+Total
+Terms
+Signature
+
+Generate professional PDF quotation.
+
+==================================================
+37. SUBSCRIPTIONS
+==================================================
+
+Create SaaS plans:
+
+STARTER
+GROWTH
+ENTERPRISE
+
+Plan configuration:
+
+Employee Limit
+Admin Limit
+Attendance Devices
+Storage
+AI Usage
+Payroll
+Recruitment
+Workforce
+Reports
+Support Level
+
+Subscription fields:
+
+Start Date
+End Date
+Trial Date
+Renewal Date
+Status
+Billing Cycle
+Amount
+Payment Status
+
+==================================================
+38. BILLING
+==================================================
+
+Create:
+
+Invoices
+Payments
+Outstanding
+Refunds
+Taxes
+Receipts
+Payment History
+
+Architecture should allow payment gateway integration later.
+
+==================================================
+39. REPORTS & ANALYTICS
+==================================================
+
+Do NOT create a generic placeholder report screen.
+
+Create actual report categories:
+
+Attendance Reports
+Late Arrival Report
+Absent Report
+Overtime Report
+Shift Report
+Leave Report
+Payroll Report
+Salary Report
+Workforce Report
+Idle Time Report
+Productivity Report
+Recruitment Report
+Performance Report
+Employee Report
+Expense Report
+Asset Report
+Sales Report
+Subscription Report
+
+Filters:
+
+Date Range
+Employee
+Department
+Branch
+Location
+Status
+
+Functions:
+
+Generate
+Preview
+Export Excel
+Export CSV
+Print
+PDF
+
+==================================================
+40. AI HR ASSISTANT
+==================================================
+
+Create a modern chat interface.
+
+Example questions:
+
+"Who came late today?"
+
+"Show employees with more than 30 minutes idle time."
+
+"How many employees are absent today?"
+
+"Show Ahmedabad branch attendance."
+
+"What is this month's payroll?"
+
+"Which employees worked overtime?"
+
+"How many employees are on leave?"
+
+"What is our sales pipeline?"
+
+"Show pending leave approvals."
+
+"Generate an attendance summary."
+
+AI must respect:
+
+tenant_id
+user role
+permissions
+
+AI must not bypass RBAC.
+
+==================================================
+41. AI INSIGHTS
+==================================================
+
+Generate controlled insights for:
+
+Attendance anomalies
+Unusual overtime
+High idle time
+Leave trends
+Payroll anomalies
+Hiring pipeline
+Workforce utilization
+Sales trends
+
+Present AI output as decision support, not autonomous HR decisions.
+
+==================================================
+42. REPORT GENERATION AI
+==================================================
+
+Allow prompts such as:
+
+"Generate monthly HR report."
+
+"Generate attendance summary."
+
+"Generate payroll summary."
+
+"Generate recruitment report."
+
+"Generate workforce productivity report."
+
+==================================================
+43. NOTIFICATIONS
+==================================================
+
+Create:
+
+In-App Notifications
+Email Notification Architecture
+SMS Integration Architecture
+WhatsApp Integration Architecture
+
+Events:
+
+Leave Request
+Leave Approval
+Attendance Regularization
+Payroll Complete
+Payslip Generated
+Birthday
+Anniversary
+Interview
+Offer
+Document Expiry
+Subscription Expiry
+Payment Due
+Device Offline
+
+==================================================
+44. APPROVAL ENGINE
+==================================================
+
+Create reusable approval workflow engine.
+
+Examples:
+
+Leave
+Attendance
+Overtime
+Expense
+Travel
+Payroll
+Resignation
+
+Support multi-level approvals.
+
+==================================================
+45. SETTINGS
+==================================================
+
+Settings must NOT be a generic placeholder page.
+
+Create real categories:
+
+Company
+Branding
+Branches
+Departments
+Designations
+Locations
+Users
+Roles
+Permissions
+Attendance
+Attendance Devices
+Shifts
+Leave
+Payroll
+Recruitment
+Performance
+Workforce
+Notifications
+AI
+Integrations
+Security
+Audit Logs
+Subscription
+
+==================================================
+46. SECURITY
+==================================================
+
+Implement architecture for:
+
+Password hashing
+Secure authentication
+Role-based access
+Permission checks
+Tenant isolation
+Input validation
+Rate limiting
+Audit logs
+Login logs
+Secure headers
+CORS
+CSRF protection where applicable
+Session expiration
+Refresh token rotation
+File validation
+API validation
+Secrets through environment variables
+
+Never hard-code production passwords.
+
+==================================================
+47. AUDIT LOG
+==================================================
+
+Record important actions:
+
+Employee Created
+Employee Updated
+Employee Deleted
+Salary Changed
+Attendance Edited
+Leave Approved
+Payroll Approved
+Permission Changed
+Device Added
+Device Changed
+Subscription Changed
+Invoice Changed
+Payment Changed
+
+Store:
+
+User
+Action
+Entity
+Old Value
+New Value
+IP
+Timestamp
+
+==================================================
+48. DATABASE TABLE GROUPS
+==================================================
+
+SAAS:
+
+tenants
+tenant_settings
+plans
+plan_features
+subscriptions
+payments
+invoices
+
+AUTH:
+
+users
+roles
+permissions
+user_roles
+role_permissions
+sessions
+login_logs
+
+ORGANIZATION:
+
+branches
+departments
+designations
+teams
+locations
+cost_centers
+
+EMPLOYEES:
+
+employees
+employee_personal_details
+employee_bank_accounts
+employee_documents
+employee_emergency_contacts
+
+ATTENDANCE:
+
+attendance_devices
+device_employee_mappings
+device_sync_logs
+attendance_punches
+attendance_daily
+attendance_adjustments
+shifts
+employee_shifts
+shift_rosters
+
+WORKFORCE:
+
+activity_sessions
+activity_events
+application_usage
+website_usage
+productivity_rules
+
+LEAVE:
+
+leave_types
+leave_policies
+leave_balances
+leave_requests
+holidays
+
+PAYROLL:
+
+salary_components
+salary_structures
+employee_salary
+payroll_runs
+payroll_items
+payslips
+payroll_adjustments
+
+RECRUITMENT:
+
+job_requisitions
+jobs
+candidates
+applications
+interviews
+interview_feedback
+offers
+
+PERFORMANCE:
+
+performance_cycles
+goals
+kpis
+kras
+performance_reviews
+feedback
+
+TRAINING:
+
+courses
+training_sessions
+training_enrollments
+certificates
+
+ASSETS:
+
+assets
+asset_categories
+asset_assignments
+
+EXPENSES:
+
+expense_claims
+expense_items
+
+TRAVEL:
+
+travel_requests
+travel_expenses
+
+DOCUMENTS:
+
+document_templates
+generated_documents
+
+EXIT:
+
+employee_exits
+exit_clearances
+final_settlements
+
+SALES:
+
+leads
+contacts
+opportunities
+followups
+quotations
+quotation_items
+sales_orders
+sales_invoices
+sales_payments
+
+AI:
+
+ai_conversations
+ai_messages
+ai_usage
+ai_insights
+
+NOTIFICATIONS:
+
+notifications
+notification_templates
+
+SECURITY:
+
+audit_logs
+
+==================================================
+49. DATA RULES
+==================================================
+
+Every tenant-owned table must contain tenant_id.
+
+Use UUID primary keys.
+
+Use:
+
+created_at
+updated_at
+
+where appropriate.
+
+Use soft delete where appropriate.
+
+Add indexes for:
+
+tenant_id
+employee_id
+device_id
+date
+status
+email
+
+==================================================
+50. API STRUCTURE
+==================================================
+
+Create APIs for:
+
+/auth
+/tenants
+/users
+/roles
+/permissions
+/employees
+/branches
+/departments
+/attendance
+/devices
+/shifts
+/workforce
+/leave
+/payroll
+/recruitment
+/performance
+/training
+/documents
+/assets
+/expenses
+/travel
+/exit
+/sales
+/subscriptions
+/billing
+/reports
+/ai
+/notifications
+/audit
+
+==================================================
+51. BACKGROUND WORKERS
+==================================================
+
+Create jobs for:
+
+Attendance Sync
+Device Health Check
+Attendance Processing
+Payroll Processing
+Report Generation
+Email
+Notifications
+Document Generation
+AI Jobs
+Subscription Expiry
+Payment Reminders
+Document Expiry
+
+==================================================
+52. DEVICE HEALTH MONITORING
+==================================================
+
+Periodically check:
+
+Online / Offline
+Last Sync
+Last Punch
+Network Error
+Authentication Error
+Device Time Difference
+
+Show alerts when a machine goes offline.
+
+==================================================
+53. EMPLOYEE PORTAL
+==================================================
+
+Employee Portal:
+
+My Dashboard
+My Profile
+My Attendance
+My Activity
+My Leave
+My Payroll
+My Payslips
+My Documents
+My Goals
+My Performance
+My Training
+My Assets
+My Expenses
+My Travel
+HR Helpdesk
+AI HR Assistant
+Announcements
+
+==================================================
+54. MANAGER PORTAL
+==================================================
+
+Manager Dashboard
+
+My Team
+Team Attendance
+Team Activity
+Team Leave
+Team Overtime
+Team Performance
+
+Approvals:
+
+Leave
+Attendance
+Expense
+Travel
+Overtime
+
+Performance:
+
+Goals
+Reviews
+Feedback
+
+==================================================
+55. RESPONSIVE DESIGN
+==================================================
+
+The application must work on:
+
+Desktop
+Laptop
+Tablet
+Mobile Browser
+
+Desktop should provide the complete enterprise experience.
+
+==================================================
+56. SEARCH
+==================================================
+
+Create global command search.
+
+Search:
+
+Employees
+Pages
+Reports
+Candidates
+Documents
+Customers
+Invoices
+Attendance Devices
+
+Keyboard shortcut:
+
+Ctrl/Cmd + K
+
+==================================================
+57. UX REQUIREMENTS
+==================================================
+
+Every page must contain appropriate:
+
+Loading State
+Empty State
+Error State
+Success State
+
+Every destructive action requires confirmation.
+
+Use toast notifications after actions.
+
+Do not leave dead buttons.
+
+Do not create fake buttons that do nothing.
+
+==================================================
+58. DEVELOPMENT PHASES
+==================================================
+
+PHASE 1:
+Authentication
+Multi-Tenancy
+RBAC
+Company
+Organization
+Employees
+Main Dashboard
+
+PHASE 2:
+Attendance Devices
+Vendor Adapter Interface
+Punch Sync
+Attendance Engine
+Shifts
+Leave
+
+PHASE 3:
+Workforce
+Live Activity
+Desktop Agent
+Productivity
+
+PHASE 4:
+Payroll
+Recruitment
+Performance
+Training
+Documents
+Assets
+Expenses
+Travel
+Exit
+
+PHASE 5:
+Sales CRM
+Subscriptions
+Billing
+TCW Super Admin
+
+PHASE 6:
+AI Assistant
+AI Insights
+AI Reports
+AI Recruitment
+
+PHASE 7:
+Testing
+Security
+Monitoring
+Backup
+Docker
+Deployment
+Production Hardening
+
+==================================================
+59. TESTING
+==================================================
+
+Create:
+
+Unit Tests
+Integration Tests
+API Tests
+Permission Tests
+Tenant Isolation Tests
+Attendance Engine Tests
+Payroll Tests
+Device Adapter Tests
+E2E Tests
+
+==================================================
+60. FINAL PRODUCT RULES
+==================================================
+
+DO NOT build a static dashboard screenshot.
+
+DO NOT create the same placeholder workspace for multiple modules.
+
+DO NOT make buttons that do nothing.
+
+DO NOT use dark mode.
+
+DO NOT fake real attendance-machine connectivity.
+
+DO NOT use unrestricted AI database access.
+
+DO NOT expose one customer's data to another customer.
+
+DO NOT directly edit finalized payroll records.
+
+DO NOT make autonomous hiring or employee disciplinary decisions using AI.
+
+Every major module must have its own real UI, forms, tables, filters, workflows, database model and API.
+
+The final software must look like a modern next-generation commercial SaaS product.
+
+==================================================
+61. PROJECT SIZE
+==================================================
+
+Do not artificially inflate the source code to reach 500 MB.
+
+The complete installed development project can exceed 500 MB naturally after:
+
+npm dependencies
+Next.js build files
+NestJS dependencies
+Prisma binaries
+Desktop agent dependencies
+test dependencies
+development tooling
+
+Keep actual source code clean and maintainable.
+
+Do not add duplicate assets, dummy videos, random binary files, or filler content just to increase project size.
+
+==================================================
+62. BRANDING
+==================================================
+
+Product Name:
+Tech Cyber Warrior PeopleOS
+
+Company:
+Tech Cyber Warrior
+
+Theme:
+LIGHT MODE ONLY
+
+Logo:
+Use a replaceable placeholder. The final logo will be added manually later.
+
+Footer:
+© Tech Cyber Warrior
+
+Customer-facing documents must support Tech Cyber Warrior branding.
+
+==================================================
+63. FINAL EXPECTATION
+==================================================
+
+Build TWO complete connected systems:
+
+A. TECH CYBER WARRIOR MAIN SOFTWARE
+For selling, managing and supporting the SaaS.
+
+B. CLIENT COMPANY SOFTWARE
+For companies using HR, attendance, workforce, payroll and other modules.
+
+The final experience should be:
+
+Modern
+Fast
+Secure
+Responsive
+Multi-Tenant
+Commercial
+Professional
+Scalable
+AI-Ready
+Attendance-Machine-Ready
+Production-Architecture-Ready
+
+The application must run in a web browser.
+
+The main goal is to create a genuine SaaS product, not a UI prototype.

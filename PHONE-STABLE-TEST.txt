@@ -1,0 +1,17 @@
+TCW HR Software - Stable Phone Test
+===================================
+
+Recommended when testing from a phone because it avoids development hot-reload refreshes.
+
+1. PC and phone must be on the same Wi-Fi/LAN.
+2. Open Terminal in this folder.
+3. First time only: npm ci
+4. Run: npm run configure:lan
+5. Run: npm run phone:stable
+6. Open the printed Phone HR URL on the phone, for example http://192.168.1.5:3000/login
+7. Super Admin stays separate on port 3001.
+
+You can also double-click RUN-PHONE-STABLE.bat.
+
+If Windows Firewall blocks the phone, run PowerShell as Administrator:
+New-NetFirewallRule -DisplayName "TCW HR Local" -Direction Inbound -Protocol TCP -LocalPort 3000,3001,4000 -Action Allow

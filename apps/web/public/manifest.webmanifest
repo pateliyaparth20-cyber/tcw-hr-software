@@ -1,0 +1,15 @@
+{
+  "name": "TCW HR Software",
+  "short_name": "TCW HR",
+  "description": "HR, biometric attendance, leave and payroll workspace",
+  "start_url": "/login?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f7fafd",
+  "theme_color": "#1f6feb",
+  "icons": [
+    {"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

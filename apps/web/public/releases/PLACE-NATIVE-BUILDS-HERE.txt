@@ -1,0 +1,5 @@
+Publish real signed release files here or on a CDN, then set:
+NEXT_PUBLIC_ANDROID_APK_URL=https://your-domain/releases/TCW-HR-Software.apk
+NEXT_PUBLIC_WINDOWS_INSTALLER_URL=https://your-domain/releases/TCW-HR-Software-Setup.exe
+
+Do not enable a download button until the corresponding signed binary exists.
