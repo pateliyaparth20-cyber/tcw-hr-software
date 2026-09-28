@@ -44,6 +44,6 @@ export const navigation=[
 export const adminNavigation=[
  {group:'Platform',items:[['dashboard','Overview','dashboard'],['trials','Trial follow-up','tenants'],['companies','Companies','tenants'],['plans','Plans','plans']]},
  {group:'Business',items:[['leads','Sales pipeline','sales'],['invoices','Invoices','billing'],['payments','Payments','billing'],['support','Support tickets','support']]},
- {group:'Administration',items:[['system','System health','system'],['audit','Audit log','audit'],['security','My security','self']]}
+ {group:'Administration',items:[['profile','Company & admin profile','system'],['system','System health','system'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
 export const readable=(value:string)=>value.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' ').replaceAll('-',' ').replace(/^./,s=>s.toUpperCase()).replace(/\bHr\b/g,'HR').replace(/\bAi\b/g,'AI').replace(/\bApi\b/g,'API').replace(/\bId\b/g,'ID').replace(/\bCsv\b/g,'CSV').replace(/\bGst\b/g,'GST').replace(/\bPan\b/g,'PAN').replace(/\bIfsc\b/g,'IFSC');
