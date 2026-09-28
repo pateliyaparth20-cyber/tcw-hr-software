@@ -618,3 +618,72 @@ body{font-size:16px}
   .auth-pro-shell:not(.auth-pro-signup) .auth-pro-signup-link{margin-top:4px!important;padding-top:4px!important}
   .auth-pro-shell:not(.auth-pro-signup) .auth-pro-legal{margin-top:4px!important;padding-top:4px!important}
 }
+
+
+/* v1.3.10 one-line auth footer + low-height/landscape phone fit */
+.auth-pro-legal{display:block!important;margin-top:7px!important;padding-top:6px!important}
+.auth-pro-legal-row{display:flex!important;align-items:center!important;justify-content:center!important;flex-wrap:nowrap!important;gap:0!important;width:100%;white-space:nowrap}
+.auth-pro-legal-row>a,.auth-pro-install-link,.auth-pro-company-link{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:20px!important;padding:1px 6px!important;border:0!important;background:transparent!important;
+  color:#74899c!important;font-family:inherit!important;font-size:.64rem!important;font-weight:600!important;
+  line-height:1.1!important;text-decoration:none!important;white-space:nowrap!important;cursor:pointer
+}
+.auth-pro-legal-row>*+*::before{
+  content:"·"!important;display:inline-block!important;width:auto!important;height:auto!important;
+  margin:0 6px 0 0!important;background:none!important;color:#b5c1cc!important
+}
+.auth-pro-legal-row>a::after{display:none!important}
+.auth-pro-company-link{gap:0!important}
+@media(max-width:390px){
+  .auth-pro-legal-row{display:flex!important;grid-template-columns:none!important;column-gap:0!important;row-gap:0!important}
+  .auth-pro-legal-row>a,.auth-pro-install-link,.auth-pro-company-link{padding:1px 4px!important;font-size:.58rem!important}
+  .auth-pro-legal-row>*+*::before{display:inline-block!important;margin-right:4px!important}
+}
+
+/* Phone landscape and any short viewport: keep the normal login fully inside the screen. */
+@media(max-height:620px){
+  .auth-pro-shell:not(.auth-pro-signup){
+    display:block!important;height:100dvh!important;min-height:100dvh!important;overflow:hidden!important
+  }
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-side{display:none!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-main{
+    width:100%!important;height:100dvh!important;min-height:0!important;
+    padding:max(3px,env(safe-area-inset-top)) 6px max(3px,env(safe-area-inset-bottom))!important;
+    overflow:hidden!important;align-items:center!important;justify-content:center!important
+  }
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-card{
+    width:min(100%,440px)!important;max-width:440px!important;
+    max-height:calc(100dvh - 6px)!important;margin:0!important;padding:9px 12px 8px!important;
+    border-radius:13px!important;overflow:hidden!important;box-shadow:0 10px 30px rgba(33,67,104,.09)!important
+  }
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-mobile-brand{display:none!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-head{margin-bottom:3px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-badge{padding:4px 7px!important;font-size:.48rem!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-secure{font-size:.52rem!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-card h2{font-size:1.08rem!important;line-height:1!important;margin:0 0 2px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-subtitle{font-size:.64rem!important;line-height:1.2!important;margin:0 0 4px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-form{gap:3px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-form>label{gap:2px!important;font-size:.68rem!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-form input,
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-form select{
+    min-height:32px!important;height:32px!important;padding:4px 8px!important;font-size:16px!important;border-radius:9px!important
+  }
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-options{min-height:18px!important;font-size:.61rem!important;margin:0!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-options input{width:13px!important;height:13px!important;min-height:0!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-submit{min-height:33px!important;height:33px!important;padding:5px 10px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-signup-link{margin-top:3px!important;padding-top:3px!important;font-size:.6rem!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-legal{margin-top:3px!important;padding-top:3px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-legal-row>a,
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-install-link,
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-company-link{min-height:17px!important;font-size:.56rem!important;padding:0 4px!important}
+}
+/* Extremely short landscape phones: remove only non-essential copy, never fields/actions. */
+@media(max-height:470px){
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-secure{display:none!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-subtitle{display:none!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-head{justify-content:center!important;margin-bottom:2px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-card h2{text-align:center!important;margin-bottom:3px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-signup-link{margin-top:2px!important;padding-top:2px!important}
+  .auth-pro-shell:not(.auth-pro-signup) .auth-pro-legal{margin-top:2px!important;padding-top:2px!important}
+}
