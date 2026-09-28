@@ -11,6 +11,6 @@ export default async function Page({params,searchParams}:{params:Promise<{path?:
  // Never expose platform login/reset routes from the HR/company portal.
  const platformOnly=new Set(['super-admin','trials','companies','plans','leads','invoices','payments','system']);
  if(page.startsWith('admin-')||platformOnly.has(page))notFound();
- if(['login','signup','forgot-password','reset-password'].includes(page))return <Login scope="TENANT" mode={page} resetToken={search.token??''}/>;
+ if(['login','signup','forgot-password','reset-password'].includes(page))return <Login scope="TENANT" mode={page} resetToken={search.token??''} prefillCompanyCode={search.companyCode??''} prefillUser={search.user??''}/>;
  return <ProtectedPortal scope="TENANT" page={page}/>;
 }
