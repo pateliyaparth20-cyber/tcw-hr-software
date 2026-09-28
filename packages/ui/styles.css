@@ -1463,3 +1463,37 @@ td{padding:14px 16px;line-height:1.45}
  .platform-shell .brand small{font-size:.65rem}
  .platform-shell .workspace-switch{margin-top:10px}
 }
+
+
+/* v1.4.3 Super Admin company profile */
+.platform-profile-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(320px,.8fr);gap:18px;align-items:start}
+.platform-company-profile,.platform-admin-profile{overflow:hidden}
+.platform-profile-logo{display:flex;gap:18px;align-items:center;padding:18px;border-bottom:1px solid var(--line);background:#fbfcfe}
+.platform-profile-logo-preview{width:104px;height:104px;display:grid;place-items:center;border:1px solid #dfe6ee;border-radius:16px;background:#fff;overflow:hidden;flex:0 0 auto}
+.platform-profile-logo-preview img{width:100%;height:100%;object-fit:contain;padding:8px}
+.platform-profile-logo-preview span{font-size:1.15rem;font-weight:700;color:#2459a8}
+.platform-profile-logo>div:last-child{min-width:0}
+.platform-profile-logo strong{display:block;color:#2f455c}
+.platform-profile-logo p{margin:5px 0 10px;font-size:.78rem;color:#8796a7}
+.platform-profile-logo-actions{display:flex;gap:8px;flex-wrap:wrap}
+.platform-profile-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+.platform-profile-fields.single{grid-template-columns:1fr;padding-top:14px}
+.platform-profile-fields label{display:flex;flex-direction:column;gap:7px}
+.platform-profile-fields label>span{font-size:.76rem;font-weight:600;color:#64768a}
+.platform-profile-fields .span-two{grid-column:1/-1}
+.platform-admin-card{display:flex;align-items:center;gap:12px;padding:18px;border-bottom:1px solid var(--line);background:#fbfcfe}
+.platform-admin-avatar{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#eaf1fb;color:#2459a8;font-weight:700}
+.platform-admin-card strong{display:block;color:#2d435a}
+.platform-admin-card small{display:block;margin-top:4px;color:#8796a7;font-size:.74rem;overflow-wrap:anywhere}
+.platform-admin-profile .form-footer,.platform-company-profile .form-footer{padding:16px 18px}
+@media(max-width:1050px){.platform-profile-grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+ .platform-profile-logo{align-items:flex-start;flex-direction:column;padding:14px}
+ .platform-profile-logo-preview{width:88px;height:88px}
+ .platform-profile-fields{grid-template-columns:1fr;padding:14px}
+ .platform-profile-fields .span-two{grid-column:auto}
+ .platform-profile-logo-actions{width:100%}
+ .platform-profile-logo-actions .btn{flex:1}
+ .platform-admin-profile .form-footer,.platform-company-profile .form-footer{padding:14px;flex-wrap:wrap}
+ .platform-admin-profile .form-footer .btn,.platform-company-profile .form-footer .btn{flex:1}
+}
