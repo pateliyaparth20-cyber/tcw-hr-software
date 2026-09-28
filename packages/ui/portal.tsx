@@ -25,7 +25,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
   if(cached){setSession(cached);setChecking(false)}
   else if(isLocalBrowser()&&!localToken){setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return()=>{active=false};}
   setError('');
-  if(!cached){setChecking(true);slowTimer=setTimeout(()=>{if(active){setChecking(false);setError('The local server did not answer. Keep npm run demo running on the PC, then try again.')}},7000)}
+  if(!cached){setChecking(true);const local=isLocalBrowser();slowTimer=setTimeout(()=>{if(active){setChecking(false);setError(local?'The local test server did not answer. Keep npm run demo running on the PC, then try again.':'The secure server is taking longer than expected. Please try again.')}},local?7000:18000)}
   (async()=>{try{
     let r:Session;
     try{r=await api('auth/me')}
@@ -104,7 +104,7 @@ function Shell({page}:{page:string}){
  return <div className="app-shell" style={{'--primary':session.company?.profile?.primaryColor??'#3474ef'} as React.CSSProperties}>
  {mobile&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
  <aside className={'sidebar '+(mobile?'open':'')}>
- <Link className="brand" href="/dashboard">{session.user.scope==='TENANT'&&session.company?.logo?<span className="brand-mark brand-logo"><img src={session.company.logo} alt={session.company.name+' logo'}/></span>:<span className="brand-mark brand-logo tcw-default-logo"><img src="/tcw-logo.png" alt="TCW HR Software"/></span>}<span><strong>TCW HR <span>Software</span></strong><small>{session.user.scope==='PLATFORM'?'SUPER ADMIN':'HR MANAGEMENT'}</small></span></Link>
+ <Link className="brand" href="/dashboard"><span className="brand-mark brand-logo tcw-default-logo"><img src="/tcw-logo.png" alt="TCW HR Software"/></span><span><strong>TCW HR <span>Software</span></strong><small>{session.user.scope==='PLATFORM'?'SUPER ADMIN':'HR MANAGEMENT'}</small></span></Link>
  <div className="workspace-switch"><span className="workspace-icon">{session.company?.logo?<img src={session.company.logo} alt=""/>:<img src="/tcw-logo.png" alt=""/>}</span><div><strong>{session.company?.name??'TCW HR Software'}</strong><small>{session.user.scope==='PLATFORM'?'SaaS administration':'Company workspace'}</small></div></div>
  <nav ref={navRef} aria-label="Main navigation">{nav.map(g=><div className="nav-group" key={g.group}><span className="nav-group-label">{g.group}</span>{g.items.map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <Link href={'/'+key} key={key} className={'nav-item '+(page===key?'selected':'')} aria-current={page===key?'page':undefined}><Icon size={19} strokeWidth={1.8}/><span>{label}</span>{key==='ai'&&<span className="new-label">AI</span>}</Link>})}</div>)}</nav>
  <div className="sidebar-bottom"><div className="account"><Avatar name={session.user.name}/><div><strong>{session.user.name}</strong><small>{session.user.roleName}</small></div><button className="icon-button" aria-label="Sign out" onClick={()=>logout().catch(()=>{})}><LogOut size={17}/></button></div></div>
