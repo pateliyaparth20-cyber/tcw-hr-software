@@ -26,7 +26,12 @@ export function PwaClient(){
           .then(()=>clearLegacyTcwCaches())
           .catch(()=>{});
       }else{
-        navigator.serviceWorker.register('/sw.js').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js').then(registration=>{
+          registration.update().catch(()=>{});
+          const announce=()=>window.dispatchEvent(new Event('tcw-update-available'));
+          if(registration.waiting)announce();
+          registration.addEventListener('updatefound',()=>{const worker=registration.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)announce()})});
+        }).catch(()=>{});
       }
     }
     const onPrompt=(event:any)=>{
