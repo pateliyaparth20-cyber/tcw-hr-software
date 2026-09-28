@@ -41,7 +41,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
     if(!active)return;
     const status=Number(e?.status??0);
     if(cached&&![401,403].includes(status)){setChecking(false);return;}
-    if([401,403].includes(status)){clearLocalSessionState();setSession(null);setError('Your sign-in session is no longer valid. Please sign in again.');setChecking(false);return;}
+    if(status===401){clearLocalSessionState();setSession(null);setError('');setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return;}if(status===403){setSession(null);setError('Your access could not be verified. Please sign in again.');setChecking(false);return;}
     if(!cached){setError(e?.message??'Your session could not be verified.');setChecking(false)}
    }})();
   return()=>{active=false;if(slowTimer)clearTimeout(slowTimer)}
@@ -66,6 +66,7 @@ function Shell({page}:{page:string}){
  const notices=useData('notifications',session.user.scope==='TENANT');
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setSearch(v=>!v)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
  useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
+ useEffect(()=>{const raw=(session as any).sessionExpiresAt;if(!raw)return;const target=new Date(raw).getTime();if(!Number.isFinite(target))return;let timer:ReturnType<typeof setTimeout>|undefined;let redirected=false;const go=()=>{if(redirected)return;redirected=true;clearLocalSessionState();queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};const schedule=()=>{const left=target-Date.now();if(left<=0){go();return;}timer=setTimeout(schedule,Math.min(left,3600000))};const check=()=>{if(Date.now()>=target)go()};schedule();document.addEventListener('visibilitychange',check);window.addEventListener('focus',check);return()=>{if(timer)clearTimeout(timer);document.removeEventListener('visibilitychange',check);window.removeEventListener('focus',check)}},[queryClient,router,session]);
  useEffect(()=>{if(process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false')return;const localSession=getLocalSessionToken();const socket=io({path:'/socket.io',withCredentials:true,transports:['websocket','polling'],auth:localSession?{localSessionToken:localSession}:{}});socket.on('changed',()=>queryClient.invalidateQueries());return()=>{socket.disconnect()}},[queryClient]);
  useEffect(()=>setMobile(false),[page]);
  useEffect(()=>{if(!mobile)return;const previous=document.body.style.overflow;const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};document.body.style.overflow='hidden';window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',onKey)}},[mobile]);
