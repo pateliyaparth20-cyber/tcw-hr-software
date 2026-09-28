@@ -782,3 +782,24 @@ body{font-size:16px}
 .software-update-banner{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:10px;width:min(520px,calc(100vw - 24px));padding:9px 10px 9px 12px;border:1px solid #cadcf0;border-radius:14px;background:#fff;box-shadow:0 16px 50px rgba(27,65,102,.2)}
 .software-update-banner>div{display:flex;align-items:center;gap:9px;flex:1;min-width:0;color:#2d6cab}.software-update-banner>div>span{display:flex;flex-direction:column;min-width:0}.software-update-banner strong{font-size:.72rem;color:#294d6e}.software-update-banner small{font-size:.62rem;color:#7f92a4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){.tcw-agent{right:12px;bottom:calc(76px + env(safe-area-inset-bottom))}.tcw-agent-fab{min-height:42px;padding:0 12px}.tcw-agent-panel{max-height:calc(100dvh - 155px)}.software-update-banner{bottom:calc(74px + env(safe-area-inset-bottom));padding:8px}.software-update-banner small{display:none}}
+
+
+/* v1.3.15 single-screen signup */
+.signup-all-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
+.signup-all-grid label{min-width:0}
+@media(max-width:700px){
+  .auth-pro-signup .signup-all-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 7px}
+  .auth-pro-signup .signup-all-grid label{font-size:.67rem!important;gap:2px!important}
+  .auth-pro-signup .signup-all-grid input{min-width:0;width:100%;font-size:16px!important}
+  .auth-pro-signup .signup-short-note{padding:6px 8px!important}
+  .auth-pro-signup .signup-short-note p{font-size:.62rem!important;line-height:1.2!important}
+  .auth-pro-signup .terms-check{font-size:.63rem!important;line-height:1.15!important}
+  .auth-pro-signup .auth-pro-submit{min-height:34px!important;height:34px!important;padding:4px 8px!important}
+}
+@media(max-width:360px){
+  .auth-pro-signup .auth-pro-card{padding:8px 9px 7px!important}
+  .auth-pro-signup .signup-all-grid{gap:4px 5px}
+  .auth-pro-signup .signup-all-grid label{font-size:.61rem!important}
+  .auth-pro-signup .auth-pro-form input,.auth-pro-signup .auth-pro-form select{min-height:30px!important;height:30px!important;padding:3px 6px!important}
+  .auth-pro-signup .terms-check{font-size:.59rem!important}
+}
