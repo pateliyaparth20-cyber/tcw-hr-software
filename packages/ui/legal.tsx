@@ -19,9 +19,9 @@ export function LegalPage({kind}:{kind:'privacy'|'cookies'|'terms'}){
   title:'Privacy notice',subtitle:'How TCW HR Software handles account and workforce information.',sections:[
    ['Data used by the service','The service processes company account information, user identities, employee records, attendance, leave, payroll, documents and operational data that authorized users choose to enter or connect.'],
    ['Purpose','Data is used to provide HR workflows, authentication, security, reporting, notifications, payroll processing and features enabled by the company administrator.'],
-   ['Access and security','Access is controlled by company code, authenticated sessions and role permissions. Production deployments should use HTTPS, strong secrets, restricted database access and audited administrator actions.'],
+   ['Access and security','Access is controlled by company code, authenticated sessions and role permissions. TCW HR Software uses HTTPS in production, protects application sessions, and records important administrator actions in the audit log.'],
    ['External services','Email, SMS, AI, object storage, biometric devices and payout providers are only used when the deployment administrator configures those integrations. Their own terms and privacy practices also apply.'],
-   ['Retention and requests','The company using TCW HR Software controls its workforce records and retention practices. Employees should contact their employer or HR administrator for access, correction or deletion requests.']
+   ['Retention and requests','Your organization controls the workforce records entered into TCW HR Software and its retention practices. Employees should contact their employer or HR administrator for access, correction or deletion requests.']
   ]}:kind==='cookies'?{
   title:'Cookie notice',subtitle:'Cookies and browser storage used by TCW HR Software.',sections:[
    ['Essential session cookies','Secure HTTP-only session cookies are used to keep signed-in users authenticated and to protect application requests. These are necessary for the service to work.'],
@@ -33,7 +33,7 @@ export function LegalPage({kind}:{kind:'privacy'|'cookies'|'terms'}){
    ['Authorized use','Use the service only for an organization you are authorized to manage. Keep credentials private and assign the minimum role permissions needed.'],
    ['HR and payroll review','Attendance, leave, salary, deductions and payout data must be reviewed by authorized company staff before final approval. The software supports administration but does not replace legal, tax, payroll or employment advice.'],
    ['Third-party integrations','SMS, AI, payout, storage and attendance-device functions depend on separately configured providers and may be subject to provider limits, fees, KYC and availability.'],
-   ['Availability and backups','Production operators are responsible for monitoring, backups, disaster recovery and keeping deployment dependencies updated.']
+   ['Availability and backups','TCW HR Software is operated with production monitoring and managed infrastructure. Each customer organization remains responsible for reviewing its HR, payroll and business records and for keeping authorized user access up to date.']
   ]};
  return <main className="legal-page"><div className="legal-shell"><Link href="/login" className="legal-brand"><img src="/tcw-logo.png" alt="TCW HR Software"/><span><strong>TCW HR Software</strong><small>TECH CYBER WARRIOR</small></span></Link><div className="legal-title"><ShieldCheck size={24}/><div><h1>{content.title}</h1><p>{content.subtitle}</p></div></div>{content.sections.map(([title,text])=><section key={title}><h2>{title}</h2><p>{text}</p></section>)}<footer><span>© TCW HR Software</span><a href="https://techcyberwarrior.in" target="_blank" rel="noreferrer">techcyberwarrior.in</a></footer></div></main>;
 }
