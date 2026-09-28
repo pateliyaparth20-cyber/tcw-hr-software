@@ -206,7 +206,7 @@ export async function createApp(db:Database){
   const api=new Api(db);
   @Module({controllers:[RootController,BiomaxPushController],providers:[{provide:'API',useValue:api}]})class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:process.env.NODE_ENV==='test'?false:['error','warn','log'],bodyParser:false});
-  app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'250kb'}));
+  app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb'}));
   // Edge Nginx adds an independent shared limit. This cap protects a local instance.
   const windows=new Map<string,{start:number;count:number}>();
   app.use((req:Request,res:Response,next:()=>void)=>{
