@@ -516,3 +516,7 @@ body{font-size:16px}
 .desktop-install-card>div>svg{color:#3474ef;margin-bottom:8px}.desktop-install-card h2{margin:4px 0 6px;color:#173451}.desktop-install-card p{margin:0;color:#6f8398;line-height:1.5}
 .desktop-install-card ol{margin:0;padding-left:22px;color:#516981;line-height:1.8}.desktop-install-card strong{color:#203b57}
 @media(max-width:700px){.desktop-install-card{grid-template-columns:1fr;gap:12px;padding:18px}.desktop-install-card ol{line-height:1.65}}
+
+.auth-pro-install-link{appearance:none;border:0;background:transparent;padding:0;color:#6e849a;font:inherit;font-size:.76rem;cursor:pointer}
+.auth-pro-install-link:hover{color:#286dcc;text-decoration:underline}
+@media(max-width:700px){.auth-pro-install-link{font-size:.8rem}}
