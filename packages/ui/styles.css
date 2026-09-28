@@ -687,3 +687,65 @@ body{font-size:16px}
   .auth-pro-shell:not(.auth-pro-signup) .auth-pro-signup-link{margin-top:2px!important;padding-top:2px!important}
   .auth-pro-shell:not(.auth-pro-signup) .auth-pro-legal{margin-top:2px!important;padding-top:2px!important}
 }
+
+
+/* v1.3.11 two-step signup: no phone scrolling */
+.signup-step-indicator{display:grid;grid-template-columns:24px minmax(28px,1fr) 24px auto;align-items:center;gap:7px;margin:0 0 2px}
+.signup-step-indicator span{width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:#edf3f8;color:#7890a6;font-size:.65rem;font-weight:800}
+.signup-step-indicator span.active{background:#3474ef;color:#fff}
+.signup-step-indicator i{height:2px;background:#dfe8f1;border-radius:99px}
+.signup-step-indicator small{color:#8495a6;font-size:.64rem;font-weight:700;white-space:nowrap}
+.signup-step-actions{display:grid;grid-template-columns:96px minmax(0,1fr);gap:9px}
+.signup-step-actions .btn{min-height:44px;justify-content:center}
+.signup-short-note{margin:0!important;padding:10px 12px!important}
+.signup-short-note p{font-size:.72rem!important;line-height:1.4!important}
+
+@media(max-width:700px){
+  .auth-pro-signup{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important}
+  .auth-pro-signup .auth-pro-main{
+    height:100dvh!important;min-height:0!important;overflow:hidden!important;
+    padding:max(6px,env(safe-area-inset-top)) 8px max(6px,env(safe-area-inset-bottom))!important;
+    align-items:center!important
+  }
+  .auth-pro-signup .auth-pro-card{
+    width:min(100%,440px)!important;max-width:440px!important;
+    max-height:calc(100dvh - 12px)!important;overflow:hidden!important;
+    margin:0!important;padding:14px 14px 12px!important;border-radius:16px!important
+  }
+  .auth-pro-signup .auth-pro-mobile-brand{margin-bottom:7px!important}
+  .auth-pro-signup .auth-pro-head{margin-bottom:6px!important}
+  .auth-pro-signup .auth-pro-card h2{font-size:1.22rem!important;margin-bottom:3px!important}
+  .auth-pro-signup .auth-pro-subtitle{font-size:.7rem!important;line-height:1.25!important;margin-bottom:7px!important}
+  .auth-pro-signup .auth-pro-form{gap:7px!important}
+  .auth-pro-signup .auth-pro-form>label{gap:3px!important;font-size:.76rem!important}
+  .auth-pro-signup .auth-pro-form input,.auth-pro-signup .auth-pro-form select{
+    min-height:38px!important;height:38px!important;padding:7px 10px!important;font-size:16px!important;border-radius:10px!important
+  }
+  .auth-pro-signup .signup-step-indicator{margin-bottom:0!important}
+  .auth-pro-signup .terms-check{font-size:.72rem!important;line-height:1.25!important;gap:7px!important}
+  .auth-pro-signup .terms-check input{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important}
+  .auth-pro-signup .signup-step-actions .btn,.auth-pro-signup .auth-pro-submit{min-height:38px!important;height:38px!important}
+  .auth-pro-signup .auth-pro-legal{margin-top:5px!important;padding-top:4px!important}
+}
+@media(max-width:950px) and (max-height:620px){
+  .auth-pro-signup{display:block!important;height:100dvh!important;min-height:100dvh!important;overflow:hidden!important}
+  .auth-pro-signup .auth-pro-side{display:none!important}
+  .auth-pro-signup .auth-pro-main{width:100%!important;height:100dvh!important;padding:4px 6px!important;overflow:hidden!important;align-items:center!important}
+  .auth-pro-signup .auth-pro-card{max-height:calc(100dvh - 8px)!important;padding:8px 12px 7px!important;border-radius:12px!important}
+  .auth-pro-signup .auth-pro-mobile-brand{display:none!important}
+  .auth-pro-signup .auth-pro-head{margin-bottom:3px!important}
+  .auth-pro-signup .auth-pro-secure{display:none!important}
+  .auth-pro-signup .auth-pro-card h2{font-size:1.03rem!important;margin-bottom:2px!important}
+  .auth-pro-signup .auth-pro-subtitle{display:none!important}
+  .auth-pro-signup .auth-pro-form{gap:4px!important}
+  .auth-pro-signup .auth-pro-form>label{gap:2px!important;font-size:.67rem!important}
+  .auth-pro-signup .auth-pro-form input,.auth-pro-signup .auth-pro-form select{min-height:31px!important;height:31px!important;padding:4px 8px!important}
+  .auth-pro-signup .signup-step-indicator span{width:20px;height:20px;font-size:.58rem!important}
+  .auth-pro-signup .signup-step-indicator{grid-template-columns:20px minmax(24px,1fr) 20px auto;gap:5px}
+  .auth-pro-signup .signup-short-note{padding:6px 8px!important}
+  .auth-pro-signup .signup-short-note p{font-size:.62rem!important;line-height:1.2!important}
+  .auth-pro-signup .terms-check{font-size:.63rem!important;line-height:1.15!important}
+  .auth-pro-signup .signup-step-actions .btn,.auth-pro-signup .auth-pro-submit{min-height:31px!important;height:31px!important;padding:4px 8px!important}
+  .auth-pro-signup .auth-pro-legal{margin-top:2px!important;padding-top:2px!important}
+  .auth-pro-signup .auth-pro-legal-row>a,.auth-pro-signup .auth-pro-install-link,.auth-pro-signup .auth-pro-company-link{font-size:.54rem!important;min-height:16px!important;padding:0 3px!important}
+}
