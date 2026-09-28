@@ -1873,3 +1873,198 @@ td{padding:14px 16px;line-height:1.45}
     padding-right:10px;
   }
 }
+
+
+/* v1.5.1 product-mockup HR dashboard */
+.tenant-shell .hr-welcome-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  margin-bottom:16px;
+  padding:22px 24px;
+  border:1px solid #dfe7f0;
+  border-radius:18px;
+  background:linear-gradient(135deg,#fff 0%,#f7faff 68%,#eef5ff 100%);
+}
+.tenant-shell .hr-welcome-copy{min-width:0}
+.tenant-shell .hr-welcome-kicker{
+  display:block;
+  margin-bottom:7px;
+  color:#2f6fe4;
+  font-size:.64rem;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.tenant-shell .hr-welcome-copy h1{
+  margin:0;
+  color:#1f3550;
+  font-size:2rem;
+  line-height:1.08;
+  letter-spacing:-.035em;
+}
+.tenant-shell .hr-welcome-copy>p{
+  margin:7px 0 13px;
+  color:#73859a;
+  font-size:.88rem;
+}
+.tenant-shell .hr-welcome-company{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.tenant-shell .hr-welcome-company>span{
+  display:inline-flex;
+  align-items:center;
+  min-height:29px;
+  padding:5px 9px;
+  border-radius:8px;
+  background:#edf4ff;
+  color:#386bbb;
+  font-size:.72rem;
+  font-weight:650;
+}
+.tenant-shell .hr-welcome-company small{
+  color:#8796a8;
+  font-size:.69rem;
+}
+.tenant-shell .hr-welcome-tools{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:12px;
+  flex:0 0 auto;
+}
+.tenant-shell .hr-welcome-tools .digital-clock{
+  min-width:170px;
+  padding:12px 14px;
+  border:1px solid #e1e7ef;
+  border-radius:12px;
+  background:#fff;
+}
+.tenant-shell .hr-welcome-tools .digital-clock strong{
+  display:block;
+  color:#203b57;
+  font-size:1.15rem;
+}
+.tenant-shell .hr-welcome-tools .digital-clock span{
+  color:#8997a7;
+  font-size:.68rem;
+}
+.tenant-shell .hr-welcome-actions{display:flex;gap:8px}
+.tenant-shell .digital-kpi-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.tenant-shell .digital-kpi-card{
+  min-height:128px;
+  padding:16px;
+  border:1px solid #e3e9f0;
+  border-radius:14px;
+  background:#fff;
+}
+.tenant-shell .digital-kpi-top{margin-bottom:8px}
+.tenant-shell .digital-kpi-top>span{
+  color:#728197;
+  font-size:.72rem;
+  font-weight:600;
+}
+.tenant-shell .digital-kpi-top i{
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+}
+.tenant-shell .digital-kpi-card>strong{
+  font-size:1.55rem;
+  color:#223d58;
+  letter-spacing:-.025em;
+}
+.tenant-shell .digital-kpi-card>small{
+  display:block;
+  margin-top:5px;
+  color:#8a98a9;
+  line-height:1.45;
+}
+.tenant-shell .digital-dashboard-grid{
+  grid-template-columns:minmax(0,1.55fr) minmax(300px,.8fr);
+  gap:16px;
+  margin-bottom:16px;
+}
+.tenant-shell .digital-panel{border-radius:14px}
+.tenant-shell .digital-signal-strip{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+}
+.tenant-shell .digital-lower-grid{
+  gap:16px;
+  margin-bottom:16px;
+}
+.tenant-shell .dashboard-ai{
+  margin-top:16px;
+  border-radius:14px;
+}
+.tenant-shell .activity-panel{margin-top:16px}
+.tenant-shell .mobile-bottom-nav{
+  border-radius:16px 16px 0 0;
+}
+@media(max-width:1100px){
+  .tenant-shell .digital-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tenant-shell .digital-dashboard-grid{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .tenant-shell .workspace-main{
+    padding-left:12px;
+    padding-right:12px;
+    padding-bottom:92px;
+  }
+  .tenant-shell .hr-welcome-card{
+    flex-direction:column;
+    align-items:stretch;
+    gap:16px;
+    padding:17px 15px;
+    border-radius:15px;
+  }
+  .tenant-shell .hr-welcome-copy h1{font-size:1.6rem}
+  .tenant-shell .hr-welcome-copy>p{font-size:.8rem}
+  .tenant-shell .hr-welcome-tools{
+    align-items:stretch;
+    width:100%;
+  }
+  .tenant-shell .hr-welcome-tools .digital-clock{
+    min-width:0;
+    width:100%;
+  }
+  .tenant-shell .hr-welcome-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .tenant-shell .hr-welcome-actions .btn{width:100%}
+  .tenant-shell .digital-kpi-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .tenant-shell .digital-kpi-card{
+    min-height:116px;
+    padding:13px;
+  }
+  .tenant-shell .digital-kpi-card>strong{font-size:1.38rem}
+  .tenant-shell .digital-kpi-card>small{font-size:.64rem}
+  .tenant-shell .digital-signal-strip{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .tenant-shell .digital-signal-strip>div:last-child{grid-column:1/-1}
+  .tenant-shell .dashboard-grid.three.digital-lower-grid{
+    grid-template-columns:1fr;
+  }
+  .tenant-shell .quick-panel.digital-quick-panel{grid-column:auto}
+  .tenant-shell .quick-panel.digital-quick-panel .quick-link{width:100%}
+  .tenant-shell .panel-heading{padding:15px 14px 12px}
+}
+@media(max-width:420px){
+  .tenant-shell .digital-kpi-grid{grid-template-columns:1fr 1fr}
+  .tenant-shell .digital-kpi-top i{width:32px;height:32px}
+  .tenant-shell .hr-welcome-actions{grid-template-columns:1fr}
+}
