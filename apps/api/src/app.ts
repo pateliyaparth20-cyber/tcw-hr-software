@@ -74,7 +74,7 @@ export class Api {
       return {company,invoices,gatewayConfigured:!!process.env.PAYMENT_GATEWAY_PROVIDER,paymentMessage:process.env.PAYMENT_INSTRUCTIONS??'Contact TCW HR Software billing support to complete payment. Access is restored after payment confirmation.'};
     }
     if(resource==='auth'){
-      if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
+      if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
       if(key==='logout'&&method==='POST')return this.auth.logout(ctx,res);
       if(key==='change-password'&&method==='POST')return this.auth.change(ctx,body,res);
       if(key==='sessions'&&method==='GET')return {items:await this.db.session.findMany({where:{userId:ctx.user.id},select:{id:true,createdAt:true,expiresAt:true,userAgent:true,ip:true}}),currentId:ctx.session.id};
