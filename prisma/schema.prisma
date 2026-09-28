@@ -888,3 +888,13 @@ model PlatformAIConfig {
 
   @@map("platform_ai_config")
 }
+
+
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
