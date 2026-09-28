@@ -1336,3 +1336,130 @@ td{padding:14px 16px;line-height:1.45}
 @media(max-width:420px){
   .tenant-shell .digital-kpi-grid{grid-template-columns:1fr}
 }
+
+
+/* v1.4.2 super admin navigation and logo sizing */
+.platform-shell .sidebar{width:268px}
+.platform-shell .main-shell{margin-left:268px;width:calc(100% - 268px)}
+.platform-shell .brand{
+  min-height:92px;
+  padding:18px 18px 16px;
+  gap:14px;
+  align-items:center;
+}
+.platform-shell .brand-mark.brand-logo{
+  width:58px;
+  height:58px;
+  min-width:58px;
+  border-radius:14px;
+  padding:5px;
+  display:grid;
+  place-items:center;
+}
+.platform-shell .brand-mark.brand-logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border-radius:9px;
+}
+.platform-shell .brand>span:last-child{min-width:0}
+.platform-shell .brand strong{
+  font-size:1.24rem;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.platform-shell .brand small{
+  margin-top:5px;
+  font-size:.68rem;
+  letter-spacing:.055em;
+}
+.platform-shell .workspace-switch{
+  margin:14px 14px 18px;
+  padding:12px 11px;
+  gap:11px;
+}
+.platform-shell .workspace-icon{
+  width:40px;
+  height:40px;
+  border-radius:10px;
+}
+.platform-shell .workspace-icon img{
+  max-width:34px;
+  max-height:34px;
+}
+.platform-shell .sidebar nav{
+  padding:0 12px 18px;
+}
+.platform-shell .nav-group{
+  margin-bottom:18px;
+}
+.platform-shell .nav-group-label{
+  padding:0 12px;
+  margin-bottom:7px;
+  font-size:.69rem;
+  letter-spacing:.06em;
+}
+.platform-shell .nav-item{
+  gap:12px;
+  min-height:44px;
+  padding:10px 12px;
+  margin:3px 0;
+  border-radius:9px;
+  font-size:.9rem;
+}
+.platform-shell .nav-item svg{
+  width:19px;
+  height:19px;
+}
+.platform-shell .nav-item span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.platform-shell .nav-item.selected{
+  background:#25578f;
+  box-shadow:inset 3px 0 0 #7fb0ff;
+}
+.platform-shell .sidebar-bottom{
+  padding:14px 14px;
+}
+.platform-shell .account{
+  gap:10px;
+}
+.platform-shell .account .avatar{
+  width:38px;
+  height:38px;
+}
+.platform-shell .account strong{font-size:.84rem}
+.platform-shell .account small{font-size:.7rem}
+.platform-shell .topbar{padding-left:26px;padding-right:26px}
+.platform-shell .breadcrumb{font-size:.82rem}
+.platform-shell .mobile-toggle{color:#61748a}
+
+@media(max-width:900px){
+ .platform-shell .sidebar{
+   width:min(86vw,300px);
+ }
+ .platform-shell .main-shell{
+   margin-left:0;
+   width:100%;
+ }
+ .platform-shell .brand{
+   min-height:84px;
+   padding:14px 16px;
+ }
+ .platform-shell .brand-mark.brand-logo{
+   width:52px;
+   height:52px;
+   min-width:52px;
+ }
+ .platform-shell .nav-item{
+   min-height:46px;
+   font-size:.94rem;
+ }
+}
+@media(max-width:700px){
+ .platform-shell .brand strong{font-size:1.14rem}
+ .platform-shell .brand small{font-size:.65rem}
+ .platform-shell .workspace-switch{margin-top:10px}
+}
