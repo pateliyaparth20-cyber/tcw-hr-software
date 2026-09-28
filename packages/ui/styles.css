@@ -387,3 +387,22 @@ body{font-size:16px}
   .legal-shell section p{font-size:.9rem;line-height:1.58}
   .legal-shell footer{flex-direction:column;align-items:flex-start}
 }
+
+
+/* v1.3.2 signup controls, trial visibility, and responsive finishing */
+.auth-pro-form .terms-check{display:grid!important;grid-template-columns:20px minmax(0,1fr)!important;align-items:start!important;gap:10px!important;width:100%!important;margin:0!important}
+.auth-pro-form .terms-check input{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;margin:2px 0 0!important;box-shadow:none!important}
+.auth-pro-form .terms-check span{display:block!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.5!important}
+.trial-topline{display:flex;align-items:center;justify-content:center;gap:10px;min-height:34px;padding:7px 16px;border-bottom:1px solid #f2dfaa;background:#fff8df;color:#684f12;font-size:.78rem;line-height:1.35;text-align:center}
+.trial-topline strong{font-weight:800}.trial-topline span{color:#806827}
+@media(max-width:700px){
+  .trial-topline{align-items:flex-start;flex-direction:column;gap:2px;padding:8px 12px;text-align:left}
+  .auth-pro-form .terms-check{font-size:.82rem!important}
+  .auth-pro-form .signup-grid{grid-template-columns:1fr!important}
+  .auth-pro-form label,.auth-pro-form .signup-grid label{width:100%;min-width:0}
+  .auth-pro-form input,.auth-pro-form select{max-width:100%;box-sizing:border-box}
+}
+@media(min-width:701px) and (max-width:1180px){
+  .auth-pro-card{max-height:none}
+  .auth-pro-form .terms-check{font-size:.76rem!important}
+}
