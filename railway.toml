@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm ci --include=dev && npm run db:generate && npm run build"
+buildCommand = "npm run db:generate && npm run build"
 
 [deploy]
 startCommand = "npm run railway:boot"
