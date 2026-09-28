@@ -962,3 +962,75 @@ td{padding:14px 16px;line-height:1.45}
  .company-update-form{grid-template-columns:1fr;padding:0 14px 14px}
  .company-update-form .span-two{grid-column:auto}
 }
+
+
+/* v1.4.0 professional super admin shell */
+.platform-shell{--primary:#2459a8;background:#f4f7fb}
+.platform-shell .sidebar{background:#0f2036;border-right:0;color:#dce7f3}
+.platform-shell .brand{border-bottom:1px solid rgba(255,255,255,.08)}
+.platform-shell .brand strong{color:#fff}
+.platform-shell .brand strong span{color:#7fb0ff}
+.platform-shell .brand small{color:#8296ad}
+.platform-shell .brand-mark.brand-logo{background:#fff;border-color:rgba(255,255,255,.16)}
+.platform-shell .workspace-switch{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}
+.platform-shell .workspace-switch strong{color:#eef5fc}
+.platform-shell .workspace-switch small{color:#8fa4ba}
+.platform-shell .workspace-icon{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.08)}
+.platform-shell .nav-group-label{color:#6f879f}
+.platform-shell .nav-item{color:#a8b8c8}
+.platform-shell .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.platform-shell .nav-item.selected{background:#1d4e89;color:#fff}
+.platform-shell .sidebar-bottom{border-top-color:rgba(255,255,255,.08)}
+.platform-shell .account strong{color:#edf4fb}
+.platform-shell .account small{color:#8499ad}
+.platform-shell .account .icon-button{color:#9db0c3}
+.platform-shell .topbar{background:#fff;border-bottom-color:#e4eaf1;box-shadow:0 1px 0 rgba(21,44,73,.02)}
+.platform-shell .workspace-main{max-width:1680px}
+.platform-shell .platform-hero{background:#173a63;border:1px solid #173a63;border-radius:16px;box-shadow:none}
+.platform-shell .platform-hero:before{display:none}
+.platform-shell .platform-hero h1{font-size:2.15rem;letter-spacing:0;max-width:760px}
+.platform-shell .platform-hero p{color:#c4d2df}
+.platform-shell .platform-hero .hero-kicker{color:#8fb7e8}
+.platform-shell .platform-hero-pulse{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);border-radius:12px}
+.platform-shell .power-stats .stat{border-radius:12px;background:#fff;box-shadow:none}
+.platform-shell .power-stats .stat:after{display:none}
+.platform-shell .power-stats .stat>strong{font-size:1.75rem;color:#213b58}
+.platform-shell .command-panel,
+.platform-shell .notification-center,
+.platform-shell .support-board,
+.platform-shell .ai-config-panel,
+.platform-shell .platform-branding-panel,
+.platform-shell .company-update-panel{border-radius:12px;box-shadow:none}
+.platform-shell .portfolio-summary{background:#edf1f5}
+.platform-shell .portfolio-summary>div{background:#fbfcfe}
+.platform-shell .billing-hero strong{font-size:1.9rem;letter-spacing:0}
+.platform-shell .record-cards{padding-left:0;padding-right:0}
+.platform-shell .record-card{background:#fff}
+.platform-shell .table-scroll{border-radius:0}
+.platform-shell th{background:#f7f9fc;color:#66788b;font-weight:600}
+.platform-shell td{color:#5f7082}
+.platform-shell tbody tr:hover{background:#f8fafc}
+.platform-shell .board-column{background:#f2f5f9;border-color:#e2e8f0}
+.platform-shell .pipeline-card{box-shadow:none}
+.platform-shell .page-title h1{color:#203750}
+.platform-shell .page-title p{color:#738399}
+.platform-shell .btn.primary{background:#2459a8}
+.platform-shell .badge.blue{background:#e9f0fb;color:#3869aa}
+.platform-shell .legal-shell,
+.platform-shell .panel{box-shadow:none}
+.platform-shell .platform-branding-body{padding-top:2px}
+.platform-shell .company-update-form textarea{min-height:120px}
+.platform-shell .form-footer{background:transparent}
+.platform-shell .support-ticket:hover{background:#f8fafc}
+.platform-shell .notification-row.unread:before{background:#2459a8}
+@media(max-width:1100px){
+ .platform-shell .platform-hero{align-items:flex-start}
+ .platform-shell .platform-hero-pulse{min-width:220px}
+}
+@media(max-width:700px){
+ .platform-shell .sidebar{box-shadow:18px 0 50px rgba(7,19,35,.22)}
+ .platform-shell .platform-hero{padding:20px 16px}
+ .platform-shell .platform-hero h1{font-size:1.75rem}
+ .platform-shell .platform-hero-pulse{width:100%;min-width:0}
+ .platform-shell .power-stats .stat>strong{font-size:1.45rem}
+}
