@@ -1803,3 +1803,73 @@ td{padding:14px 16px;line-height:1.45}
  .auth-pro-options label>span{max-width:220px}
  .auth-pro-options .remember-note{font-size:.56rem}
 }
+
+
+/* v1.4.9 forgot password mobile alignment */
+.auth-pro-platform .auth-pro-card,
+.auth-pro-tenant .auth-pro-card{
+  display:flex;
+  flex-direction:column;
+}
+.auth-pro-platform .auth-pro-head,
+.auth-pro-tenant .auth-pro-head{
+  flex:0 0 auto;
+}
+.auth-pro-platform .auth-pro-subtitle,
+.auth-pro-tenant .auth-pro-subtitle{
+  max-width:100%;
+}
+.auth-pro-platform .reset-success-panel,
+.auth-pro-tenant .reset-success-panel,
+.auth-pro-platform .auth-pro-form,
+.auth-pro-tenant .auth-pro-form{
+  width:100%;
+}
+@media(max-width:700px){
+  .auth-pro-platform .auth-pro-main,
+  .auth-pro-tenant .auth-pro-main{
+    min-height:100dvh;
+    align-items:center;
+    justify-content:center;
+    padding-top:calc(16px + env(safe-area-inset-top));
+    padding-bottom:calc(18px + env(safe-area-inset-bottom));
+  }
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card{
+    margin:0 auto;
+    width:100%;
+    max-width:440px;
+  }
+  .auth-pro-platform .auth-pro-mobile-brand,
+  .auth-pro-tenant .auth-pro-mobile-brand{
+    margin-bottom:15px;
+  }
+  .auth-pro-platform .auth-pro-head,
+  .auth-pro-tenant .auth-pro-head{
+    margin-bottom:14px;
+  }
+  .auth-pro-platform .auth-pro-card h2,
+  .auth-pro-tenant .auth-pro-card h2{
+    margin-bottom:7px;
+  }
+  .auth-pro-platform .auth-pro-subtitle,
+  .auth-pro-tenant .auth-pro-subtitle{
+    margin-bottom:17px;
+    line-height:1.5;
+  }
+  .auth-pro-platform .reset-success-panel,
+  .auth-pro-tenant .reset-success-panel{
+    margin-top:2px;
+  }
+  .auth-pro-platform .auth-pro-form,
+  .auth-pro-tenant .auth-pro-form{
+    gap:13px;
+  }
+}
+@media(max-width:380px){
+  .auth-pro-platform .auth-pro-main,
+  .auth-pro-tenant .auth-pro-main{
+    padding-left:10px;
+    padding-right:10px;
+  }
+}
