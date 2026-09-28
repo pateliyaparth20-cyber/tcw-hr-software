@@ -493,3 +493,12 @@ body{font-size:16px}
   .auth-pro-signup .auth-pro-card{max-width:650px}
   .trial-success-panel{padding:18px}
 }
+
+
+/* v1.3.5 password-reset confirmation */
+.reset-success-panel{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:24px 20px;border:1px solid #d5e9df;border-radius:16px;background:#f6fffa}
+.reset-success-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:#dff5e9;color:#22845e}
+.reset-success-panel h3{margin:2px 0 0;color:#214a3b;font-size:1.15rem}
+.reset-success-panel p{max-width:430px;margin:0 0 5px;color:#678277;font-size:.8rem;line-height:1.55}
+.reset-success-panel .btn{min-width:180px;justify-content:center}
+@media(max-width:700px){.reset-success-panel{padding:20px 16px}.reset-success-panel p{font-size:.84rem}}
