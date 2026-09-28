@@ -509,3 +509,10 @@ body{font-size:16px}
 .ios-install-card>div>svg{color:#3474ef;margin-bottom:8px}.ios-install-card h2{margin:4px 0 6px;color:#173451}.ios-install-card p{margin:0;color:#6f8398;line-height:1.5}
 .ios-install-card ol{margin:0;padding-left:22px;color:#516981;line-height:1.8}.ios-install-card strong{color:#203b57}
 @media(max-width:700px){.ios-install-card{grid-template-columns:1fr;gap:12px;padding:18px}.ios-install-card ol{line-height:1.65}}
+
+
+/* v1.3.7 cross-device install guidance */
+.desktop-install-card{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:24px;align-items:center;margin:18px 0;padding:22px 24px}
+.desktop-install-card>div>svg{color:#3474ef;margin-bottom:8px}.desktop-install-card h2{margin:4px 0 6px;color:#173451}.desktop-install-card p{margin:0;color:#6f8398;line-height:1.5}
+.desktop-install-card ol{margin:0;padding-left:22px;color:#516981;line-height:1.8}.desktop-install-card strong{color:#203b57}
+@media(max-width:700px){.desktop-install-card{grid-template-columns:1fr;gap:12px;padding:18px}.desktop-install-card ol{line-height:1.65}}
