@@ -749,3 +749,9 @@ body{font-size:16px}
   .auth-pro-signup .auth-pro-legal{margin-top:2px!important;padding-top:2px!important}
   .auth-pro-signup .auth-pro-legal-row>a,.auth-pro-signup .auth-pro-install-link,.auth-pro-signup .auth-pro-company-link{font-size:.54rem!important;min-height:16px!important;padding:0 3px!important}
 }
+
+
+/* v1.3.12 separate immutable TCW product branding from client branding */
+.workspace-initials{font-size:.72rem;font-weight:800;letter-spacing:.03em;color:#59718a}
+.brand-upload>div:last-child{min-width:0}
+.brand-upload>div:last-child>p{max-width:620px;line-height:1.5}
