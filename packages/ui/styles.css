@@ -2298,449 +2298,193 @@ td{padding:14px 16px;line-height:1.45}
 }
 
 
-/* v1.5.3 premium product visual system */
-/* Shared premium visual language inspired by the approved product mockup */
-.tenant-shell,
-.platform-shell{
-  background:#f5f8fc;
+
+
+/* v1.5.5 stable auth typography */
+/* Stable typography for Sign in, Sign up, Forgot password and Reset password */
+.auth-pro-card h2{
+  font-size:1.72rem;
+  line-height:1.15;
+  margin-bottom:7px;
 }
-.tenant-shell .main-shell,
-.platform-shell .main-shell{
-  background:#f5f8fc;
+.auth-pro-subtitle{
+  font-size:.78rem;
+  line-height:1.55;
+  margin-bottom:20px;
 }
-.tenant-shell .workspace-main,
-.platform-shell .workspace-main{
-  max-width:1600px;
-  margin:0 auto;
+.auth-pro-form{
+  gap:14px;
 }
-.tenant-shell .topbar,
-.platform-shell .topbar{
-  background:rgba(255,255,255,.94);
-  border-bottom:1px solid #e4eaf1;
-  backdrop-filter:blur(12px);
-  box-shadow:0 1px 0 rgba(30,55,80,.025);
-}
-.tenant-shell .panel,
-.platform-shell .panel,
-.tenant-shell .stat,
-.platform-shell .stat,
-.tenant-shell .record-card,
-.platform-shell .record-card{
-  background:#fff;
-  border:1px solid #e2e8ef;
-  box-shadow:0 8px 24px rgba(31,60,91,.045);
-}
-.tenant-shell .panel,
-.platform-shell .panel{
-  border-radius:16px;
-}
-.tenant-shell .panel-heading h2,
-.platform-shell .panel-heading h2{
-  color:#203a55;
+.auth-pro-form>label,
+.auth-pro-form .signup-all-grid label,
+.auth-pro-form .signup-grid label{
+  font-size:.72rem;
+  line-height:1.35;
   font-weight:700;
+  gap:7px;
 }
-.tenant-shell .panel-heading p,
-.platform-shell .panel-heading p{
-  color:#8291a3;
+.auth-pro-form input,
+.auth-pro-form select,
+.auth-pro-form textarea{
+  font-size:.84rem;
+  line-height:1.35;
 }
-.tenant-shell .btn.primary,
-.platform-shell .btn.primary{
-  background:linear-gradient(135deg,#2d73ea,#1765db);
-  border-color:#1765db;
-  box-shadow:0 8px 18px rgba(39,111,225,.17);
+.auth-pro-form input::placeholder,
+.auth-pro-form textarea::placeholder{
+  font-size:.72rem;
+  color:#9aa8b8;
+  opacity:1;
+  font-weight:500;
 }
-.tenant-shell .btn.secondary,
-.platform-shell .btn.secondary{
-  background:#fff;
-  border-color:#dbe4ee;
-  color:#47627e;
+.auth-pro-form select{
+  color:#314a64;
 }
-.tenant-shell input,
-.tenant-shell select,
-.tenant-shell textarea,
-.platform-shell input,
-.platform-shell select,
-.platform-shell textarea{
-  border-color:#dce4ed;
-  background:#fff;
-  color:#233c56;
+.auth-pro-options,
+.auth-pro-options label,
+.auth-pro-signup-link,
+.back-login{
+  font-size:.7rem;
 }
-.tenant-shell input:focus,
-.tenant-shell select:focus,
-.tenant-shell textarea:focus,
-.platform-shell input:focus,
-.platform-shell select:focus,
-.platform-shell textarea:focus{
-  border-color:#71a7ed;
-  box-shadow:0 0 0 4px rgba(52,116,239,.08);
+.auth-pro-legal-row{
+  font-size:.64rem;
 }
-.tenant-shell table,
-.platform-shell table{
-  background:#fff;
+.auth-pro-signup .compact-notice,
+.auth-pro-signup .signup-short-note{
+  padding:10px 11px;
+  align-items:flex-start;
 }
-.tenant-shell th,
-.platform-shell th{
-  background:#f8fafc;
-  color:#728197;
+.auth-pro-signup .compact-notice p,
+.auth-pro-signup .signup-short-note p{
+  margin:0;
+  font-size:.68rem!important;
+  line-height:1.45!important;
+  color:#718397;
 }
-.tenant-shell td,
-.platform-shell td{
-  color:#60748a;
+.auth-pro-signup .terms-check{
+  font-size:.7rem!important;
+  line-height:1.45!important;
+  font-weight:500!important;
+  color:#687b90;
 }
-.tenant-shell tbody tr:hover,
-.platform-shell tbody tr:hover{
-  background:#f8fbff;
+.auth-pro-signup .terms-check span{
+  font-size:inherit!important;
+  line-height:inherit!important;
 }
-
-/* HR sidebar closer to the product mockup */
-.tenant-shell .sidebar{
-  background:linear-gradient(180deg,#0f345f 0%,#0d2b4f 100%);
-  border-right:0;
-  box-shadow:10px 0 28px rgba(24,51,83,.05);
+.auth-pro-badge{
+  font-size:.58rem;
 }
-.tenant-shell .brand{
-  min-height:98px;
-  padding:16px 16px 14px;
-}
-.tenant-shell .brand-mark{
-  background:#fff;
-  border:1px solid rgba(255,255,255,.2);
-  box-shadow:0 8px 22px rgba(2,20,38,.2);
-}
-.tenant-shell .brand strong{color:#fff}
-.tenant-shell .brand small{color:#a9c5df}
-.tenant-shell .workspace-switch{
-  background:rgba(255,255,255,.06);
-  border-color:rgba(255,255,255,.08);
-}
-.tenant-shell .workspace-switch strong{color:#eaf4ff}
-.tenant-shell .workspace-switch small{color:#9fb8d0}
-.tenant-shell .nav-group-label{color:#7294b5}
-.tenant-shell .nav-item{
-  color:#c2d4e6;
-  border-radius:9px;
-}
-.tenant-shell .nav-item:hover{
-  background:rgba(255,255,255,.06);
-  color:#fff;
-}
-.tenant-shell .nav-item.selected{
-  background:#1768e5;
-  color:#fff;
-  box-shadow:0 8px 20px rgba(16,92,195,.24);
-}
-.tenant-shell .nav-item.selected svg{color:#fff}
-.tenant-shell .sidebar-bottom{
-  border-top:1px solid rgba(255,255,255,.08);
-}
-.tenant-shell .account strong{color:#eef6ff}
-.tenant-shell .account small{color:#9db5cb}
-
-/* HR dashboard composition */
-.tenant-shell .hr-welcome-card{
-  box-shadow:0 8px 24px rgba(34,68,103,.045);
-}
-.tenant-shell .digital-kpi-card{
-  position:relative;
-  overflow:hidden;
-  box-shadow:0 8px 22px rgba(34,68,103,.04);
-}
-.tenant-shell .digital-kpi-card:after{
-  content:"";
-  position:absolute;
-  width:72px;height:72px;
-  right:-28px;bottom:-28px;
-  border-radius:50%;
-  background:rgba(45,115,234,.045);
-}
-.tenant-shell .digital-kpi-card.blue .digital-kpi-top i{
-  background:#eaf2ff;color:#236ddf;
-}
-.tenant-shell .digital-kpi-card.green .digital-kpi-top i{
-  background:#eaf8f2;color:#2aa36f;
-}
-.tenant-shell .digital-kpi-card.amber .digital-kpi-top i{
-  background:#fff6df;color:#d18a16;
-}
-.tenant-shell .digital-kpi-card.violet .digital-kpi-top i{
-  background:#f2edff;color:#7653df;
-}
-.tenant-shell .trend-chart{
-  padding:0 14px 10px;
-}
-.tenant-shell .digital-health-list>a{
-  border-radius:10px;
-}
-.tenant-shell .digital-health-list>a:hover{
-  background:#f6f9fd;
-}
-.tenant-shell .quick-link{
-  min-height:62px;
-}
-.tenant-shell .dashboard-ai{
-  border:1px solid #e0e7f0;
-  background:linear-gradient(135deg,#fff 0%,#f8fbff 100%);
+.auth-pro-secure{
+  font-size:.6rem;
 }
 
-/* Super Admin: same product family, darker navigation */
-.platform-shell .sidebar{
-  background:linear-gradient(180deg,#102840,#0e2137);
-  border-right:0;
-  box-shadow:10px 0 28px rgba(21,43,67,.06);
-}
-.platform-shell .workspace-switch{
-  background:rgba(255,255,255,.055);
-  border-color:rgba(255,255,255,.08);
-}
-.platform-shell .workspace-switch strong{color:#eef6ff}
-.platform-shell .workspace-switch small{color:#9bb3c9}
-.platform-shell .nav-group-label{color:#6f8ca8}
-.platform-shell .nav-item{color:#bdcee0}
-.platform-shell .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
-.platform-shell .nav-item.selected{
-  background:#1f67c8;
-  color:#fff;
-  box-shadow:0 8px 20px rgba(13,78,161,.22);
-}
-.platform-shell .sidebar-bottom{
-  border-top:1px solid rgba(255,255,255,.08);
-}
-.platform-shell .account strong{color:#edf5ff}
-.platform-shell .account small{color:#9bb2c8}
-.platform-shell .platform-hero{
-  border:1px solid #dfe7ef;
-  background:linear-gradient(135deg,#fff 0%,#f5f9ff 72%,#eaf2ff 100%);
-  box-shadow:0 8px 24px rgba(31,60,91,.045);
-}
-.platform-shell .platform-hero h1{color:#203b56}
-.platform-shell .platform-hero p{color:#75869a}
-.platform-shell .power-stats .stat{
-  border-radius:14px;
-}
-.platform-shell .command-panel{
-  border-radius:16px;
-}
-
-/* Better visual density on large desktop */
-@media(min-width:1200px){
-  .tenant-shell .workspace-main,
-  .platform-shell .workspace-main{
-    padding-top:26px;
-    padding-bottom:18px;
-  }
-  .tenant-shell .panel-heading,
-  .platform-shell .panel-heading{
-    padding-top:18px;
-    padding-bottom:13px;
-  }
-}
-
-/* Phone: app-like cards and navigation, natural scrolling */
 @media(max-width:700px){
-  .tenant-shell,
-  .platform-shell{
-    background:#f3f7fb;
+  .auth-pro-main,
+  .auth-pro-signup .auth-pro-main{
+    align-items:flex-start!important;
+    justify-content:flex-start!important;
+    min-height:100dvh;
+    height:auto;
+    overflow:visible;
+    padding:14px 11px calc(28px + env(safe-area-inset-bottom));
   }
-  .tenant-shell .topbar,
-  .platform-shell .topbar{
-    height:58px;
-    padding-left:12px;
-    padding-right:12px;
+  .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    padding:20px 16px 22px;
   }
-  .tenant-shell .workspace-main,
-  .platform-shell .workspace-main{
-    padding:12px 10px calc(94px + env(safe-area-inset-bottom));
+  .auth-pro-card h2,
+  .auth-pro-signup .auth-pro-card h2{
+    font-size:1.4rem!important;
+    line-height:1.18;
+    margin-bottom:6px;
   }
-  .tenant-shell .panel,
-  .platform-shell .panel,
-  .tenant-shell .stat,
-  .platform-shell .stat{
-    border-radius:14px;
-    box-shadow:0 6px 18px rgba(36,66,99,.04);
+  .auth-pro-subtitle{
+    font-size:.74rem!important;
+    line-height:1.5;
+    margin-bottom:16px!important;
   }
-  .tenant-shell .hr-welcome-card{
-    margin-bottom:12px;
-    padding:15px 14px;
+  .auth-pro-head{
+    margin-bottom:13px!important;
   }
-  .tenant-shell .hr-welcome-copy h1{
-    font-size:1.48rem;
+  .auth-pro-badge{
+    font-size:.55rem!important;
   }
-  .tenant-shell .hr-welcome-copy>p{
-    margin-bottom:10px;
+  .auth-pro-secure{
+    font-size:.57rem!important;
   }
-  .tenant-shell .hr-welcome-company{
-    gap:7px;
+  .auth-pro-form{
+    gap:13px!important;
   }
-  .tenant-shell .hr-welcome-tools{
-    gap:9px;
+  .auth-pro-form>label,
+  .auth-pro-form .signup-all-grid label,
+  .auth-pro-form .signup-grid label{
+    font-size:.72rem!important;
+    line-height:1.35!important;
+    gap:6px;
   }
-  .tenant-shell .hr-welcome-actions{
-    grid-template-columns:1fr 1fr;
+  .auth-pro-signup .signup-all-grid,
+  .auth-pro-signup .signup-grid{
+    display:grid;
+    grid-template-columns:1fr!important;
+    gap:13px!important;
   }
-  .tenant-shell .digital-kpi-grid{
-    gap:9px;
-    margin-bottom:12px;
+  .auth-pro-form input,
+  .auth-pro-form select,
+  .auth-pro-form textarea{
+    min-height:48px;
+    font-size:16px!important;
+    line-height:1.25;
+    padding:11px 12px;
   }
-  .tenant-shell .digital-kpi-card{
-    min-height:112px;
-    padding:12px;
-    border-radius:13px;
+  .auth-pro-form input::placeholder,
+  .auth-pro-form textarea::placeholder{
+    font-size:12px!important;
+    line-height:1.25;
+    color:#9aa8b8;
   }
-  .tenant-shell .digital-kpi-card>strong{
-    font-size:1.32rem;
+  .auth-pro-signup .compact-notice p,
+  .auth-pro-signup .signup-short-note p{
+    font-size:.66rem!important;
+    line-height:1.4!important;
   }
-  .tenant-shell .digital-kpi-card>small{
-    font-size:.63rem;
+  .auth-pro-signup .terms-check{
+    font-size:.68rem!important;
+    line-height:1.45!important;
+  }
+  .auth-pro-options,
+  .auth-pro-options label{
+    font-size:.68rem!important;
     line-height:1.4;
   }
-  .tenant-shell .digital-dashboard-grid,
-  .tenant-shell .digital-lower-grid{
-    gap:12px;
-    margin-bottom:12px;
+  .auth-pro-signup-link,
+  .back-login{
+    font-size:.68rem!important;
+    line-height:1.4;
   }
-  .tenant-shell .panel-heading,
-  .platform-shell .panel-heading{
-    padding:14px 13px 11px;
+  .auth-pro-legal-row{
+    font-size:.61rem!important;
+    line-height:1.4;
   }
-  .tenant-shell .panel-heading h2,
-  .platform-shell .panel-heading h2{
-    font-size:.94rem;
+  .auth-pro-submit{
+    min-height:48px;
+    font-size:.82rem;
   }
-  .tenant-shell .panel-heading p,
-  .platform-shell .panel-heading p{
-    font-size:.67rem;
-  }
-  .tenant-shell .list-row,
-  .platform-shell .list-row{
+}
+
+@media(max-width:380px){
+  .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
     padding-left:13px;
     padding-right:13px;
   }
-  .tenant-shell .mobile-bottom-nav{
-    left:8px;
-    right:8px;
-    bottom:calc(8px + env(safe-area-inset-bottom));
-    width:auto;
-    border:1px solid #dde5ee;
-    border-radius:16px;
-    background:rgba(255,255,255,.96);
-    box-shadow:0 14px 38px rgba(29,57,87,.14);
-    backdrop-filter:blur(14px);
-    overflow:hidden;
+  .auth-pro-card h2,
+  .auth-pro-signup .auth-pro-card h2{
+    font-size:1.32rem!important;
   }
-  .tenant-shell .mobile-bottom-nav a{
-    min-height:58px;
-  }
-  .tenant-shell .mobile-bottom-nav a.selected{
-    color:#1768e5;
-    background:#edf4ff;
-  }
-  .platform-shell .platform-hero{
-    padding:17px 15px;
-    border-radius:15px;
-  }
-  .platform-shell .platform-hero h1{
-    font-size:1.55rem;
-  }
-  .platform-shell .stats.four.power-stats{
-    grid-template-columns:1fr 1fr;
-    gap:9px;
-  }
-  .platform-shell .power-stats .stat{
-    min-height:112px;
-    padding:13px;
-  }
-}
-
-@media(max-width:420px){
-  .tenant-shell .workspace-main,
-  .platform-shell .workspace-main{
-    padding-left:8px;
-    padding-right:8px;
-  }
-  .tenant-shell .hr-welcome-actions{
-    grid-template-columns:1fr;
-  }
-  .tenant-shell .digital-kpi-grid{
-    grid-template-columns:1fr 1fr;
-  }
-  .platform-shell .stats.four.power-stats{
-    grid-template-columns:1fr 1fr;
-  }
-}
-
-
-/* v1.5.4 visible mockup match + mobile nav active */
-/* Make the approved mockup direction visibly distinct */
-.tenant-shell .hr-welcome-card{
-  background:
-    radial-gradient(circle at 88% 15%,rgba(60,132,238,.12),transparent 26%),
-    linear-gradient(135deg,#ffffff 0%,#f7fbff 56%,#edf5ff 100%);
-  border-color:#d8e4f2;
-}
-.tenant-shell .hr-welcome-copy h1{
-  font-size:2.12rem;
-  color:#173a61;
-}
-.tenant-shell .digital-kpi-card{
-  border-color:#dfe7f0;
-  box-shadow:0 10px 26px rgba(34,68,103,.065);
-}
-.tenant-shell .digital-kpi-top i{
-  width:40px;
-  height:40px;
-  border-radius:12px;
-}
-.tenant-shell .digital-panel,
-.tenant-shell .digital-lower-grid>.panel{
-  border-color:#dfe7f0;
-  box-shadow:0 10px 26px rgba(34,68,103,.05);
-}
-.tenant-shell .panel-heading h2{
-  font-size:1rem;
-}
-.tenant-shell .digital-section-label{
-  color:#5e87bf;
-  font-weight:800;
-  letter-spacing:.09em;
-}
-.platform-shell .platform-hero{
-  background:
-    radial-gradient(circle at 90% 18%,rgba(47,111,228,.13),transparent 25%),
-    linear-gradient(135deg,#fff 0%,#f6faff 58%,#eaf3ff 100%);
-}
-.platform-shell .power-stats .stat{
-  box-shadow:0 10px 26px rgba(31,60,91,.055);
-}
-
-/* markup uses .active on mobile shortcuts */
-.tenant-shell .mobile-bottom-nav a.active,
-.tenant-shell .mobile-bottom-nav button.active,
-.platform-shell .mobile-bottom-nav a.active,
-.platform-shell .mobile-bottom-nav button.active{
-  color:#1768e5;
-  background:#edf4ff;
-}
-.tenant-shell .mobile-bottom-nav a.active svg,
-.tenant-shell .mobile-bottom-nav button.active svg,
-.platform-shell .mobile-bottom-nav a.active svg,
-.platform-shell .mobile-bottom-nav button.active svg{
-  color:#1768e5;
-}
-
-@media(max-width:700px){
-  .tenant-shell .hr-welcome-card{
-    background:linear-gradient(145deg,#fff 0%,#f2f7ff 100%);
-    border-color:#dbe6f2;
-  }
-  .tenant-shell .hr-welcome-copy h1{
-    font-size:1.6rem;
-  }
-  .tenant-shell .digital-kpi-card{
-    min-height:118px;
-    box-shadow:0 8px 20px rgba(34,68,103,.055);
-  }
-  .tenant-shell .digital-kpi-top i{
-    width:36px;
-    height:36px;
+  .auth-pro-form input::placeholder,
+  .auth-pro-form textarea::placeholder{
+    font-size:11.5px!important;
   }
 }
