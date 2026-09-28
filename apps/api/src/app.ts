@@ -127,6 +127,54 @@ export class Api {
       if(method==='PATCH'&&key){await this.db.notification.updateMany({where:{...where,id:id.parse(key)},data:{readAt:new Date()}});return {ok:true};}
     }
     
+    if(resource==='system'&&key==='platform-profile'){
+      platform(ctx);
+      const defaults={companyName:'Tech Cyber Warrior',legalName:'',email:'',phone:'',website:'https://techcyberwarrior.in',address:'',city:'',state:'Gujarat',country:'India',postalCode:'',taxId:'',pan:'',supportEmail:'',logo:'/tcw-logo.png'};
+      if(method==='GET'){
+        requirePermission(ctx,'system','VIEW');
+        const [profileRow,brandingRow]=await Promise.all([
+          this.db.platformSetting.findUnique({where:{key:'platform-profile'}}),
+          this.db.platformSetting.findUnique({where:{key:'branding'}})
+        ]);
+        const profile=profileRow?.value&&typeof profileRow.value==='object'&&!Array.isArray(profileRow.value)?profileRow.value as any:{};
+        const branding=brandingRow?.value&&typeof brandingRow.value==='object'&&!Array.isArray(brandingRow.value)?brandingRow.value as any:{};
+        return {...defaults,...profile,logo:branding.logo??profile.logo??defaults.logo,updatedAt:profileRow?.updatedAt??null};
+      }
+      if(method==='PUT'){
+        requirePermission(ctx,'system','EDIT');
+        const input=z.object({
+          companyName:z.string().trim().min(1).max(160),
+          legalName:z.string().trim().max(200).default(''),
+          email:z.string().trim().email().or(z.literal('')).default(''),
+          phone:z.string().trim().max(40).default(''),
+          website:z.string().trim().url().or(z.literal('')).default(''),
+          address:z.string().trim().max(500).default(''),
+          city:z.string().trim().max(120).default(''),
+          state:z.string().trim().max(120).default(''),
+          country:z.string().trim().max(120).default(''),
+          postalCode:z.string().trim().max(20).default(''),
+          taxId:z.string().trim().max(60).default(''),
+          pan:z.string().trim().max(30).default(''),
+          supportEmail:z.string().trim().email().or(z.literal('')).default(''),
+          logo:z.string().max(8_000_000).nullable()
+        }).strict().parse(body);
+        if(input.logo){
+          if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.logo))throw new BadRequestException('Use a PNG or JPEG logo up to 5 MB.');
+          const raw=Buffer.from(input.logo.split(',')[1],'base64');
+          const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+          const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;
+          if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG logo up to 5 MB.');
+        }
+        const {logo,...profile}=input;
+        const [profileRow]=await Promise.all([
+          this.db.platformSetting.upsert({where:{key:'platform-profile'},update:{value:profile},create:{key:'platform-profile',value:profile}}),
+          this.db.platformSetting.upsert({where:{key:'branding'},update:{value:{logo:logo??'/tcw-logo.png'}},create:{key:'branding',value:{logo:logo??'/tcw-logo.png'}}})
+        ]);
+        await audit(this.db,ctx,'PLATFORM_PROFILE_UPDATED','system');
+        return {...profile,logo:logo??'/tcw-logo.png',updatedAt:profileRow.updatedAt};
+      }
+      throw new NotFoundException();
+    }
     if(resource==='system'&&key==='branding'){
       platform(ctx);
       if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};}
