@@ -502,3 +502,10 @@ body{font-size:16px}
 .reset-success-panel p{max-width:430px;margin:0 0 5px;color:#678277;font-size:.8rem;line-height:1.55}
 .reset-success-panel .btn{min-width:180px;justify-content:center}
 @media(max-width:700px){.reset-success-panel{padding:20px 16px}.reset-success-panel p{font-size:.84rem}}
+
+
+/* v1.3.6 public iOS install guidance */
+.ios-install-card{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:24px;align-items:center;margin:18px 0;padding:22px 24px}
+.ios-install-card>div>svg{color:#3474ef;margin-bottom:8px}.ios-install-card h2{margin:4px 0 6px;color:#173451}.ios-install-card p{margin:0;color:#6f8398;line-height:1.5}
+.ios-install-card ol{margin:0;padding-left:22px;color:#516981;line-height:1.8}.ios-install-card strong{color:#203b57}
+@media(max-width:700px){.ios-install-card{grid-template-columns:1fr;gap:12px;padding:18px}.ios-install-card ol{line-height:1.65}}
