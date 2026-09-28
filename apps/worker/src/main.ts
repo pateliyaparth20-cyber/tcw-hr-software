@@ -77,7 +77,12 @@ const worker=new Worker('peopleos-outbox',async job=>{
 worker.on('failed',(job,error)=>console.error('Outbox delivery failed for job',job?.id,String(error?.message??error??'unknown').slice(0,240)));
 let scanning=false;
 async function scan(){if(scanning)return;scanning=true;try{
-  const rows=await db.outbox.findMany({where:{sentAt:null,attempts:{lt:5}},take:100,orderBy:{createdAt:'asc'}});
+  const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
+  if(!smsConfigured){
+    await db.outbox.updateMany({where:{kind:'SMS',sentAt:null},data:{sentAt:new Date(),error:null}});
+    await db.notification.deleteMany({where:{title:'TCW Agent: message delivery issue',message:{startsWith:'SMS delivery failed'}}});
+  }
+  const rows=await db.outbox.findMany({where:{sentAt:null,attempts:{lt:5},...(smsConfigured?{}:{kind:{not:'SMS'}})},take:100,orderBy:{createdAt:'asc'}});
   for(const row of rows)await queue.add(row.kind,{id:row.id},{jobId:row.id,attempts:5,backoff:{type:'exponential',delay:5000},removeOnComplete:1000,removeOnFail:1000});
   await syncCompanyAccess(db);
   await prepareScheduledPayroll(db);
