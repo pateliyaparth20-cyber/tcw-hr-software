@@ -39,11 +39,11 @@ export const navigation=[
  {group:'Workspace',items:[['dashboard','Overview','dashboard'],['employees','People','employees'],['organization','Organization','organization'],['calendar','Calendar','calendar']]},
  {group:'Time & work',items:[['attendance','Attendance','attendance'],['devices','Devices','devices'],['workforce','Live workforce','workforce'],['leave','Time off','leave']]},
  {group:'Talent & finance',items:[['payroll','Payroll','payroll'],['recruitment','Recruitment','recruitment'],['goals','Performance','performance'],['courses','Training','training'],['assets','Assets','assets'],['expenses','Expenses','expenses'],['travel','Travel','travel'],['documents','Documents','documents'],['exit','Offboarding','exit']]},
- {group:'Intelligence',items:[['reports','Reports','reports'],['ai','AI assistant','ai'],['support','Support','support'],['settings','Settings','company'],['users','Users & roles','users'],['audit','Audit log','audit'],['security','My security','self'],['apps','Apps & install','self']]}
+ {group:'Intelligence',items:[['reports','Reports','reports'],['ai','AI assistant','ai'],['support','Support','support'],['settings','Settings','company'],['users','Users & roles','users'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
 export const adminNavigation=[
  {group:'Platform',items:[['dashboard','Overview','dashboard'],['trials','Trial follow-up','tenants'],['companies','Companies','tenants'],['plans','Plans','plans']]},
  {group:'Business',items:[['leads','Sales pipeline','sales'],['invoices','Invoices','billing'],['payments','Payments','billing'],['support','Support tickets','support']]},
- {group:'Administration',items:[['system','System health','system'],['audit','Audit log','audit'],['security','My security','self'],['apps','Apps & install','self']]}
+ {group:'Administration',items:[['system','System health','system'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
 export const readable=(value:string)=>value.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' ').replaceAll('-',' ').replace(/^./,s=>s.toUpperCase());
