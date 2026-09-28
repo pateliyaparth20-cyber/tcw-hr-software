@@ -2667,3 +2667,80 @@ td{padding:14px 16px;line-height:1.45}
     grid-template-columns:1fr 1fr;
   }
 }
+
+
+/* v1.5.4 visible mockup match + mobile nav active */
+/* Make the approved mockup direction visibly distinct */
+.tenant-shell .hr-welcome-card{
+  background:
+    radial-gradient(circle at 88% 15%,rgba(60,132,238,.12),transparent 26%),
+    linear-gradient(135deg,#ffffff 0%,#f7fbff 56%,#edf5ff 100%);
+  border-color:#d8e4f2;
+}
+.tenant-shell .hr-welcome-copy h1{
+  font-size:2.12rem;
+  color:#173a61;
+}
+.tenant-shell .digital-kpi-card{
+  border-color:#dfe7f0;
+  box-shadow:0 10px 26px rgba(34,68,103,.065);
+}
+.tenant-shell .digital-kpi-top i{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+}
+.tenant-shell .digital-panel,
+.tenant-shell .digital-lower-grid>.panel{
+  border-color:#dfe7f0;
+  box-shadow:0 10px 26px rgba(34,68,103,.05);
+}
+.tenant-shell .panel-heading h2{
+  font-size:1rem;
+}
+.tenant-shell .digital-section-label{
+  color:#5e87bf;
+  font-weight:800;
+  letter-spacing:.09em;
+}
+.platform-shell .platform-hero{
+  background:
+    radial-gradient(circle at 90% 18%,rgba(47,111,228,.13),transparent 25%),
+    linear-gradient(135deg,#fff 0%,#f6faff 58%,#eaf3ff 100%);
+}
+.platform-shell .power-stats .stat{
+  box-shadow:0 10px 26px rgba(31,60,91,.055);
+}
+
+/* markup uses .active on mobile shortcuts */
+.tenant-shell .mobile-bottom-nav a.active,
+.tenant-shell .mobile-bottom-nav button.active,
+.platform-shell .mobile-bottom-nav a.active,
+.platform-shell .mobile-bottom-nav button.active{
+  color:#1768e5;
+  background:#edf4ff;
+}
+.tenant-shell .mobile-bottom-nav a.active svg,
+.tenant-shell .mobile-bottom-nav button.active svg,
+.platform-shell .mobile-bottom-nav a.active svg,
+.platform-shell .mobile-bottom-nav button.active svg{
+  color:#1768e5;
+}
+
+@media(max-width:700px){
+  .tenant-shell .hr-welcome-card{
+    background:linear-gradient(145deg,#fff 0%,#f2f7ff 100%);
+    border-color:#dbe6f2;
+  }
+  .tenant-shell .hr-welcome-copy h1{
+    font-size:1.6rem;
+  }
+  .tenant-shell .digital-kpi-card{
+    min-height:118px;
+    box-shadow:0 8px 20px rgba(34,68,103,.055);
+  }
+  .tenant-shell .digital-kpi-top i{
+    width:36px;
+    height:36px;
+  }
+}
