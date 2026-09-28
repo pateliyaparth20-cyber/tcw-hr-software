@@ -1034,3 +1034,305 @@ td{padding:14px 16px;line-height:1.45}
  .platform-shell .platform-hero-pulse{width:100%;min-width:0}
  .platform-shell .power-stats .stat>strong{font-size:1.45rem}
 }
+
+
+/* v1.4.1 premium tenant HR experience */
+.tenant-shell{
+  --tenant-navy:#17324d;
+  --tenant-blue:#2f6fe4;
+  --tenant-blue-soft:#eef4ff;
+  --tenant-green:#1f9b78;
+  --tenant-amber:#d18a1f;
+  --tenant-red:#cf5e68;
+  background:#f5f8fc;
+}
+.tenant-shell .sidebar{
+  background:#ffffff;
+  border-right:1px solid #e4eaf1;
+  box-shadow:4px 0 18px rgba(30,55,85,.025);
+}
+.tenant-shell .brand{
+  padding:22px 19px 18px;
+  border-bottom:1px solid #eef2f6;
+}
+.tenant-shell .brand strong{font-size:1.22rem;color:#1e3650}
+.tenant-shell .brand strong span{color:var(--tenant-blue)}
+.tenant-shell .brand small{color:#8b99aa;letter-spacing:.045em}
+.tenant-shell .workspace-switch{
+  background:#f7f9fc;
+  border-color:#e5eaf1;
+  border-radius:12px;
+  margin:14px 14px 18px;
+}
+.tenant-shell .workspace-switch strong{color:#31465d}
+.tenant-shell .workspace-switch small{color:#8796a8}
+.tenant-shell .nav-group-label{color:#9aa6b4}
+.tenant-shell .nav-item{
+  color:#68788b;
+  border-radius:9px;
+  min-height:42px;
+}
+.tenant-shell .nav-item:hover{background:#f5f8fc;color:#29445f}
+.tenant-shell .nav-item.selected{
+  background:#eef4ff;
+  color:#2f6fe4;
+  font-weight:650;
+}
+.tenant-shell .topbar{
+  height:68px;
+  background:rgba(255,255,255,.97);
+  border-bottom:1px solid #e6ebf1;
+  backdrop-filter:blur(10px);
+}
+.tenant-shell .workspace-main{
+  max-width:1720px;
+  padding-top:22px;
+}
+.tenant-shell .page-title{
+  align-items:flex-start;
+  margin-bottom:20px;
+}
+.tenant-shell .page-title h1{
+  color:#1d334b;
+  font-size:1.72rem;
+  margin-bottom:5px;
+}
+.tenant-shell .page-title p{
+  color:#748398;
+  max-width:840px;
+}
+.tenant-shell .panel{
+  border:1px solid #e4e9f0;
+  border-radius:13px;
+  box-shadow:0 2px 10px rgba(29,52,80,.035);
+}
+.tenant-shell .panel-heading{
+  padding:17px 18px 14px;
+}
+.tenant-shell .panel-heading h2{color:#31465d}
+.tenant-shell .panel-heading p{color:#8997a8}
+.tenant-shell .stats{gap:14px}
+.tenant-shell .stat{
+  border-radius:13px;
+  border-color:#e5eaf1;
+  box-shadow:none;
+  background:#fff;
+}
+.tenant-shell .stat-label{color:#7b8a9d}
+.tenant-shell .stat>strong{color:#1f3954}
+.tenant-shell .btn{
+  border-radius:9px;
+  font-weight:600;
+}
+.tenant-shell .btn.primary{
+  background:#2f6fe4;
+  box-shadow:none;
+}
+.tenant-shell .btn.secondary{
+  background:#fff;
+  border-color:#dce4ed;
+  color:#52667c;
+}
+.tenant-shell input,
+.tenant-shell select,
+.tenant-shell textarea{
+  border-color:#dce4ed;
+  border-radius:9px;
+  background:#fff;
+}
+.tenant-shell input:focus,
+.tenant-shell select:focus,
+.tenant-shell textarea:focus{
+  border-color:#9db9ef;
+  box-shadow:0 0 0 3px rgba(47,111,228,.09);
+  outline:none;
+}
+.tenant-shell .toolbar{
+  padding:14px 16px;
+  background:#fbfcfe;
+}
+.tenant-shell .search-field{
+  border-color:#dfe6ee;
+  background:#fff;
+}
+.tenant-shell .tabs{
+  gap:18px;
+  margin-bottom:20px;
+}
+.tenant-shell .tabs button{color:#7b8999}
+.tenant-shell .tabs button.active{
+  color:#2f6fe4;
+  border-bottom-color:#2f6fe4;
+}
+.tenant-shell th{
+  background:#f8fafc;
+  color:#68778a;
+  font-weight:600;
+}
+.tenant-shell td{
+  color:#657487;
+  padding-top:13px;
+  padding-bottom:13px;
+}
+.tenant-shell tbody tr:hover{background:#fafcff}
+.tenant-shell .badge{
+  border-radius:6px;
+  font-weight:600;
+}
+.tenant-shell .badge.green{background:#eaf8f2;color:#278765}
+.tenant-shell .badge.amber{background:#fff5e6;color:#ad771d}
+.tenant-shell .badge.red{background:#fff0f1;color:#c55e66}
+.tenant-shell .badge.blue{background:#edf4ff;color:#4e76b5}
+.tenant-shell .notice{
+  background:#f0f6ff;
+  border-color:#dce9fb;
+  color:#5c7ba5;
+}
+.tenant-shell .notice p{color:#657f9f}
+.tenant-shell .record-card{
+  background:#fff;
+  border-color:#e3e9f0;
+  border-radius:12px;
+}
+.tenant-shell .card-symbol{
+  border-radius:10px;
+  background:#edf4ff;
+  color:#4e7bd2;
+}
+.tenant-shell .modal{
+  border-radius:15px;
+  border-color:#dfe6ee;
+}
+.tenant-shell .modal-head{
+  background:#fff;
+  border-bottom-color:#e9edf2;
+}
+.tenant-shell .form-grid{gap:16px}
+.tenant-shell .field{color:#67778b}
+.tenant-shell .field small{color:#98a5b4}
+.tenant-shell .form-footer{background:#fbfcfe}
+.tenant-shell .app-footer{color:#a1acb8}
+.tenant-shell .mobile-bottom-nav{
+  background:#fff;
+  border-top:1px solid #e0e6ed;
+  box-shadow:0 -10px 28px rgba(25,48,74,.07);
+}
+.tenant-shell .mobile-bottom-nav a,
+.tenant-shell .mobile-bottom-nav button{color:#7d8a99}
+.tenant-shell .mobile-bottom-nav .active{color:#2f6fe4}
+
+/* HR dashboard refinement */
+.tenant-shell .digital-command-hero{
+  border:1px solid #dce6f3;
+  border-radius:18px;
+  background:
+    linear-gradient(135deg,#ffffff 0%,#f7faff 72%,#f1f7ff 100%);
+  box-shadow:none;
+}
+.tenant-shell .digital-live{color:#2f6fe4}
+.tenant-shell .digital-live i{background:#22a37e}
+.tenant-shell .digital-command-copy h1{
+  color:#1b3550;
+  font-size:clamp(2rem,3.4vw,2.8rem);
+}
+.tenant-shell .digital-command-copy p{
+  color:#708299;
+  max-width:760px;
+}
+.tenant-shell .digital-command-status{
+  background:#fff;
+  border:1px solid #e0e7ef;
+  border-radius:14px;
+  box-shadow:0 8px 24px rgba(40,70,105,.05);
+}
+.tenant-shell .digital-clock strong{color:#1e3a58}
+.tenant-shell .digital-clock span{color:#8594a5}
+.tenant-shell .digital-kpi-grid{gap:13px}
+.tenant-shell .digital-kpi-card{
+  border:1px solid #e4eaf1;
+  border-radius:14px;
+  box-shadow:none;
+  background:#fff;
+}
+.tenant-shell .digital-kpi-card:before{opacity:.45}
+.tenant-shell .digital-kpi-card>strong{
+  color:#203b56;
+  font-size:1.65rem;
+}
+.tenant-shell .digital-kpi-card>small{color:#8896a7}
+.tenant-shell .digital-section-label{
+  color:#92a0af;
+  letter-spacing:.05em;
+}
+.tenant-shell .digital-signal-chip{
+  background:#f4f7fb;
+  border-color:#e2e7ee;
+  color:#6f8093;
+}
+.tenant-shell .digital-signal-strip{
+  background:#fafbfd;
+  border-top:1px solid #e9edf2;
+}
+.tenant-shell .digital-signal-strip>div strong{color:#294560}
+.tenant-shell .digital-health-list>a:hover{background:#f8fbff}
+.tenant-shell .digital-health-icon{
+  background:#eef4ff;
+  color:#4276cf;
+}
+.tenant-shell .quick-link:hover{background:#f8fbff}
+
+/* payroll, attendance, leave */
+.tenant-shell .payroll-card{
+  border-radius:13px;
+  box-shadow:none;
+}
+.tenant-shell .payroll-month h2{color:#2c4661}
+.tenant-shell .payroll-totals strong{
+  color:#284661;
+  font-size:1.28rem;
+}
+.tenant-shell .status-picker{
+  background:#fbfcfe;
+  border-color:#e3e8ef;
+}
+.tenant-shell .calendar-day{background:#fff}
+.tenant-shell .calendar-day.outside{background:#fbfcfe}
+.tenant-shell .calendar-day.today .day-number{background:#2f6fe4}
+.tenant-shell .calendar-event{background:#edf4ff;color:#5378ac}
+.tenant-shell .calendar-event.holiday{background:#eaf8f2;color:#4b8d70}
+.tenant-shell .calendar-event.interview{background:#f4effc;color:#8a73b2}
+
+/* settings and security */
+.tenant-shell .settings-panel{max-width:1120px}
+.tenant-shell .brand-upload{
+  padding:22px;
+  background:#fbfcfe;
+}
+.tenant-shell .company-logo{
+  background:#fff;
+  border-color:#d8e1ec;
+}
+.tenant-shell .settings-grid{gap:18px}
+.tenant-shell .session-row{padding:15px 18px}
+.tenant-shell .upload-zone{background:#fbfcff}
+.tenant-shell .toast{border-radius:10px}
+
+@media(max-width:1100px){
+  .tenant-shell .digital-command-hero{padding:22px}
+  .tenant-shell .digital-command-status{min-width:240px}
+}
+@media(max-width:700px){
+  .tenant-shell .topbar{height:60px}
+  .tenant-shell .workspace-main{padding-top:12px}
+  .tenant-shell .digital-command-hero{padding:17px 14px;border-radius:14px}
+  .tenant-shell .digital-command-copy h1{font-size:1.72rem}
+  .tenant-shell .digital-command-status{box-shadow:none}
+  .tenant-shell .digital-kpi-grid{grid-template-columns:1fr 1fr}
+  .tenant-shell .digital-kpi-card{padding:14px 12px}
+  .tenant-shell .panel{border-radius:11px}
+  .tenant-shell .toolbar{padding:11px}
+  .tenant-shell .record-card{border-radius:10px}
+}
+@media(max-width:420px){
+  .tenant-shell .digital-kpi-grid{grid-template-columns:1fr}
+}
