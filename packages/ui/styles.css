@@ -520,3 +520,28 @@ body{font-size:16px}
 .auth-pro-install-link{appearance:none;border:0;background:transparent;padding:0;color:#6e849a;font:inherit;font-size:.76rem;cursor:pointer}
 .auth-pro-install-link:hover{color:#286dcc;text-decoration:underline}
 @media(max-width:700px){.auth-pro-install-link{font-size:.8rem}}
+
+
+/* v1.3.8 polished login footer links */
+.auth-pro-legal{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:7px!important;margin-top:14px!important;padding-top:12px!important;border-top:1px solid #e6edf4}
+.auth-pro-legal-row{display:flex;align-items:center;justify-content:center;gap:0;max-width:100%;flex-wrap:wrap}
+.auth-pro-legal-row>a,.auth-pro-install-link{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:28px;padding:3px 9px!important;border:0!important;background:transparent!important;color:#6e849a!important;font-family:inherit!important;font-size:.72rem!important;font-weight:600!important;line-height:1.2!important;text-decoration:none!important;white-space:nowrap;cursor:pointer}
+.auth-pro-legal-row>a:not(:last-child)::after{content:"";width:1px;height:12px;margin-left:9px;background:#dce5ee}
+.auth-pro-install-link{position:relative}
+.auth-pro-legal-row>.auth-pro-install-link::before{content:"";width:1px;height:12px;margin-right:9px;background:#dce5ee}
+.auth-pro-legal-row>a:hover,.auth-pro-install-link:hover{color:#286dcc!important;text-decoration:none!important}
+.auth-pro-company-link{display:inline-flex!important;align-items:center;gap:4px;color:#8799aa!important;font-size:.68rem!important;font-weight:600;text-decoration:none!important;line-height:1.2}
+.auth-pro-company-link:hover{color:#286dcc!important;text-decoration:none!important}
+@media(max-width:700px){
+  .auth-pro-legal{gap:6px!important;margin-top:10px!important;padding-top:9px!important}
+  .auth-pro-legal-row{row-gap:3px}
+  .auth-pro-legal-row>a,.auth-pro-install-link{min-height:26px;padding:3px 8px!important;font-size:.74rem!important}
+  .auth-pro-legal-row>a:not(:last-child)::after{margin-left:8px}
+  .auth-pro-legal-row>.auth-pro-install-link::before{margin-right:8px}
+  .auth-pro-company-link{font-size:.7rem!important}
+}
+@media(max-width:390px){
+  .auth-pro-legal-row{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;column-gap:12px;row-gap:2px}
+  .auth-pro-legal-row>a,.auth-pro-install-link{padding:3px 4px!important}
+  .auth-pro-legal-row>a::after,.auth-pro-legal-row>.auth-pro-install-link::before{display:none!important}
+}
