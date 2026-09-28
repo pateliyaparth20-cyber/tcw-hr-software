@@ -60,7 +60,7 @@ export class Api {
       if(key==='login'&&method==='POST')return this.auth.login(req.body,req,res);
       if(key==='signup'&&method==='POST')return this.auth.signup(req.body,req,res);
       if(key==='forgot-password'&&method==='POST')return this.auth.forgot(req.body);
-      if(key==='reset-password'&&action==='claim'&&method==='POST')return this.auth.claimReset(req.body,res);
+      if(key==='reset-password'&&action==='claim'&&method==='POST')return this.auth.claimReset(req.body,req,res);
       if(key==='reset-password'&&!action&&method==='POST')return this.auth.reset(req.body,req,res);
     }
     const ctx=await authenticate(this.db,req);
