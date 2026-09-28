@@ -25,6 +25,10 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
  const router=useRouter();
  const[session,setSession]=useState<Session|null>(null),[error,setError]=useState(''),[checking,setChecking]=useState(true),[attempt,setAttempt]=useState(0);
  useEffect(()=>{let active=true;let slowTimer:ReturnType<typeof setTimeout>|undefined;
+  const activeKey=`tcw_active_window_${scope.toLowerCase()}`,rememberKey=`tcw_remember_${scope.toLowerCase()}`;
+  let windowActive=false,remembered=false;
+  try{windowActive=window.sessionStorage.getItem(activeKey)==='1';remembered=!!window.localStorage.getItem(rememberKey)}catch{}
+  if(!windowActive&&!remembered&&!isLocalBrowser()){clearLocalSessionState();setSession(null);setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return()=>{active=false};}
   const cached=getLocalSessionSnapshot(scope);
   const localToken=getLocalSessionToken();
   if(cached){setSession(cached);setChecking(false)}
@@ -40,7 +44,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
     }
     if(!active)return;
     if(scope!=='ANY'&&r.user?.scope!==scope){clearLocalSessionState();setSession(null);setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return;}
-    try{window.localStorage.setItem('tcw_portal_scope',String(r.user?.scope??''))}catch{}
+    try{window.localStorage.setItem('tcw_portal_scope',String(r.user?.scope??''));window.sessionStorage.setItem(`tcw_active_window_${String(r.user?.scope??scope).toLowerCase()}`,'1')}catch{}
     setSession(r);setError('');setChecking(false);
    }catch(e:any){
     if(!active)return;
@@ -81,7 +85,7 @@ function Shell({page}:{page:string}){
  useEffect(()=>setMobile(false),[page]);
  useEffect(()=>{if(!mobile)return;const previous=document.body.style.overflow;const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};document.body.style.overflow='hidden';window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',onKey)}},[mobile]);
  useEffect(()=>{const el=navRef.current;if(!el)return;const key=`tcw-sidebar-scroll:${session.user.scope}`;const saved=sessionStorage.getItem(key);if(saved!==null)el.scrollTop=Number(saved)||0;else requestAnimationFrame(()=>el.querySelector('[aria-current="page"]')?.scrollIntoView({block:'nearest'}));const save=()=>sessionStorage.setItem(key,String(el.scrollTop));el.addEventListener('scroll',save,{passive:true});return()=>el.removeEventListener('scroll',save)},[page,session.user.scope]);
- async function logout(){try{await api('auth/logout','POST',{},session.csrf)}finally{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
+ async function logout(){try{await api('auth/logout','POST',{},session.csrf)}finally{try{window.sessionStorage.removeItem(`tcw_active_window_${session.user.scope.toLowerCase()}`)}catch{}queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
  let content:React.ReactNode;
  if(current&&!can(current[2]))content=<Empty title="Access restricted"/>;
  else if(page==='dashboard')content=<Dashboard/>;
@@ -153,14 +157,15 @@ export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',pr
  const[companyCode,setCompanyCode]=useState(prefillCompanyCode),[email,setEmail]=useState(prefillUser),[password,setPassword]=useState(''),[confirmPassword,setConfirmPassword]=useState(''),[remember,setRemember]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[resetReady,setResetReady]=useState(mode!=='reset-password'),[resetChecking,setResetChecking]=useState(mode==='reset-password'),[rememberChecking,setRememberChecking]=useState(mode==='login');
  const[companyName,setCompanyName]=useState(''),[ownerName,setOwnerName]=useState(''),[phone,setPhone]=useState(''),[plan,setPlan]=useState('STARTER'),[terms,setTerms]=useState(false),[contactConsent,setContactConsent]=useState(false),[created,setCreated]=useState<Row|null>(null);
  const signup=scope==='TENANT'&&mode==='signup';
- useEffect(()=>{if(mode!=='login')return;let active=true;const key=`tcw_remember_${scope.toLowerCase()}`;try{const saved=JSON.parse(window.localStorage.getItem(key)??'null');if(saved){setRemember(true);if(scope==='TENANT'&&saved.companyCode)setCompanyCode(String(saved.companyCode));if(saved.email)setEmail(String(saved.email));}}catch{}
- (async()=>{try{const current=await api('auth/me');if(active&&current?.user?.scope===scope){try{window.localStorage.setItem('tcw_portal_scope',scope)}catch{}router.replace('/dashboard');return;}}catch{}finally{if(active)setRememberChecking(false)}})();return()=>{active=false}},[mode,scope,router]);
+ useEffect(()=>{if(mode!=='login')return;let active=true;const key=`tcw_remember_${scope.toLowerCase()}`,activeKey=`tcw_active_window_${scope.toLowerCase()}`;let shouldResume=false;try{const saved=JSON.parse(window.localStorage.getItem(key)??'null');const windowActive=window.sessionStorage.getItem(activeKey)==='1';shouldResume=!!saved||windowActive;if(saved){setRemember(true);if(scope==='TENANT'&&saved.companyCode)setCompanyCode(String(saved.companyCode));if(saved.email)setEmail(String(saved.email));}}catch{}
+ if(!shouldResume){setRememberChecking(false);return()=>{active=false};}
+ (async()=>{try{const current=await api('auth/me');if(active&&current?.user?.scope===scope){try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(activeKey,'1')}catch{}router.replace('/dashboard');return;}}catch{}finally{if(active)setRememberChecking(false)}})();return()=>{active=false}},[mode,scope,router]);
  useEffect(()=>{if(mode!=='reset-password')return;let active=true;(async()=>{try{if(!resetToken)throw new Error('This reset link is invalid or expired.');await api('auth/reset-password/claim','POST',{token:resetToken});if(active){setResetReady(true);setResetChecking(false)}}catch(e:any){if(active){setResetReady(false);setResetChecking(false);setError(e?.message??'This reset link is invalid, expired, or already used.')}}})();return()=>{active=false}},[mode,resetToken]);
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{
   if(signup){if(!terms)throw new Error('Accept the Terms and Privacy notice to start a trial.');if(!contactConsent)throw new Error('Please allow us to contact you about your trial.');const r=await api('auth/signup','POST',{companyName,ownerName,ownerEmail:email.trim(),phone:phone.trim(),plan,acceptTerms:true,contactConsent:true});setCreated(r);setMessage(`Your company workspace is ready. Save the login details below. SMS and email delivery are queued automatically when the provider is configured.`)}
   else if(mode==='reset-password'){if(password!==confirmPassword)throw new Error('Passwords do not match.');const r=await api('auth/reset-password','POST',{password});setMessage(r.message);setResetReady(false);setPassword('');setConfirmPassword('')}
   else if(mode==='forgot-password'){const r=await api('auth/forgot-password','POST',{email,...(scope==='TENANT'?{companyCode}: {})});setMessage(r.message)}
-  else{const r=await api('auth/login','POST',{email:email.trim(),password,remember,...(scope==='TENANT'?{companyCode:companyCode.trim().toUpperCase()}: {})});if(r.user.scope!==scope){await api('auth/logout','POST',{},r.csrf);throw new Error('Use the correct portal for this account.')}try{window.localStorage.setItem('tcw_portal_scope',scope);const key=`tcw_remember_${scope.toLowerCase()}`;if(remember)window.localStorage.setItem(key,JSON.stringify({companyCode:scope==='TENANT'?companyCode.trim().toUpperCase():'',email:email.trim()}));else window.localStorage.removeItem(key)}catch{}router.replace('/dashboard')}
+  else{const r=await api('auth/login','POST',{email:email.trim(),password,remember,...(scope==='TENANT'?{companyCode:companyCode.trim().toUpperCase()}: {})});if(r.user.scope!==scope){await api('auth/logout','POST',{},r.csrf);throw new Error('Use the correct portal for this account.')}try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(`tcw_active_window_${scope.toLowerCase()}`,'1');const key=`tcw_remember_${scope.toLowerCase()}`;if(remember)window.localStorage.setItem(key,JSON.stringify({companyCode:scope==='TENANT'?companyCode.trim().toUpperCase():'',email:email.trim()}));else window.localStorage.removeItem(key)}catch{}router.replace('/dashboard')}
  }catch(e:any){setError(e?.message??'Sign in failed. Please try again.')}finally{setBusy(false)}}
  const title=signup?'Create your company workspace':mode==='forgot-password'?'Forgot password':mode==='reset-password'?'Create password':'Sign in';
  const subtitle=signup?'Create your trial workspace. Your company code and login ID will appear on this screen immediately.':mode==='login'?(scope==='PLATFORM'?'Use your TCW platform administrator credentials.':'Enter your company code, login ID or email, and password.'):mode==='forgot-password'?'Enter your Company Code and account email. We will send a one-time reset link valid for 10 minutes.':mode==='reset-password'?'Create and confirm your new password. This one-time link expires after 10 minutes.':'Secure access to your TCW HR Software account.';
