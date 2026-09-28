@@ -50,6 +50,7 @@ export class Api {
     const parts=req.path.replace(/^\/api\/?/,'').split('/').filter(Boolean),[resource,key,action]=parts;
     const method=req.method;
     if(resource==='health'&&method==='GET')return {status:'ok',service:'tcw-hr-api'};
+    if(resource==='version'&&method==='GET')return {version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GIT_COMMIT_SHA??process.env.npm_package_version??'local'};
     if(resource==='biometric'&&key==='push'&&method==='POST')return this.biometric.genericPush(req.headers as any,req.body);
     if(resource==='biometric'&&key==='biomax'&&action==='push'&&method==='POST')return this.biometric.biomaxPush(req.headers as any,req.body);
     if(!['GET','HEAD','OPTIONS'].includes(method)){
@@ -127,6 +128,49 @@ export class Api {
       if(action==='test'&&method==='POST'){requirePermission(ctx,'system','EDIT');try{return await testAIConnection(this.db);}catch(e:any){throw new ServiceUnavailableException(e.message);}}
     }
     if(resource==='system'&&method==='GET'){platform(ctx);requirePermission(ctx,'system','VIEW');await this.db.$queryRaw`SELECT 1`;const ai=await publicAIConfig(this.db);const sms=String(process.env.SMS_PROVIDER??'').trim();const payouts=process.env.PAYROLL_PAYOUTS_ENABLED==='true'&&process.env.PAYOUT_PROVIDER==='RAZORPAYX';return {database:'CONNECTED',email:process.env.SMTP_HOST?'CONFIGURED':'NOT_CONFIGURED',sms:sms?'CONFIGURED':'NOT_CONFIGURED',storage:process.env.S3_ENDPOINT?'CONFIGURED':'NOT_CONFIGURED',ai:ai.configured?'CONFIGURED':'NOT_CONFIGURED',salaryPayouts:payouts?'CONFIGURED':'SAFE_MODE',pendingMessages:await this.db.outbox.count({where:{sentAt:null}})};}
+    if(resource==='agent'&&key==='status'&&method==='GET'){
+      const tid=tenant(ctx),now=new Date(),company=await this.db.tenant.findUnique({where:{id:tid}});
+      await this.db.$queryRaw`SELECT 1`;
+      const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW');
+      const recentCutoff=new Date(now.getTime()-24*3600000);
+      const [failedMessages,deviceIssues]=await Promise.all([
+        this.db.outbox.count({where:{tenantId:tid,sentAt:null,attempts:{gte:3},createdAt:{gte:recentCutoff}}}),
+        canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
+      ]);
+      const issues:any[]=[];
+      if(failedMessages>0)issues.push({code:'MESSAGE_DELIVERY',severity:'warning',title:'Message delivery needs attention',message:failedMessages+' recent email/SMS job(s) have failed repeatedly. Check provider configuration or delivery logs.'});
+      if(deviceIssues.length)issues.push({code:'ATTENDANCE_DEVICE',severity:'warning',title:'Attendance device issue',message:deviceIssues.length+' device(s) are offline, degraded, or reporting an error.'});
+      if(company?.status==='EXPIRED'||company?.status==='SUSPENDED')issues.push({code:'COMPANY_ACCESS',severity:'warning',title:'Company access needs attention',message:'Company status is '+company.status+'. Review subscription or platform access.'});
+      const daysRemaining=company?.expiresAt?Math.max(0,Math.ceil((company.expiresAt.getTime()-now.getTime())/86400000)):null;
+      if(company?.status==='TRIAL'&&daysRemaining!==null&&daysRemaining<=1)issues.push({code:'TRIAL_ENDING',severity:'info',title:'Trial ending soon',message:'Trial access ends in '+daysRemaining+' day(s).'});
+      return {healthy:issues.filter(v=>v.severity==='warning').length===0,checkedAt:now,issues,checks:{api:'ONLINE',database:'CONNECTED',email:(process.env.RESEND_API_KEY||process.env.SMTP_HOST)?'CONFIGURED':'NOT_CONFIGURED',sms:process.env.SMS_PROVIDER?'CONFIGURED':'NOT_CONFIGURED',devices:canDevices?(deviceIssues.length?'ATTENTION':'OK'):'ROLE_RESTRICTED'},company:{status:company?.status,daysRemaining},version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.npm_package_version??'local'};
+    }
+    if(resource==='agent'&&method==='POST'){
+      const tid=tenant(ctx);const {question}=z.object({question:z.string().trim().min(2).max(700)}).strict().parse(body);const q=question.toLowerCase(),now=new Date();
+      const company=await this.db.tenant.findUnique({where:{id:tid}});
+      const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
+      const [failedMessages,deviceIssues,pendingLeave,payrollReview]=await Promise.all([
+        this.db.outbox.count({where:{tenantId:tid,sentAt:null,attempts:{gte:3},createdAt:{gte:new Date(now.getTime()-24*3600000)}}}),
+        canDevices?this.db.attendanceDevice.count({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]}}):Promise.resolve(0),
+        canLeave?this.db.leaveRequest.count({where:{tenantId:tid,status:'PENDING'}}):Promise.resolve(0),
+        canPayroll?this.db.payrollRun.count({where:{tenantId:tid,status:{in:['DRAFT','REVIEW']}}}):Promise.resolve(0)
+      ]);
+      const emailConfigured=!!(process.env.RESEND_API_KEY||process.env.SMTP_HOST),smsConfigured=!!process.env.SMS_PROVIDER;
+      const summary='Monitor: API online, database connected, '+failedMessages+' recent failed message job(s), '+deviceIssues+' attendance device issue(s).';
+      let answer='';
+      if(q.includes('email')||q.includes('mail'))answer=emailConfigured?(failedMessages?'Email is configured, but '+failedMessages+' recent delivery job(s) need attention. Try a fresh Forgot Password request; if it fails, check delivery logs.':'Email delivery is configured. For testing, use a fresh Forgot Password request and check Inbox/Spam.'):'Email delivery is not configured yet.';
+      else if(q.includes('sms')||q.includes('message'))answer=smsConfigured?('SMS provider is configured. '+(failedMessages?failedMessages+' recent message job(s) still need attention.':'No repeated recent delivery failures are visible.')):'SMS provider is not configured. Email can continue working independently.';
+      else if(q.includes('device')||q.includes('biometric')||q.includes('attendance'))answer=canAttendance?((deviceIssues?deviceIssues+' attendance device issue(s) need review. ':'')+'Open Attendance/Devices to check connectivity, mapping, punches and last-seen status.'):'Your role does not have access to attendance diagnostics.';
+      else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.':'Your role does not have payroll access.';
+      else if(q.includes('leave'))answer=canLeave?'There are '+pendingLeave+' pending leave request(s). Review dates and attendance impact before approval.':'Your role does not have leave access.';
+      else if(q.includes('login')||q.includes('password')||q.includes('forgot'))answer='For login issues, confirm Company Code + User ID/email. Remember me keeps a valid session on this device. Forgot Password sends a one-time link that expires in 10 minutes.';
+      else if(q.includes('update')||q.includes('version'))answer='TCW HR checks for a newer deployment while the software is open. When one is detected, an Update now banner appears; use it to reload into the new version.';
+      else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=(failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.';
+      else answer='I can help with login, password reset, email/SMS, attendance devices, payroll, leave, software updates and current system problems. '+summary;
+      try{const cfg=await effectiveAIConfig(this.db);if(cfg.enabled){const enhanced=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,{companyStatus:company?.status,failedMessages,deviceIssues,pendingLeave,payrollReview,emailConfigured,smsConfigured});if(enhanced)answer=enhanced;}}catch{}
+      await audit(this.db,ctx,'AGENT_HELP','agent');
+      return {answer,model:'TCW AI Agent'};
+    }
     if(resource==='reports'&&method==='GET')return this.report(ctx,key,req,res);
     if(resource==='ai'&&key==='status'&&method==='GET'){tenant(ctx);requirePermission(ctx,'ai','VIEW');return publicAIConfig(this.db);}
     if(resource==='ai'&&method==='POST'){
