@@ -464,3 +464,32 @@ body{font-size:16px}
   .auth-pro-shell:not(.auth-pro-signup) .auth-pro-signup-link{margin-top:9px;padding-top:9px}
   .auth-pro-shell:not(.auth-pro-signup) .auth-pro-legal{margin-top:9px;padding-top:8px}
 }
+
+
+/* v1.3.4 professional trial-success credentials layout */
+.trial-success-panel{width:100%;padding:20px;border:1px solid #cfe8dc;border-radius:18px;background:linear-gradient(180deg,#f7fffb 0%,#eefaf5 100%);box-shadow:0 14px 34px rgba(35,105,77,.08)}
+.trial-success-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:17px}
+.trial-success-icon{width:42px;height:42px;display:grid;place-items:center;flex:0 0 42px;border-radius:12px;background:#dcf5e8;color:#23855f}
+.trial-success-head small{display:block;margin-bottom:3px;color:#4c9a7b;font-size:.61rem;font-weight:850;letter-spacing:.1em}
+.trial-success-head h3{margin:0;color:#1d4e3c;font-size:1.05rem;line-height:1.25;letter-spacing:-.015em}
+.trial-success-head p{margin:5px 0 0;color:#648477;font-size:.76rem;line-height:1.5}
+.signup-created{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;margin-top:0!important}
+.signup-created>div{min-width:0;padding:12px 13px;border:1px solid #d9ebe3;border-radius:12px;background:rgba(255,255,255,.82)}
+.signup-created span{display:block!important;margin-bottom:4px;color:#789286!important;font-size:.64rem!important;font-weight:700}
+.signup-created strong{display:block!important;min-width:0;color:#244d3e!important;font-size:.86rem!important;line-height:1.35;overflow-wrap:anywhere}
+.signup-created .mono-secret{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;color:#174b38!important}
+.signup-created-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.signup-created-actions .btn{width:100%;justify-content:center;min-height:44px}
+.trial-success-note{margin:11px 0 0;color:#718b80;font-size:.68rem;line-height:1.4;text-align:center}
+@media(max-width:700px){
+  .trial-success-panel{padding:16px;border-radius:15px}
+  .trial-success-head{gap:10px;margin-bottom:13px}
+  .trial-success-icon{width:38px;height:38px;flex-basis:38px}
+  .signup-created{grid-template-columns:1fr!important;gap:8px!important}
+  .signup-created>div{padding:10px 11px}
+  .signup-created-actions{grid-template-columns:1fr;gap:8px;margin-top:11px}
+}
+@media(min-width:701px) and (max-width:1180px){
+  .auth-pro-signup .auth-pro-card{max-width:650px}
+  .trial-success-panel{padding:18px}
+}
