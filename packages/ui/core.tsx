@@ -110,8 +110,9 @@ export async function api(path:string,method='GET',data?:any,csrf?:string){
     await sleep(350);
   }
   if(!response){
-    if(lastError?.name==='AbortError')throw new Error(path.startsWith('auth/')?'The server is taking too long to respond. Keep TCW HR running on the PC and try again.':'The server did not respond in time. Please try again.');
-    throw new Error('Unable to reach TCW HR Software. Confirm the phone and PC are on the same Wi-Fi and the local server is running.');
+    const message=lastError?.name==='AbortError'?(path.startsWith('auth/')?'The server is taking too long to respond. Please try again.':'The server did not respond in time. Please try again.'):'Unable to reach TCW HR Software. Please check your connection and try again.';
+    if(typeof window!=='undefined'&&!path.startsWith('agent'))window.dispatchEvent(new CustomEvent('tcw-app-error',{detail:{path,status:0,message}}));
+    throw new Error(message);
   }
   if(!response.ok){
     let message='The request failed.';
@@ -121,6 +122,7 @@ export async function api(path:string,method='GET',data?:any,csrf?:string){
       clearLocalSessionState();
       if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('tcw-session-expired',{detail:{message}}));
     }
+    if(typeof window!=='undefined'&&response.status>=500&&!path.startsWith('agent'))window.dispatchEvent(new CustomEvent('tcw-app-error',{detail:{path,status:response.status,message}}));
     const error=Object.assign(new Error(message),{status:response.status});throw error;
   }
   if(response.status===204)return {};
