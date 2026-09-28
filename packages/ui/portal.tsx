@@ -17,7 +17,7 @@ const TCW_PRODUCT_LOGO='/tcw-logo.png';
 function PlatformLogo({alt='TCW HR Software',className}:{alt?:string;className?:string}){
  const[src,setSrc]=useState(TCW_PRODUCT_LOGO);
  useEffect(()=>{let active=true;fetch('/api/branding',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{if(active&&v?.logo)setSrc(String(v.logo))}).catch(()=>{});return()=>{active=false}},[]);
- return <img src={src} alt={alt} className={className}/>;
+ return <img src={src} alt={alt} className={className} decoding="async" draggable={false} onError={()=>{if(src!==TCW_PRODUCT_LOGO)setSrc(TCW_PRODUCT_LOGO)}}/>;
 }
 const icons:Record<string,any>={dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server,profile:Building2};
 export function Portal({session,page}:{session:Session;page:string}){return <Providers session={session}><Shell page={page}/></Providers>}
