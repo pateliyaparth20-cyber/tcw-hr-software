@@ -16,9 +16,17 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
  try{
   const root=await login('admin@example.test','test-admin-strong-password');const alpha=await login('owner@example.test','test-owner-strong-password','ALPHA');
   await t.test('anonymous requests and missing CSRF are rejected',async()=>{assert.equal((await call('employees')).status,401);assert.equal((await call('employees','POST',{}, {...alpha,csrf:''})).status,403)});
-  let betaTenant:string;
-  await t.test('platform provisions tenant owner atomically',async()=>{const r=await call('platform/companies','POST',{name:'Beta',code:'BETA',ownerName:'Beta owner',ownerEmail:'owner@example.test',ownerPassword:'test-beta-strong-password'},root);assert.equal(r.status,200,JSON.stringify(r.data));betaTenant=r.data.id;assert.equal((await call('platform/companies','GET',undefined,alpha)).status,403)});
-  const beta=await login('owner@example.test','test-beta-strong-password','BETA');
+  let betaTenant:string,betaCode:string,betaTempPassword:string;
+  await t.test('platform provisions tenant owner atomically with generated credentials',async()=>{
+   const r=await call('platform/companies','POST',{name:'Beta',ownerName:'Beta owner',ownerEmail:'owner@example.test'},root);
+   assert.equal(r.status,200,JSON.stringify(r.data));
+   betaTenant=r.data.company.id;betaCode=r.data.credentials.companyCode;betaTempPassword=r.data.credentials.tempPassword;
+   assert.match(betaCode,/^TCW-/);assert.equal(betaTempPassword.length,8);assert.equal(r.data.credentials.loginId.length,7);
+   assert.equal((await call('platform/companies','GET',undefined,alpha)).status,403);
+  });
+  let beta=await login('owner@example.test',betaTempPassword!,betaCode!);
+  const changed=await call('auth/change-password','POST',{currentPassword:betaTempPassword!,password:'test-beta-strong-password'},beta);assert.equal(changed.status,200,JSON.stringify(changed.data));
+  beta=await login('owner@example.test','test-beta-strong-password',betaCode!);
   const depA=await call('departments','POST',{name:'Engineering',code:'ENG'},alpha);assert.equal(depA.status,200,JSON.stringify(depA.data));
   const depB=await call('departments','POST',{name:'Finance',code:'FIN'},beta);assert.equal(depB.status,200,JSON.stringify(depB.data));
   const employeeInput={employeeCode:'A01',firstName:'Test',lastName:'Employee',email:'employee@example.test',departmentId:depA.data.id,joiningDate:'2025-01-01',monthlySalary:5000000};
