@@ -230,8 +230,8 @@ export class Api {
       const recentCutoff=new Date(now.getTime()-24*3600000);
       const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
       const [failedEmail,failedSms,deviceIssues]=await Promise.all([
-        this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3},createdAt:{gte:recentCutoff}}}),
-        smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3},createdAt:{gte:recentCutoff}}}):Promise.resolve(0),
+        this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}),
+        smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}):Promise.resolve(0),
         canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
       ]);
       const issues:any[]=[];
@@ -249,8 +249,8 @@ export class Api {
       const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
       const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim(),recentDeliveryCutoff=new Date(now.getTime()-24*3600000);
       const [failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview]=await Promise.all([
-        this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3},createdAt:{gte:recentDeliveryCutoff}}}),
-        smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3},createdAt:{gte:recentDeliveryCutoff}}}):Promise.resolve(0),
+        this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}),
+        smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}):Promise.resolve(0),
         canDevices?this.db.attendanceDevice.count({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]}}):Promise.resolve(0),
         canLeave?this.db.leaveRequest.count({where:{tenantId:tid,status:'PENDING'}}):Promise.resolve(0),
         canPayroll?this.db.payrollRun.count({where:{tenantId:tid,status:{in:['DRAFT','REVIEW']}}}):Promise.resolve(0)
