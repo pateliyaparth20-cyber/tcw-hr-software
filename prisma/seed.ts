@@ -50,4 +50,19 @@ export async function seed(database:PrismaClient,options:{adminEmail:string;admi
   for(const [company,stage,value] of [['Northstar Studio','DEMO',2500000],['Orbit Labs','LEAD',1800000],['Bluebird Systems','NEGOTIATION',5400000]] as const)await database.lead.create({data:{company,stage,value,contactName:'Demo Contact',email:company.toLowerCase().replace(' ','')+'@example.test',notes:'Fictional sample lead'}});
   await database.auditLog.create({data:{tenantId:tenant.id,action:'DEMO_DATA_CREATED',entity:'workspace',after:{sample:true}}});
 }
-if(require.main===module){seed(db,{adminEmail:process.env.ADMIN_EMAIL??'',adminPassword:process.env.ADMIN_PASSWORD??'',ownerEmail:process.env.OWNER_EMAIL,ownerPassword:process.env.OWNER_PASSWORD,companyCode:process.env.DEMO_COMPANY_CODE,demo:process.env.SEED_DEMO==='true'}).then(()=>console.log('Bootstrap complete. Existing passwords were preserved.')).catch(e=>{console.error(e.message);process.exitCode=1}).finally(()=>db.$disconnect())}
+if(require.main===module){
+  (async()=>{
+    await seed(db,{adminEmail:process.env.ADMIN_EMAIL??'',adminPassword:process.env.ADMIN_PASSWORD??'',ownerEmail:process.env.OWNER_EMAIL,ownerPassword:process.env.OWNER_PASSWORD,companyCode:process.env.DEMO_COMPANY_CODE,demo:process.env.SEED_DEMO==='true'});
+    if(process.env.QA_BOOTSTRAP==='true'){
+      const qaEmail=process.env.QA_OWNER_EMAIL?.trim(),qaPassword=process.env.QA_OWNER_PASSWORD?.trim(),qaCode=(process.env.QA_COMPANY_CODE??'TCW-QA').trim().toUpperCase();
+      if(!qaEmail||!qaPassword)throw new Error('QA_BOOTSTRAP requires QA_OWNER_EMAIL and QA_OWNER_PASSWORD.');
+      await seed(db,{adminEmail:process.env.ADMIN_EMAIL??'',adminPassword:process.env.ADMIN_PASSWORD??'',ownerEmail:qaEmail,ownerPassword:qaPassword,companyCode:qaCode,demo:true});
+      const tenant=await db.tenant.findUniqueOrThrow({where:{code:qaCode}});
+      const user=await db.user.findFirstOrThrow({where:{tenantId:tenant.id,email:qaEmail.toLowerCase()}});
+      await db.user.update({where:{id:user.id},data:{loginId:'TCWQA01',mustChangePassword:false}});
+      await db.tenant.update({where:{id:tenant.id},data:{name:'TCW QA Workspace',profile:{...((tenant.profile as any)??{}),legalName:'TCW QA Workspace',industry:'Technology',website:'https://hr.techcyberwarrior.in',email:qaEmail,phone:'+91 9000000000',address:'QA workspace',city:'Ahmedabad',state:'Gujarat',country:'India',postalCode:'380001',companyType:'Private Limited',contactPerson:'QA Administrator',contactDesignation:'HR Manager',supportEmail:qaEmail,billingEmail:qaEmail,primaryColor:'#3474ef',footer:'© TCW HR Software · QA workspace'}}});
+      console.log('QA workspace ready:',qaCode,'loginId=TCWQA01');
+    }
+    console.log('Bootstrap complete. Existing passwords were preserved.');
+  })().catch(e=>{console.error(e.message);process.exitCode=1}).finally(()=>db.$disconnect());
+}
