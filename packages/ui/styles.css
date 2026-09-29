@@ -5043,3 +5043,23 @@ table td,table th{overflow-wrap:anywhere}
     transition-duration:.01ms!important;
   }
 }
+
+
+/* v1.9.1 compact mobile app header */
+@media(max-width:950px){
+.mobile-app-hero,.platform-mobile-hero{margin:0 0 10px!important;padding:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important}
+.mobile-app-brand,.platform-mobile-brand{min-height:62px!important;margin:0 -10px!important;padding:9px 13px!important;border-radius:0 0 16px 16px!important;color:#fff;box-shadow:0 5px 16px rgba(27,65,106,.11)}
+.mobile-app-brand{background:linear-gradient(135deg,#0b66d6,#237fe9)!important}
+.platform-mobile-brand{background:linear-gradient(135deg,#123654,#1e629d)!important}
+.mobile-app-logo,.platform-mobile-brand>span{width:44px!important;height:44px!important;min-width:44px!important;border-radius:13px!important;background:#fff!important;border:1px solid rgba(255,255,255,.65)!important}
+.mobile-app-brand strong,.platform-mobile-brand strong{color:#fff!important;font-size:.93rem!important}
+.mobile-app-brand small,.platform-mobile-brand small{color:rgba(255,255,255,.76)!important;font-size:.62rem!important}
+.mobile-app-user,.platform-mobile-greeting{min-height:70px!important;margin:9px 0 0!important;padding:11px 12px!important;border:1px solid #e2e8ef!important;border-radius:16px!important;background:#fff!important;box-shadow:0 4px 14px rgba(30,59,91,.045)!important}
+.platform-mobile-greeting{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;align-items:center!important}
+.mobile-app-user{display:flex!important;align-items:center!important}
+.mobile-app-user .avatar,.platform-mobile-greeting>.avatar{width:44px!important;height:44px!important;border:2px solid #e5edf5!important;background:#f0f5fb!important}
+.mobile-app-user small,.platform-mobile-greeting small{color:#8494a6!important;font-size:.61rem!important}
+.mobile-app-user strong,.platform-mobile-greeting strong{color:#203b56!important;font-size:1rem!important;line-height:1.12!important}
+.mobile-app-user span,.platform-mobile-greeting span{color:#71859a!important;font-size:.62rem!important}
+.platform-mobile-action,.mobile-app-bell{color:#fff!important;background:rgba(255,255,255,.11)!important;border-color:rgba(255,255,255,.18)!important}
+}
