@@ -6545,3 +6545,584 @@ textarea,
     min-height:44px!important;
   }
 }
+
+
+/* v1.11.0 canonical PC / laptop / Windows desktop UI */
+@media(min-width:951px){
+  html,body{
+    background:#f4f7fb;
+  }
+  .tenant-shell,
+  .platform-shell,
+  .tenant-shell .main-shell,
+  .platform-shell .main-shell{
+    background:#f4f7fb!important;
+  }
+
+  /* Desktop navigation: same premium light system for HR and Super Admin. */
+  .tenant-shell .sidebar,
+  .platform-shell .sidebar{
+    width:264px!important;
+    background:#fff!important;
+    color:#31485f!important;
+    border-right:1px solid #e3e9f0!important;
+    box-shadow:6px 0 28px rgba(30,55,84,.035)!important;
+  }
+  .tenant-shell .main-shell,
+  .platform-shell .main-shell{
+    margin-left:264px!important;
+    width:calc(100% - 264px)!important;
+  }
+  .tenant-shell .sidebar .brand,
+  .platform-shell .sidebar .brand{
+    min-height:84px;
+    padding:18px 18px 16px!important;
+    border-bottom:1px solid #edf1f5!important;
+    background:#fff!important;
+  }
+  .tenant-shell .sidebar .brand-mark.brand-logo,
+  .platform-shell .sidebar .brand-mark.brand-logo{
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    border-radius:14px!important;
+    border:1px solid #dfe7ef!important;
+    box-shadow:0 6px 16px rgba(35,65,96,.06)!important;
+  }
+  .tenant-shell .sidebar .brand strong,
+  .platform-shell .sidebar .brand strong{
+    color:#203a54!important;
+    font-size:1.06rem!important;
+    line-height:1.15!important;
+  }
+  .tenant-shell .sidebar .brand strong span,
+  .platform-shell .sidebar .brand strong span{
+    color:var(--primary)!important;
+  }
+  .tenant-shell .sidebar .brand small,
+  .platform-shell .sidebar .brand small{
+    margin-top:5px!important;
+    color:#8a99a9!important;
+    font-size:.58rem!important;
+  }
+
+  .tenant-shell .sidebar .workspace-switch,
+  .platform-shell .sidebar .workspace-switch{
+    min-height:68px!important;
+    display:grid!important;
+    grid-template-columns:46px minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:11px!important;
+    margin:14px 14px 16px!important;
+    padding:10px 11px!important;
+    border:1px solid #e0e7ef!important;
+    border-radius:14px!important;
+    background:#f8fafc!important;
+    box-shadow:none!important;
+  }
+  .tenant-shell .sidebar .workspace-icon,
+  .platform-shell .sidebar .workspace-icon{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    padding:4px!important;
+    border-radius:13px!important;
+    background:#fff!important;
+    border:1px solid #dfe7ef!important;
+    overflow:hidden!important;
+  }
+  .tenant-shell .sidebar .workspace-icon img,
+  .platform-shell .sidebar .workspace-icon img{
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+    object-fit:contain!important;
+  }
+  .tenant-shell .sidebar .workspace-copy strong,
+  .platform-shell .sidebar .workspace-copy strong,
+  .tenant-shell .sidebar .workspace-switch strong,
+  .platform-shell .sidebar .workspace-switch strong{
+    color:#2c465f!important;
+    font-size:.78rem!important;
+    font-weight:800!important;
+  }
+  .tenant-shell .sidebar .workspace-copy small,
+  .platform-shell .sidebar .workspace-copy small,
+  .tenant-shell .sidebar .workspace-switch small,
+  .platform-shell .sidebar .workspace-switch small{
+    color:#8797a8!important;
+    font-size:.62rem!important;
+  }
+
+  .tenant-shell .sidebar nav,
+  .platform-shell .sidebar nav{
+    padding:0 12px 18px!important;
+  }
+  .tenant-shell .sidebar .nav-group,
+  .platform-shell .sidebar .nav-group{
+    margin-bottom:15px!important;
+  }
+  .tenant-shell .sidebar .nav-group-label,
+  .platform-shell .sidebar .nav-group-label{
+    padding:0 10px!important;
+    color:#9aa7b5!important;
+    font-size:.59rem!important;
+    font-weight:800!important;
+    letter-spacing:.1em!important;
+  }
+  .tenant-shell .sidebar .nav-item,
+  .platform-shell .sidebar .nav-item{
+    min-height:42px!important;
+    margin:3px 0!important;
+    padding:9px 11px!important;
+    border-radius:11px!important;
+    color:#687a8d!important;
+    background:transparent!important;
+    font-size:.78rem!important;
+  }
+  .tenant-shell .sidebar .nav-item:hover,
+  .platform-shell .sidebar .nav-item:hover{
+    color:#29445e!important;
+    background:#f5f8fc!important;
+    transform:translateX(2px);
+  }
+  .tenant-shell .sidebar .nav-item.selected,
+  .platform-shell .sidebar .nav-item.selected{
+    color:var(--primary)!important;
+    background:#eef4ff!important;
+    box-shadow:inset 0 0 0 1px rgba(52,116,239,.07)!important;
+    font-weight:750!important;
+  }
+  .tenant-shell .sidebar-bottom,
+  .platform-shell .sidebar-bottom{
+    padding:11px 13px!important;
+    border-top:1px solid #e8edf3!important;
+    background:#fff!important;
+  }
+  .tenant-shell .sidebar .account,
+  .platform-shell .sidebar .account{
+    min-height:52px;
+    padding:5px!important;
+    border:1px solid #e4eaf1!important;
+    border-radius:13px!important;
+    background:#f8fafc!important;
+  }
+  .tenant-shell .sidebar .account strong,
+  .platform-shell .sidebar .account strong{color:#31485f!important}
+  .tenant-shell .sidebar .account small,
+  .platform-shell .sidebar .account small{color:#8393a4!important}
+
+  /* Desktop header */
+  .tenant-shell .topbar,
+  .platform-shell .topbar{
+    height:70px!important;
+    padding:0 28px!important;
+    background:rgba(255,255,255,.94)!important;
+    border-bottom:1px solid #e5ebf1!important;
+    box-shadow:0 2px 12px rgba(29,53,80,.025)!important;
+    backdrop-filter:blur(14px)!important;
+  }
+  .tenant-shell .breadcrumb,
+  .platform-shell .breadcrumb{
+    font-size:.76rem!important;
+    color:#98a5b4!important;
+  }
+  .tenant-shell .breadcrumb strong,
+  .platform-shell .breadcrumb strong{
+    color:#425970!important;
+    font-weight:700!important;
+  }
+  .tenant-shell .command-button,
+  .platform-shell .command-button{
+    min-height:38px!important;
+    padding:7px 10px!important;
+    border:1px solid #e2e8ef!important;
+    border-radius:10px!important;
+    background:#f8fafc!important;
+    color:#7d8da0!important;
+  }
+  .tenant-shell .header-avatar .avatar,
+  .platform-shell .header-avatar .avatar{
+    width:38px!important;
+    height:38px!important;
+  }
+
+  /* Workspace proportions */
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    width:100%!important;
+    max-width:1720px!important;
+    min-height:calc(100vh - 70px)!important;
+    margin:0 auto!important;
+    padding:28px 30px 18px!important;
+  }
+  .tenant-shell .page-stage,
+  .platform-shell .page-stage{
+    width:100%;
+    min-width:0;
+  }
+
+  /* Page title / toolbar */
+  .tenant-shell .page-title,
+  .platform-shell .page-title{
+    min-height:66px;
+    align-items:flex-end!important;
+    gap:24px!important;
+    margin:0 0 20px!important;
+    padding:0!important;
+    background:transparent!important;
+  }
+  .tenant-shell .page-title h1,
+  .platform-shell .page-title h1{
+    margin:0 0 5px!important;
+    color:#1f3851!important;
+    font-size:1.58rem!important;
+    line-height:1.15!important;
+    letter-spacing:-.025em!important;
+  }
+  .tenant-shell .page-title p,
+  .platform-shell .page-title p{
+    max-width:860px!important;
+    color:#7d8c9e!important;
+    font-size:.78rem!important;
+    line-height:1.5!important;
+  }
+  .tenant-shell .title-actions,
+  .platform-shell .title-actions{
+    gap:9px!important;
+  }
+
+  /* Cards and panels */
+  .tenant-shell .panel,
+  .platform-shell .panel,
+  .tenant-shell .stat,
+  .platform-shell .stat,
+  .tenant-shell .record-card,
+  .platform-shell .record-card,
+  .tenant-shell .payroll-card,
+  .platform-shell .payroll-card,
+  .tenant-shell .pipeline-card,
+  .platform-shell .pipeline-card,
+  .tenant-shell .settings-card,
+  .platform-shell .settings-card{
+    border:1px solid #e3e9f0!important;
+    border-radius:16px!important;
+    background:#fff!important;
+    box-shadow:0 4px 18px rgba(31,58,88,.04)!important;
+  }
+  .tenant-shell .panel:hover,
+  .platform-shell .panel:hover{
+    box-shadow:0 9px 26px rgba(31,58,88,.065)!important;
+  }
+  .tenant-shell .panel-heading,
+  .platform-shell .panel-heading{
+    min-height:62px;
+    padding:16px 18px 14px!important;
+    border-bottom-color:#edf1f5!important;
+  }
+  .tenant-shell .panel-heading h2,
+  .platform-shell .panel-heading h2{
+    color:#304960!important;
+    font-size:.92rem!important;
+  }
+  .tenant-shell .panel-heading p,
+  .platform-shell .panel-heading p{
+    margin-top:3px!important;
+    color:#8a99aa!important;
+    font-size:.69rem!important;
+  }
+
+  /* KPI cards */
+  .tenant-shell .stats,
+  .platform-shell .stats{
+    gap:14px!important;
+    margin-bottom:18px;
+  }
+  .tenant-shell .stat,
+  .platform-shell .stat{
+    min-height:118px!important;
+    padding:17px!important;
+  }
+  .tenant-shell .stat-label,
+  .platform-shell .stat-label{
+    color:#7b8c9e!important;
+    font-size:.68rem!important;
+  }
+  .tenant-shell .stat>strong,
+  .platform-shell .stat>strong{
+    margin-top:9px!important;
+    color:#203b55!important;
+    font-size:1.55rem!important;
+  }
+  .tenant-shell .stat>small,
+  .platform-shell .stat>small{
+    margin-top:5px!important;
+    color:#91a0b0!important;
+    font-size:.64rem!important;
+  }
+
+  /* Buttons / controls */
+  .tenant-shell .btn,
+  .platform-shell .btn{
+    min-height:40px!important;
+    padding:9px 14px!important;
+    border-radius:10px!important;
+    font-size:.78rem!important;
+    font-weight:700!important;
+  }
+  .tenant-shell .icon-button,
+  .platform-shell .icon-button{
+    width:36px!important;
+    height:36px!important;
+    border-radius:10px!important;
+  }
+  .tenant-shell input,
+  .tenant-shell select,
+  .tenant-shell textarea,
+  .platform-shell input,
+  .platform-shell select,
+  .platform-shell textarea{
+    min-height:42px!important;
+    border:1px solid #dce4ed!important;
+    border-radius:10px!important;
+    background:#fff!important;
+  }
+  .tenant-shell textarea,
+  .platform-shell textarea{min-height:100px!important}
+  .tenant-shell input:focus,
+  .tenant-shell select:focus,
+  .tenant-shell textarea:focus,
+  .platform-shell input:focus,
+  .platform-shell select:focus,
+  .platform-shell textarea:focus{
+    border-color:#9bb8e8!important;
+    box-shadow:0 0 0 3px rgba(52,116,239,.08)!important;
+  }
+
+  /* Toolbars and searches */
+  .tenant-shell .toolbar,
+  .platform-shell .toolbar,
+  .tenant-shell .date-filters,
+  .platform-shell .date-filters{
+    min-height:58px;
+    padding:10px 12px!important;
+    gap:10px!important;
+    border:1px solid #e4eaf1!important;
+    border-radius:14px!important;
+    background:#fbfcfe!important;
+    box-shadow:none!important;
+  }
+  .tenant-shell .search-field,
+  .platform-shell .search-field{
+    min-height:40px!important;
+    border-radius:10px!important;
+    background:#fff!important;
+  }
+
+  /* Tables */
+  .tenant-shell .table-scroll,
+  .platform-shell .table-scroll{
+    width:100%;
+    max-width:100%;
+    overflow:auto;
+    border-radius:0 0 16px 16px;
+  }
+  .tenant-shell table,
+  .platform-shell table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+  }
+  .tenant-shell th,
+  .platform-shell th{
+    position:sticky;
+    top:0;
+    z-index:1;
+    height:42px;
+    padding:10px 13px!important;
+    background:#f8fafc!important;
+    color:#718195!important;
+    font-size:.64rem!important;
+    font-weight:800!important;
+    letter-spacing:.025em;
+  }
+  .tenant-shell td,
+  .platform-shell td{
+    padding:12px 13px!important;
+    color:#5f7184!important;
+    font-size:.72rem!important;
+    border-bottom-color:#edf1f5!important;
+  }
+  .tenant-shell tbody tr,
+  .platform-shell tbody tr{
+    transition:background-color .16s ease;
+  }
+  .tenant-shell tbody tr:hover,
+  .platform-shell tbody tr:hover{
+    background:#fafcff!important;
+  }
+
+  /* Forms: actions always at the end, never floating over fields. */
+  .record-form,
+  .my-profile-form{
+    position:relative!important;
+    overflow:visible!important;
+  }
+  .form-grid{
+    gap:15px!important;
+    padding:18px!important;
+  }
+  .form-actions-end,
+  .record-form>.form-actions-end,
+  .my-profile-form>.form-actions-end{
+    position:static!important;
+    display:flex!important;
+    justify-content:flex-end!important;
+    gap:10px!important;
+    margin:0!important;
+    padding:15px 18px!important;
+    border-top:1px solid #e9eef3!important;
+    background:#fbfcfe!important;
+    border-radius:0 0 16px 16px!important;
+  }
+  .form-actions-end .btn{
+    min-width:116px;
+  }
+
+  /* Profile / company imagery */
+  .my-profile-photo,
+  .platform-admin-avatar.has-upload{
+    width:96px!important;
+    height:96px!important;
+    min-width:96px!important;
+    min-height:96px!important;
+    flex:0 0 96px!important;
+    aspect-ratio:1/1!important;
+    border-radius:50%!important;
+    border:4px solid #fff!important;
+    overflow:hidden!important;
+    background:#eef3f8!important;
+    box-shadow:0 10px 26px rgba(31,64,97,.12)!important;
+  }
+  .my-profile-photo>img,
+  .platform-admin-avatar.has-upload>img{
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+    object-fit:cover!important;
+    object-position:center 24%!important;
+    border-radius:50%!important;
+    padding:0!important;
+    clip-path:circle(50%)!important;
+  }
+  .company-logo,
+  .company-profile-summary-logo,
+  .platform-profile-logo-preview{
+    overflow:hidden!important;
+    border-radius:16px!important;
+  }
+  .company-logo img,
+  .company-profile-summary-logo img,
+  .platform-profile-logo-preview img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:contain!important;
+    object-position:center!important;
+  }
+
+  /* Modals / dialogs */
+  .modal{
+    width:min(720px,calc(100vw - 80px))!important;
+    max-height:calc(100vh - 64px)!important;
+    margin:auto!important;
+    border:1px solid #dde5ed!important;
+    border-radius:18px!important;
+    box-shadow:0 24px 70px rgba(27,50,75,.22)!important;
+    overflow:hidden!important;
+  }
+  .modal.wide{
+    width:min(1020px,calc(100vw - 80px))!important;
+  }
+  .modal-head{
+    min-height:62px;
+    padding:14px 18px!important;
+    background:#fff!important;
+    border-bottom:1px solid #e9eef3!important;
+  }
+  .modal-body{
+    max-height:calc(100vh - 150px)!important;
+    overflow:auto!important;
+  }
+
+  /* Floating AI */
+  .tcw-agent{
+    right:24px!important;
+    bottom:24px!important;
+  }
+  .tcw-agent-fab{
+    width:58px!important;
+    height:58px!important;
+    border-radius:50%!important;
+  }
+  .tcw-agent-panel{
+    width:min(390px,calc(100vw - 56px))!important;
+    max-height:min(680px,calc(100vh - 110px))!important;
+    border-radius:18px!important;
+    box-shadow:0 22px 64px rgba(25,50,78,.22)!important;
+  }
+
+  /* Desktop-only: no mobile controls. */
+  .mobile-bottom-nav,
+  .mobile-unified-hero,
+  .mobile-scrim{
+    display:none!important;
+  }
+}
+
+/* Laptop widths: preserve desktop character without cramped multi-column layouts. */
+@media(min-width:951px) and (max-width:1180px){
+  .tenant-shell .sidebar,
+  .platform-shell .sidebar{width:232px!important}
+  .tenant-shell .main-shell,
+  .platform-shell .main-shell{
+    margin-left:232px!important;
+    width:calc(100% - 232px)!important;
+  }
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding:22px 20px 16px!important;
+  }
+  .tenant-shell .topbar,
+  .platform-shell .topbar{
+    padding:0 20px!important;
+  }
+  .tenant-shell .dashboard-grid,
+  .platform-shell .dashboard-grid,
+  .tenant-shell .dashboard-grid.three,
+  .platform-shell .dashboard-grid.three,
+  .platform-profile-grid,
+  .my-profile-layout{
+    grid-template-columns:1fr!important;
+  }
+  .record-cards{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+
+/* Large desktop: keep content readable, not stretched edge-to-edge. */
+@media(min-width:1600px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding-left:38px!important;
+    padding-right:38px!important;
+  }
+  .tenant-shell .sidebar,
+  .platform-shell .sidebar{width:276px!important}
+  .tenant-shell .main-shell,
+  .platform-shell .main-shell{
+    margin-left:276px!important;
+    width:calc(100% - 276px)!important;
+  }
+}
