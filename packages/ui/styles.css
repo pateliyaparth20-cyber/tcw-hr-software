@@ -4230,3 +4230,384 @@ td{padding:14px 16px;line-height:1.45}
     padding-right:13px!important;
   }
 }
+
+
+/* v1.8.0 responsive QA consolidation */
+/* Global overflow safety */
+.app-shell,
+.main-shell,
+.workspace-main,
+.page-stage,
+.panel,
+.modal,
+.toolbar,
+.form-grid,
+.record-card,
+.report-card,
+.payroll-card,
+.settings-panel,
+.platform-profile-grid,
+.my-profile-layout,
+.company-profile-summary,
+.brand-upload,
+.mobile-app-section,
+.mobile-app-stats,
+.mobile-quick-grid{
+  min-width:0;
+  max-width:100%;
+}
+.app-shell img,
+.auth-pro-shell img,
+.modal img,
+.company-profile-panel img,
+.platform-profile-grid img,
+.my-profile-layout img{
+  display:block;
+  max-width:100%;
+  max-height:100%;
+}
+.page-stage h1,.page-stage h2,.page-stage h3,.page-stage p,
+.panel h1,.panel h2,.panel h3,.panel p,
+.panel strong,.panel small,.panel span,
+.company-profile-summary-copy,
+.my-profile-identity,
+.platform-admin-card>div:last-child{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+table td,table th{overflow-wrap:anywhere}
+
+/* Uploaded media must never escape its frame */
+.company-logo,
+.company-profile-summary-logo,
+.platform-profile-logo-preview,
+.platform-admin-avatar,
+.my-profile-photo,
+.avatar,
+.workspace-icon,
+.brand-mark.brand-logo,
+.mobile-app-logo{
+  flex-shrink:0;
+}
+.company-logo img,
+.company-profile-summary-logo img,
+.platform-profile-logo-preview img,
+.workspace-icon img,
+.brand-mark.brand-logo img,
+.mobile-app-logo img{
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
+.my-profile-photo>img,
+.platform-admin-avatar>img,
+.avatar.has-photo>img{
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+.company-logo,
+.company-profile-summary-logo,
+.platform-profile-logo-preview,
+.workspace-icon,
+.brand-mark.brand-logo,
+.mobile-app-logo{
+  overflow:hidden!important;
+}
+.my-profile-photo>img{clip-path:inset(0 round 18px)}
+.platform-admin-avatar>img{clip-path:inset(0 round 13px)}
+.avatar.has-photo>img{clip-path:circle(50%)}
+
+/* Desktop baseline */
+@media(min-width:1200px){
+  .tenant-shell .sidebar{width:248px}
+  .tenant-shell .main-shell{margin-left:248px;width:calc(100% - 248px)}
+  .platform-shell .sidebar{width:260px}
+  .platform-shell .main-shell{margin-left:260px;width:calc(100% - 260px)}
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    width:100%;
+    max-width:1600px;
+    padding:28px 28px 14px;
+  }
+  .tenant-shell .page-title h1,
+  .platform-shell .page-title h1{font-size:1.65rem}
+  .tenant-shell .page-title p,
+  .platform-shell .page-title p{font-size:.82rem;line-height:1.55}
+  .tenant-shell .panel-heading h2,
+  .platform-shell .panel-heading h2{font-size:.96rem}
+  .tenant-shell .panel-heading p,
+  .platform-shell .panel-heading p{font-size:.74rem}
+}
+
+/* Laptop/tablet-landscape: keep desktop UI but remove cramped columns */
+@media(min-width:951px) and (max-width:1199px){
+  .tenant-shell .sidebar,
+  .platform-shell .sidebar{width:218px!important}
+  .tenant-shell .main-shell,
+  .platform-shell .main-shell{
+    margin-left:218px!important;
+    width:calc(100% - 218px)!important;
+  }
+  .tenant-shell .brand,
+  .platform-shell .brand{padding-left:14px;padding-right:14px}
+  .tenant-shell .brand-mark.brand-logo,
+  .platform-shell .brand-mark.brand-logo{
+    width:52px!important;height:52px!important;min-width:52px!important;
+  }
+  .tenant-shell .brand strong,
+  .platform-shell .brand strong{font-size:.96rem!important}
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{padding:22px 20px 12px!important}
+  .tenant-shell .topbar,
+  .platform-shell .topbar{padding-left:20px;padding-right:20px}
+  .tenant-shell .digital-kpi-grid,
+  .platform-shell .stats.four{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .tenant-shell .digital-dashboard-grid,
+  .tenant-shell .dashboard-grid,
+  .tenant-shell .dashboard-grid.three,
+  .platform-shell .dashboard-grid,
+  .platform-shell .dashboard-grid.three{grid-template-columns:1fr!important}
+  .tenant-shell .quick-panel,
+  .platform-shell .quick-panel{grid-column:auto!important}
+  .platform-profile-grid,
+  .my-profile-layout{grid-template-columns:1fr!important}
+  .settings-panel{max-width:100%}
+  .record-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .page-title{align-items:flex-start}
+  .page-title h1{font-size:1.48rem}
+  .page-title p{font-size:.78rem}
+}
+
+/* Phone and portrait tablet */
+@media(max-width:950px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    width:100%;
+    max-width:620px;
+    padding-left:10px!important;
+    padding-right:10px!important;
+    overflow-x:hidden;
+  }
+  .tenant-shell .page-stage,
+  .platform-shell .page-stage{width:100%;overflow-x:hidden}
+
+  /* mobile typography: readable, not microscopic */
+  .tenant-shell .panel-heading h2,
+  .platform-shell .panel-heading h2{font-size:.96rem!important;line-height:1.3}
+  .tenant-shell .panel-heading p,
+  .platform-shell .panel-heading p{font-size:.72rem!important;line-height:1.5}
+  .tenant-shell .list-row strong,
+  .platform-shell .list-row strong,
+  .tenant-shell .record-card strong,
+  .platform-shell .record-card strong{font-size:.78rem}
+  .tenant-shell .list-row small,
+  .platform-shell .list-row small,
+  .tenant-shell .record-card small,
+  .platform-shell .record-card small{font-size:.68rem;line-height:1.45}
+  .tenant-shell .field,
+  .platform-shell .field,
+  .tenant-shell .platform-profile-fields label,
+  .platform-shell .platform-profile-fields label{font-size:.72rem!important}
+  .tenant-shell .field small,
+  .platform-shell .field small{font-size:.66rem!important;line-height:1.45}
+  .tenant-shell .btn,
+  .platform-shell .btn{font-size:.74rem;white-space:normal;text-align:center}
+  .tenant-shell .badge,
+  .platform-shell .badge{font-size:.62rem}
+
+  /* poster-style shortcuts need room for labels */
+  .mobile-quick-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+  }
+  .mobile-quick-action{
+    min-height:98px!important;
+    padding:12px 8px!important;
+  }
+  .mobile-quick-action strong{font-size:.72rem!important;line-height:1.25}
+  .mobile-quick-action small{font-size:.62rem!important;line-height:1.3}
+  .mobile-quick-icon{width:40px!important;height:40px!important}
+
+  .mobile-app-stats,
+  .platform-mobile-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .mobile-app-stats>div,
+  .platform-mobile-stats>a{min-width:0!important}
+  .mobile-app-stats strong,
+  .platform-mobile-stats strong{
+    max-width:100%;
+    font-size:clamp(.8rem,3.7vw,1rem)!important;
+    line-height:1.18!important;
+    overflow-wrap:anywhere!important;
+  }
+  .mobile-app-stats small,
+  .platform-mobile-stats small{font-size:.64rem!important;line-height:1.4!important}
+  .mobile-app-section-head strong{font-size:.9rem}
+  .mobile-app-section-head span,
+  .mobile-app-section-head a{font-size:.66rem}
+  .mobile-update-row strong{font-size:.73rem!important}
+  .mobile-update-row small{font-size:.64rem!important}
+
+  /* Profile screens */
+  .my-profile-layout,
+  .platform-profile-grid{width:100%;grid-template-columns:1fr!important}
+  .my-profile-card,
+  .my-employee-card,
+  .platform-company-profile,
+  .platform-admin-profile{width:100%;min-width:0;overflow:hidden}
+  .my-profile-main{min-width:0}
+  .my-profile-identity{flex:1;min-width:0}
+  .my-profile-identity h2{font-size:1.08rem!important;overflow-wrap:anywhere}
+  .my-profile-identity p,
+  .my-profile-identity span{overflow-wrap:anywhere}
+  .my-profile-photo{width:78px!important;height:78px!important;flex-basis:78px!important}
+  .platform-admin-card{min-width:0}
+  .platform-admin-avatar{width:52px!important;height:52px!important;flex:0 0 52px}
+  .platform-admin-card strong{font-size:.82rem}
+  .platform-admin-card small{font-size:.68rem;white-space:normal!important;overflow-wrap:anywhere}
+  .platform-profile-logo{min-width:0}
+  .platform-profile-logo>div:last-child{width:100%;min-width:0}
+  .platform-profile-logo-preview{width:88px!important;height:88px!important;flex:0 0 88px!important}
+  .company-profile-summary{min-width:0}
+  .company-profile-summary-logo{width:68px!important;height:68px!important;flex:0 0 68px!important}
+  .company-profile-summary-copy{flex:1;min-width:0}
+  .company-profile-summary-copy h2{font-size:1rem!important}
+  .company-profile-summary-copy p{font-size:.7rem!important}
+  .brand-upload>div:last-child{width:100%;min-width:0}
+  .company-logo{width:76px!important;height:76px!important;flex:0 0 76px!important}
+  .brand-upload p{font-size:.7rem!important;line-height:1.5}
+  .brand-actions,.platform-profile-logo-actions{display:grid!important;grid-template-columns:1fr 1fr;width:100%}
+  .brand-actions .btn,.platform-profile-logo-actions .btn{width:100%;min-width:0}
+
+  /* Forms and action bars */
+  .form-grid,
+  .platform-profile-fields,
+  .settings-grid{width:100%;grid-template-columns:1fr!important}
+  .form-grid>*,
+  .platform-profile-fields>*,
+  .settings-grid>*{min-width:0}
+  .form-footer{
+    width:100%;
+    flex-wrap:wrap;
+    gap:8px!important;
+  }
+  .form-footer>.btn,.form-footer>a.btn{flex:1 1 140px;min-width:0}
+  input,select,textarea{max-width:100%}
+
+  /* Modal/dialog safety */
+  .modal{
+    max-width:calc(100vw - 16px)!important;
+    width:calc(100vw - 16px)!important;
+    overflow-x:hidden!important;
+  }
+  .modal-body,.modal-head{min-width:0;max-width:100%}
+  .modal-body img{max-width:100%!important;height:auto!important}
+  .credential-sheet,.payout-review,.support-detail{min-width:0;max-width:100%}
+
+  /* Horizontal data regions are the only places allowed to scroll sideways */
+  .table-scroll{
+    width:100%;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+  .table-scroll table{min-width:640px!important;width:max-content;max-width:none}
+  .calendar-layout,
+  .support-detail-grid,
+  .dashboard-grid,
+  .digital-dashboard-grid,
+  .digital-lower-grid{min-width:0}
+
+  /* bottom nav remains readable */
+  .mobile-bottom-nav a,
+  .mobile-bottom-nav button{
+    font-size:.62rem!important;
+    line-height:1.15;
+    min-width:0;
+    overflow:hidden;
+  }
+  .mobile-bottom-nav a span,
+  .mobile-bottom-nav button span{
+    display:block;
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  /* drawer strings and account data */
+  .sidebar{overflow:hidden}
+  .sidebar nav{overflow-y:auto;overflow-x:hidden}
+  .workspace-switch>div,.account>div{min-width:0}
+  .workspace-switch strong,.workspace-switch small,.account strong,.account small{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+
+@media(max-width:520px){
+  .company-profile-summary{
+    align-items:center!important;
+    flex-direction:column!important;
+    text-align:center;
+  }
+  .company-profile-summary-copy>div{justify-content:center}
+  .brand-upload{align-items:center!important;text-align:center}
+  .brand-actions,.platform-profile-logo-actions{grid-template-columns:1fr!important}
+  .my-profile-main{
+    align-items:center!important;
+    flex-direction:column!important;
+    margin-top:-36px!important;
+    text-align:center;
+  }
+  .my-profile-identity>div{justify-content:center}
+  .my-profile-facts{grid-template-columns:1fr!important}
+  .my-profile-facts>div.span-two{grid-column:auto!important}
+  .platform-admin-card{
+    align-items:center;
+    flex-direction:column;
+    text-align:center;
+  }
+  .platform-profile-logo{align-items:center!important;text-align:center!important}
+  .mobile-app-brand strong{font-size:.86rem!important}
+  .mobile-app-brand small{font-size:.62rem!important}
+}
+
+/* Auth sizing QA */
+@media(max-width:700px){
+  .auth-pro-main{overflow-x:hidden!important}
+  .auth-pro-card{overflow:hidden!important}
+  .auth-pro-mobile-brand{min-width:0}
+  .auth-pro-mobile-brand>span:last-child{min-width:0}
+  .auth-pro-mobile-brand strong,
+  .auth-pro-mobile-brand small{white-space:normal!important;overflow-wrap:anywhere}
+  .auth-pro-form,
+  .auth-pro-form label,
+  .signup-all-grid{min-width:0;max-width:100%}
+  .auth-pro-options{flex-wrap:wrap}
+  .auth-pro-options label{min-width:0}
+  .signup-email-delivery{min-width:0}
+  .signup-email-delivery>div{min-width:0}
+  .signup-email-delivery strong,
+  .signup-email-delivery small{overflow-wrap:anywhere}
+}
+
+/* Very small phones */
+@media(max-width:360px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{padding-left:7px!important;padding-right:7px!important}
+  .mobile-quick-grid{gap:7px!important}
+  .mobile-quick-action{min-height:94px!important}
+  .mobile-bottom-nav{left:4px!important;right:4px!important;padding-left:2px!important;padding-right:2px!important}
+  .mobile-bottom-nav a,
+  .mobile-bottom-nav button{font-size:.56rem!important}
+  .auth-pro-card{border-radius:16px!important;padding-left:12px!important;padding-right:12px!important}
+}
