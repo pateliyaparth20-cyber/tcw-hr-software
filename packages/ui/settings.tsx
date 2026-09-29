@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye,Check,Bell,Trash2,Sparkles,KeyRound,RefreshCw,Search,Clock3,AlertTriangle,Building2,UserCircle} from 'lucide-react';
-import {useApp,useData,api,PageTitle,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,displayDate,currencyValue} from './core';
+import {useApp,useData,api,PageTitle,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,displayDate,currencyValue} from './core';
 import {Row,Field,readable} from './config';
 export function SoftwareUpdateCard(){
  const{notify}=useApp();const[current,setCurrent]=useState(''),[available,setAvailable]=useState(''),[checking,setChecking]=useState(false);
