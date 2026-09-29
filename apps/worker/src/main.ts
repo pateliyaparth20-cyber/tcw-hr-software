@@ -45,6 +45,16 @@ async function sendEmail(payload:any){
   if(resendError)throw new Error(resendError);
   throw new Error('Email provider is not configured');
 }
+function normalizeMobile(value:string){
+  let digits=String(value??'').replace(/\D/g,'');
+  if(digits.length===10)digits='91'+digits;
+  return digits;
+}
+function redactDeliveredCredential(payload:any,label='[delivered]'){
+  const secret=typeof payload?.tempPassword==='string'?payload.tempPassword:'';
+  const text=secret&&typeof payload?.text==='string'?payload.text.split(secret).join(label):payload?.text;
+  return {...payload,...(text!==undefined?{text}:{}),delivered:true,...(secret?{tempPassword:label}:{})};
+}
 async function sendSms(payload:any){
   const provider=(process.env.SMS_PROVIDER??'').trim().toUpperCase();
   if(!provider)throw new Error('SMS provider is not configured');
