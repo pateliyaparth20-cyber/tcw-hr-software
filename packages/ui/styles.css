@@ -2488,3 +2488,463 @@ td{padding:14px 16px;line-height:1.45}
     font-size:11.5px!important;
   }
 }
+
+
+/* v1.6.0 distinct desktop + native mobile UI */
+/* ---------------- DESKTOP: full SaaS workspace ---------------- */
+@media(min-width:951px){
+  .tenant-shell .sidebar{width:248px}
+  .tenant-shell .main-shell{margin-left:248px;width:calc(100% - 248px)}
+  .platform-shell .sidebar{width:268px}
+  .platform-shell .main-shell{margin-left:268px;width:calc(100% - 268px)}
+
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding:28px 30px 14px;
+    max-width:1680px;
+    margin:0 auto;
+  }
+  .tenant-shell .topbar,
+  .platform-shell .topbar{
+    height:68px;
+    padding:0 28px;
+  }
+  .tenant-shell .panel,
+  .platform-shell .panel{
+    border-radius:14px;
+  }
+  .tenant-shell .digital-kpi-grid{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+  .tenant-shell .digital-dashboard-grid{
+    grid-template-columns:minmax(0,1.55fr) minmax(320px,.75fr);
+  }
+}
+
+/* ---------------- MOBILE: native-app visual system ---------------- */
+@media(max-width:950px){
+  .tenant-shell,
+  .platform-shell{
+    min-height:100dvh;
+    background:#f4f7fb;
+  }
+  .tenant-shell .main-shell,
+  .platform-shell .main-shell{
+    min-height:100dvh;
+    background:#f4f7fb;
+  }
+
+  /* App bar instead of desktop header */
+  .tenant-shell .topbar,
+  .platform-shell .topbar{
+    position:sticky;
+    top:0;
+    z-index:32;
+    height:58px;
+    padding:0 12px;
+    background:rgba(255,255,255,.97);
+    border-bottom:1px solid #e5eaf0;
+    box-shadow:0 3px 14px rgba(31,58,88,.05);
+    backdrop-filter:blur(14px);
+  }
+  .tenant-shell .breadcrumb,
+  .platform-shell .breadcrumb{
+    font-size:.78rem;
+    color:#6f8093;
+  }
+  .tenant-shell .breadcrumb>span,
+  .platform-shell .breadcrumb>span{
+    display:none;
+  }
+  .tenant-shell .breadcrumb>strong,
+  .platform-shell .breadcrumb>strong{
+    display:block;
+    color:#213b55;
+    font-size:.9rem;
+    font-weight:750;
+  }
+  .tenant-shell .command-button,
+  .platform-shell .command-button{
+    width:40px;
+    height:40px;
+    padding:0;
+    justify-content:center;
+    border:0;
+    background:#f3f6fa;
+    border-radius:12px;
+  }
+  .tenant-shell .command-button span,
+  .tenant-shell .command-button kbd,
+  .platform-shell .command-button span,
+  .platform-shell .command-button kbd{
+    display:none;
+  }
+  .tenant-shell .header-divider,
+  .tenant-shell .header-avatar,
+  .platform-shell .header-divider,
+  .platform-shell .header-avatar{
+    display:none;
+  }
+  .tenant-shell .notification-button{
+    width:40px;height:40px;
+    border-radius:12px;
+    background:#f3f6fa;
+  }
+  .tenant-shell .mobile-toggle,
+  .platform-shell .mobile-toggle{
+    width:40px;height:40px;
+    border-radius:12px;
+    background:#eef4fb;
+    color:#2c69c9;
+  }
+
+  /* Main screen behaves like an app feed */
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding:12px 10px calc(88px + env(safe-area-inset-bottom));
+    width:100%;
+  }
+  .tenant-shell .page-stage,
+  .platform-shell .page-stage{
+    animation:none;
+  }
+  .tenant-shell .app-footer,
+  .platform-shell .app-footer{
+    display:none;
+  }
+
+  /* Native card proportions */
+  .tenant-shell .panel,
+  .platform-shell .panel,
+  .tenant-shell .stat,
+  .platform-shell .stat,
+  .tenant-shell .record-card,
+  .platform-shell .record-card{
+    border-radius:16px;
+    border:1px solid #e3e8ef;
+    background:#fff;
+    box-shadow:0 5px 16px rgba(35,64,96,.045);
+  }
+  .tenant-shell .panel-heading,
+  .platform-shell .panel-heading{
+    padding:14px 14px 11px;
+  }
+  .tenant-shell .panel-heading h2,
+  .platform-shell .panel-heading h2{
+    font-size:.92rem;
+    line-height:1.25;
+  }
+  .tenant-shell .panel-heading p,
+  .platform-shell .panel-heading p{
+    font-size:.66rem;
+    line-height:1.45;
+  }
+  .tenant-shell .list-row,
+  .platform-shell .list-row{
+    min-height:58px;
+    padding:11px 13px;
+  }
+  .tenant-shell .list-row strong,
+  .platform-shell .list-row strong{
+    font-size:.78rem;
+  }
+  .tenant-shell .list-row small,
+  .platform-shell .list-row small{
+    font-size:.64rem;
+    line-height:1.35;
+  }
+
+  /* HR home screen */
+  .tenant-shell .hr-welcome-card{
+    display:block;
+    margin:0 0 11px;
+    padding:15px 14px;
+    border-radius:18px;
+    background:linear-gradient(145deg,#1f69d8,#327ce8);
+    border:0;
+    color:#fff;
+    box-shadow:0 10px 26px rgba(32,103,215,.18);
+  }
+  .tenant-shell .hr-welcome-kicker{color:#cfe0ff;font-size:.58rem}
+  .tenant-shell .hr-welcome-copy h1{
+    color:#fff;
+    font-size:1.45rem;
+    margin-top:3px;
+  }
+  .tenant-shell .hr-welcome-copy>p{
+    color:#dfebff;
+    font-size:.72rem;
+    margin:6px 0 10px;
+  }
+  .tenant-shell .hr-welcome-company>span{
+    color:#fff;
+    background:rgba(255,255,255,.14);
+    font-size:.66rem;
+  }
+  .tenant-shell .hr-welcome-company small{
+    color:#d5e5ff;
+    font-size:.62rem;
+  }
+  .tenant-shell .hr-welcome-tools{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:9px;
+    align-items:stretch;
+  }
+  .tenant-shell .hr-welcome-tools .digital-clock{
+    min-width:0;
+    width:100%;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:12px;
+    background:rgba(255,255,255,.10);
+  }
+  .tenant-shell .hr-welcome-tools .digital-clock span{color:#dce9ff}
+  .tenant-shell .hr-welcome-tools .digital-clock strong{color:#fff}
+  .tenant-shell .hr-welcome-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .tenant-shell .hr-welcome-actions .btn{
+    width:100%;
+    min-height:42px;
+    border-radius:11px;
+  }
+  .tenant-shell .hr-welcome-actions .btn.primary{
+    background:#fff;
+    color:#2467c8;
+    border-color:#fff;
+    box-shadow:none;
+  }
+  .tenant-shell .hr-welcome-actions .btn.secondary{
+    background:rgba(255,255,255,.13);
+    color:#fff;
+    border-color:rgba(255,255,255,.22);
+  }
+
+  /* Mobile KPI tiles: app shortcuts style */
+  .tenant-shell .digital-kpi-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    margin-bottom:11px;
+  }
+  .tenant-shell .digital-kpi-card{
+    min-height:112px;
+    padding:12px;
+    border-radius:16px;
+    box-shadow:none;
+  }
+  .tenant-shell .digital-kpi-top{margin-bottom:8px}
+  .tenant-shell .digital-kpi-top>span{
+    font-size:.64rem;
+    line-height:1.35;
+  }
+  .tenant-shell .digital-kpi-top i{
+    width:32px;height:32px;
+    border-radius:10px;
+  }
+  .tenant-shell .digital-kpi-card>strong{
+    font-size:1.28rem;
+    line-height:1.15;
+  }
+  .tenant-shell .digital-kpi-card>small{
+    font-size:.6rem;
+    line-height:1.38;
+    margin-top:5px;
+  }
+
+  .tenant-shell .digital-dashboard-grid,
+  .tenant-shell .dashboard-grid.three,
+  .platform-shell .dashboard-grid,
+  .platform-shell .dashboard-grid.three{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:11px;
+  }
+  .tenant-shell .digital-signal-strip{
+    grid-template-columns:1fr 1fr;
+  }
+  .tenant-shell .digital-signal-strip>div{
+    padding:10px 7px;
+  }
+  .tenant-shell .digital-signal-strip>div span{font-size:.58rem}
+  .tenant-shell .digital-signal-strip>div strong{font-size:.9rem}
+
+  /* Convert desktop tables to scrollable app cards area */
+  .tenant-shell .table-scroll,
+  .platform-shell .table-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border-radius:0 0 16px 16px;
+  }
+  .tenant-shell table,
+  .platform-shell table{
+    min-width:640px;
+    font-size:.74rem;
+  }
+  .tenant-shell th,
+  .platform-shell th{
+    padding:10px 12px;
+    font-size:.62rem;
+  }
+  .tenant-shell td,
+  .platform-shell td{
+    padding:12px;
+    font-size:.72rem;
+  }
+
+  /* Toolbar/forms in mobile app format */
+  .tenant-shell .toolbar,
+  .platform-shell .toolbar{
+    padding:11px;
+    gap:9px;
+  }
+  .tenant-shell .toolbar-actions,
+  .platform-shell .toolbar-actions{
+    width:100%;
+    gap:8px;
+  }
+  .tenant-shell .search-field,
+  .platform-shell .search-field{
+    max-width:none;
+    min-height:43px;
+  }
+  .tenant-shell .form-grid,
+  .platform-shell .form-grid{
+    grid-template-columns:1fr;
+    padding:14px;
+    gap:14px;
+  }
+  .tenant-shell .form-grid .span-two,
+  .platform-shell .form-grid .span-two{
+    grid-column:auto;
+  }
+  .tenant-shell .field input,
+  .tenant-shell .field select,
+  .tenant-shell .field textarea,
+  .platform-shell .field input,
+  .platform-shell .field select,
+  .platform-shell .field textarea{
+    min-height:46px;
+    font-size:16px;
+  }
+
+  /* Native-style bottom nav */
+  .tenant-shell .mobile-bottom-nav,
+  .platform-shell .mobile-bottom-nav{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    position:fixed;
+    left:8px;
+    right:8px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    z-index:40;
+    width:auto;
+    min-height:62px;
+    padding:4px;
+    border:1px solid #dde5ee;
+    border-radius:18px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 12px 34px rgba(29,57,87,.16);
+    backdrop-filter:blur(16px);
+  }
+  .tenant-shell .mobile-bottom-nav a,
+  .tenant-shell .mobile-bottom-nav button,
+  .platform-shell .mobile-bottom-nav a,
+  .platform-shell .mobile-bottom-nav button{
+    min-width:0;
+    min-height:52px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:5px 2px;
+    border-radius:13px;
+    color:#7a8a9c;
+    font-size:.56rem;
+    font-weight:650;
+  }
+  .tenant-shell .mobile-bottom-nav a.active,
+  .tenant-shell .mobile-bottom-nav button.active,
+  .platform-shell .mobile-bottom-nav a.active,
+  .platform-shell .mobile-bottom-nav button.active{
+    color:#1768e5;
+    background:#eaf2ff;
+  }
+  .tenant-shell .mobile-bottom-nav svg,
+  .platform-shell .mobile-bottom-nav svg{
+    width:20px;height:20px;
+  }
+
+  /* Drawer on phone */
+  .tenant-shell .sidebar,
+  .platform-shell .sidebar{
+    width:min(86vw,310px);
+    border-radius:0 18px 18px 0;
+    box-shadow:18px 0 45px rgba(20,45,72,.2);
+  }
+
+  /* Super Admin mobile dashboard */
+  .platform-shell .platform-hero{
+    padding:15px 14px;
+    border-radius:17px;
+  }
+  .platform-shell .platform-hero h1{
+    font-size:1.42rem;
+    line-height:1.18;
+  }
+  .platform-shell .platform-hero p{
+    font-size:.7rem;
+    line-height:1.45;
+  }
+  .platform-shell .stats.four.power-stats{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+  }
+  .platform-shell .power-stats .stat{
+    min-height:108px;
+    padding:12px;
+    border-radius:16px;
+  }
+
+  /* Auth/legal copy: smaller secondary text */
+  .auth-pro-legal,
+  .auth-pro-legal-row,
+  .auth-pro-signup-link,
+  .auth-pro-form .terms-check,
+  .auth-pro-form .terms-check span,
+  .auth-pro-form small,
+  .auth-pro-form .signup-short-note p{
+    font-size:.62rem!important;
+    line-height:1.4!important;
+  }
+  .auth-pro-form input::placeholder,
+  .auth-pro-form textarea::placeholder{
+    font-size:11.5px!important;
+  }
+}
+
+@media(max-width:380px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding-left:8px;
+    padding-right:8px;
+  }
+  .tenant-shell .digital-kpi-grid,
+  .platform-shell .stats.four.power-stats{
+    gap:7px;
+  }
+  .tenant-shell .digital-kpi-card,
+  .platform-shell .power-stats .stat{
+    padding:10px;
+  }
+  .tenant-shell .mobile-bottom-nav,
+  .platform-shell .mobile-bottom-nav{
+    left:5px;right:5px;
+  }
+}
