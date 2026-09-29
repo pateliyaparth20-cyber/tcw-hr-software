@@ -112,6 +112,13 @@ export class DataService {
       if(recordId&&!before)throw new NotFoundException('Employee not found.');
       if(method==='DELETE'){await tx.employee.update({where:{id:before!.id},data:{deletedAt:new Date(),status:'INACTIVE'}});await tx.user.updateMany({where:{tenantId:tid,employeeId:before!.id},data:{active:false}});await audit(tx,ctx,'EMPLOYEE_ARCHIVED','employees',before!.id,before);return {ok:true};}
       const input=employeeSchema.parse(body);
+      if(input.photo){
+        if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.photo))throw new BadRequestException('Use a PNG or JPEG employee photo up to 5 MB.');
+        const raw=Buffer.from(input.photo.split(',')[1],'base64');
+        const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+        const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;
+        if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG employee photo up to 5 MB.');
+      }
       if(before && !(body as any)?.personal)input.personal=before.personal as any;
       if(before && !canSalary && !Object.prototype.hasOwnProperty.call(body??{},"monthlySalary"))input.monthlySalary=before.monthlySalary;
       if(!canSalary&&((before&&input.monthlySalary!==before.monthlySalary)||(!before&&input.monthlySalary>0)))throw new ForbiddenException('Payroll permission is required to set salary.');
