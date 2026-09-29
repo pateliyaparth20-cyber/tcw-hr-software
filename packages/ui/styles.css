@@ -5154,3 +5154,79 @@ table td,table th{overflow-wrap:anywhere}
 .person-inline .avatar{width:28px;height:28px;flex:0 0 28px;font-size:.57rem}
 .person-inline>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:950px){.person-inline .avatar{width:30px;height:30px;flex-basis:30px}.person-inline>span:last-child{font-size:.69rem}}
+
+
+/* v1.9.4 identity and company profile polish */
+.company-profile-facts{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:1px;
+  background:#e7edf3;
+  border-bottom:1px solid #e7edf3;
+}
+.company-profile-facts>div{
+  min-width:0;
+  padding:12px 14px;
+  background:#fff;
+}
+.company-profile-facts span{
+  display:block;
+  margin-bottom:4px;
+  color:#8a99a8;
+  font-size:.61rem;
+}
+.company-profile-facts strong{
+  display:block;
+  color:#334d66;
+  font-size:.74rem;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.person-cell{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+}
+.person-cell .avatar{
+  width:32px;
+  height:32px;
+  flex:0 0 32px;
+}
+.person-cell strong{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.avatar.has-photo img{
+  object-fit:cover!important;
+  object-position:center 24%!important;
+}
+.platform-admin-avatar.has-upload>img,
+.my-profile-photo>img,
+.image-field>img{
+  object-position:center 22%!important;
+}
+.panel,
+.mobile-app-section,
+.platform-mobile-stats>a,
+.mobile-app-stats>div,
+.mobile-quick-action{
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+@media(hover:hover) and (pointer:fine){
+  .mobile-quick-action:hover,
+  .platform-mobile-stats>a:hover,
+  .mobile-app-stats>div:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 24px rgba(31,64,99,.08);
+  }
+}
+@media(max-width:1199px){
+  .company-profile-facts{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:600px){
+  .company-profile-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .company-profile-facts>div{padding:10px 11px}
+}
