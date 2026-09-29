@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall} from 'lucide-react';
+import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard} from 'lucide-react';
 import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
 function Trend({attendance}:{attendance:Row[]}){
