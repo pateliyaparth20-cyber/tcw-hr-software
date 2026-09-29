@@ -1,4 +1,4 @@
-const CACHE='tcw-shell-v1.3.14-agent-monitor';
+const CACHE='tcw-shell-v1.4.0-auto-refresh';
 const STATIC=['/offline.html','/tcw-logo.png','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting())
