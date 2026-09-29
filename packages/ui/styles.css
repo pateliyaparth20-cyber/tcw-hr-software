@@ -5230,3 +5230,297 @@ table td,table th{overflow-wrap:anywhere}
   .company-profile-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .company-profile-facts>div{padding:10px 11px}
 }
+
+
+/* v1.9.5 canonical UI geometry and mobile navigation alignment */
+:root{
+  --radius:16px;
+  --card-radius:16px;
+  --control-radius:10px;
+  --shadow:0 6px 22px rgba(31,55,101,.055);
+}
+.panel,
+.stat,
+.record-card,
+.payroll-card,
+.pipeline-card,
+.notice,
+.status-picker,
+.software-update-card,
+.company-profile-panel,
+.my-profile-card,
+.my-employee-card{
+  border-radius:var(--card-radius)!important;
+}
+.btn,
+.icon-button,
+input,
+select,
+textarea,
+.search-field,
+.filter,
+.date-chip{
+  border-radius:var(--control-radius)!important;
+}
+.panel,
+.stat,
+.record-card,
+.payroll-card,
+.pipeline-card,
+.mobile-app-section,
+.mobile-app-stats>div,
+.platform-mobile-stats>a{
+  box-shadow:var(--shadow);
+}
+.panel-heading,
+.toolbar,
+.record-card,
+.stat,
+.payroll-card{
+  min-width:0;
+}
+.page-title>*,
+.toolbar>*,
+.row-between>*,
+.card-fact>*,
+.person-cell>*{
+  min-width:0;
+}
+.card-fact strong,
+.card-fact span,
+.page-title p,
+.panel-heading p{
+  overflow-wrap:anywhere;
+}
+.record-cards,
+.stats,
+.dashboard-grid,
+.dashboard-grid.three,
+.profile-grid,
+.my-profile-layout,
+.platform-profile-grid{
+  align-items:stretch;
+}
+
+@media(max-width:950px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    width:100%;
+    max-width:620px;
+    padding-left:12px!important;
+    padding-right:12px!important;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;
+  }
+
+  .mobile-bottom-nav{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+    min-height:68px!important;
+    padding:5px!important;
+    overflow:hidden!important;
+    border-radius:20px!important;
+    border:1px solid rgba(215,225,237,.96)!important;
+    background:rgba(255,255,255,.97)!important;
+    box-shadow:0 14px 36px rgba(28,57,91,.18)!important;
+  }
+  .mobile-bottom-nav>a,
+  .mobile-bottom-nav>button{
+    width:100%!important;
+    min-width:0!important;
+    min-height:56px!important;
+    margin:0!important;
+    padding:6px 2px 5px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:4px!important;
+    border-radius:14px!important;
+    text-align:center!important;
+    line-height:1!important;
+    overflow:hidden!important;
+  }
+  .mobile-bottom-nav>a>svg,
+  .mobile-bottom-nav>button>svg{
+    display:block!important;
+    width:20px!important;
+    height:20px!important;
+    min-width:20px!important;
+    min-height:20px!important;
+    margin:0 auto!important;
+    flex:0 0 20px!important;
+  }
+  .mobile-bottom-nav>a>span,
+  .mobile-bottom-nav>button>span{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:12px!important;
+    margin:0!important;
+    padding:0 1px!important;
+    color:inherit!important;
+    font-size:.58rem!important;
+    font-weight:700!important;
+    line-height:1.08!important;
+    letter-spacing:0!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  .mobile-bottom-nav>a.active,
+  .mobile-bottom-nav>button.active{
+    background:#eaf2ff!important;
+    color:var(--primary)!important;
+  }
+
+  .mobile-quick-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    align-items:stretch!important;
+  }
+  .mobile-quick-action{
+    width:100%!important;
+    min-width:0!important;
+    min-height:98px!important;
+    padding:10px 6px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    border-radius:16px!important;
+    text-align:center!important;
+  }
+  .mobile-quick-icon{
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    flex:0 0 40px!important;
+    display:grid!important;
+    place-items:center!important;
+    margin:0 auto!important;
+    border-radius:13px!important;
+  }
+  .mobile-quick-action strong,
+  .mobile-quick-action small{
+    display:block!important;
+    width:100%!important;
+    margin:0!important;
+    text-align:center!important;
+    overflow-wrap:anywhere!important;
+  }
+  .mobile-quick-action strong{
+    min-height:16px;
+    font-size:.68rem!important;
+    line-height:1.2!important;
+  }
+  .mobile-quick-action small{
+    font-size:.56rem!important;
+    line-height:1.25!important;
+  }
+
+  .panel,
+  .stat,
+  .record-card,
+  .payroll-card,
+  .pipeline-card,
+  .mobile-app-section,
+  .mobile-app-stats>div,
+  .platform-mobile-stats>a,
+  .software-update-card{
+    border-radius:16px!important;
+    overflow:hidden;
+  }
+  .panel-heading{
+    padding:16px 15px 13px!important;
+  }
+  .toolbar{
+    padding:13px!important;
+    gap:10px!important;
+  }
+  .record-cards{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+    padding:12px!important;
+  }
+  .record-card{
+    padding:15px!important;
+  }
+  .stats,
+  .stats.four{
+    gap:10px!important;
+  }
+  .stat{
+    min-height:104px;
+    padding:14px!important;
+  }
+  .form-grid{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea,
+  .record-form input,
+  .record-form select,
+  .record-form textarea{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .title-actions,
+  .toolbar-actions,
+  .card-actions{
+    max-width:100%;
+    flex-wrap:wrap!important;
+  }
+  .table-scroll{
+    width:100%!important;
+    max-width:100%!important;
+    border-radius:0 0 16px 16px;
+  }
+}
+
+@media(max-width:390px){
+  .mobile-bottom-nav{
+    left:6px!important;
+    right:6px!important;
+    padding:4px!important;
+  }
+  .mobile-bottom-nav>a,
+  .mobile-bottom-nav>button{
+    min-height:54px!important;
+    padding-left:1px!important;
+    padding-right:1px!important;
+  }
+  .mobile-bottom-nav>a>span,
+  .mobile-bottom-nav>button>span{
+    font-size:.53rem!important;
+  }
+  .mobile-quick-grid{
+    gap:7px!important;
+  }
+  .mobile-quick-action{
+    min-height:94px!important;
+    padding-left:4px!important;
+    padding-right:4px!important;
+  }
+}
+
+@media(min-width:951px){
+  .panel,
+  .stat,
+  .record-card,
+  .payroll-card,
+  .pipeline-card,
+  .software-update-card{
+    border-radius:16px!important;
+  }
+  .record-cards{
+    gap:18px;
+  }
+}
