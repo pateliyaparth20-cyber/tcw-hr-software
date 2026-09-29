@@ -5063,3 +5063,32 @@ table td,table th{overflow-wrap:anywhere}
 .mobile-app-user span,.platform-mobile-greeting span{color:#71859a!important;font-size:.62rem!important}
 .platform-mobile-action,.mobile-app-bell{color:#fff!important;background:rgba(255,255,255,.11)!important;border-color:rgba(255,255,255,.18)!important}
 }
+
+
+/* v1.9.2 software update settings card */
+.software-update-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:15px;align-items:center;margin-top:16px;padding:18px}
+.software-update-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:#edf5ff;color:#176ee0}
+.software-update-copy{min-width:0}
+.software-update-copy>small{display:block;color:#5d82b3;font-size:.58rem;font-weight:800;letter-spacing:.1em;margin-bottom:3px}
+.software-update-copy h2{margin:0;color:#29445f;font-size:.98rem}
+.software-update-copy p{margin:5px 0 8px;color:#7b8da0;font-size:.72rem;line-height:1.45}
+.software-version{display:inline-block;padding:3px 7px;border-radius:7px;background:#f3f6f9;color:#60758a;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.61rem}
+.software-update-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.image-field{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;align-items:center;padding:10px;border:1px solid #e1e8ef;border-radius:13px;background:#f8fafc}
+.image-field>img,.image-field>span{width:92px;height:106px;border-radius:12px;background:#eaf0f6;object-fit:cover;object-position:center 22%;display:grid;place-items:center;color:#8899aa;font-size:.68rem}
+.image-field>div{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:950px){
+.software-update-card{grid-template-columns:auto minmax(0,1fr);gap:11px;padding:14px}
+.software-update-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr;width:100%}
+.software-update-actions .btn{width:100%;min-height:44px;justify-content:center}
+.image-field{grid-template-columns:78px minmax(0,1fr)}
+.image-field>img,.image-field>span{width:78px;height:92px}
+}
+@media(max-width:420px){
+.software-update-card{grid-template-columns:1fr;text-align:center}
+.software-update-icon{margin:auto}
+.software-update-actions{grid-column:auto}
+.image-field{grid-template-columns:1fr;text-align:center}
+.image-field>img,.image-field>span{margin:auto}
+.image-field>div{justify-content:center}
+}
