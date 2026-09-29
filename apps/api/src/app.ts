@@ -142,7 +142,12 @@ export class Api {
     }
     if(resource==='notifications'){
       const tid=tenant(ctx),where={tenantId:tid,OR:[{userId:ctx.user.id},{userId:null}]};
-      if(method==='GET'){const items=await this.db.notification.findMany({where,orderBy:{createdAt:'desc'},take:200});return {items,unread:items.filter(r=>!r.readAt).length};}
+      if(method==='GET'){
+        const clearBefore=new Date(Date.now()-12*60*60*1000);
+        await this.db.notification.deleteMany({where:{tenantId:tid,readAt:{lte:clearBefore}}});
+        const items=await this.db.notification.findMany({where,orderBy:{createdAt:'desc'},take:200});
+        return {items};
+      }
       if(method==='PATCH'&&key==='all'){await this.db.notification.updateMany({where:{...where,readAt:null},data:{readAt:new Date()}});return {ok:true};}
       if(method==='PATCH'&&key){await this.db.notification.updateMany({where:{...where,id:id.parse(key)},data:{readAt:new Date()}});return {ok:true};}
     }
