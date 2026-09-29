@@ -47,7 +47,7 @@ export function MyProfilePage(){
       <label><span>User ID</span><input value={user.loginId??''} readOnly/></label>
       <label><span>Role</span><input value={user.roleName??''} readOnly/></label>
      </div>
-     <div className="form-footer"><button type="button" className="btn secondary" onClick={()=>setForm(v=>({...v,avatar:null}))}>Remove photo</button><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
+     <div className="form-actions-end profile-actions-end"><button type="button" className="btn secondary" onClick={()=>setForm(v=>({...v,avatar:null}))}>Remove photo</button><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
     </form>
    </section>
    <section className="panel my-employee-card">

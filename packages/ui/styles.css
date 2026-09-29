@@ -5996,3 +5996,159 @@ textarea,
     flex-basis:82px!important;
   }
 }
+
+
+/* v1.9.9 structural mobile form actions + More drawer profile */
+.form-actions-end{
+  position:relative!important;
+  inset:auto!important;
+  z-index:1!important;
+  clear:both!important;
+  width:100%!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin:18px 0 0!important;
+  padding:16px 0 0!important;
+  border-top:1px solid #e8edf3!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.form-actions-end .btn{
+  position:static!important;
+  inset:auto!important;
+  margin:0!important;
+}
+.sidebar-profile-link{
+  min-width:0;
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:4px;
+  border-radius:12px;
+}
+.sidebar-profile-link>span{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+.sidebar-profile-link strong,
+.sidebar-profile-link small{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.sidebar-profile-link:hover{background:#f4f7fb}
+
+@media(max-width:950px){
+  .record-form{
+    display:block!important;
+    position:relative!important;
+    overflow:visible!important;
+    padding-bottom:0!important;
+  }
+  .record-form>.form-grid,
+  .my-profile-form>.platform-profile-fields{
+    display:grid!important;
+    position:relative!important;
+    z-index:1!important;
+    width:100%!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  .record-form>.form-actions-end,
+  .my-profile-form>.form-actions-end{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    transform:none!important;
+    margin:16px 0 0!important;
+    padding:14px!important;
+    border-top:1px solid #e6ecf2!important;
+    background:#fff!important;
+    border-radius:0 0 16px 16px!important;
+  }
+  .record-form>.form-actions-end .btn,
+  .my-profile-form>.form-actions-end .btn{
+    width:100%!important;
+    min-height:46px!important;
+  }
+  .my-profile-form{
+    display:block!important;
+    position:relative!important;
+    overflow:visible!important;
+  }
+  .my-profile-form>.platform-profile-fields{
+    padding:14px!important;
+    gap:13px!important;
+  }
+  .my-profile-form>.platform-profile-fields>label{
+    display:block!important;
+    position:relative!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+
+  .sidebar.open{
+    display:flex!important;
+    flex-direction:column!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+  }
+  .sidebar.open nav{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    padding-bottom:14px!important;
+  }
+  .sidebar.open .sidebar-bottom{
+    flex:0 0 auto!important;
+    margin:0!important;
+    padding:10px 12px max(12px,env(safe-area-inset-bottom,0px))!important;
+    border-top:1px solid #e5ebf2!important;
+    background:#fff!important;
+  }
+  .sidebar.open .account{
+    width:100%!important;
+    min-height:54px!important;
+    padding:5px!important;
+    border:1px solid #e4eaf1!important;
+    border-radius:15px!important;
+    background:#f8fafc!important;
+  }
+  .sidebar.open .sidebar-profile-link{
+    min-width:0!important;
+    min-height:44px!important;
+  }
+  .sidebar.open .sidebar-profile-link .avatar{
+    width:38px!important;
+    height:38px!important;
+    flex:0 0 38px!important;
+  }
+  .sidebar.open .sidebar-profile-link strong{
+    font-size:.78rem!important;
+    color:#314960!important;
+  }
+  .sidebar.open .sidebar-profile-link small{
+    font-size:.62rem!important;
+    color:#8191a2!important;
+  }
+  .sidebar.open .sidebar-signout{
+    width:38px!important;
+    height:38px!important;
+    flex:0 0 38px!important;
+    border-radius:12px!important;
+  }
+}
+
+@media(max-width:420px){
+  .record-form>.form-actions-end,
+  .my-profile-form>.form-actions-end{
+    grid-template-columns:1fr!important;
+  }
+}
