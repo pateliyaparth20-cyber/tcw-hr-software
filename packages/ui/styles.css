@@ -6243,3 +6243,185 @@ textarea,
     flex:0 0 38px!important;
   }
 }
+
+
+/* v1.10.1 light mobile drawers + consistent open motion */
+@keyframes tcw-drawer-in{
+  from{opacity:.25;transform:translateX(-28px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes tcw-pop-in{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes tcw-fade-in{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+.modal[open]{
+  animation:tcw-pop-in .24s cubic-bezier(.2,.82,.2,1) both;
+}
+.modal::backdrop{
+  animation:tcw-fade-in .2s ease both;
+}
+.tcw-agent.open .tcw-agent-panel{
+  animation:tcw-pop-in .22s cubic-bezier(.2,.82,.2,1) both;
+  transform-origin:100% 100%;
+}
+.command-results,
+.command-search{
+  animation:tcw-pop-in .2s cubic-bezier(.2,.82,.2,1) both;
+}
+.dropdown-menu,
+.popover,
+.menu-panel,
+.status-menu{
+  animation:tcw-pop-in .18s cubic-bezier(.2,.82,.2,1) both;
+  transform-origin:top center;
+}
+
+@media(max-width:950px){
+  .sidebar{
+    transition:transform .28s cubic-bezier(.2,.82,.2,1),box-shadow .28s ease!important;
+    will-change:transform;
+  }
+  .sidebar.open{
+    animation:tcw-drawer-in .28s cubic-bezier(.2,.82,.2,1) both;
+  }
+  .mobile-scrim{
+    animation:tcw-fade-in .22s ease both;
+  }
+
+  /* White drawer for both HR and Super Admin */
+  .tenant-shell .sidebar,
+  .platform-shell .sidebar{
+    background:#fff!important;
+    color:#31485f!important;
+    border-right:1px solid #e4eaf1!important;
+    box-shadow:18px 0 44px rgba(25,48,74,.16)!important;
+  }
+  .tenant-shell .sidebar .brand,
+  .platform-shell .sidebar .brand{
+    background:#fff!important;
+    border-bottom:1px solid #e8edf3!important;
+  }
+  .tenant-shell .sidebar .brand strong,
+  .platform-shell .sidebar .brand strong{
+    color:#213a53!important;
+  }
+  .tenant-shell .sidebar .brand strong span,
+  .platform-shell .sidebar .brand strong span{
+    color:var(--primary)!important;
+  }
+  .tenant-shell .sidebar .brand small,
+  .platform-shell .sidebar .brand small{
+    color:#8998a8!important;
+  }
+  .tenant-shell .sidebar .workspace-switch,
+  .platform-shell .sidebar .workspace-switch{
+    background:#f7f9fc!important;
+    border:1px solid #e2e8ef!important;
+  }
+  .tenant-shell .sidebar .workspace-switch strong,
+  .platform-shell .sidebar .workspace-switch strong{
+    color:#31485f!important;
+  }
+  .tenant-shell .sidebar .workspace-switch small,
+  .platform-shell .sidebar .workspace-switch small{
+    color:#8998a8!important;
+  }
+  .tenant-shell .sidebar .workspace-icon,
+  .platform-shell .sidebar .workspace-icon{
+    background:#fff!important;
+    border-color:#dfe6ee!important;
+  }
+  .tenant-shell .sidebar .nav-group-label,
+  .platform-shell .sidebar .nav-group-label{
+    color:#9aa7b5!important;
+  }
+  .tenant-shell .sidebar .nav-item,
+  .platform-shell .sidebar .nav-item{
+    color:#68798b!important;
+    background:transparent!important;
+  }
+  .tenant-shell .sidebar .nav-item:hover,
+  .platform-shell .sidebar .nav-item:hover{
+    background:#f4f7fb!important;
+    color:#2e4963!important;
+  }
+  .tenant-shell .sidebar .nav-item.selected,
+  .platform-shell .sidebar .nav-item.selected{
+    background:#edf4ff!important;
+    color:var(--primary)!important;
+    box-shadow:inset 0 0 0 1px rgba(52,116,239,.08)!important;
+  }
+  .tenant-shell .sidebar .nav-item.selected::before,
+  .platform-shell .sidebar .nav-item.selected::before{
+    background:var(--primary)!important;
+  }
+  .tenant-shell .sidebar-bottom,
+  .platform-shell .sidebar-bottom{
+    background:#fff!important;
+    border-top:1px solid #e6ecf2!important;
+  }
+  .tenant-shell .sidebar .account,
+  .platform-shell .sidebar .account{
+    background:#f8fafc!important;
+    border:1px solid #e3eaf1!important;
+  }
+  .tenant-shell .sidebar .account strong,
+  .platform-shell .sidebar .account strong{
+    color:#31485f!important;
+  }
+  .tenant-shell .sidebar .account small,
+  .platform-shell .sidebar .account small{
+    color:#8292a3!important;
+  }
+  .tenant-shell .sidebar .account .icon-button,
+  .platform-shell .sidebar .account .icon-button{
+    color:#8292a3!important;
+  }
+
+  /* Make interactive cards feel alive without excessive motion. */
+  .panel,
+  .record-card,
+  .stat,
+  .mobile-quick-action,
+  .mobile-update-row,
+  .sidebar-profile-link,
+  .nav-item,
+  .btn,
+  .icon-button{
+    transition:
+      transform .18s cubic-bezier(.2,.82,.2,1),
+      box-shadow .18s ease,
+      background-color .18s ease,
+      border-color .18s ease,
+      color .18s ease!important;
+  }
+  .mobile-quick-action:active,
+  .mobile-update-row:active,
+  .btn:active,
+  .icon-button:active,
+  .nav-item:active{
+    transform:scale(.975)!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .sidebar,
+  .sidebar.open,
+  .modal[open],
+  .tcw-agent.open .tcw-agent-panel,
+  .command-results,
+  .command-search,
+  .dropdown-menu,
+  .popover,
+  .menu-panel,
+  .status-menu,
+  .mobile-scrim{
+    animation:none!important;
+    transition:none!important;
+  }
+}
