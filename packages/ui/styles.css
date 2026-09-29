@@ -4811,3 +4811,235 @@ table td,table th{overflow-wrap:anywhere}
     color:#176ee0!important;
   }
 }
+
+
+/* v1.9.0 controlled responsive polish */
+/* User photos: consistent face-forward crop everywhere. */
+.avatar.has-photo img,
+.my-profile-photo>img,
+.platform-admin-avatar.has-upload>img{
+  object-fit:cover!important;
+  object-position:center 22%!important;
+}
+.my-profile-photo,
+.platform-admin-avatar.has-upload{
+  background:#eef3f8!important;
+}
+
+/* Subtle product motion without layout shifts. */
+.panel,
+.mobile-app-stats>div,
+.platform-mobile-stats>a,
+.mobile-quick-action{
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+@media(hover:hover) and (pointer:fine){
+  .panel:hover{box-shadow:0 10px 28px rgba(31,61,94,.075)}
+  .mobile-quick-action:hover{transform:translateY(-2px)}
+}
+
+/* New dashboard identity rows */
+.platform-hero-user,
+.hr-welcome-user{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  min-width:0;
+}
+.platform-hero-user>.avatar,
+.hr-welcome-user>.avatar{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  border:2px solid rgba(255,255,255,.78);
+  box-shadow:0 6px 18px rgba(26,60,95,.12);
+}
+.platform-hero-user>div,
+.hr-welcome-user>div{min-width:0}
+
+/* Mobile cleanup from real-device QA. */
+@media(max-width:950px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    padding-bottom:104px!important;
+  }
+
+  .mobile-app-hero,
+  .platform-mobile-hero{
+    min-height:0!important;
+    margin:-12px -10px 11px!important;
+    padding:13px 14px 14px!important;
+    border-radius:0 0 20px 20px!important;
+    box-shadow:0 8px 22px rgba(26,61,99,.12)!important;
+  }
+
+  .mobile-app-brand,
+  .platform-mobile-brand{
+    min-height:46px;
+    gap:10px!important;
+  }
+  .mobile-app-logo,
+  .platform-mobile-brand>span{
+    width:44px!important;
+    height:44px!important;
+    flex:0 0 44px!important;
+    border-radius:14px!important;
+  }
+  .mobile-app-logo img,
+  .platform-mobile-brand img{
+    width:40px!important;
+    height:40px!important;
+  }
+  .mobile-app-brand strong,
+  .platform-mobile-brand strong{
+    font-size:.94rem!important;
+    line-height:1.15!important;
+  }
+  .mobile-app-brand small,
+  .platform-mobile-brand small{
+    font-size:.64rem!important;
+    line-height:1.25!important;
+  }
+
+  .platform-mobile-greeting{
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:center!important;
+    gap:10px!important;
+    margin-top:11px!important;
+  }
+  .platform-mobile-greeting>.avatar{
+    width:42px!important;
+    height:42px!important;
+    flex:0 0 42px!important;
+    border:2px solid rgba(255,255,255,.75);
+  }
+  .platform-mobile-greeting>div{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .platform-mobile-greeting small,
+  .mobile-app-user small{font-size:.63rem!important}
+  .platform-mobile-greeting strong,
+  .mobile-app-user strong{
+    font-size:1.08rem!important;
+    line-height:1.08!important;
+  }
+  .platform-mobile-greeting span,
+  .mobile-app-user span{font-size:.64rem!important}
+
+  .mobile-app-user{
+    margin-top:11px!important;
+  }
+  .mobile-app-user .avatar{
+    width:42px!important;
+    height:42px!important;
+  }
+
+  /* The bottom nav must never cover cards/forms/Agent content. */
+  .mobile-bottom-nav{
+    bottom:8px!important;
+    min-height:66px!important;
+    padding:5px 4px!important;
+    border-radius:20px!important;
+  }
+  .page-stage{
+    padding-bottom:8px!important;
+  }
+  .tcw-agent{
+    bottom:88px!important;
+  }
+  .tcw-agent-panel{
+    max-height:calc(100dvh - 150px)!important;
+  }
+  .toast{
+    bottom:92px!important;
+    max-width:calc(100vw - 24px)!important;
+  }
+
+  /* Sidebar update control is no longer a drawer action. */
+  .mobile-update-check{display:none!important}
+
+  /* Dense dashboard cards from screenshot: cleaner typography. */
+  .mobile-app-stats>div,
+  .platform-mobile-stats>a{
+    min-height:92px!important;
+    padding:11px!important;
+  }
+  .mobile-app-stats strong,
+  .platform-mobile-stats strong{
+    font-size:.95rem!important;
+  }
+  .mobile-app-stats small,
+  .platform-mobile-stats small{
+    font-size:.61rem!important;
+    line-height:1.35!important;
+  }
+  .mobile-app-section{
+    border-radius:17px!important;
+    padding:13px!important;
+  }
+
+  /* Profile cards stay within viewport. */
+  .my-profile-layout,
+  .platform-profile-grid,
+  .company-profile-panel{
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+  }
+  .my-profile-photo,
+  .platform-admin-avatar.has-upload{
+    width:86px!important;
+    height:100px!important;
+    flex:0 0 86px!important;
+    border-radius:18px!important;
+  }
+  .my-profile-photo>img,
+  .platform-admin-avatar.has-upload>img{
+    border-radius:14px!important;
+  }
+
+  /* Forms: consistent touch sizing. */
+  .platform-profile-fields input,
+  .platform-profile-fields textarea,
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+}
+
+/* Very narrow Android/iPhone screens. */
+@media(max-width:390px){
+  .mobile-app-stats,
+  .platform-mobile-stats{
+    gap:7px!important;
+  }
+  .mobile-app-stats>div,
+  .platform-mobile-stats>a{
+    grid-template-columns:34px minmax(0,1fr)!important;
+    column-gap:8px!important;
+    padding:9px!important;
+  }
+  .mobile-stat-icon{
+    width:34px!important;
+    height:34px!important;
+  }
+  .mobile-bottom-nav a,
+  .mobile-bottom-nav button{
+    font-size:.56rem!important;
+  }
+}
+
+/* Respect reduced-motion accessibility preference. */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
