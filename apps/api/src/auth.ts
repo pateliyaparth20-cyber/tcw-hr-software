@@ -77,7 +77,7 @@ export class AuthService {
       return {company,user,loginId};
     });
     await this.db.loginAttempt.upsert({where:{key:throttleKey},create:{key:throttleKey,failures:0},update:{failures:0,lockedUntil:null}});
-    return {company:created.company,companyCode:code,loginId:created.loginId,temporaryPassword,trialEndsAt,email:input.ownerEmail};
+    return {company:{id:created.company.id,name:created.company.name,status:created.company.status,plan:created.company.plan},trialEndsAt,email:input.ownerEmail,credentialsDelivery:'EMAIL'};
   }
   async logout(ctx:Context,res:Response){await this.db.session.deleteMany({where:{id:ctx.session.id,userId:ctx.user.id}});const names=ctx.user.role.scope==='PLATFORM'?[sessionCookieName('PLATFORM'),'tcw_admin_session','peopleos_session']:[sessionCookieName('TENANT'),'tcw_hr_session','peopleos_session'];for(const name of names)res.clearCookie(name,{path:'/'});return {ok:true};}
   async forgot(body:unknown){
