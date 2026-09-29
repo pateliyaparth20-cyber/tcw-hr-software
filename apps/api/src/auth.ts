@@ -11,7 +11,7 @@ import {syncCompanyAccess} from './billing';
 const dummyHash=hashPassword('unusable-dummy-password');
 export class AuthService {
   constructor(private db:Database){}
-  publicUser(user:any){const localTest=process.env.NODE_ENV!=='production'&&process.env.LOCAL_TEST_MODE==='true';return {id:user.id,name:user.name,email:user.email,loginId:user.loginId,tenantId:user.tenantId,employeeId:user.employeeId,mustChangePassword:localTest?false:user.mustChangePassword,role:user.role.code,roleName:user.role.name,scope:user.role.scope,permissions:user.role.permissions};}
+  publicUser(user:any){const localTest=process.env.NODE_ENV!=='production'&&process.env.LOCAL_TEST_MODE==='true';return {id:user.id,name:user.name,email:user.email,avatar:user.avatar??null,loginId:user.loginId,tenantId:user.tenantId,employeeId:user.employeeId,mustChangePassword:localTest?false:user.mustChangePassword,role:user.role.code,roleName:user.role.name,scope:user.role.scope,permissions:user.role.permissions};}
   private async setSession(user:any,req:Request,res:Response,remember:boolean){
     const raw=token(),csrf=token();
     const expiresAt=new Date(Date.now()+(remember?30:1)*86400000);
