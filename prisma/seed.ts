@@ -59,9 +59,11 @@ if(require.main===module){
       await seed(db,{adminEmail:process.env.ADMIN_EMAIL??'',adminPassword:process.env.ADMIN_PASSWORD??'',ownerEmail:qaEmail,ownerPassword:qaPassword,companyCode:qaCode,demo:true});
       const tenant=await db.tenant.findUniqueOrThrow({where:{code:qaCode}});
       const user=await db.user.findFirstOrThrow({where:{tenantId:tenant.id,email:qaEmail.toLowerCase()}});
-      await db.user.update({where:{id:user.id},data:{loginId:'TCWQA01',mustChangePassword:false}});
+      const preferredQaLoginId='TCWQA01';
+      const loginIdConflict=await db.user.findFirst({where:{tenantId:tenant.id,loginId:preferredQaLoginId,NOT:{id:user.id}},select:{id:true}});
+      const updatedQaUser=await db.user.update({where:{id:user.id},data:{...(loginIdConflict?{}:{loginId:preferredQaLoginId}),mustChangePassword:false},select:{loginId:true}});
       await db.tenant.update({where:{id:tenant.id},data:{name:'TCW QA Workspace',profile:{...((tenant.profile as any)??{}),legalName:'TCW QA Workspace',industry:'Technology',website:'https://hr.techcyberwarrior.in',email:qaEmail,phone:'+91 9000000000',address:'QA workspace',city:'Ahmedabad',state:'Gujarat',country:'India',postalCode:'380001',companyType:'Private Limited',contactPerson:'QA Administrator',contactDesignation:'HR Manager',supportEmail:qaEmail,billingEmail:qaEmail,primaryColor:'#3474ef',footer:'© TCW HR Software · QA workspace'}}});
-      console.log('QA workspace ready:',qaCode,'loginId=TCWQA01');
+      console.log('QA workspace ready:',qaCode,`loginId=${updatedQaUser.loginId}`);
     }
     console.log('Bootstrap complete. Existing passwords were preserved.');
   })().catch(e=>{console.error(e.message);process.exitCode=1}).finally(()=>db.$disconnect());
