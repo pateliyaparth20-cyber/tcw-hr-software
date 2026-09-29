@@ -39,9 +39,9 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
  ] as const;
  const latestEmployee=people[0];
  return <section className="hr-mobile-dashboard">
-  <div className="mobile-app-hero">
-   <div className="mobile-app-brand"><span className="mobile-app-logo"><img src={d.company?.logo||'/tcw-logo.png'} alt="TCW HR Software"/></span><div><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-app-bell" aria-label="Notifications"><Bell size={20}/>{Number(d.unreadNotifications??0)>0&&<b>{Math.min(99,Number(d.unreadNotifications??0))}</b>}</Link></div>
-   <div className="mobile-app-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>Good Morning,</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
+  <div className="mobile-unified-hero mobile-unified-hero-tenant">
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src={d.company?.logo||'/tcw-logo.png'} alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/>{Number(d.unreadNotifications??0)>0&&<b>{Math.min(99,Number(d.unreadNotifications??0))}</b>}</Link></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>GOOD MORNING</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
   </div>
 
   <div className="mobile-app-welcome"><div><small>WELCOME BACK</small><strong>Let’s make today productive.</strong></div><span><ActivityIcon size={21}/></span></div>
@@ -71,9 +71,9 @@ function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,out
  const active=companies.filter(c=>c.status==='ACTIVE').length;
  const firstName=String(session.user.name??'Admin').split(' ')[0];
  return <section className="platform-mobile-dashboard">
-  <div className="platform-mobile-hero">
-   <div className="platform-mobile-brand"><span><img src="/tcw-logo.png" alt="Tech Cyber Warrior"/></span><div><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="platform-mobile-action"><Server size={19}/></Link></div>
-   <div className="platform-mobile-greeting"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>Good Morning,</small><strong>{firstName}!</strong><span>Platform administrator</span></div></div>
+  <div className="mobile-unified-hero mobile-unified-hero-platform">
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src="/tcw-logo.png" alt="Tech Cyber Warrior"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="mobile-unified-action" aria-label="System health"><Server size={19}/></Link></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>GOOD MORNING</small><strong>{firstName}!</strong><span>Platform administrator</span></div></div>
   </div>
   <div className="platform-mobile-stats">
    <Link href="/companies"><span className="mobile-stat-icon blue"><Building2 size={19}/></span><strong>{companies.length}</strong><small>Companies · {active} active</small></Link>
