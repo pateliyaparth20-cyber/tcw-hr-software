@@ -42,6 +42,7 @@ model User {
   email              String
   loginId            String?   @map("login_id")
   name               String
+  avatar             String?
   passwordHash       String
   roleId             String    @db.Uuid
   role               Role      @relation(fields: [roleId], references: [id])
