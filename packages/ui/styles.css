@@ -5148,3 +5148,9 @@ table td,table th{overflow-wrap:anywhere}
 .ai-chat-panel .chat-compose .btn{padding:0;justify-content:center}
 .chat-message{max-width:94%}
 }
+
+
+.person-inline{display:inline-flex;align-items:center;gap:7px;min-width:0;vertical-align:middle}
+.person-inline .avatar{width:28px;height:28px;flex:0 0 28px;font-size:.57rem}
+.person-inline>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:950px){.person-inline .avatar{width:30px;height:30px;flex-basis:30px}.person-inline>span:last-child{font-size:.69rem}}
