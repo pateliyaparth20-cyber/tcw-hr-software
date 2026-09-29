@@ -17,6 +17,26 @@ async function clearLegacyTcwCaches(){
 
 export function PwaClient(){
   useEffect(()=>{
+    let cancelled=false;
+    const syncVersion=async()=>{
+      try{
+        const response=await fetch('/api/version?ts='+Date.now(),{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});
+        if(!response.ok||cancelled)return;
+        const data=await response.json(),next=String(data.version??'');
+        if(!next)return;
+        const key='tcw_loaded_deployment_version';
+        const previous=window.localStorage.getItem(key);
+        if(!previous){window.localStorage.setItem(key,next);return;}
+        if(previous!==next){
+          window.localStorage.setItem(key,next);
+          await clearLegacyTcwCaches().catch(()=>{});
+          const url=new URL(window.location.href);
+          url.searchParams.set('tcw_refresh',String(Date.now()));
+          window.location.replace(url.toString());
+        }
+      }catch{}
+    };
+    syncVersion();
     // Never let a development service worker cache Next.js bundles. Old cached
     // chunks can produce React hydration mismatches after a UI update.
     if('serviceWorker' in navigator){
@@ -46,6 +66,7 @@ export function PwaClient(){
     window.addEventListener('beforeinstallprompt',onPrompt as EventListener);
     window.addEventListener('appinstalled',onInstalled);
     return()=>{
+      cancelled=true;
       window.removeEventListener('beforeinstallprompt',onPrompt as EventListener);
       window.removeEventListener('appinstalled',onInstalled);
     };
