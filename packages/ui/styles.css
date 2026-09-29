@@ -3468,3 +3468,586 @@ td{padding:14px 16px;line-height:1.45}
     line-height:1.4!important;
   }
 }
+
+
+/* v1.7.0 full mobile app UI + profile system */
+/* Shared profile imagery */
+.avatar.has-photo{padding:0;overflow:hidden;background:#fff!important}
+.avatar.has-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.platform-admin-avatar.has-upload{position:relative;overflow:visible}
+.platform-admin-avatar.has-upload>img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.profile-photo-action{
+  position:absolute;
+  right:-4px;
+  bottom:-4px;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border:2px solid #fff;
+  border-radius:50%;
+  background:#176ee0;
+  color:#fff;
+  cursor:pointer;
+  box-shadow:0 6px 16px rgba(28,91,178,.25);
+}
+
+/* Full user profile */
+.my-profile-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(320px,.85fr);
+  gap:18px;
+  align-items:start;
+}
+.my-profile-card{overflow:hidden}
+.my-profile-cover{
+  height:112px;
+  background:
+    radial-gradient(circle at 78% 20%,rgba(255,255,255,.2),transparent 25%),
+    linear-gradient(135deg,#0f61cb,#2c83ef);
+}
+.my-profile-main{
+  display:flex;
+  align-items:flex-end;
+  gap:18px;
+  padding:0 22px 18px;
+  margin-top:-42px;
+}
+.my-profile-photo{
+  width:96px;height:96px;
+  position:relative;
+  flex:0 0 96px;
+  display:grid;place-items:center;
+  border:5px solid #fff;
+  border-radius:28px;
+  background:#eaf2ff;
+  color:#2868bf;
+  font-size:1.45rem;
+  font-weight:800;
+  overflow:visible;
+  box-shadow:0 10px 28px rgba(31,66,104,.14);
+}
+.my-profile-photo>img{width:100%;height:100%;object-fit:cover;border-radius:22px;display:block}
+.my-profile-identity{padding-bottom:6px;min-width:0}
+.my-profile-identity h2{margin:0;color:#203b56;font-size:1.35rem}
+.my-profile-identity p{margin:4px 0 8px;color:#75879a;font-size:.78rem}
+.my-profile-identity>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.my-profile-identity>div>span:last-child{color:#8797a8;font-size:.7rem}
+.my-profile-form{border-top:1px solid #edf1f5}
+.my-employee-card{overflow:hidden}
+.my-profile-facts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  background:#edf1f5;
+  border-top:1px solid #edf1f5;
+}
+.my-profile-facts>div{
+  min-width:0;
+  padding:15px 16px;
+  background:#fff;
+}
+.my-profile-facts>div.span-two{grid-column:1/-1}
+.my-profile-facts span{display:block;margin-bottom:5px;color:#8a9aab;font-size:.66rem}
+.my-profile-facts strong{display:block;color:#334d66;font-size:.78rem;overflow-wrap:anywhere}
+
+/* Company profile hero */
+.company-profile-panel{overflow:hidden}
+.company-profile-summary{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding:22px;
+  border-bottom:1px solid #e7edf3;
+  background:
+    radial-gradient(circle at 90% 15%,rgba(50,125,230,.11),transparent 27%),
+    linear-gradient(135deg,#fff,#f6faff);
+}
+.company-profile-summary-logo{
+  width:92px;height:92px;
+  flex:0 0 92px;
+  display:grid;place-items:center;
+  border:1px solid #dbe5ef;
+  border-radius:22px;
+  background:#fff;
+  overflow:hidden;
+  color:#2b6ec8;
+  font-size:1.1rem;
+  font-weight:800;
+  box-shadow:0 8px 22px rgba(31,67,104,.07);
+}
+.company-profile-summary-logo img{width:100%;height:100%;object-fit:contain;padding:8px}
+.company-profile-summary-copy small{color:#3979c9;font-size:.6rem;font-weight:850;letter-spacing:.11em}
+.company-profile-summary-copy h2{margin:5px 0 3px;color:#203c58;font-size:1.35rem}
+.company-profile-summary-copy p{margin:0 0 8px;color:#7e8fa1;font-size:.74rem}
+.company-profile-summary-copy>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.company-profile-summary-copy>div>span:last-child{font-size:.68rem;color:#8998a8}
+
+/* Mobile application shell across every page */
+@media(max-width:950px){
+  .tenant-shell .workspace-main,
+  .platform-shell .workspace-main{
+    max-width:620px;
+    margin:0 auto;
+    padding-top:0!important;
+  }
+
+  /* Every non-dashboard screen gets a native-style page header */
+  .tenant-shell .page-title,
+  .platform-shell .page-title{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+    margin:0 -10px 12px;
+    padding:17px 14px 18px;
+    border-radius:0 0 22px 22px;
+    background:
+      radial-gradient(circle at 88% 8%,rgba(255,255,255,.14),transparent 25%),
+      linear-gradient(145deg,#0f65d8,#287feb);
+    color:#fff;
+    box-shadow:0 10px 26px rgba(26,97,193,.16);
+  }
+  .platform-shell .page-title{
+    background:
+      radial-gradient(circle at 88% 8%,rgba(255,255,255,.11),transparent 25%),
+      linear-gradient(145deg,#102d4d,#1c5f9d);
+    box-shadow:0 10px 26px rgba(18,55,91,.17);
+  }
+  .tenant-shell .page-title h1,
+  .platform-shell .page-title h1{
+    color:#fff;
+    margin:0;
+    font-size:1.35rem;
+    line-height:1.15;
+  }
+  .tenant-shell .page-title p,
+  .platform-shell .page-title p{
+    max-width:96%;
+    margin:5px 0 0;
+    color:#deebff;
+    font-size:.68rem;
+    line-height:1.45;
+  }
+  .platform-shell .page-title p{color:#cbdceb}
+  .tenant-shell .title-actions,
+  .platform-shell .title-actions{
+    width:100%;
+    display:flex;
+    gap:8px;
+  }
+  .tenant-shell .page-title .btn,
+  .platform-shell .page-title .btn{
+    flex:1;
+    justify-content:center;
+    min-height:42px;
+    background:rgba(255,255,255,.13);
+    color:#fff;
+    border-color:rgba(255,255,255,.22);
+    box-shadow:none;
+  }
+  .tenant-shell .page-title .btn.primary,
+  .platform-shell .page-title .btn.primary{
+    background:#fff;
+    color:#2469cc;
+    border-color:#fff;
+  }
+
+  /* All content cards */
+  .tenant-shell .panel,
+  .platform-shell .panel,
+  .tenant-shell .record-card,
+  .platform-shell .record-card,
+  .tenant-shell .report-card,
+  .platform-shell .report-card,
+  .tenant-shell .payroll-card,
+  .platform-shell .payroll-card,
+  .tenant-shell .settings-card,
+  .platform-shell .settings-card{
+    border-radius:17px;
+    border-color:#e2e8ef;
+    box-shadow:0 5px 16px rgba(32,61,92,.045);
+  }
+  .tenant-shell .stats,
+  .platform-shell .stats{
+    gap:9px;
+  }
+  .tenant-shell .stats.three,
+  .platform-shell .stats.three,
+  .tenant-shell .stats.four,
+  .platform-shell .stats.four{
+    grid-template-columns:1fr 1fr;
+  }
+  .tenant-shell .stat,
+  .platform-shell .stat{
+    min-height:105px;
+    padding:12px;
+    border-radius:16px;
+  }
+  .tenant-shell .stat-label,
+  .platform-shell .stat-label{font-size:.62rem}
+  .tenant-shell .stat>strong,
+  .platform-shell .stat>strong{font-size:1.25rem}
+  .tenant-shell .stat>small,
+  .platform-shell .stat>small{font-size:.58rem;line-height:1.35}
+
+  /* Toolbars behave like app search/filter cards */
+  .tenant-shell .toolbar,
+  .platform-shell .toolbar,
+  .tenant-shell .date-filters,
+  .platform-shell .date-filters{
+    margin-bottom:11px;
+    padding:10px;
+    border:1px solid #e2e8ef;
+    border-radius:15px;
+    background:#fff;
+    box-shadow:0 4px 14px rgba(35,63,94,.035);
+  }
+  .tenant-shell .search-field,
+  .platform-shell .search-field{
+    width:100%;
+    min-height:44px;
+    border-radius:12px;
+    background:#f6f8fb;
+  }
+  .tenant-shell .toolbar-actions,
+  .platform-shell .toolbar-actions{width:100%}
+  .tenant-shell .toolbar-actions>.btn,
+  .platform-shell .toolbar-actions>.btn{
+    flex:1;
+    justify-content:center;
+  }
+
+  /* Tabs become horizontal app chips */
+  .tenant-shell .tabs,
+  .platform-shell .tabs{
+    width:100%;
+    overflow-x:auto;
+    gap:7px;
+    padding:4px;
+    margin-bottom:11px;
+    border:1px solid #e3e8ef;
+    border-radius:14px;
+    background:#fff;
+    scrollbar-width:none;
+  }
+  .tenant-shell .tabs::-webkit-scrollbar,
+  .platform-shell .tabs::-webkit-scrollbar{display:none}
+  .tenant-shell .tabs button,
+  .tenant-shell .tabs a,
+  .platform-shell .tabs button,
+  .platform-shell .tabs a{
+    flex:0 0 auto;
+    padding:9px 11px;
+    border-radius:10px;
+    font-size:.66rem;
+    white-space:nowrap;
+  }
+
+  /* Forms: one-column native controls */
+  .tenant-shell .form-grid,
+  .platform-shell .form-grid,
+  .tenant-shell .platform-profile-fields,
+  .platform-shell .platform-profile-fields,
+  .tenant-shell .settings-grid,
+  .platform-shell .settings-grid{
+    grid-template-columns:1fr!important;
+  }
+  .tenant-shell .field,
+  .platform-shell .field,
+  .tenant-shell .platform-profile-fields label,
+  .platform-shell .platform-profile-fields label{
+    gap:6px;
+    font-size:.69rem;
+  }
+  .tenant-shell .field input,
+  .tenant-shell .field select,
+  .tenant-shell .field textarea,
+  .platform-shell .field input,
+  .platform-shell .field select,
+  .platform-shell .field textarea,
+  .tenant-shell .platform-profile-fields input,
+  .tenant-shell .platform-profile-fields textarea,
+  .platform-shell .platform-profile-fields input,
+  .platform-shell .platform-profile-fields textarea{
+    min-height:47px;
+    padding:11px 12px;
+    border-radius:12px;
+    font-size:16px;
+  }
+  .tenant-shell .form-footer,
+  .platform-shell .form-footer{
+    position:sticky;
+    bottom:calc(72px + env(safe-area-inset-bottom));
+    z-index:4;
+    gap:8px;
+    padding:12px;
+    background:rgba(255,255,255,.97);
+    backdrop-filter:blur(12px);
+  }
+  .tenant-shell .form-footer .btn,
+  .platform-shell .form-footer .btn{
+    flex:1;
+    justify-content:center;
+  }
+
+  /* Tables remain usable but feel like an app data sheet */
+  .tenant-shell .table-scroll,
+  .platform-shell .table-scroll{
+    border-radius:16px;
+    background:#fff;
+    border:1px solid #e3e8ee;
+  }
+  .tenant-shell table,
+  .platform-shell table{
+    min-width:680px;
+    background:#fff;
+  }
+  .tenant-shell th,
+  .platform-shell th{
+    position:sticky;
+    top:0;
+    background:#f5f8fb;
+    font-size:.61rem;
+  }
+  .tenant-shell td,
+  .platform-shell td{font-size:.7rem}
+
+  /* Record/report cards */
+  .tenant-shell .record-cards,
+  .platform-shell .record-cards,
+  .tenant-shell .report-cards,
+  .platform-shell .report-cards{
+    grid-template-columns:1fr!important;
+    gap:10px;
+    padding:0;
+  }
+  .tenant-shell .record-card,
+  .platform-shell .record-card{
+    padding:14px;
+  }
+  .tenant-shell .card-actions,
+  .platform-shell .card-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .tenant-shell .card-actions .btn,
+  .platform-shell .card-actions .btn{justify-content:center}
+
+  /* Lists/sessions */
+  .tenant-shell .session-row,
+  .platform-shell .session-row,
+  .tenant-shell .list-row,
+  .platform-shell .list-row{
+    min-height:58px;
+    padding:11px 12px;
+  }
+  .tenant-shell .session-row strong,
+  .platform-shell .session-row strong{
+    font-size:.7rem;
+    line-height:1.35;
+  }
+  .tenant-shell .session-row small,
+  .platform-shell .session-row small{font-size:.58rem}
+
+  /* Modals become mobile sheets */
+  .tenant-shell .modal,
+  .platform-shell .modal,
+  .modal{
+    width:calc(100vw - 12px);
+    max-width:620px;
+    max-height:calc(100dvh - 12px);
+    margin:auto;
+    border-radius:22px;
+  }
+  .modal-head{
+    padding:14px 15px;
+    border-radius:22px 22px 0 0;
+  }
+  .modal-head h2{font-size:.9rem}
+  .modal-body{padding:14px}
+
+  /* Company profile mobile */
+  .company-profile-summary{
+    align-items:flex-start;
+    gap:13px;
+    padding:15px;
+  }
+  .company-profile-summary-logo{
+    width:70px;height:70px;flex-basis:70px;border-radius:18px;
+  }
+  .company-profile-summary-copy h2{font-size:1.08rem}
+  .brand-upload{
+    align-items:flex-start;
+    flex-direction:column;
+    padding:15px!important;
+  }
+  .company-logo{width:82px!important;height:82px!important}
+  .brand-actions{width:100%}
+  .brand-actions .btn{flex:1}
+
+  /* User profile mobile */
+  .my-profile-layout{grid-template-columns:1fr;gap:11px}
+  .my-profile-cover{height:92px}
+  .my-profile-main{gap:13px;padding:0 14px 14px;margin-top:-35px}
+  .my-profile-photo{width:82px;height:82px;flex-basis:82px;border-radius:24px}
+  .my-profile-photo>img{border-radius:18px}
+  .my-profile-identity h2{font-size:1.08rem}
+  .my-profile-facts{grid-template-columns:1fr 1fr}
+  .my-profile-facts>div{padding:12px}
+  .platform-profile-grid{grid-template-columns:1fr!important;gap:11px}
+  .platform-profile-logo{padding:14px}
+  .platform-profile-logo-preview{width:92px;height:92px}
+  .platform-admin-card{padding:14px}
+}
+
+/* Native-style auth experience on phones */
+@media(max-width:700px){
+  .auth-pro-shell,
+  .auth-pro-platform,
+  .auth-pro-tenant{
+    min-height:100dvh;
+    background:#f3f7fb!important;
+  }
+  .auth-pro-main,
+  .auth-pro-platform .auth-pro-main,
+  .auth-pro-tenant .auth-pro-main{
+    min-height:100dvh;
+    align-items:flex-start!important;
+    justify-content:flex-start!important;
+    padding:calc(24px + env(safe-area-inset-top)) 10px calc(28px + env(safe-area-inset-bottom))!important;
+    background:
+      radial-gradient(circle at 80% 2%,rgba(255,255,255,.18),transparent 22%),
+      linear-gradient(180deg,#1169d8 0,#237fe9 176px,#f3f7fb 176px,#f3f7fb 100%)!important;
+  }
+  .auth-pro-platform .auth-pro-main{
+    background:
+      radial-gradient(circle at 80% 2%,rgba(255,255,255,.13),transparent 22%),
+      linear-gradient(180deg,#102d4d 0,#1d5c98 176px,#f3f7fb 176px,#f3f7fb 100%)!important;
+  }
+  .auth-pro-card,
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    width:100%;
+    max-width:480px;
+    margin:76px auto 0!important;
+    padding:20px 16px 19px!important;
+    border:1px solid #e0e7ef!important;
+    border-radius:24px!important;
+    background:#fff!important;
+    box-shadow:0 18px 48px rgba(25,59,96,.14)!important;
+  }
+  .auth-pro-card:before{display:none}
+  .auth-pro-mobile-brand,
+  .auth-pro-platform .auth-pro-mobile-brand,
+  .auth-pro-tenant .auth-pro-mobile-brand{
+    display:flex!important;
+    align-items:center;
+    gap:11px;
+    margin:-70px 0 28px!important;
+    padding:0!important;
+    border:0!important;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo,
+  .auth-pro-platform .auth-pro-mobile-brand .auth-pro-logo,
+  .auth-pro-tenant .auth-pro-mobile-brand .auth-pro-logo{
+    width:54px!important;height:54px!important;flex:0 0 54px!important;
+    border-radius:16px!important;
+    background:#fff!important;
+    border:2px solid rgba(255,255,255,.8)!important;
+    box-shadow:0 8px 20px rgba(13,58,115,.18)!important;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo img{width:48px!important;height:48px!important}
+  .auth-pro-mobile-brand strong,
+  .auth-pro-platform .auth-pro-mobile-brand strong,
+  .auth-pro-tenant .auth-pro-mobile-brand strong{
+    color:#fff!important;
+    font-size:.98rem!important;
+  }
+  .auth-pro-mobile-brand small,
+  .auth-pro-platform .auth-pro-mobile-brand small,
+  .auth-pro-tenant .auth-pro-mobile-brand small{
+    color:#d7e8ff!important;
+    font-size:.54rem!important;
+  }
+  .auth-pro-head{margin-bottom:12px!important}
+  .auth-pro-card h2,
+  .auth-pro-platform .auth-pro-card h2,
+  .auth-pro-tenant .auth-pro-card h2,
+  .auth-pro-signup .auth-pro-card h2{
+    font-size:1.32rem!important;
+    line-height:1.18!important;
+    color:#203a54!important;
+  }
+  .auth-pro-subtitle{
+    margin-bottom:15px!important;
+    font-size:.7rem!important;
+    line-height:1.48!important;
+  }
+  .auth-pro-form{gap:12px!important}
+  .auth-pro-form>label,
+  .auth-pro-form .signup-all-grid label,
+  .auth-pro-form .signup-grid label{
+    font-size:.68rem!important;
+    gap:6px!important;
+  }
+  .auth-pro-form input,
+  .auth-pro-form select,
+  .auth-pro-form textarea{
+    min-height:48px!important;
+    padding:11px 12px!important;
+    border-radius:13px!important;
+    background:#f8fafc!important;
+    font-size:16px!important;
+  }
+  .auth-pro-form input::placeholder,
+  .auth-pro-form textarea::placeholder{
+    font-size:11.5px!important;
+    color:#99a7b6!important;
+  }
+  .auth-pro-submit{
+    min-height:49px!important;
+    border-radius:13px!important;
+    font-size:.8rem!important;
+  }
+  .auth-pro-options,
+  .auth-pro-options label,
+  .auth-pro-signup-link,
+  .back-login{
+    font-size:.64rem!important;
+  }
+  .auth-pro-legal-row{
+    font-size:.58rem!important;
+    gap:10px!important;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .auth-pro-signup .signup-all-grid,
+  .auth-pro-signup .signup-grid{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .auth-pro-signup .terms-check span,
+  .auth-pro-form .signup-short-note p{
+    font-size:.61rem!important;
+    line-height:1.4!important;
+  }
+  .trial-success-panel,
+  .reset-success-panel{
+    border-radius:16px!important;
+  }
+}
+
+/* Tiny phones */
+@media(max-width:380px){
+  .tenant-shell .page-title,
+  .platform-shell .page-title{margin-left:-8px;margin-right:-8px}
+  .my-profile-facts{grid-template-columns:1fr}
+  .my-profile-facts>div.span-two{grid-column:auto}
+  .auth-pro-card,
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card{padding-left:13px!important;padding-right:13px!important}
+}
