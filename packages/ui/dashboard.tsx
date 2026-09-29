@@ -40,7 +40,7 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
  const latestEmployee=people[0];
  return <section className="hr-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-tenant">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src={d.company?.logo||'/tcw-logo.png'} alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/>{Number(d.unreadNotifications??0)>0&&<b>{Math.min(99,Number(d.unreadNotifications??0))}</b>}</Link></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src={d.company?.logo||'/tcw-logo.png'} alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div>
    <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>GOOD MORNING</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
   </div>
 
