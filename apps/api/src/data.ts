@@ -59,7 +59,7 @@ export class DataService {
     const owned={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
     const [company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications]=await Promise.all([
       this.db.tenant.findUnique({where:{id:tid}}),
-      this.db.employee.findMany({where:employeeWhere,select:{id:true,firstName:true,lastName:true,departmentId:true,designation:true,status:true,joiningDate:true,monthlySalary:hasPermission(ctx.user.role.permissions,'payroll','VIEW')}}),
+      this.db.employee.findMany({where:employeeWhere,select:{id:true,firstName:true,lastName:true,photo:true,departmentId:true,designation:true,status:true,joiningDate:true,monthlySalary:hasPermission(ctx.user.role.permissions,'payroll','VIEW')}}),
       hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendanceDaily.findMany({where:{...owned,date:{gte:new Date(Date.now()-7*86400000)}},orderBy:{date:'asc'}}):[],
       hasPermission(ctx.user.role.permissions,'leave','VIEW')?this.db.leaveRequest.findMany({where:owned,orderBy:{createdAt:'desc'},take:200}):[],
       hasPermission(ctx.user.role.permissions,'recruitment','VIEW')?this.db.job.count({where:{tenantId:tid,status:'OPEN'}}):0,
