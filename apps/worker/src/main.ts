@@ -29,24 +29,21 @@ function buildEmailHtml(payload:any){
 async function sendEmail(payload:any){
   const html=buildEmailHtml(payload);
   const resendKey=process.env.RESEND_API_KEY?.trim();
+  let resendError='';
   if(resendKey){
-    const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.SMTP_FROM??'TCW HR Software <noreply@techcyberwarrior.in>',to:[String(payload.to)],subject:String(payload.subject??'TCW HR Software'),text:String(payload.text??''),html})});
-    if(!response.ok){let detail='';try{detail=await response.text()}catch{}throw new Error(`Resend API failed (${response.status})${detail?`: ${detail.slice(0,180)}`:''}`);}
-    return;
+    try{
+      const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.SMTP_FROM??'TCW HR Software <noreply@techcyberwarrior.in>',to:[String(payload.to)],subject:String(payload.subject??'TCW HR Software'),text:String(payload.text??''),html})});
+      if(response.ok)return;
+      let detail='';try{detail=await response.text()}catch{}
+      resendError=`Resend API failed (${response.status})${detail?`: ${detail.slice(0,180)}`:''}`;
+    }catch(e:any){resendError=String(e?.message??e??'Resend request failed').slice(0,220)}
   }
-  if(!transport)throw new Error('Email provider is not configured');
-  await transport.sendMail({from:process.env.SMTP_FROM,to:payload.to,subject:payload.subject,text:payload.text,html});
-}
-
-function normalizeMobile(value:string){
-  let digits=String(value??'').replace(/\D/g,'');
-  if(digits.length===10)digits='91'+digits;
-  return digits;
-}
-function redactDeliveredCredential(payload:any,label='[delivered]'){
-  const secret=typeof payload?.tempPassword==='string'?payload.tempPassword:'';
-  const text=secret&&typeof payload?.text==='string'?payload.text.split(secret).join(label):payload?.text;
-  return {...payload,...(text!==undefined?{text}:{}),delivered:true,...(secret?{tempPassword:label}:{})};
+  if(transport){
+    try{await transport.sendMail({from:process.env.SMTP_FROM,to:payload.to,subject:payload.subject,text:payload.text,html});return}
+    catch(e:any){throw new Error(`${resendError?resendError+'; ':''}SMTP fallback failed: ${String(e?.message??e).slice(0,180)}`)}
+  }
+  if(resendError)throw new Error(resendError);
+  throw new Error('Email provider is not configured');
 }
 async function sendSms(payload:any){
   const provider=(process.env.SMS_PROVIDER??'').trim().toUpperCase();
