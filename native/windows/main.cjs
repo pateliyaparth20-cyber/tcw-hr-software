@@ -13,9 +13,9 @@ function openExternal(url){try{const protocol=new URL(url).protocol;if(['http:',
 function createWindow(){
  const origin=appOrigin();
  const win=new BrowserWindow({
-  width:1440,height:900,minWidth:420,minHeight:600,
+  width:1440,height:900,minWidth:1024,minHeight:700,
   title:'TCW HR Software',icon:path.join(__dirname,'tcw.ico'),
-  backgroundColor:'#f7fafd',autoHideMenuBar:true,
+  backgroundColor:'#f4f7fb',autoHideMenuBar:true,show:false,
   webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,spellcheck:true}
  });
  win.webContents.setWindowOpenHandler(({url})=>{
@@ -26,6 +26,7 @@ function createWindow(){
   if(isInternal(url,origin))return;
   event.preventDefault();openExternal(url);
  });
+ win.once('ready-to-show',()=>win.show());
  win.loadURL(APP_URL).catch(error=>{
   dialog.showErrorBox('TCW HR Software','Unable to open the HR server. Check TCW_APP_URL and your network connection.\n\n'+error.message);
  });
