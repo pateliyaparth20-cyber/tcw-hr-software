@@ -149,7 +149,7 @@ export class Api {
     
     if(resource==='system'&&key==='platform-profile'){
       platform(ctx);
-      const defaults={companyName:'Tech Cyber Warrior',legalName:'',email:'',phone:'',website:'https://techcyberwarrior.in',address:'',city:'',state:'Gujarat',country:'India',postalCode:'',taxId:'',pan:'',supportEmail:'',logo:'/tcw-logo.png'};
+      const defaults={companyName:'Tech Cyber Warrior',legalName:'',companyType:'',registrationNumber:'',foundedYear:'',contactPerson:'',contactDesignation:'',billingEmail:'',email:'',phone:'',website:'https://techcyberwarrior.in',address:'',city:'',state:'Gujarat',country:'India',postalCode:'',taxId:'',pan:'',supportEmail:'',logo:'/tcw-logo.png'};
       if(method==='GET'){
         requirePermission(ctx,'system','VIEW');
         const [profileRow,brandingRow]=await Promise.all([
@@ -165,6 +165,12 @@ export class Api {
         const input=z.object({
           companyName:z.string().trim().min(1).max(160),
           legalName:z.string().trim().max(200).default(''),
+          companyType:z.string().trim().max(100).default(''),
+          registrationNumber:z.string().trim().max(80).default(''),
+          foundedYear:z.string().trim().regex(/^$|^\d{4}$/).default(''),
+          contactPerson:z.string().trim().max(120).default(''),
+          contactDesignation:z.string().trim().max(120).default(''),
+          billingEmail:z.string().trim().email().or(z.literal('')).default(''),
           email:z.string().trim().email().or(z.literal('')).default(''),
           phone:z.string().trim().max(40).default(''),
           website:z.string().trim().url().or(z.literal('')).default(''),
