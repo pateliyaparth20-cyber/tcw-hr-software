@@ -157,7 +157,7 @@ function TCWAgent(){
     {!!messages.length&&<div className="tcw-agent-messages">{messages.slice(-8).map((m:Row,i:number)=><div className={m.role} key={i}><strong>{m.role==='user'?'You':m.role==='error'?'Agent error':'TCW Agent'}</strong><p>{m.text}</p></div>)}{busy&&<small>Checking…</small>}</div>}
     <form onSubmit={e=>{e.preventDefault();ask(question)}}><input value={question} onChange={e=>setQuestion(e.target.value)} maxLength={700} placeholder="Ask TCW Agent…" aria-label="Ask TCW Agent"/><button className="btn primary" disabled={busy||!question.trim()}><Send size={16}/></button></form>
    </section>}
-   <button className="tcw-agent-fab" aria-label="Open TCW AI Agent" onClick={()=>setOpen(v=>!v)}><Bot size={21}/><span>Agent</span>{issueCount>0&&<b>{issueCount>9?'9+':issueCount}</b>}</button>
+   <button className="tcw-agent-fab" aria-label="Open TCW AI Agent" onClick={()=>setOpen(v=>!v)}><span className="tcw-agent-face"><Bot size={22}/></span>{issueCount>0&&<b>{issueCount>9?'9+':issueCount}</b>}</button>
  </div>;
 }
 

@@ -5717,3 +5717,62 @@ textarea,
   .mobile-unified-user .avatar{width:48px!important;height:48px!important;flex-basis:48px!important}
   .mobile-unified-user strong{font-size:1.08rem}
 }
+
+
+/* v1.9.7 AI Agent avatar launcher */
+.tcw-agent{
+  right:18px!important;
+  bottom:28px!important;
+}
+.tcw-agent-fab{
+  width:58px!important;
+  height:58px!important;
+  min-width:58px!important;
+  min-height:58px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:50%!important;
+  border:2px solid rgba(255,255,255,.92)!important;
+  background:linear-gradient(145deg,#174c75,#2177b5)!important;
+  color:#fff!important;
+  box-shadow:0 12px 30px rgba(18,57,91,.28),0 0 0 1px rgba(26,93,143,.12)!important;
+}
+.tcw-agent-face{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.07));
+  border:1px solid rgba(255,255,255,.28);
+}
+.tcw-agent-fab>b{
+  right:-2px!important;
+  top:-4px!important;
+}
+@media(max-width:950px){
+  .tcw-agent{
+    right:14px!important;
+    bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .tcw-agent-fab{
+    width:56px!important;
+    height:56px!important;
+    min-width:56px!important;
+    min-height:56px!important;
+  }
+  .tcw-agent-face{
+    width:42px;
+    height:42px;
+  }
+  .tcw-agent-panel{
+    max-height:calc(100dvh - 170px)!important;
+  }
+}
+@media(max-width:390px){
+  .tcw-agent{
+    right:10px!important;
+    bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;
+  }
+}
