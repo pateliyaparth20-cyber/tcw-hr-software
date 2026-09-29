@@ -4051,3 +4051,182 @@ td{padding:14px 16px;line-height:1.45}
   .auth-pro-platform .auth-pro-card,
   .auth-pro-tenant .auth-pro-card{padding-left:13px!important;padding-right:13px!important}
 }
+
+
+/* v1.7.1 full-screen auth + mobile update control */
+.mobile-update-check{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  margin-bottom:10px;
+  padding:10px 11px;
+  border:1px solid #dfe7ef;
+  border-radius:12px;
+  background:#f7faff;
+  color:#4c6781;
+  text-align:left;
+}
+.mobile-update-check>span{display:flex;flex-direction:column;min-width:0}
+.mobile-update-check strong{font-size:.72rem;color:#365777}
+.mobile-update-check small{font-size:.58rem;color:#8595a6;margin-top:2px}
+.mobile-update-check>svg{color:#3474ef}
+.mobile-update-check.ready{
+  background:#edf6ff;
+  border-color:#cfe1f7;
+}
+.mobile-update-check.ready strong,
+.mobile-update-check.ready>svg{color:#176ee0}
+
+@media(min-width:951px){
+  .mobile-update-check{display:none}
+}
+
+/* True edge-to-edge auth on phones: no split-color top band */
+@media(max-width:700px){
+  html,body{
+    background:#f4f7fb!important;
+  }
+  .auth-pro-shell,
+  .auth-pro-tenant,
+  .auth-pro-platform,
+  .auth-pro-signup{
+    width:100%;
+    min-height:100dvh!important;
+    height:auto!important;
+    display:block!important;
+    overflow:visible!important;
+    background:#f4f7fb!important;
+  }
+  .auth-pro-side{
+    display:none!important;
+  }
+  .auth-pro-main,
+  .auth-pro-tenant .auth-pro-main,
+  .auth-pro-platform .auth-pro-main,
+  .auth-pro-signup .auth-pro-main{
+    width:100%!important;
+    min-height:100dvh!important;
+    height:auto!important;
+    margin:0!important;
+    padding:
+      max(18px,env(safe-area-inset-top))
+      12px
+      max(24px,env(safe-area-inset-bottom))!important;
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:center!important;
+    background:#f4f7fb!important;
+    overflow:visible!important;
+  }
+  .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card,
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    width:100%!important;
+    max-width:480px!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    padding:18px 16px 19px!important;
+    border:1px solid #e1e7ee!important;
+    border-radius:20px!important;
+    background:#fff!important;
+    box-shadow:0 10px 30px rgba(35,64,96,.08)!important;
+  }
+  .auth-pro-card:before{
+    display:none!important;
+  }
+  .auth-pro-mobile-brand,
+  .auth-pro-tenant .auth-pro-mobile-brand,
+  .auth-pro-platform .auth-pro-mobile-brand{
+    display:flex!important;
+    align-items:center!important;
+    gap:10px!important;
+    margin:0 0 18px!important;
+    padding:0!important;
+    color:#203b55!important;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo{
+    width:52px!important;
+    height:52px!important;
+    flex:0 0 52px!important;
+    border:1px solid #dce6f0!important;
+    border-radius:15px!important;
+    background:#fff!important;
+    box-shadow:0 6px 16px rgba(42,77,113,.08)!important;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo img{
+    width:46px!important;
+    height:46px!important;
+  }
+  .auth-pro-mobile-brand strong{
+    color:#203b55!important;
+    font-size:.95rem!important;
+  }
+  .auth-pro-mobile-brand small{
+    color:#8293a6!important;
+    font-size:.54rem!important;
+  }
+  .auth-pro-head{
+    margin-bottom:13px!important;
+  }
+  .auth-pro-card h2{
+    color:#203b55!important;
+    font-size:1.35rem!important;
+    line-height:1.18!important;
+  }
+  .auth-pro-subtitle{
+    color:#7c8da0!important;
+    font-size:.7rem!important;
+    line-height:1.5!important;
+    margin-bottom:15px!important;
+  }
+  .auth-pro-form{
+    gap:12px!important;
+  }
+  .auth-pro-form input,
+  .auth-pro-form select,
+  .auth-pro-form textarea{
+    min-height:48px!important;
+    border-radius:12px!important;
+    background:#f8fafc!important;
+    font-size:16px!important;
+  }
+  .auth-pro-submit{
+    min-height:49px!important;
+    border-radius:12px!important;
+  }
+  .auth-pro-signup-link{
+    margin-top:15px!important;
+    padding-top:13px!important;
+  }
+  .auth-pro-legal{
+    margin-top:12px!important;
+  }
+  .auth-pro-legal-row{
+    font-size:.58rem!important;
+    line-height:1.35!important;
+  }
+  .reset-success-panel,
+  .trial-success-panel,
+  .remember-check-panel{
+    border-radius:15px!important;
+  }
+}
+
+@media(max-width:380px){
+  .auth-pro-main,
+  .auth-pro-tenant .auth-pro-main,
+  .auth-pro-platform .auth-pro-main,
+  .auth-pro-signup .auth-pro-main{
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card,
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    padding-left:13px!important;
+    padding-right:13px!important;
+  }
+}
