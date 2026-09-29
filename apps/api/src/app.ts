@@ -84,7 +84,14 @@ export class Api {
       if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
       if(key==='profile'&&method==='GET')return {user:this.auth.publicUser(ctx.user)};
       if(key==='profile'&&method==='PATCH'){
-        const input=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200)}).strict().parse(body);
+        const input=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200),avatar:z.string().max(8_000_000).nullable().optional()}).strict().parse(body);
+        if(input.avatar){
+          if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.avatar))throw new BadRequestException('Use a PNG or JPEG profile photo up to 5 MB.');
+          const raw=Buffer.from(input.avatar.split(',')[1],'base64');
+          const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+          const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;
+          if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG profile photo up to 5 MB.');
+        }
         const before=await this.db.user.findUniqueOrThrow({where:{id:ctx.user.id}});
         const duplicate=await this.db.user.findFirst({where:{email:input.email,id:{not:ctx.user.id},tenantId:ctx.tenantId??null}});
         if(duplicate)throw new ConflictException('Another account already uses this email.');
