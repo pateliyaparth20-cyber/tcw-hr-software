@@ -67,6 +67,36 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
   </section>
  </section>;
 }
+function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,outstanding,openTickets,currency,support}:{session:any;companies:Row[];trials:number;trialSummary:Row;paid:number;outstanding:number;openTickets:number;currency:string;support:Row[]}){
+ const active=companies.filter(c=>c.status==='ACTIVE').length;
+ const firstName=String(session.user.name??'Admin').split(' ')[0];
+ return <section className="platform-mobile-dashboard">
+  <div className="platform-mobile-hero">
+   <div className="platform-mobile-brand"><span><img src="/tcw-logo.png" alt="Tech Cyber Warrior"/></span><div><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="platform-mobile-action"><Server size={19}/></Link></div>
+   <div className="platform-mobile-greeting"><small>Good Morning,</small><strong>{firstName}!</strong><span>Platform administrator</span></div>
+  </div>
+  <div className="platform-mobile-stats">
+   <Link href="/companies"><span className="mobile-stat-icon blue"><Building2 size={19}/></span><strong>{companies.length}</strong><small>Companies · {active} active</small></Link>
+   <Link href="/trials"><span className="mobile-stat-icon violet"><PhoneCall size={19}/></span><strong>{trialSummary.callDue??0}</strong><small>Trial calls due</small></Link>
+   <Link href="/invoices"><span className="mobile-stat-icon green"><CircleDollarSign size={19}/></span><strong>{currencyValue(paid,currency)}</strong><small>Payments received</small></Link>
+   <Link href="/support"><span className="mobile-stat-icon amber"><Headphones size={19}/></span><strong>{openTickets}</strong><small>Open support</small></Link>
+  </div>
+  <section className="mobile-app-section"><div className="mobile-app-section-head"><strong>Quick Actions</strong><span>Platform</span></div><div className="mobile-quick-grid">
+   <Link href="/companies" className="mobile-quick-action"><span className="mobile-quick-icon blue"><Building2 size={23}/></span><strong>Companies</strong><small>Customers</small></Link>
+   <Link href="/trials" className="mobile-quick-action"><span className="mobile-quick-icon violet"><PhoneCall size={23}/></span><strong>Trials</strong><small>Follow-ups</small></Link>
+   <Link href="/invoices" className="mobile-quick-action"><span className="mobile-quick-icon green"><Receipt size={23}/></span><strong>Invoices</strong><small>Billing</small></Link>
+   <Link href="/payments" className="mobile-quick-action"><span className="mobile-quick-icon amber"><CreditCard size={23}/></span><strong>Payments</strong><small>Revenue</small></Link>
+   <Link href="/support" className="mobile-quick-action"><span className="mobile-quick-icon blue"><Headphones size={23}/></span><strong>Support</strong><small>Tickets</small></Link>
+   <Link href="/system" className="mobile-quick-action"><span className="mobile-quick-icon violet"><Server size={23}/></span><strong>System</strong><small>Health</small></Link>
+  </div></section>
+  <section className="mobile-app-section mobile-updates"><div className="mobile-app-section-head"><strong>Platform Updates</strong><Link href="/support">See All</Link></div>
+   <Link href="/invoices" className="mobile-update-row"><span className="mobile-update-icon green"><CircleDollarSign size={18}/></span><div><strong>{currencyValue(outstanding,currency)} outstanding</strong><small>Review billing and invoices</small></div><ChevronRight size={17}/></Link>
+   <Link href="/trials" className="mobile-update-row"><span className="mobile-update-icon violet"><PhoneCall size={18}/></span><div><strong>{trials} companies on trial</strong><small>{trialSummary.expiringSoon??0} expiring soon</small></div><ChevronRight size={17}/></Link>
+   <Link href="/support" className="mobile-update-row"><span className="mobile-update-icon amber"><Headphones size={18}/></span><div><strong>{openTickets} open support ticket{openTickets===1?'':'s'}</strong><small>{support.filter(r=>r.priority==='URGENT'&&r.status!=='RESOLVED').length} urgent</small></div><ChevronRight size={17}/></Link>
+  </section>
+ </section>;
+}
+
 export function Dashboard(){
  const{session,can,currency}=useApp();const q=useData('dashboard');
  if(q.isLoading)return <Loading/>;if(q.error)return <Failure error={q.error} retry={()=>q.refetch()}/>;
@@ -77,11 +107,14 @@ export function Dashboard(){
   const paid=invoices.reduce((n,r)=>n+(r.paidAmount??0),0),outstanding=invoices.reduce((n,r)=>n+Math.max(0,(r.total??0)-(r.paidAmount??0)),0),openTickets=support.filter(r=>r.status!=='RESOLVED').length;
   const weekAgo=Date.now()-7*86400000,newSignups=companies.filter(c=>new Date(c.createdAt).getTime()>=weekAgo).length;
   return <>
+   <MobilePlatformDashboard session={session} companies={companies} trials={trials} trialSummary={trialSummary} paid={paid} outstanding={outstanding} openTickets={openTickets} currency={currency} support={support}/>
+   <div className="platform-desktop-dashboard">
    <div className="platform-hero"><div><span className="hero-kicker">TCW PLATFORM COMMAND CENTER</span><h1>Operate your HR SaaS business with total visibility.</h1><p>Companies, trials, billing, support and platform health — surfaced in one executive workspace.</p></div><div className="platform-hero-pulse"><span className="pulse-dot"/><strong>{active} companies live</strong><small>{newSignups} new signup(s) in the last 7 days</small></div></div>
    <div className="stats four power-stats"><Stat label="Customer companies" value={companies.length} icon={<Building2 size={20}/>} detail={`${active} active · ${trials} trial`}/><Stat label="Trial calls due" value={trialSummary.callDue??0} icon={<PhoneCall size={20}/>} detail={`${trialSummary.expiringSoon??0} expiring within 2 days`}/><Stat label="Payments received" value={currencyValue(paid,currency)} icon={<CircleDollarSign size={20}/>} detail={`${currencyValue(outstanding,currency)} outstanding`}/><Stat label="Support pressure" value={openTickets} icon={<Headphones size={20}/>} detail={`${support.filter(r=>r.priority==='URGENT'&&r.status!=='RESOLVED').length} urgent ticket(s)`}/></div>
    <div className="dashboard-grid admin-command-grid"><section className="panel command-panel"><div className="panel-heading"><div><h2>Company portfolio</h2><p>Live tenant health and onboarding status</p></div>{can('tenants')&&<Link href="/companies">Manage all <ArrowUpRight size={16}/></Link>}</div><div className="portfolio-summary"><div><strong>{active}</strong><span>Active</span></div><div><strong>{trials}</strong><span>Trial</span></div><div><strong>{suspended}</strong><span>Attention</span></div></div>{companies.length?companies.slice(0,6).map(c=><div className="list-row premium-row" key={c.id}><Avatar name={c.name}/><div className="grow"><strong>{c.name}</strong><small>{c.code} · {c.plan} · {new Date(c.createdAt).toLocaleDateString('en-IN')}</small></div><Badge value={c.status}/></div>):<Empty title="No customer companies yet" description="Self-service signups and companies you create will appear here."/>}</section><section className="panel command-panel"><div className="panel-heading"><div><h2>Revenue & billing</h2><p>Collected and outstanding invoice value</p></div><Wallet size={19}/></div><div className="billing-hero"><span>Collected</span><strong>{currencyValue(paid,currency)}</strong><small>{invoices.filter(r=>r.status==='PAID').length} paid invoice(s)</small></div><div className="billing-bars"><div><span>Outstanding</span><strong>{currencyValue(outstanding,currency)}</strong></div><progress value={paid} max={Math.max(paid+outstanding,1)}/></div><Link href="/invoices" className="panel-bottom-link">Open billing workspace <ChevronRight size={16}/></Link></section></div>
    <div className="dashboard-grid three"><section className="panel"><div className="panel-heading"><div><h2>Trial follow-ups</h2><p>{trialSummary.callDue??0} call(s) due · {trialSummary.expiringSoon??0} expiring soon</p></div>{can('tenants')&&<Link href="/trials"><ArrowUpRight size={17}/><span className="sr-only">Open trial follow-up</span></Link>}</div>{trialRows.filter(r=>r.needsCall||r.tenantStatus==='TRIAL').slice(0,5).map(r=><Link className="list-row" href="/trials" key={r.id}><Avatar name={r.company}/><div className="grow"><strong>{r.company}</strong><small>{r.contactName||r.email} · {r.phone||'No mobile'} · ends {displayDate(r.trialEndsAt)}</small></div><Badge value={r.needsCall?'CALL_DUE':r.followupStatus}/></Link>)}{!trialRows.length&&<Empty title="No trial follow-ups" description="Free-trial registrations will appear here automatically."/>}<Link href="/trials" className="panel-bottom-link">Open trial follow-up <ChevronRight size={16}/></Link></section><section className="panel"><div className="panel-heading"><h2>Support queue</h2><Headphones size={18}/></div>{support.filter(r=>r.status!=='RESOLVED').slice(0,5).map(r=><Link className="list-row" href="/support" key={r.id}><span className={'priority-dot '+String(r.priority).toLowerCase()}/><div className="grow"><strong>{r.ticketNumber} · {r.subject}</strong><small>{readable(String(r.category??'GENERAL').toLowerCase())}</small></div><Badge value={r.status}/></Link>)}{!openTickets&&<Empty title="Support queue is clear" description="Customer tickets will appear here."/>}</section><section className="panel"><div className="panel-heading"><h2>Sales pipeline</h2><TrendingUp size={18}/></div><div className="department-list">{['LEAD','CONTACTED','DEMO','QUOTATION','NEGOTIATION','WON'].map(stage=>{const count=leads.filter(l=>l.stage===stage).length;return <div className="department-row" key={stage}><div><span>{readable(stage.toLowerCase())}</span><strong>{count}</strong></div><progress value={count} max={Math.max(leads.length,1)}/></div>})}</div></section></div>
    <Activity rows={d.activity??[]}/>
+   </div>
   </>;
  }
  const people:Row[]=d.employees??[],attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],devices:Row[]=d.devices??[],support:Row[]=d.support??[];
