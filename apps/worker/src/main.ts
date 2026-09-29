@@ -94,7 +94,8 @@ const worker=new Worker('peopleos-outbox',async job=>{
   }catch(error){
     const finalAttempt=row.attempts>=4;
     const safePayload=finalAttempt&&payload.tempPassword?redactDeliveredCredential(payload,'[delivery failed]'):payload;
-    await db.outbox.update({where:{id:row.id},data:{attempts:{increment:1},error:`${row.kind} delivery failed; check provider configuration and service logs.`,...(finalAttempt?{payload:safePayload}:{})}});
+    const detail=String((error as any)?.message??error??'unknown delivery error').replace(/(Bearer\s+)[^\s;]+/gi,'$1[redacted]').replace(/(api[_-]?key|auth[_-]?key|password|token)=?[^\s;]*/gi,'$1=[redacted]').slice(0,320);
+    await db.outbox.update({where:{id:row.id},data:{attempts:{increment:1},error:`${row.kind} delivery failed: ${detail}`,...(finalAttempt?{payload:safePayload}:{})}});
     if(row.attempts===4&&row.tenantId)await db.notification.create({data:{tenantId:row.tenantId,title:'TCW Agent: message delivery issue',message:`${row.kind} delivery failed after repeated attempts. Open TCW Agent or contact your software administrator to review provider configuration.`}}).catch(()=>{});
     throw error;
   }
