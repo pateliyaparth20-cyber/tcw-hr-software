@@ -63,6 +63,12 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
     const company=await db.tenant.findUnique({where:{id:session.user.tenantId}});
     if(!company||company.status==='ARCHIVED')throw new ForbiddenException('This company account is unavailable.');
     if(company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason!=='BILLING')throw new ForbiddenException('This company is suspended. Contact your software administrator.');
+    if(session.user.role?.code==='COMPANY_OWNER'){
+      const hrRole=await db.role.findUnique({where:{code:'HR_ADMIN'}});
+      if(hrRole){
+        session.user=await db.user.update({where:{id:session.user.id},data:{roleId:hrRole.id},include:{role:true}});
+      }
+    }
   }
   if(!['GET','HEAD','OPTIONS'].includes(req.method)&&!safeEqual(String(req.headers['x-csrf-token']??''),session.csrf))throw new ForbiddenException('Session verification failed. Refresh and try again.');
   return {user:session.user,session,tenantId:session.user.tenantId,ip:req.ip??''};
