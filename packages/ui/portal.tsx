@@ -16,7 +16,7 @@ import {SupportPage} from './support';
 import {MEGHNA_AVATAR} from './meghna-avatar';
 const icons:Record<string,any>={dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server,profile:UserCircle,subscription:CreditCard,'software-update':RefreshCw};
 
-function isEmployeeNativeApp(){if(typeof window==='undefined')return false;try{const bridge=(window as any).TCWNative;return bridge?.isEmployeeApp?.()===true||bridge?.getAppMode?.()==='EMPLOYEE'}catch{return false}}
+function isEmployeeNativeApp(){if(typeof window==='undefined')return false;try{const bridge=(window as any).TCWNative;return bridge?.isEmployeeApp?.()===true||bridge?.getAppMode?.()==='EMPLOYEE'||window.location.hostname.toLowerCase()==='employee.techcyberwarrior.in'}catch{return false}}
 export function Portal({session,page}:{session:Session;page:string}){return <Providers session={session}><Shell page={page}/></Providers>}
 export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';page:string}){
  const router=useRouter();
