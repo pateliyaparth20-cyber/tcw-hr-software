@@ -65,7 +65,7 @@ export class DataService {
       hasPermission(ctx.user.role.permissions,'leave','VIEW')?this.db.leaveRequest.findMany({where:owned,orderBy:{createdAt:'desc'},take:200}):[],
       hasPermission(ctx.user.role.permissions,'recruitment','VIEW')?this.db.job.count({where:{tenantId:tid,status:'OPEN'}}):0,
       this.db.department.findMany({where:{tenantId:tid}}),
-      this.db.calendarEvent.findMany({where:{tenantId:tid,date:{gte:new Date(new Date().toISOString().slice(0,10))}},orderBy:{date:'asc'},take:5}),
+      this.db.calendarEvent.findMany({where:{tenantId:tid,OR:[{date:{gte:new Date(new Date().toISOString().slice(0,10))}},{endDate:{gte:new Date(new Date().toISOString().slice(0,10))}}]},orderBy:{date:'asc'},take:5}),
       hasPermission(ctx.user.role.permissions,'audit','VIEW')?this.db.auditLog.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:6}):[],
       hasPermission(ctx.user.role.permissions,'payroll','VIEW')?this.db.payrollRun.findFirst({where:{tenantId:tid},orderBy:{month:'desc'}}):null,
       hasPermission(ctx.user.role.permissions,'devices','VIEW')?this.db.attendanceDevice.findMany({where:{tenantId:tid},select:{id:true,name:true,status:true,lastSeenAt:true}}):[],
