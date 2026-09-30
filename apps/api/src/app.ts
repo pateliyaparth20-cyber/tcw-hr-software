@@ -485,7 +485,7 @@ export async function createApp(db:Database){
     res.setHeader('Cache-Control','no-store');next();
   });
   await app.init();
-  if(process.env.NODE_ENV==='production'&&String(process.env.RAILWAY_SERVICE_NAME??'')==='tcw-hr-software'){
+  if(process.env.NODE_ENV==='production'&&process.env.RELEASE_UPDATES_ENABLED==='true'&&String(process.env.RAILWAY_SERVICE_NAME??'')==='tcw-hr-software'){
     const deployment=String(process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??'').trim();
     if(deployment){
       setTimeout(async()=>{
