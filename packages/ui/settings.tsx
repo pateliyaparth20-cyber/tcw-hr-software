@@ -79,14 +79,13 @@ function ProfilePhotoEditor({value,name,onChange,notify}:{value?:string|null;nam
  return <>
   <div className="profile-photo-editor">
    <div className="profile-photo-preview">{value?<img src={value} alt={name+' profile photo'}/>:<span>{initials}</span>}</div>
-   <div className="profile-photo-copy"><strong>Profile photo</strong><p>Square crop · saved at 512 × 512 px · image file up to 5 MB.</p><div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>Upload photo<input className="sr-only" type="file" accept="image/*" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
+   <div className="profile-photo-copy"><strong>Profile photo</strong><p>Choose and adjust your photo inside the round frame.</p><div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>Upload photo<input className="sr-only" type="file" accept="image/*" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
   </div>
-  {open&&<Modal title="Crop profile photo" onClose={()=>setOpen(false)}>
+  {open&&<Modal title="Adjust profile photo" onClose={()=>setOpen(false)}>
    <div className="profile-crop-modal">
     <div className="profile-crop-stage"><div className="profile-crop-circle"><img src={source} alt="Crop preview" style={{transform:`translate(${x*.18}%, ${y*.18}%) scale(${zoom})`}}/></div></div>
-    {meta&&<div className="profile-crop-meta"><span>{meta.name}</span><span>{meta.width} × {meta.height}px</span><span>{(meta.size/1024/1024).toFixed(2)} MB</span></div>}
     <div className="profile-crop-controls"><label><span>Zoom</span><input type="range" min="1" max="3" step=".01" value={zoom} onChange={e=>setZoom(Number(e.target.value))}/></label><label><span>Horizontal</span><input type="range" min="-100" max="100" value={x} onChange={e=>setX(Number(e.target.value))}/></label><label><span>Vertical</span><input type="range" min="-100" max="100" value={y} onChange={e=>setY(Number(e.target.value))}/></label></div>
-    <div className="profile-crop-actions"><button type="button" className="btn secondary" onClick={()=>setOpen(false)}>Cancel</button><button type="button" className="btn primary" onClick={applyCrop}><Check size={16}/>Use cropped photo</button></div>
+    <div className="profile-crop-actions"><button type="button" className="btn secondary" onClick={()=>setOpen(false)}>Cancel</button><button type="button" className="btn primary" onClick={applyCrop}><Check size={16}/>Use photo</button></div>
    </div>
   </Modal>}
  </>;
@@ -100,7 +99,7 @@ export function MyProfilePage(){
  if(profile.isLoading)return <Loading/>;if(profile.error)return <Failure error={profile.error}/>;
  const user=profile.data?.user??session.user,employee=profile.data?.employee,personal=employee?.personal??{};
  return <><PageTitle title="My profile" subtitle="Manage your account identity, profile photo and linked employee information."/>
-  <div className="my-profile-layout">
+  <div className="my-profile-layout single-profile-layout">
    <section className="panel my-profile-card">
     <div className="my-profile-cover"/>
     <div className="my-profile-main">
@@ -117,18 +116,6 @@ export function MyProfilePage(){
      </div>
      <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
     </form>
-   </section>
-   <section className="panel my-employee-card">
-    <div className="panel-heading"><div><h2>Employee profile</h2><p>{employee?'Details linked to your HR employee record.':'No employee record is linked to this account.'}</p></div><UserCircle size={21}/></div>
-    {employee?<div className="my-profile-facts">
-      <div><span>Employee ID</span><strong>{employee.employeeCode}</strong></div>
-      <div><span>Designation</span><strong>{employee.designation||'—'}</strong></div>
-      <div><span>Phone</span><strong>{employee.phone||'—'}</strong></div>
-      <div><span>Employment type</span><strong>{readable(String(employee.employmentType??'').toLowerCase())}</strong></div>
-      <div><span>Joining date</span><strong>{displayDate(employee.joiningDate)}</strong></div>
-      <div><span>Emergency contact</span><strong>{personal.emergencyContactName??personal.emergencyContact??'—'}</strong></div>
-      <div className="span-two"><span>Address</span><strong>{personal.address??personal.currentAddress??'—'}</strong></div>
-    </div>:<Empty title="No linked employee profile" description="Ask an administrator to link this user account to an employee record."/>}
    </section>
   </div>
  </>;
