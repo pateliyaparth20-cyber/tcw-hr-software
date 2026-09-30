@@ -76,7 +76,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
 export async function attendanceMonthSummary(db:Database,tenantId:string,month:string,employeeIds?:string[]|null){
   const {first,next}=monthBounds(month);
   const [rows,employees,lock,shifts,holidays]=await Promise.all([
-    db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:next},...(employeeIds?{employeeId:{in:employeeIds}}:{})},orderBy:[{employeeId:'asc'},{date:'asc'}]}),
+    db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:next},status:{not:'VOID'},...(employeeIds?{employeeId:{in:employeeIds}}:{})},orderBy:[{employeeId:'asc'},{date:'asc'}]}),
     db.employee.findMany({where:{tenantId,deletedAt:null,...(employeeIds?{id:{in:employeeIds}}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,shiftId:true,joiningDate:true}}),
     db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
