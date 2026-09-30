@@ -65,10 +65,7 @@ USING "_tcw_deleted_employees" d
 WHERE m."tenant_id" = d."tenant_id"
   AND m."employee_id" = d."id";
 
-DELETE FROM "attendance_punches" a
-USING "_tcw_deleted_employees" d
-WHERE a."tenant_id" = d."tenant_id"
-  AND a."employeeId" = d."id";
+-- Raw attendance punches are immutable audit evidence and are intentionally retained.
 
 DELETE FROM "attendance_daily" a
 USING "_tcw_deleted_employees" d
@@ -142,8 +139,11 @@ DELETE FROM "users" u
 USING "_tcw_deleted_employee_users" du
 WHERE u."id" = du."id";
 
-DELETE FROM "employees" e
-USING "_tcw_deleted_employees" d
+-- Keep the archived employee tombstone because immutable raw punches reference it.
+-- It remains hidden from every active People/Attendance/Leave query via deletedAt.
+UPDATE "employees" e
+SET "status" = 'INACTIVE'
+FROM "_tcw_deleted_employees" d
 WHERE e."tenant_id" = d."tenant_id"
   AND e."id" = d."id";
 
