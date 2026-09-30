@@ -45,11 +45,58 @@ export function UsersPage(){
  const fields:Field[]=[{key:'name',label:'Full name',required:true,hint:'Enter the user’s full name as it should appear in TCW HR.'},{key:'email',label:'Email address',type:'email',required:true,hint:'Used for account recovery and important notifications.'},{key:'loginId',label:'User ID',hint:'Optional. Leave blank and TCW HR will generate a short ID such as TCW2104.'},{key:'password',label:edit?'New password':'Temporary password',type:'password',required:false,hint:edit?'Optional. Leave blank to keep the current password.':'Optional. Leave blank to generate a secure 8-character temporary password. If delivery is configured, login details can be sent by email or SMS.'},{key:'role',label:'Role',type:'select',required:true,options:roles.data?.items?.map((r:Row)=>r.code)??[],hint:'Choose the role that matches this user’s responsibilities.'},{key:'employeeId',label:'Linked employee',source:'employees',type:'select',required:false,hint:'Optional. Link an employee so the account is connected to that employee record and mobile number.'},{key:'active',label:'Active account',type:'checkbox',default:true,hint:'Turn this off to block sign-in without deleting the user.'}];
  return <><PageTitle title="Users & roles" subtitle="Create user accounts, assign the right role, and link employee records when needed."><button className="btn primary" onClick={()=>setEdit(null)}><Plus size={18}/>Add user</button></PageTitle><div className="panel">{q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:<Table columns={['name','email','loginId','role','active']} rows={q.data?.items??[]} cell={(r,k)=>k==='name'?<div className="person-cell"><Avatar name={r.name} src={r.avatar}/><strong>{r.name}</strong></div>:k==='role'?<button className="text-button" onClick={()=>setRoleView(roles.data?.items?.find((v:Row)=>v.code===r.role.code))}>{r.role.name}</button>:k==='active'?<Badge value={r.active?'ACTIVE':'INACTIVE'}/>:undefined} actions={r=><button className="icon-button" aria-label={'Edit '+r.name} onClick={()=>setEdit({...r,role:r.role.code})}><Pencil size={16}/></button>}/>}</div>{edit!==undefined&&<Modal title={edit?'Edit user':'Add user'} onClose={()=>setEdit(undefined)}><RecordForm fields={fields} initial={edit??undefined} onCancel={()=>setEdit(undefined)} onSave={async body=>{if(!body.password)delete body.password;if(!body.loginId)delete body.loginId;const result=await mutate('users'+(edit?'/'+edit.id:''),edit?'PATCH':'POST',body);setEdit(undefined);if(!edit&&result?.temporaryPassword)setCredentials({name:result.name,email:result.email,loginId:result.loginId,temporaryPassword:result.temporaryPassword})}}/></Modal>}{credentials&&<Modal title="User login created" onClose={()=>setCredentials(null)}><div className="modal-body credential-sheet"><p>Save these temporary credentials now. The password is only shown once.</p><div className="profile-grid"><div><span>User</span><strong>{credentials.name}</strong></div><div><span>User ID</span><strong>{credentials.loginId}</strong></div><div><span>Email</span><strong>{credentials.email}</strong></div><div><span>Temporary password</span><strong className="mono-secret">{credentials.temporaryPassword}</strong></div></div><button className="btn primary" type="button" onClick={()=>navigator.clipboard?.writeText(`User ID: ${credentials.loginId}\nTemporary Password: ${credentials.temporaryPassword}\nEmail: ${credentials.email}`)}>Copy login details</button></div></Modal>}{roleView&&<Modal title={roleView.name+' permissions'} onClose={()=>setRoleView(null)}><div className="modal-body permissions-grid">{roleView.permissions.map((p:string)=><span key={p}><Check size={14}/>{readable(p.replace(':',' · '))}</span>)}</div></Modal>}</>;
 }
+
+function ProfilePhotoEditor({value,name,onChange,notify}:{value?:string|null;name:string;onChange:(value:string|null)=>void;notify:(message:string,error?:boolean)=>void}){
+ const[open,setOpen]=useState(false),[source,setSource]=useState(''),[zoom,setZoom]=useState(1),[x,setX]=useState(0),[y,setY]=useState(0),[meta,setMeta]=useState<{name:string;size:number;width:number;height:number}|null>(null);
+ function choose(file?:File){
+  if(!file)return;
+  if(!/^image\/(png|jpeg)$/.test(file.type)){notify('Choose a PNG or JPEG profile photo.',true);return;}
+  if(file.size>5*1024*1024){notify('Choose a profile photo up to 5 MB.',true);return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+   const data=String(reader.result??'');const image=new Image();
+   image.onload=()=>{if(image.naturalWidth<256||image.naturalHeight<256){notify('Choose a clearer photo of at least 256 × 256 px. 512 × 512 px or larger is recommended.',true);return;}setSource(data);setMeta({name:file.name,size:file.size,width:image.naturalWidth,height:image.naturalHeight});setZoom(1);setX(0);setY(0);setOpen(true)};
+   image.onerror=()=>notify('The selected photo could not be read. Choose another PNG or JPEG.',true);
+   image.src=data;
+  };
+  reader.readAsDataURL(file);
+ }
+ function applyCrop(){
+  if(!source)return;
+  const image=new Image();
+  image.onload=()=>{
+   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=512;
+   const ctx=canvas.getContext('2d');if(!ctx){notify('Unable to crop this photo.',true);return;}
+   const base=Math.min(image.naturalWidth,image.naturalHeight),crop=base/zoom;
+   const maxX=Math.max(0,(image.naturalWidth-crop)/2),maxY=Math.max(0,(image.naturalHeight-crop)/2);
+   const centerX=image.naturalWidth/2+(x/100)*maxX,centerY=image.naturalHeight/2+(y/100)*maxY;
+   const sx=Math.max(0,Math.min(image.naturalWidth-crop,centerX-crop/2)),sy=Math.max(0,Math.min(image.naturalHeight-crop,centerY-crop/2));
+   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(image,sx,sy,crop,crop,0,0,512,512);
+   onChange(canvas.toDataURL('image/jpeg',.92));setOpen(false);
+  };
+  image.src=source;
+ }
+ const initials=String(name||'U').split(/\s+/).filter(Boolean).slice(0,2).map(v=>v[0]?.toUpperCase()).join('');
+ return <>
+  <div className="profile-photo-editor">
+   <div className="profile-photo-preview">{value?<img src={value} alt={name+' profile photo'}/>:<span>{initials}</span>}</div>
+   <div className="profile-photo-copy"><strong>Profile photo</strong><p>Square crop · saved at 512 × 512 px · PNG/JPEG up to 5 MB.</p><div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>Upload photo<input className="sr-only" type="file" accept="image/png,image/jpeg" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
+  </div>
+  {open&&<Modal title="Crop profile photo" onClose={()=>setOpen(false)}>
+   <div className="profile-crop-modal">
+    <div className="profile-crop-stage"><div className="profile-crop-circle"><img src={source} alt="Crop preview" style={{transform:`translate(${x*.18}%, ${y*.18}%) scale(${zoom})`}}/></div></div>
+    {meta&&<div className="profile-crop-meta"><span>{meta.name}</span><span>{meta.width} × {meta.height}px</span><span>{(meta.size/1024/1024).toFixed(2)} MB</span></div>}
+    <div className="profile-crop-controls"><label><span>Zoom</span><input type="range" min="1" max="3" step=".01" value={zoom} onChange={e=>setZoom(Number(e.target.value))}/></label><label><span>Horizontal</span><input type="range" min="-100" max="100" value={x} onChange={e=>setX(Number(e.target.value))}/></label><label><span>Vertical</span><input type="range" min="-100" max="100" value={y} onChange={e=>setY(Number(e.target.value))}/></label></div>
+    <div className="profile-crop-actions"><button type="button" className="btn secondary" onClick={()=>setOpen(false)}>Cancel</button><button type="button" className="btn primary" onClick={applyCrop}><Check size={16}/>Use cropped photo</button></div>
+   </div>
+  </Modal>}
+ </>;
+}
+
 export function MyProfilePage(){
  const profile=useData('auth/profile');const{session,notify}=useApp();
  const[form,setForm]=useState<Row>({name:'',email:'',avatar:null}),[saving,setSaving]=useState(false);
  useEffect(()=>{if(profile.data?.user)setForm({name:profile.data.user.name??'',email:profile.data.user.email??'',avatar:profile.data.user.avatar??null})},[profile.data]);
- function choosePhoto(file?:File){if(!file)return;if(file.size>5*1024*1024){notify('Choose a PNG or JPEG profile photo up to 5 MB.',true);return;}const reader=new FileReader();reader.onload=()=>setForm(v=>({...v,avatar:String(reader.result)}));reader.readAsDataURL(file)}
  async function save(e:React.FormEvent){e.preventDefault();setSaving(true);try{await api('auth/profile','PATCH',{name:form.name,email:form.email,avatar:form.avatar??null},session.csrf);await profile.refetch();notify('Profile saved.');setTimeout(()=>window.location.reload(),300)}catch(e:any){notify(e.message,true)}finally{setSaving(false)}}
  if(profile.isLoading)return <Loading/>;if(profile.error)return <Failure error={profile.error}/>;
  const user=profile.data?.user??session.user,employee=profile.data?.employee,personal=employee?.personal??{};
@@ -58,17 +105,18 @@ export function MyProfilePage(){
    <section className="panel my-profile-card">
     <div className="my-profile-cover"/>
     <div className="my-profile-main">
-     <div className="my-profile-photo">{form.avatar?<img src={form.avatar} alt={form.name+' profile photo'}/>:<span>{String(form.name||'U').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</span>}<label className="profile-photo-action" title="Change profile photo"><Upload size={15}/><input className="sr-only" type="file" accept="image/png,image/jpeg" onChange={e=>choosePhoto(e.target.files?.[0])}/></label></div>
-     <div className="my-profile-identity"><h2>{form.name||user.name}</h2><p>{user.roleName}</p><div><Badge value={employee?.status??'ACTIVE'}/><span>{user.loginId??user.email}</span></div></div>
+     <div className="my-profile-photo">{form.avatar?<img src={form.avatar} alt={form.name+' profile photo'}/>:<span>{String(form.name||'U').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</span>}</div>
+     <div className="my-profile-identity"><h2>{form.name||user.name}</h2><p>{user.role==='COMPANY_OWNER'?'HR Admin':user.roleName}</p><div><Badge value={employee?.status??'ACTIVE'}/><span>{user.loginId??user.email}</span></div></div>
     </div>
     <form onSubmit={save} className="my-profile-form">
+     <ProfilePhotoEditor value={form.avatar} name={form.name||user.name} onChange={avatar=>setForm(v=>({...v,avatar}))} notify={notify}/>
      <div className="platform-profile-fields">
       <label><span>Full name</span><input required value={form.name??''} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>
       <label><span>Email address</span><input type="email" required value={form.email??''} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></label>
       <label><span>User ID</span><input value={user.loginId??''} readOnly/></label>
-      <label><span>Role</span><input value={user.roleName??''} readOnly/></label>
+      <label><span>Role</span><input value={user.role==='COMPANY_OWNER'?'HR Admin':(user.roleName??'')} readOnly/></label>
      </div>
-     <div className="form-actions-end profile-actions-end"><button type="button" className="btn secondary" onClick={()=>setForm(v=>({...v,avatar:null}))}>Remove photo</button><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
+     <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
     </form>
    </section>
    <section className="panel my-employee-card">
@@ -126,7 +174,7 @@ export function PlatformProfilePage(){
    </form>}
   </section>
   <section className="panel platform-admin-profile"><div className="panel-heading"><div><h2>Super Admin profile</h2><p>Your own platform administrator identity.</p></div><UserCircle size={21}/></div>
-   {account.isLoading?<Loading/>:account.error?<Failure error={account.error}/>:<form onSubmit={saveAccount}><div className="platform-admin-card"><div className="platform-admin-avatar has-upload">{accountForm.avatar?<img src={accountForm.avatar} alt="Super Admin profile"/>:String(accountForm.name??'SA').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}<label className="profile-photo-action"><Upload size={14}/><input className="sr-only" type="file" accept="image/png,image/jpeg" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){notify('Choose a profile photo up to 5 MB.',true);return;}const reader=new FileReader();reader.onload=()=>setAccountForm(v=>({...v,avatar:String(reader.result)}));reader.readAsDataURL(file)}}/></label></div><div><strong>{accountForm.name||'Super Admin'}</strong><small>{session.user.loginId??session.user.email} · {session.user.roleName}</small></div></div><div className="platform-profile-fields single"><label><span>Full name</span><input required value={accountForm.name??''} onChange={e=>setAccountForm(v=>({...v,name:e.target.value}))}/></label><label><span>Email address</span><input type="email" required value={accountForm.email??''} onChange={e=>setAccountForm(v=>({...v,email:e.target.value}))}/></label></div><div className="form-footer"><a className="btn secondary" href="/security">Password & sessions</a><button className="btn primary" disabled={savingAccount}>{savingAccount?'Saving…':'Save admin profile'}</button></div></form>}
+   {account.isLoading?<Loading/>:account.error?<Failure error={account.error}/>:<form onSubmit={saveAccount}><div className="platform-admin-card"><div className="platform-admin-avatar">{accountForm.avatar?<img src={accountForm.avatar} alt="Super Admin profile"/>:String(accountForm.name??'SA').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</div><div><strong>{accountForm.name||'Super Admin'}</strong><small>{session.user.loginId??session.user.email} · {session.user.roleName}</small></div></div><ProfilePhotoEditor value={accountForm.avatar} name={accountForm.name||'Super Admin'} onChange={avatar=>setAccountForm(v=>({...v,avatar}))} notify={notify}/><div className="platform-profile-fields single"><label><span>Full name</span><input required value={accountForm.name??''} onChange={e=>setAccountForm(v=>({...v,name:e.target.value}))}/></label><label><span>Email address</span><input type="email" required value={accountForm.email??''} onChange={e=>setAccountForm(v=>({...v,email:e.target.value}))}/></label></div><div className="form-footer"><a className="btn secondary" href="/security">Password & sessions</a><button className="btn primary" disabled={savingAccount}>{savingAccount?'Saving…':'Save admin profile'}</button></div></form>}
   </section>
  </div></>;
 }
