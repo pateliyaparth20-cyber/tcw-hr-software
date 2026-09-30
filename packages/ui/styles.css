@@ -7336,3 +7336,27 @@ textarea,
   .auth-pro-card h2,.auth-pro-signup .auth-pro-card h2{font-size:1.45rem!important}
 }
 @media(prefers-reduced-motion:reduce){.auth-pro-card,.auth-pro-copy{animation:none!important}}
+
+
+/* v1.12.1 attendance machine catalogue */
+.machine-catalog{padding:18px!important}
+.machine-catalog-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}
+.machine-catalog-head>div{min-width:0}
+.machine-catalog-head strong{display:block;color:#24415d;font-size:.9rem}
+.machine-catalog-head p{max-width:620px;margin:5px 0 0;color:#7f90a2;font-size:.7rem;line-height:1.5}
+.machine-catalog-head .search-field{width:min(320px,100%);flex:0 0 min(320px,100%)}
+.machine-catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:58vh;overflow:auto;padding:2px 4px 4px 0}
+.machine-catalog-item{width:100%;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;padding:12px;border:1px solid #e0e7ef;border-radius:14px;background:#fff;text-align:left;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.machine-catalog-item:hover{transform:translateY(-1px);border-color:#c8d9ee;background:#fbfdff;box-shadow:0 7px 18px rgba(31,65,100,.06)}
+.machine-catalog-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#eef5ff;color:#3572bd}
+.machine-catalog-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
+.machine-catalog-copy strong{color:#2d465e;font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.machine-catalog-copy small{color:#8998a8;font-size:.61rem}
+.machine-catalog-item .badge{font-size:.52rem}
+@media(max-width:700px){
+ .machine-catalog{padding:13px!important}
+ .machine-catalog-head{align-items:stretch;flex-direction:column;gap:11px}
+ .machine-catalog-head .search-field{width:100%;flex:auto}
+ .machine-catalog-grid{grid-template-columns:1fr;max-height:62vh}
+ .machine-catalog-item{padding:11px}
+}
