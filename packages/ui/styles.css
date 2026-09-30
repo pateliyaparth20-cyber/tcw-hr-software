@@ -10757,3 +10757,25 @@ input[type="month"]{
     box-shadow:0 12px 32px rgba(25,47,70,.18)!important;
   }
 }
+
+
+/* v1.15.3 refresh-safe company branding */
+.first-login-brand{
+  display:flex!important;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  text-align:left!important;
+}
+.first-login-brand>img{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  object-fit:contain;
+  border-radius:12px;
+  background:#fff;
+  border:1px solid #e4eaf0;
+}
+.first-login-brand>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.first-login-brand strong{color:#29475f;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.first-login-brand small{color:#8796a4;font-size:.53rem;letter-spacing:.08em}
