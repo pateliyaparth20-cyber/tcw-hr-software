@@ -138,16 +138,16 @@ export class Workflows {
         }
         await tx.payrollAdjustment.updateMany({where:{id:{in:adjustments.map(a=>a.id)},tenantId:tid},data:{appliedRunId:recordId}});
         const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'REVIEW',totalGross,totalDeductions,totalNet,attendanceLockId:period.id}});
-        await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} ready for review`,message:`Attendance is locked and payroll has been calculated for ${employees.length} eligible employee(s). Net payroll: ${(totalNet/100).toLocaleString('en-IN',{style:'currency',currency:'INR'})}. Review before approval.`}});
+        const reviewNotice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} ready for review`,message:`Attendance is locked and payroll has been calculated for ${employees.length} eligible employee(s). Net payroll: ${(totalNet/100).toLocaleString('en-IN',{style:'currency',currency:'INR'})}. Review before approval.`}});sendPush(this.db,{tenantId:tid,title:reviewNotice.title,body:reviewNotice.message,url:'/payroll',tag:'tcw-'+reviewNotice.id}).catch(()=>{});
         await audit(tx,ctx,'PAYROLL_CALCULATED','payroll',recordId,run,{...after,attendanceMonth:summary.totals});return after;
       }
       const target=action==='approve'?'APPROVED':action==='lock'?'LOCKED':action==='reopen'?'DRAFT':null;
       if(!target)throw new BadRequestException('Unknown payroll action.');assertPayrollTransition(run.status,target);
       if(target==='DRAFT')await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
       const after=await tx.payrollRun.update({where:{id:recordId},data:{status:target,...(target==='APPROVED'?{approvedBy:ctx.user.id}:{}),...(target==='LOCKED'?{lockedAt:new Date()}: {})}});
-      if(target==='APPROVED')await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} approved`,message:'Payroll has been approved and is ready for final lock / payout preparation.'}});
+      if(target==='APPROVED'){const notice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} approved`,message:'Payroll has been approved and is ready for final lock / payout preparation.'}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/payroll',tag:'tcw-'+notice.id}).catch(()=>{});}
       if(target==='LOCKED'){
-        await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} finalized`,message:'Payroll is locked. Employee payslips and bank payout export are now based on the finalized run.'}});
+        const finalNotice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} finalized`,message:'Payroll is locked. Employee payslips and bank payout export are now based on the finalized run.'}});sendPush(this.db,{tenantId:tid,title:finalNotice.title,body:finalNotice.message,url:'/payroll',tag:'tcw-'+finalNotice.id}).catch(()=>{});
         const items=await tx.payrollItem.findMany({where:{tenantId:tid,runId:recordId},select:{employeeId:true,net:true}});
         const linked=await tx.user.findMany({where:{tenantId:tid,employeeId:{in:items.map(i=>i.employeeId)},active:true},select:{id:true,employeeId:true}});
         const netByEmployee=new Map(items.map(i=>[i.employeeId,i.net]));
