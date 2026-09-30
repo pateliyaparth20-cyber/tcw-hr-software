@@ -10036,3 +10036,74 @@ input[type="month"]{
     justify-content:center;
   }
 }
+
+
+/* v1.14.4 one-box search + structured Branch form */
+.search-field{
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  width:100%;
+  min-width:0;
+  min-height:42px!important;
+  padding:0 12px!important;
+  border:1px solid #dfe6ee!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+  transition:border-color .15s ease,box-shadow .15s ease!important;
+}
+.search-field>svg{
+  flex:0 0 auto;
+  color:#8595a6;
+}
+.search-field>input{
+  flex:1 1 auto!important;
+  width:100%!important;
+  min-width:0!important;
+  height:40px!important;
+  min-height:40px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-width:0!important;
+  border-color:transparent!important;
+  border-radius:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-appearance:none!important;
+  appearance:none!important;
+}
+.search-field>input:focus,
+.search-field>input:focus-visible{
+  border:0!important;
+  border-width:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+.search-field:focus-within{
+  border-color:#9bb8e8!important;
+  box-shadow:0 0 0 3px rgba(52,116,239,.08)!important;
+}
+.panel>.toolbar:has(.search-field):not(:has(.toolbar-actions>*)){
+  padding:14px 16px!important;
+}
+@media(max-width:700px){
+  .search-field{
+    min-height:44px!important;
+    border-radius:12px!important;
+  }
+  .search-field>input{
+    height:42px!important;
+    min-height:42px!important;
+    font-size:16px!important;
+  }
+}
+
+/* Branch form uses compact individual fields, no full-width address textarea. */
+.record-form .field:has(#field-addressLine){
+  grid-column:auto!important;
+}
