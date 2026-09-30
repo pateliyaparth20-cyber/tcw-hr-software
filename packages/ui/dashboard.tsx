@@ -4,6 +4,21 @@ import Link from 'next/link';
 import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard} from 'lucide-react';
 import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
+function useTimeGreeting(timeZone?:string){
+ const[greeting,setGreeting]=useState('GOOD MORNING');
+ useEffect(()=>{
+  const update=()=>{
+   let hour=new Date().getHours();
+   if(timeZone)try{hour=Number(new Intl.DateTimeFormat('en-US',{hour:'2-digit',hourCycle:'h23',timeZone}).format(new Date()))}catch{}
+   setGreeting(hour<12?'GOOD MORNING':hour<17?'GOOD AFTERNOON':'GOOD EVENING');
+  };
+  update();
+  const timer=window.setInterval(update,60_000);
+  return()=>window.clearInterval(timer);
+ },[timeZone]);
+ return greeting;
+}
+
 function Trend({attendance}:{attendance:Row[]}){
  const days=Array.from({length:7},(_,i)=>new Date(Date.now()-(6-i)*86400000).toISOString().slice(0,10));
  const values=days.map(d=>attendance.filter(r=>r.date.startsWith(d)&&r.status==='PRESENT').length);
@@ -29,6 +44,7 @@ function DigitalMetric({label,value,detail,icon,tone='blue'}:{label:string;value
 
 function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pending,payroll,attendanceRate}:{session:any;can:(resource:string)=>boolean;currency:string;d:Row;people:Row[];present:number;onLeave:number;pending:Row[];payroll:Row|null;attendanceRate:number}){
  const firstName=String(session.user.name??'User').split(' ')[0];
+ const greeting=useTimeGreeting(d.company?.timezone);
  const quick=[
   ['employees','Employees','Team',<Users size={23}/>,'blue'],
   ['attendance','Attendance','Today',<Clock3 size={23}/>,'green'],
@@ -41,7 +57,7 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
  return <section className="hr-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-tenant">
    <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src={d.company?.logo||'/tcw-logo.png'} alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div>
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>GOOD MORNING</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
   </div>
 
   <div className="mobile-app-welcome"><div><small>WELCOME BACK</small><strong>Let’s make today productive.</strong></div><span><ActivityIcon size={21}/></span></div>
@@ -70,10 +86,11 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
 function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,outstanding,openTickets,currency,support}:{session:any;companies:Row[];trials:number;trialSummary:Row;paid:number;outstanding:number;openTickets:number;currency:string;support:Row[]}){
  const active=companies.filter(c=>c.status==='ACTIVE').length;
  const firstName=String(session.user.name??'Admin').split(' ')[0];
+ const greeting=useTimeGreeting('Asia/Kolkata');
  return <section className="platform-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-platform">
    <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src="/tcw-logo.png" alt="Tech Cyber Warrior"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="mobile-unified-action" aria-label="System health"><Server size={19}/></Link></div>
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>GOOD MORNING</small><strong>{firstName}!</strong><span>Platform administrator</span></div></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>Platform administrator</span></div></div>
   </div>
   <div className="platform-mobile-stats">
    <Link href="/companies"><span className="mobile-stat-icon blue"><Building2 size={19}/></span><strong>{companies.length}</strong><small>Companies · {active} active</small></Link>
