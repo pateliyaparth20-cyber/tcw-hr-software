@@ -1,3 +1,4 @@
+-- Recovery-safe: preserves immutable attendance and finalized payroll audit history.
 ALTER TABLE "leave_requests"
   ADD COLUMN IF NOT EXISTS "request_key" TEXT;
 
