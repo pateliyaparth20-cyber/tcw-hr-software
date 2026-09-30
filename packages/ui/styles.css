@@ -7706,3 +7706,86 @@ textarea,
     max-width:112px!important;
   }
 }
+
+
+/* v1.12.6 canonical circular user profile photo */
+.my-profile-photo{
+  width:96px!important;
+  height:96px!important;
+  min-width:96px!important;
+  min-height:96px!important;
+  flex:0 0 96px!important;
+  aspect-ratio:1/1!important;
+  position:relative!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:5px solid #fff!important;
+  border-radius:50%!important;
+  overflow:visible!important;
+  background:#eaf2ff!important;
+  box-shadow:0 10px 28px rgba(31,66,104,.14)!important;
+}
+.my-profile-photo>img{
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  display:block!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  clip-path:circle(50%)!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  background:#eef3f8!important;
+}
+.my-profile-photo>span{
+  width:100%!important;
+  height:100%!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:50%!important;
+  overflow:hidden!important;
+}
+.my-profile-photo .profile-photo-action{
+  position:absolute!important;
+  right:-2px!important;
+  bottom:-2px!important;
+  width:30px!important;
+  height:30px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:3px solid #fff!important;
+  border-radius:50%!important;
+  background:#176ee0!important;
+  color:#fff!important;
+  box-shadow:0 5px 14px rgba(28,91,178,.24)!important;
+  z-index:5!important;
+}
+@media(max-width:950px){
+  .my-profile-photo{
+    width:88px!important;
+    height:88px!important;
+    min-width:88px!important;
+    min-height:88px!important;
+    flex:0 0 88px!important;
+  }
+}
+@media(max-width:520px){
+  .my-profile-photo{
+    width:86px!important;
+    height:86px!important;
+    min-width:86px!important;
+    min-height:86px!important;
+    flex:0 0 86px!important;
+  }
+  .my-profile-photo .profile-photo-action{
+    right:-1px!important;
+    bottom:-1px!important;
+    width:29px!important;
+    height:29px!important;
+  }
+}
