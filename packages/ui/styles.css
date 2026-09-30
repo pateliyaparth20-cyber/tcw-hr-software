@@ -7863,3 +7863,57 @@ textarea,
 .tcw-pull-refresh.ready>span{border-top-color:#16a36f}
 @keyframes tcw-pull-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.tcw-pull-refresh>span{animation:none}}
+
+
+/* v1.13.0 direct payment + actionable notifications + Meghna voice */
+.notification-row-link{cursor:pointer;transition:background .16s ease,transform .16s ease}
+.notification-row-link:hover,.notification-row-link:focus-visible{background:#f8fbff;outline:none;transform:translateY(-1px)}
+
+.meghna-header-actions{display:flex;align-items:center;gap:6px}
+.meghna-voice-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid #edf1f5;background:#fbfdff}
+.meghna-voice-bar select{min-width:0;max-width:160px;height:34px;padding:0 28px 0 9px;border:1px solid #dce5ee;border-radius:10px;background:#fff;color:#4f657b;font-size:.62rem;font-weight:700}
+.meghna-voice-bar span{color:#7b8d9f;font-size:.58rem;font-weight:700}
+.meghna-compose{display:grid!important;grid-template-columns:38px minmax(0,1fr) 42px!important;gap:8px!important;align-items:center!important}
+.meghna-compose .voice-button{width:38px;height:38px;display:grid;place-items:center;border:1px solid #dce5ee;border-radius:50%;background:#f8fbff;color:#4678b9;cursor:pointer}
+.meghna-compose .voice-button.listening{background:#fff0f0;border-color:#f1c7c7;color:#d24343;animation:meghna-listening 1.1s ease-in-out infinite}
+@keyframes meghna-listening{50%{box-shadow:0 0 0 6px rgba(210,67,67,.09)}}
+.message-speak{float:right;margin:-2px 0 0 8px;width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#7890a8;cursor:pointer}
+.message-speak:hover{background:#eef5ff;color:#3474ef}
+
+.payment-checkout-screen{padding-bottom:38px}
+.checkout-layout{max-width:1050px;margin:0 auto;display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.35fr);gap:16px;align-items:start}
+.checkout-summary-card{padding:20px!important}
+.checkout-back{margin:0 0 18px;padding:0;border:0;background:transparent;color:#3474ef;font-weight:750;font-size:.72rem;cursor:pointer}
+.checkout-summary-card>small,.upi-checkout-copy>small{color:#8292a4;font-size:.61rem;font-weight:850;letter-spacing:.1em}
+.checkout-summary-card h2{margin:4px 0 18px;color:#24415d;font-size:1.4rem}
+.checkout-price-lines{display:grid;gap:0;border:1px solid #e5ebf1;border-radius:14px;overflow:hidden;background:#fbfdff}
+.checkout-price-lines>div{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid #e8eef4;color:#6f8294;font-size:.72rem}
+.checkout-price-lines>div:last-child{border-bottom:0}
+.checkout-price-lines strong{color:#29455f;font-size:.8rem}
+.checkout-price-lines .checkout-total{background:#f2f7ff}
+.checkout-price-lines .checkout-total span{font-weight:800;color:#36526b}
+.checkout-price-lines .checkout-total strong{font-size:1.15rem;color:#1f5fb8}
+.checkout-note{margin:14px 0 0;color:#8494a5;font-size:.66rem}
+.direct-upi-card{display:grid!important;grid-template-columns:220px minmax(0,1fr)!important;gap:22px!important;align-items:start!important;padding:20px!important}
+.direct-upi-card .upi-qr-wrap{padding:14px;border:1px solid #e2e9f0;border-radius:16px;background:#fff}
+.direct-upi-card .upi-qr-wrap img{width:100%!important;aspect-ratio:1/1;object-fit:contain}
+.direct-upi-card .upi-checkout-copy h2{margin:5px 0 8px;color:#1f405e;font-size:1.7rem}
+.upi-app-hints{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+.upi-app-hints span{padding:5px 8px;border:1px solid #e0e8f0;border-radius:999px;background:#f8fbff;color:#6b7f93;font-size:.58rem;font-weight:700}
+.plan-pay-cta{margin-top:14px!important;padding-top:12px!important;border-top:1px solid #edf1f5;color:#2f70c9!important;font-weight:800!important;font-size:.68rem!important}
+.upgrade-plan-card:disabled{opacity:.62;cursor:not-allowed;transform:none!important}
+.payment-config-warning{max-width:760px;margin:16px auto;padding:16px 18px!important;text-align:center}
+.payment-config-warning strong{color:#8b5a00}
+.payment-config-warning p{margin:5px 0 0;color:#8a99a8;font-size:.7rem}
+.success-notice{display:flex;flex-direction:column;gap:3px}
+
+@media(max-width:760px){
+ .checkout-layout{grid-template-columns:1fr}
+ .direct-upi-card{grid-template-columns:1fr!important}
+ .direct-upi-card .upi-qr-wrap{max-width:280px;margin:0 auto;width:100%}
+ .payment-proof-row{grid-template-columns:1fr!important}
+}
+@media(max-width:520px){
+ .meghna-voice-bar{padding:7px 10px}
+ .meghna-voice-bar select{max-width:145px}
+}
