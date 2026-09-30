@@ -6,6 +6,7 @@ import {attendancePayableUnits,calculateAttendance,localDate,workingDaySet,zoned
 import {calculatePay,assertPayrollTransition} from '../../../packages/payroll-engine';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,unlockAttendanceMonth} from './attendance-automation';
+import {sendPush} from './push';
 
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
 export class Workflows {
@@ -93,7 +94,7 @@ export class Workflows {
       if(type==='leave'){affectedMonths=monthsCovered(before.startDate,before.endDate);const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before reviewing this leave.`);}
       const data=type==='leave'?{status:input.decision,reviewerId:ctx.user.id,reviewNote:input.note}:{status:input.decision,reviewedBy:ctx.user.id};
       const result=await table.updateMany({where:{id:recordId,tenantId:tid,status:'PENDING'},data});if(result.count!==1)throw new ConflictException('This request has already been reviewed.');
-      await audit(tx,ctx,`${type.toUpperCase()}_${input.decision}`,type,recordId,before,data);const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:before.employeeId}});if(user)await tx.notification.create({data:{tenantId:tid,userId:user.id,title:`${type} ${input.decision.toLowerCase()}`,message:'Your request has been reviewed.'}});return table.findUnique({where:{id:recordId}});
+      await audit(tx,ctx,`${type.toUpperCase()}_${input.decision}`,type,recordId,before,data);const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:before.employeeId}});if(user){const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:`${type} ${input.decision.toLowerCase()}`,message:'Your request has been reviewed.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:type==='leave'?'/leave':'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});}return table.findUnique({where:{id:recordId}});
     });
     if(type==='leave'&&input.decision==='APPROVED')for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
     return reviewed;
