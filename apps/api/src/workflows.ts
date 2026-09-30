@@ -69,6 +69,24 @@ export class Workflows {
         return {ok:true,punchType,punchTime,status:calculated.status,workMinutes:calculated.workMinutes,firstIn:calculated.firstIn,lastOut:calculated.lastOut};
       });
     }
+    if(recordId&&method==='DELETE'&&!action){
+      requirePermission(ctx,'attendance','MANAGE');
+      const before=await this.db.attendanceDaily.findFirst({where:{tenantId:tid,id:id.parse(recordId)}});
+      if(!before)throw new NotFoundException('Attendance record not found.');
+      await assertAttendanceUnlocked(this.db,tid,before.date);
+      await assertEmployee(this.db,ctx,before.employeeId);
+      const shift=await employeeShift(this.db,tid,before.employeeId,before.shiftId??undefined);
+      const day=before.date.toISOString().slice(0,10),night=shift.endMinute<=shift.startMinute;
+      const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone);
+      const end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
+      return this.db.$transaction(async tx=>{
+        const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:before.employeeId,punchTime:{gte:start,lt:end}},select:{id:true}});
+        await tx.attendancePunch.deleteMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}}});
+        await tx.attendanceDaily.delete({where:{id:before.id}});
+        await audit(tx,ctx,'ATTENDANCE_DELETED','attendance',before.id,before,{deletedPunches:punches.length});
+        return {ok:true,deleted:true,deletedPunches:punches.length};
+      });
+    }
     if(recordId&&action==='correct'&&method==='POST'){
       requirePermission(ctx,'attendance','MANAGE');const input=z.object({status:z.enum(['PRESENT','HALF_DAY','ABSENT']),workMinutes:z.number().int().min(0).max(1440).optional(),note:z.string().trim().min(5).max(1000)}).strict().parse(body);
       const before=await this.db.attendanceDaily.findFirst({where:{tenantId:tid,id:id.parse(recordId)}});if(!before)throw new NotFoundException();await assertAttendanceUnlocked(this.db,tid,before.date);
