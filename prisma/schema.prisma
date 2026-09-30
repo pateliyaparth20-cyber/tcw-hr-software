@@ -150,6 +150,11 @@ model Branch {
   name        String
   code        String
   description String   @default("")
+  location    String   @default("")
+  addressLine String   @default("") @map("address_line")
+  city        String   @default("")
+  state       String   @default("")
+  pincode     String   @default("")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
