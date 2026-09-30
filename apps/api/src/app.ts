@@ -83,8 +83,9 @@ export class Api {
       ]);
       const payRow=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
-      const upiId=String(pay.upiId??'').trim(),payeeName=String(pay.payeeName??'TCW HR Software').trim();
-      return {company,invoices,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{id:upiId,payeeName}};
+      const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
+      const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18));
+      return {company,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{id:upiId,payeeName},gstPercent};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
@@ -97,11 +98,13 @@ export class Api {
       if(!plan)throw new BadRequestException('Selected subscription plan is unavailable.');
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const base=String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim();
-      const upiId=String(pay.upiId??'').trim(),payeeName=String(pay.payeeName??'TCW HR Software').trim();
+      const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
+      const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18));
       if(input.mode==='GATEWAY'&&!base)throw new ServiceUnavailableException('Card/online gateway is not configured yet.');
       if(input.mode==='UPI'&&!upiId)throw new ServiceUnavailableException('UPI payment is not configured yet.');
-      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:plan.monthlyPrice},orderBy:{createdAt:'desc'}});
-      const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount:plan.monthlyPrice,tax:0,total:plan.monthlyPrice,dueDate:new Date(new Date().toISOString().slice(0,10))}});
+      const tax=Math.round(plan.monthlyPrice*gstPercent/100),total=plan.monthlyPrice+tax;
+      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:plan.monthlyPrice,tax,total},orderBy:{createdAt:'desc'}});
+      const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount:plan.monthlyPrice,tax,total,dueDate:new Date(new Date().toISOString().slice(0,10))}});
       await this.db.tenant.update({where:{id:tid},data:{plan:plan.name,employeeLimit:plan.employeeLimit,profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString(),paymentMode:input.mode,pendingInvoiceId:invoice.id}}});
       await audit(this.db,ctx,'SUBSCRIPTION_PAYMENT_STARTED','tenants',tid,undefined,{plan:plan.name,invoiceId:invoice.id,total:invoice.total,mode:input.mode});
       if(input.mode==='GATEWAY'){
@@ -111,7 +114,7 @@ export class Api {
       const amount=(invoice.total/100).toFixed(2);
       const upiUrl=`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent('TCW HR '+invoice.number)}`;
       const qrUrl=`https://quickchart.io/qr?size=280&margin=1&text=${encodeURIComponent(upiUrl)}`;
-      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{id:upiId,payeeName},amount};
+      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{id:upiId,payeeName},amount,gstPercent,breakdown:{subtotal:invoice.amount,tax:invoice.tax,total:invoice.total}};
     }
     if(resource==='subscription'&&key==='manual-payment'&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
@@ -265,8 +268,8 @@ export class Api {
     }
     if(resource==='system'&&key==='payment-settings'){
       platform(ctx);
-      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {upiId:String(value.upiId??''),payeeName:String(value.payeeName??'TCW HR Software')};}
-      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({upiId:z.string().trim().max(120),payeeName:z.string().trim().min(1).max(120)}).strict().parse(body);if(input.upiId&&!/^[A-Za-z0-9._-]{2,}@[A-Za-z0-9.-]{2,}$/.test(input.upiId))throw new BadRequestException('Enter a valid UPI ID, for example name@bank.');const row=await this.db.platformSetting.upsert({where:{key:'billing-payment'},update:{value:input},create:{key:'billing-payment',value:input}});await audit(this.db,ctx,'PAYMENT_SETTINGS_UPDATED','system');return row.value;}
+      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {upiId:String(value.upiId??process.env.PAYMENT_UPI_ID??''),payeeName:String(value.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software'),gstPercent:Number(value.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18};}
+      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({upiId:z.string().trim().max(120),payeeName:z.string().trim().min(1).max(120),gstPercent:z.number().min(0).max(100).default(18)}).strict().parse(body);if(input.upiId&&!/^[A-Za-z0-9._-]{2,}@[A-Za-z0-9.-]{2,}$/.test(input.upiId))throw new BadRequestException('Enter a valid UPI ID, for example name@bank.');const row=await this.db.platformSetting.upsert({where:{key:'billing-payment'},update:{value:input},create:{key:'billing-payment',value:input}});await audit(this.db,ctx,'PAYMENT_SETTINGS_UPDATED','system');return row.value;}
       throw new NotFoundException();
     }
     if(resource==='system'&&key==='company-update'){
@@ -321,7 +324,9 @@ export class Api {
       const failedMessages=failedEmail+failedSms;
       const summary='Monitor: API online, database connected, '+failedEmail+' failed email job(s), '+failedSms+' failed SMS job(s), '+deviceIssues+' attendance device issue(s).';
       let answer='';
-      if(q.includes('email')||q.includes('mail'))answer=emailConfigured?(failedEmail?'Email is configured, but '+failedEmail+' recent email delivery job(s) need attention. Verify the recipient address and delivery logs.':'Email delivery is configured and no repeated recent email failure is visible. Check Inbox/Spam for a fresh test message.'):'Email delivery is not configured yet.';
+      if(/^(hi|hello|hey|hiya|namaste|namaskar|kem cho|કેમ છો|નમસ્તે|હાય|हाय|नमस्ते)[!?. ]*$/.test(q))answer=/[\u0A80-\u0AFF]/.test(question)?'હાય! હું મેઘના છું 😊 કહો, આજે શું વાત કરવી છે?':/[\u0900-\u097F]/.test(question)?'हाय! मैं मेघना हूँ 😊 बताइए, आज क्या बात करनी है?':'Hi! I’m Meghna 😊 What would you like to talk about?';
+      else if(/^(thanks|thank you|thx|આભાર|धन्यवाद)[!?. ]*$/.test(q))answer=/[\u0A80-\u0AFF]/.test(question)?'આભાર! જ્યારે ઇચ્છો ત્યારે વાત કરો 😊':/[\u0900-\u097F]/.test(question)?'आपका स्वागत है 😊 जब चाहें बात कीजिए।':'You’re welcome 😊 I’m here whenever you want to chat.';
+      else if(q.includes('email')||q.includes('mail'))answer=emailConfigured?(failedEmail?'Email is configured, but '+failedEmail+' recent email delivery job(s) need attention. Verify the recipient address and delivery logs.':'Email delivery is configured and no repeated recent email failure is visible. Check Inbox/Spam for a fresh test message.'):'Email delivery is not configured yet.';
       else if(q.includes('sms')||q.includes('message'))answer=smsConfigured?('SMS provider is configured. '+(failedSms?failedSms+' recent SMS job(s) need attention.':'No repeated recent SMS delivery failure is visible.')):'SMS provider is not configured. Email works independently and SMS warnings are suppressed.';
       else if(q.includes('device')||q.includes('biometric')||q.includes('attendance'))answer=canAttendance?((deviceIssues?deviceIssues+' attendance device issue(s) need review. ':'')+'Open Attendance/Devices to check connectivity, mapping, punches and last-seen status.'):'Your role does not have access to attendance diagnostics.';
       else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.':'Your role does not have payroll access.';
@@ -329,7 +334,7 @@ export class Api {
       else if(q.includes('login')||q.includes('password')||q.includes('forgot'))answer='For login issues, confirm Company Code + User ID/email. Remember me keeps a valid session on this device. Forgot Password sends a one-time link that expires in 10 minutes.';
       else if(q.includes('update')||q.includes('version'))answer='TCW HR checks for a newer deployment while the software is open. When one is detected, an Update now banner appears; use it to reload into the new version.';
       else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=(failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.';
-      else answer='I can help with login, password reset, email/SMS, attendance devices, payroll, leave, software updates and current system problems. '+summary;
+      else answer='I’m Meghna. We can talk normally about whatever is on your mind, and I can also help with TCW HR Software when you need it. '+summary;
       try{const cfg=await effectiveAIConfig(this.db);if(cfg.enabled){const enhanced=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,{conversationHistory:history,company:{name:company?.name,status:company?.status,plan:company?.plan},failedMessages,failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview,emailConfigured,smsConfigured});if(enhanced)answer=enhanced;}}catch{}
       let agentAction:any=undefined;
       if(/\b(open|go to|show)\b/.test(q)){
