@@ -45,7 +45,7 @@ export function ModulePage({name}:{name:string}){
  const rows:Row[]=name==='employees'?raw:raw.filter((r:Row)=>(!search||JSON.stringify(r).toLowerCase().includes(search.toLowerCase()))&&(!filter||(r.status??r.stage)===filter));
  const total=query.data?.total??raw.length;
  const options=[...new Set(raw.map((r:Row)=>r.status??r.stage).filter(Boolean))] as string[];
- const searchPlaceholder=name==='branches'?'Search branches by name, code or address…':name==='departments'?'Search departments by name or code…':name==='designations'?'Search designations by name or code…':name==='teams'?'Search teams by name or code…':'Search '+cfg.title.toLowerCase()+'…';
+ const searchPlaceholder=name==='branches'?'Search branches by name, code or location…':name==='departments'?'Search departments by name or code…':name==='designations'?'Search designations by name or code…':name==='teams'?'Search teams by name or code…':'Search '+cfg.title.toLowerCase()+'…';
  function cell(row:Row,key:string):React.ReactNode{
   if(key==='employee')return <button className="person-cell" onClick={()=>setDetail(row)}><Avatar name={`${row.firstName} ${row.lastName}`} src={row.photo}/><span><strong>{row.firstName} {row.lastName}</strong><small>{row.email}</small></span></button>;
   if(key==='status'||key==='stage')return <Badge value={row[key]}/>;
