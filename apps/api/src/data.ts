@@ -9,6 +9,7 @@ import {configs,employeeSchema,id,tenantSchema,leadSchema,planSchema,date,passwo
 import {hasPermission,restrictedRoles} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,platform,requirePermission,tenant,Context} from './context';
 import {syncCompanyAccess} from './billing';
+import {sendPush} from './push';
 export class DataService {
   constructor(public db:Database){}
   private object(value:any):Record<string,any>{return value&&typeof value==='object'&&!Array.isArray(value)?{...value}:{};}
@@ -135,7 +136,7 @@ export class DataService {
       }
       const after=before?await tx.employee.update({where:{id:before.id},data:input}):await tx.employee.create({data:{tenantId:tid,...input}});
       await audit(tx,ctx,before?'EMPLOYEE_UPDATED':'EMPLOYEE_CREATED','employees',after.id,before,after);
-      if(!before)await tx.notification.create({data:{tenantId:tid,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. Complete user access, documents and attendance mapping as needed.`}});
+      if(!before){const notice=await tx.notification.create({data:{tenantId:tid,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. Complete user access, documents and attendance mapping as needed.`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/employees',tag:'tcw-'+notice.id}).catch(()=>{});}
       return clean(after);
     });
   }
@@ -176,7 +177,7 @@ export class DataService {
         const slaDueAt=new Date(Date.now()+(priorityMinutes[input.priority]??1440)*60000);
         const after=await table.create({data:{tenantId:tid,...input,ticketNumber,slaDueAt}});
         await tx.supportTicketMessage.create({data:{tenantId:tid,ticketId:after.id,authorId:ctx.user.id,authorScope:'TENANT',authorName:ctx.user.name,message:input.message}});
-        await tx.notification.create({data:{tenantId:tid,title:`Support ticket ${ticketNumber} created`,message:`${input.subject} · ${input.priority} priority. TCW Support will update this ticket here.`}});
+        const notice=await tx.notification.create({data:{tenantId:tid,title:`Support ticket ${ticketNumber} created`,message:`${input.subject} · ${input.priority} priority. TCW Support will update this ticket here.`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});
         await audit(tx,ctx,'SUPPORT_TICKET_CREATED','support',after.id,before,after);return after;
       }
       const after=before?await table.update({where:{id:recordId},data:input}):await table.create({data:{tenantId:tid,...input}});
@@ -194,7 +195,7 @@ export class DataService {
     return this.db.$transaction(async tx=>{
       const row=await tx.supportTicketMessage.create({data:{tenantId:ticket.tenantId,ticketId:ticket.id,authorId:ctx.user.id,authorScope:isPlatform?'PLATFORM':'TENANT',authorName:ctx.user.name,message:input.message,internal}});
       const after=await tx.supportTicket.update({where:{id:ticket.id},data:{status:!isPlatform&&ticket.status==='RESOLVED'?'OPEN':ticket.status,closedAt:!isPlatform&&ticket.status==='RESOLVED'?null:ticket.closedAt}});
-      if(isPlatform&&!internal)await tx.notification.create({data:{tenantId:ticket.tenantId,title:`Support ticket ${ticket.ticketNumber} replied`,message:input.message.slice(0,300)}});
+      if(isPlatform&&!internal){const notice=await tx.notification.create({data:{tenantId:ticket.tenantId,title:`Support ticket ${ticket.ticketNumber} replied`,message:input.message.slice(0,300)}});sendPush(this.db,{tenantId:ticket.tenantId,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});}
       await audit(tx,ctx,isPlatform?'TICKET_SUPPORT_REPLY':'TICKET_CUSTOMER_REPLY','support',ticket.id,ticket,after);return row;
     });
   }
