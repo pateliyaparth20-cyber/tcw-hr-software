@@ -120,6 +120,7 @@ export class DataService {
         const payrollItems=await tx.payrollItem.findMany({where:{tenantId:tid,employeeId},select:{runId:true}});
         const runIds=[...new Set(payrollItems.map(i=>i.runId))];
 
+        await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.deviceEmployeeMap.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.attendanceDaily.deleteMany({where:{tenantId:tid,employeeId}});
@@ -253,19 +254,31 @@ export class DataService {
     const tid=tenant(ctx);requirePermission(ctx,'employees',method==='GET'?'VIEW':'EDIT');if(method!=='GET')requirePermission(ctx,'users','MANAGE');
     const employee=await this.db.employee.findFirst({where:{id:id.parse(employeeId),tenantId:tid,deletedAt:null},select:{id:true,employeeCode:true,firstName:true,lastName:true,email:true,phone:true,status:true}});
     if(!employee)throw new NotFoundException('Employee not found.');
-    const existing=await this.db.user.findFirst({where:{tenantId:tid,employeeId:employee.id},include:{role:true}});
+    const [existing,faceProfile]=await Promise.all([
+      this.db.user.findFirst({where:{tenantId:tid,employeeId:employee.id},include:{role:true}}),
+      this.db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId:employee.id}},select:{enrolledAt:true,templateVersion:true,sampleCount:true}})
+    ]);
     const safe=(user:any)=>user?{id:user.id,name:user.name,email:user.email,loginId:user.loginId,active:user.active,mustChangePassword:user.mustChangePassword,role:user.role?.code??'',createdAt:user.createdAt,updatedAt:user.updatedAt}:null;
-    if(method==='GET'){const company=await this.db.tenant.findUnique({where:{id:tid},select:{code:true}});return {employee,user:safe(existing),companyCode:company?.code??'',employeePortal:'https://employee.techcyberwarrior.in/login'};}
+    const faceEnrollment=faceProfile?{enrolled:true,enrolledAt:faceProfile.enrolledAt,templateVersion:faceProfile.templateVersion,sampleCount:faceProfile.sampleCount}:{enrolled:false};
+    if(method==='GET'){const company=await this.db.tenant.findUnique({where:{id:tid},select:{code:true}});return {employee,user:safe(existing),faceEnrollment,companyCode:company?.code??'',employeePortal:'https://employee.techcyberwarrior.in/login'};}
     if(method!=='POST')throw new BadRequestException('Unsupported Employee App access operation.');
-    const input=z.object({operation:z.enum(['CREATE','RESET_PASSWORD','SET_ACTIVE']),password:password.optional(),active:z.boolean().optional()}).strict().parse(body);
+    const input=z.object({operation:z.enum(['CREATE','RESET_PASSWORD','SET_ACTIVE','RESET_FACE']),password:password.optional(),active:z.boolean().optional()}).strict().parse(body);
     if(input.operation==='CREATE'&&existing)throw new ConflictException('Employee App access already exists for this employee.');
     if(input.operation!=='CREATE'&&!existing)throw new NotFoundException('Create Employee App access first.');
-    const generatedPassword=input.operation!=='SET_ACTIVE'&&!input.password?temporaryPassword8():null;
+    const credentialOperation=input.operation==='CREATE'||input.operation==='RESET_PASSWORD';
+    const generatedPassword=credentialOperation&&!input.password?temporaryPassword8():null;
     const newPassword=input.password??generatedPassword??undefined;
     const company=await this.db.tenant.findUnique({where:{id:tid},select:{name:true,code:true}});
     const loginUrl='https://employee.techcyberwarrior.in/login';
     return this.db.$transaction(async tx=>{
       let user:any=existing;
+      if(input.operation==='RESET_FACE'){
+        const beforeFace=await tx.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId:employee.id}},select:{id:true,enrolledAt:true,templateVersion:true,sampleCount:true}});
+        await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId:employee.id}});
+        if(existing)await tx.session.deleteMany({where:{userId:existing.id}});
+        await audit(tx,ctx,'EMPLOYEE_FACE_RESET','employees',employee.id,beforeFace??undefined,{employeeCode:employee.employeeCode});
+        return {employee,user:safe(existing),faceEnrollment:{enrolled:false},companyCode:company?.code??'',employeePortal:loginUrl};
+      }
       if(input.operation==='CREATE'){
         const role=await tx.role.findUnique({where:{code:'EMPLOYEE'}});if(!role||role.scope!=='TENANT')throw new BadRequestException('Employee role is not configured.');
         const duplicateEmail=await tx.user.findFirst({where:{tenantId:tid,email:employee.email.toLowerCase()}});if(duplicateEmail)throw new ConflictException('This employee email is already used by another login account.');
@@ -286,7 +299,8 @@ export class DataService {
         await tx.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{to:employee.email,subject:'Your TCW Employee login',tempPassword:newPassword,text:`Your TCW Employee account is ready. Company Code: ${company?.code??''}. Employee ID: ${employee.employeeCode}. Temporary Password: ${newPassword}. Login: ${loginUrl}. You will be asked to change this temporary password after first sign in.`}}});
         if(employee.phone)await tx.outbox.create({data:{tenantId:tid,kind:'SMS',payload:{to:employee.phone,template:'EMPLOYEE_LOGIN',company:company?.name??'Your company',companyCode:company?.code??'',employeeCode:employee.employeeCode,tempPassword:newPassword,loginUrl,text:`TCW Employee login: Company ${company?.code??''}, Employee ID ${employee.employeeCode}, Temp Password ${newPassword}. Login ${loginUrl}.`}}});
       }
-      return {employee,user:safe(user),companyCode:company?.code??'',employeePortal:loginUrl,...(generatedPassword?{temporaryPassword:generatedPassword}:{})};
+      const currentFace=await tx.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId:employee.id}},select:{enrolledAt:true,templateVersion:true,sampleCount:true}});
+      return {employee,user:safe(user),faceEnrollment:currentFace?{enrolled:true,enrolledAt:currentFace.enrolledAt,templateVersion:currentFace.templateVersion,sampleCount:currentFace.sampleCount}:{enrolled:false},companyCode:company?.code??'',employeePortal:loginUrl,...(generatedPassword?{temporaryPassword:generatedPassword}:{})};
     });
   }
 

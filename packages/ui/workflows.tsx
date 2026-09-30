@@ -1,51 +1,10 @@
 'use client';
 import React,{useEffect,useRef,useState} from 'react';
-import {Plus,Download,ChevronLeft,ChevronRight,CalendarDays,Clock3,UserCheck,Monitor,LockKeyhole,Play,Check,Printer,Activity,ArrowUpRight,Send,Trash2,Camera,ShieldCheck,RotateCcw} from 'lucide-react';
+import {Plus,Download,ChevronLeft,ChevronRight,CalendarDays,Clock3,UserCheck,Monitor,LockKeyhole,Play,Check,Printer,Activity,ArrowUpRight,Send,Trash2,Camera} from 'lucide-react';
 import {useApp,useData,api,PageTitle,Stat,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,currencyValue,displayDate} from './core';
 import {Row,Field,readable} from './config';
 import {ModulePage} from './modules';
-
-export function FaceScanAttendanceModal({onClose,onComplete}:{onClose:()=>void;onComplete?:()=>void}){
- const{session}=useApp();const videoRef=useRef<HTMLVideoElement>(null),canvasRef=useRef<HTMLCanvasElement>(null),streamRef=useRef<MediaStream|null>(null);
- const[state,setState]=useState<'starting'|'ready'|'scanning'|'success'|'error'>('starting'),[message,setMessage]=useState('Starting front camera…'),[result,setResult]=useState<Row|null>(null);
- const stop=()=>{streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null};
- const start=async()=>{stop();setState('starting');setMessage('Starting front camera…');try{
-  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera access is not supported in this browser.');
-  const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:720},height:{ideal:720}}});streamRef.current=stream;
-  const video=videoRef.current;if(!video){stop();return;}video.srcObject=stream;await video.play();setState('ready');setMessage('Center one face inside the guide, then scan.');
- }catch(e:any){setState('error');setMessage(e?.name==='NotAllowedError'?'Camera permission was blocked. Allow camera access for TCW HR Software and try again.':e?.message??'Camera could not be started.');}};
- useEffect(()=>{start();return stop},[]);
- const close=()=>{stop();onClose()};
- async function scan(){
-  const video=videoRef.current,canvas=canvasRef.current;if(!video||!canvas||video.readyState<2||!video.videoWidth){setState('error');setMessage('Camera is not ready yet. Try again.');return;}
-  setState('scanning');setMessage('Checking face and recording attendance…');
-  try{
-   const Detector=(window as any).FaceDetector;
-   if(Detector){const faces=await new Detector({fastMode:true,maxDetectedFaces:2}).detect(video);if(faces.length!==1){setState('ready');setMessage(faces.length>1?'Only one person should be visible during Face Scan.':'No face detected. Center your face inside the guide and try again.');return;}}
-   const side=Math.min(video.videoWidth,video.videoHeight),sx=(video.videoWidth-side)/2,sy=(video.videoHeight-side)/2;canvas.width=320;canvas.height=320;
-   const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Camera capture is unavailable.');
-   ctx.drawImage(video,sx,sy,side,side,0,0,320,320);
-   const pixels=ctx.getImageData(0,0,320,320).data;let total=0,totalSq=0,count=0;for(let i=0;i<pixels.length;i+=64){const l=(pixels[i]+pixels[i+1]+pixels[i+2])/3;total+=l;totalSq+=l*l;count++}const variance=totalSq/count-(total/count)**2;
-   if(variance<110){setState('ready');setMessage('Image is too dark or unclear. Face the camera in better light and try again.');return;}
-   const frame=canvas.toDataURL('image/jpeg',.68);const response=await api('attendance/face-scan','POST',{frame,clientNonce:crypto.randomUUID()},session.csrf);
-   setResult(response);setState('success');setMessage(response.punchType==='IN'?'Check-in recorded':'Check-out recorded');stop();onComplete?.();
-  }catch(e:any){setState('error');setMessage(e?.message??'Face Scan could not be completed. Try again.');}
- }
- return <Modal title="Face Scan attendance" onClose={close}>
-  <div className="face-scan-modal">
-   <div className={'face-camera '+state}>
-    <video ref={videoRef} autoPlay muted playsInline/>
-    <canvas ref={canvasRef} className="sr-only"/>
-    <div className="face-scan-shade"/><div className="face-scan-guide"><span/><i/><i/><i/><i/></div>
-    {state==='starting'&&<div className="face-scan-overlay"><span className="auth-spinner"/><strong>Opening camera</strong></div>}
-    {state==='success'&&<div className="face-scan-overlay success"><span><Check size={30}/></span><strong>{message}</strong><small>{result?.punchTime?new Date(result.punchTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''}</small></div>}
-   </div>
-   <div className="face-scan-status"><span className={'face-status-icon '+state}>{state==='success'?<Check size={18}/>:state==='error'?<RotateCcw size={18}/>:<UserCheck size={18}/>}</span><div><strong>{state==='success'?message:state==='error'?'Face Scan needs attention':'Ready for attendance'}</strong><p>{state==='success'?'Attendance status: '+readable(String(result?.status??'recorded').toLowerCase())+'.':message}</p></div></div>
-   <div className="face-scan-privacy"><ShieldCheck size={16}/><p>Camera capture is used for this attendance scan. The raw face image is not stored in the attendance database; TCW keeps verification metadata and an audit hash.</p></div>
-   <div className="face-scan-actions">{state==='error'?<button className="btn secondary" type="button" onClick={start}><RotateCcw size={16}/>Try camera again</button>:state==='success'?<button className="btn primary" type="button" onClick={close}>Done</button>:<button className="btn primary face-scan-button" type="button" disabled={state!=='ready'} onClick={scan}><Camera size={17}/>{state==='scanning'?'Scanning…':'Scan face & record attendance'}</button>}</div>
-  </div>
- </Modal>;
-}
+import {FaceScanAttendanceModal} from './face';
 
 export function AttendancePage(){
  const{can,mutate,session}=useApp();const employeeSelf=session.user.role==='EMPLOYEE';const[tab,setTab]=useState('attendance'),[open,setOpen]=useState(false),[faceOpen,setFaceOpen]=useState(false),[correct,setCorrect]=useState<Row|null>(null),[removeAttendance,setRemoveAttendance]=useState<Row|null>(null),[from,setFrom]=useState(new Date(Date.now()-30*86400000).toISOString().slice(0,10)),[to,setTo]=useState(new Date().toISOString().slice(0,10)),[month,setMonth]=useState(new Date().toISOString().slice(0,7));

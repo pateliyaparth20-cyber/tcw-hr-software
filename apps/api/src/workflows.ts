@@ -8,12 +8,19 @@ import {calculatePay,assertPayrollTransition} from '../../../packages/payroll-en
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,unlockAttendanceMonth} from './attendance-automation';
 import {sendPush} from './push';
+import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-profile';
 
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
 export class Workflows {
   constructor(public db:Database){}
   async attendance(ctx:Context,method:string,body:any,query:any={},recordId?:string,action?:string){
     const tid=tenant(ctx);const scope=await employeeScope(this.db,ctx);
+    if(recordId==='face-profile'){
+      requirePermission(ctx,'attendance','VIEW');
+      if(method==='GET')return faceProfileStatus(this.db,ctx);
+      if(method==='POST')return enrollEmployeeFace(this.db,ctx,body);
+      throw new BadRequestException('Unsupported face profile operation.');
+    }
     if(recordId==='summary'&&method==='GET'){
       requirePermission(ctx,'attendance','VIEW');const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(String(query.month??''));
       return attendanceMonthSummary(this.db,tid,month,scope);
@@ -34,10 +41,16 @@ export class Workflows {
       requirePermission(ctx,'attendance','VIEW');
       if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Face Scan attendance is available from an Employee account.');
       if(!ctx.user.employeeId)throw new BadRequestException('Link this user account to an employee before using Face Scan attendance.');
-      const input=z.object({frame:z.string().min(1000).max(800000),clientNonce:z.string().min(8).max(64)}).strict().parse(body);
+      const input=z.object({frame:z.string().min(1000).max(800000),descriptor:z.array(z.number().min(-5).max(5)).length(128),clientNonce:z.string().min(8).max(64)}).strict().parse(body);
       const matched=input.frame.match(/^data:image\/(jpeg|png);base64,([A-Za-z0-9+/=]+)$/);if(!matched)throw new BadRequestException('Capture a valid camera image.');
       const bytes=Buffer.from(matched[2],'base64');const png=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
       if(bytes.length<5000||bytes.length>500000||(!png&&!jpg))throw new BadRequestException('Face Scan image is invalid. Keep your face clearly inside the camera frame and try again.');
+      const match=await verifyEmployeeFace(this.db,ctx,input.descriptor);
+      if(!match.enrolled)throw new ForbiddenException('Add your face before using Face Scan attendance.');
+      if(!match.matched){
+        await audit(this.db,ctx,'FACE_SCAN_REJECTED','attendance',ctx.user.employeeId,undefined,{reason:'FACE_MISMATCH',distance:match.distance,threshold:match.threshold});
+        throw new ForbiddenException('Face did not match the enrolled employee face. Attendance was not recorded.');
+      }
       const employeeId=ctx.user.employeeId;await assertEmployee(this.db,ctx,employeeId);
       const punchTime=new Date();await assertAttendanceUnlocked(this.db,tid,punchTime);
       const shift=await employeeShift(this.db,tid,employeeId);let day=localDate(punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;
@@ -57,7 +70,7 @@ export class Workflows {
         const last=await tx.attendancePunch.findFirst({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'desc'}});
         if(last&&punchTime.getTime()-last.punchTime.getTime()<45000)throw new ConflictException('A Face Scan punch was just recorded. Wait a few seconds before scanning again.');
         const punchType:'IN'|'OUT'=last?.punchType==='IN'?'OUT':'IN';
-        const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:mobileDevice.id,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',app:'TCW_EMPLOYEE',actorId:ctx.user.id,faceCaptureHash:faceHash,captureBytes:bytes.length,rawImageStored:false}}});
+        const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:mobileDevice.id,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',app:'TCW_EMPLOYEE',actorId:ctx.user.id,faceCaptureHash:faceHash,captureBytes:bytes.length,rawImageStored:false,faceMatched:true,faceDistance:match.distance,faceThreshold:match.threshold}}});
         const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
         const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
         const calculated=calculateAttendance(punches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
@@ -65,7 +78,7 @@ export class Workflows {
         await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:reportDate}},create:{tenantId:tid,employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...calculated},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...calculated}});
         await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});
         await tx.deviceSyncLog.create({data:{tenantId:tid,deviceId:mobileDevice.id,action:'FACE_SCAN_PUNCH',message:`Employee Face Scan ${punchType} recorded.`,details:{employeeId,punchType,punchTime,verificationType:'FACE_SCAN'}}});
-        await audit(tx,ctx,'FACE_PUNCH_RECORDED','attendance',row.id,undefined,{employeeId,punchTime,punchType,verificationType:'FACE_SCAN',faceCaptureHash:faceHash,rawImageStored:false});
+        await audit(tx,ctx,'FACE_PUNCH_RECORDED','attendance',row.id,undefined,{employeeId,punchTime,punchType,verificationType:'FACE_SCAN',faceCaptureHash:faceHash,rawImageStored:false,faceMatched:true,faceDistance:match.distance});
         return {ok:true,punchType,punchTime,status:calculated.status,workMinutes:calculated.workMinutes,firstIn:calculated.firstIn,lastOut:calculated.lastOut};
       });
     }

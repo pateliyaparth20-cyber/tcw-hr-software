@@ -10382,3 +10382,31 @@ input[type="month"]{
     justify-content:center;
   }
 }
+
+
+/* Employee first-login face enrollment and verified attendance */
+.face-enrollment-card{width:min(560px,100%);padding:24px;display:grid;gap:14px}
+.face-enrollment-card .auth-text-brand{text-align:center}
+.face-enrollment-card .face-camera{width:min(100%,380px)}
+.face-enrollment-copy{text-align:center}
+.face-enrollment-copy h2{margin:5px 0 6px;color:#213d58;font-size:1.35rem}
+.face-enrollment-copy p{margin:0;color:#74869a;font-size:.76rem;line-height:1.55}
+.face-enrollment-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.face-enrollment-progress span{height:7px;border-radius:999px;background:#e8eef5;overflow:hidden}
+.face-enrollment-progress span.done{background:linear-gradient(90deg,var(--primary,#3474ef),#2fbba7)}
+.face-enrollment-actions{display:flex;gap:9px;justify-content:flex-end}
+.face-enrollment-actions .btn{justify-content:center}
+.face-model-note{font-size:.56rem!important;color:#8495a7!important}
+.employee-face-enrollment-status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #dfe8f2;border-radius:12px;background:#f8fbff}
+.employee-face-enrollment-status>span{display:flex;align-items:center;gap:9px;color:#4278bd}
+.employee-face-enrollment-status>span>span{display:grid;gap:2px}
+.employee-face-enrollment-status small{font-size:.5rem;font-weight:850;letter-spacing:.08em;color:#7790aa}
+.employee-face-enrollment-status strong{font-size:.68rem;color:#36536e}
+.employee-face-enrollment-status em{font-size:.54rem;font-style:normal;color:#8798a9}
+@media(max-width:700px){
+ .face-enrollment-card{padding:16px;border-radius:20px}
+ .face-enrollment-actions{flex-direction:column-reverse}
+ .face-enrollment-actions .btn{width:100%}
+ .employee-face-enrollment-status{align-items:flex-start;flex-direction:column}
+ .employee-face-enrollment-status .btn{width:100%}
+}

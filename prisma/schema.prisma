@@ -271,6 +271,22 @@ model Employee {
   @@map("employees")
 }
 
+model EmployeeFaceProfile {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  employeeId         String   @map("employee_id") @db.Uuid
+  templateCiphertext String   @map("template_ciphertext") @db.Text
+  templateVersion    String   @default("face-api-1.7.15") @map("template_version")
+  sampleCount        Int      @default(3) @map("sample_count")
+  enrolledAt         DateTime @default(now()) @map("enrolled_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, employeeId])
+  @@index([tenantId])
+  @@map("employee_face_profiles")
+}
+
 model Shift {
   id                   String   @id @default(uuid()) @db.Uuid
   tenantId             String   @map("tenant_id") @db.Uuid

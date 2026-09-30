@@ -11,6 +11,7 @@ import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
 import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
+import {EmployeeFaceEnrollmentGate} from './face';
 import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,MyProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
 import {SupportPage} from './support';
 import {MEGHNA_AVATAR} from './meghna-avatar';
@@ -116,6 +117,7 @@ function Shell({page}:{page:string}){
  const flat=nav.flatMap(g=>g.items);const current=flat.find(([key])=>key===page);const navRef=useRef<HTMLElement>(null);
  const employees=useData('employees?q='+encodeURIComponent(query)+'&pageSize=6',search&&query.length>1&&session.user.scope==='TENANT'&&can('employees'));
  const notices=useData('notifications',session.user.scope==='TENANT');
+ const faceProfile=useData('attendance/face-profile',session.user.role==='EMPLOYEE'&&!session.user.mustChangePassword&&(!session.company||['ACTIVE','TRIAL'].includes(session.company.status)));
  const lastNoticeRef=useRef<string|null>(null);
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setSearch(v=>!v)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
  useEffect(()=>{if(session.user.scope!=='TENANT')return;const timer=window.setInterval(()=>notices.refetch().catch(()=>{}),30000);return()=>window.clearInterval(timer)},[session.user.scope,notices.refetch]);
@@ -161,6 +163,11 @@ function Shell({page}:{page:string}){
  if(session.user.mustChangePassword)return <FirstPasswordChange/>;
  if(billingLocked&&!can('company','VIEW'))return <div className="employee-access-paused"><div className="employee-access-paused-card"><BrandLogo/><span>{session.user.role==='EMPLOYEE'?'EMPLOYEE SELF SERVICE':'COMPANY WORKSPACE'}</span><h1>Company access is temporarily paused</h1><p>Your company subscription needs attention. Billing details are available only to authorized company administrators. Please contact your HR administrator.</p><button className="btn secondary" type="button" onClick={logout}><LogOut size={16}/>Sign out</button></div></div>;
  if(billingLocked)return <SubscriptionLock/>;
+ if(session.user.role==='EMPLOYEE'){
+  if(faceProfile.isLoading)return <div className="auth-session-loader"><div className="auth-session-loader-card"><span className="auth-session-logo"><BrandLogo/></span><span className="auth-spinner"/><strong>Checking Face Setup</strong><small>Preparing secure employee attendance…</small></div></div>;
+  if(faceProfile.error)return <div className="mandatory-overlay"><div className="mandatory-card"><BrandLogo/><span className="login-eyebrow">FACE ATTENDANCE</span><h2>Face Setup could not be checked</h2><p>{String(faceProfile.error?.message??'Please try again.')}</p><div className="face-enrollment-actions"><button className="btn secondary" onClick={logout}><LogOut size={16}/>Sign out</button><button className="btn primary" onClick={()=>faceProfile.refetch()}>Try again</button></div></div></div>;
+  if(!faceProfile.data?.enrolled)return <EmployeeFaceEnrollmentGate onComplete={()=>faceProfile.refetch()} onSignOut={logout}/>;
+ }
  return <div className={'app-shell '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')+(session.user.role==='EMPLOYEE'?' employee-shell':'')} style={{'--primary':session.company?.profile?.primaryColor??'#3474ef'} as React.CSSProperties}>
  {mobile&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
  <aside className={'sidebar '+(mobile?'open':'')}>
