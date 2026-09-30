@@ -289,6 +289,7 @@ model Shift {
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@unique([tenantId, id])
+  @@unique([tenantId, requestKey])
   @@index([tenantId])
   @@map("shifts")
 }
@@ -446,6 +447,7 @@ model LeaveRequest {
   endDate     DateTime @db.Date
   days        Decimal  @db.Decimal(5, 1)
   reason      String
+  requestKey  String?  @map("request_key")
   status      String   @default("PENDING")
   reviewerId  String?
   reviewNote  String?
