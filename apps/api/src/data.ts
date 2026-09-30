@@ -251,7 +251,7 @@ export class DataService {
 
   async users(ctx:Context,method:string,body?:unknown,recordId?:string){
     const tid=tenant(ctx);requirePermission(ctx,'users',method==='GET'?'VIEW':'MANAGE');
-    if(method==='GET')return {items:await this.db.user.findMany({where:{tenantId:tid},select:{id:true,name:true,email:true,loginId:true,active:true,employeeId:true,role:{select:{code:true,name:true}},createdAt:true}})};
+    if(method==='GET')return {items:await this.db.user.findMany({where:{tenantId:tid,role:{code:{notIn:['EMPLOYEE','MANAGER','TEAM_LEADER']}}},select:{id:true,name:true,email:true,loginId:true,active:true,employeeId:true,role:{select:{code:true,name:true}},createdAt:true}})};
     const input=z.object({name:z.string().min(1).max(200),email:z.email().transform(v=>v.toLowerCase()),loginId:z.string().trim().min(3).max(80).regex(/^[A-Za-z0-9._-]+$/).optional(),password:password.optional(),role:z.string(),employeeId:id.nullable().optional(),active:z.boolean().default(true)}).strict().parse(body);
     const role=await this.db.role.findUnique({where:{code:input.role}});
     if(!role||role.scope!=='TENANT')throw new BadRequestException('Invalid company role.');
