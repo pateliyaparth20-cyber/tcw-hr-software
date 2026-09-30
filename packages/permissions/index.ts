@@ -11,7 +11,7 @@ export const roleDefinitions = [
   ...['SUPPORT_ADMIN','SUPPORT_AGENT'].map(code=>({code,name:code.replaceAll('_',' '),scope:'PLATFORM',permissions:grants(['dashboard','support'])})),
   {code:'FINANCE_ADMIN',name:'Finance Admin',scope:'PLATFORM',permissions:grants(['dashboard','billing','plans'])},
   {code:'COMPANY_OWNER',name:'Company Owner',scope:'TENANT',permissions:grants(tenantResources)},
-  {code:'HR_ADMIN',name:'HR Admin',scope:'TENANT',permissions:grants(tenantResources.filter(r=>r!=='users'))},
+  {code:'HR_ADMIN',name:'HR Admin',scope:'TENANT',permissions:grants(tenantResources)},
   {code:'HR_EXECUTIVE',name:'HR Executive',scope:'TENANT',permissions:grants(['dashboard','organization','employees','attendance','leave','calendar','documents','assets','expenses','travel','support'],['VIEW','CREATE','EDIT','EXPORT'])},
   {code:'PAYROLL_MANAGER',name:'Payroll Manager',scope:'TENANT',permissions:grants(['dashboard','payroll','attendance','reports'])},
   {code:'RECRUITER',name:'Recruiter',scope:'TENANT',permissions:grants(['dashboard','recruitment','calendar'])},
