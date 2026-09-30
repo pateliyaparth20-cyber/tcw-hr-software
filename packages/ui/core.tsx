@@ -181,6 +181,7 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
   const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const notify=(text:string,error=false)=>{setToast({text,error});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);};
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
+  useEffect(()=>{const openPicker=(event:MouseEvent)=>{const input=event.target instanceof HTMLInputElement?event.target:null;if(!input||!['date','datetime-local','month'].includes(input.type)||input.disabled||input.readOnly)return;try{input.showPicker?.()}catch{}};document.addEventListener('click',openPicker);return()=>document.removeEventListener('click',openPicker)},[]);
   const mutate=async(path:string,method:string,data?:any)=>{try{
     const r=await api(path,method,data,session.csrf);await client.invalidateQueries();
     const verb=method.toUpperCase(),root=path.split(/[/?]/)[0],labels:Record<string,string>={employees:'Employee',users:'User',company:'Company',organization:'Record',leave:'Request',expenses:'Expense',travel:'Travel request',assets:'Asset',documents:'Document',support:'Support ticket',subscription:'Subscription',payroll:'Payroll',attendance:'Attendance',recruitment:'Recruitment record',goals:'Goal',courses:'Training record',devices:'Device',plans:'Plan',companies:'Company',leads:'Lead',invoices:'Invoice',payments:'Payment'};
