@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
 def hrUrl = project.findProperty('TCW_APP_URL') ?: 'https://hr.techcyberwarrior.in'
-def employeeUrl = project.findProperty('TCW_EMPLOYEE_APP_URL') ?: hrUrl
+def employeeUrl = project.findProperty('TCW_EMPLOYEE_APP_URL') ?: 'https://employee.techcyberwarrior.in'
 
 android {
     namespace 'com.tcw.hrsoftware'
