@@ -105,7 +105,9 @@ export class DataService {
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
-      const [items,total]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where})]);return {items:items.map(clean),total,page,pageSize:take};
+      const [items,total,departments,branches]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
+      const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name]));
+      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null})),total,page,pageSize:take};
     }
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Employee records are managed by HR.');
     return this.db.$transaction(async tx=>{
