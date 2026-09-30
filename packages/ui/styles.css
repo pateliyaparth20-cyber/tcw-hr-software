@@ -9836,3 +9836,50 @@ input[type="month"]{
     grid-template-columns:1fr!important;
   }
 }
+
+
+.employee-access-paused{
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:linear-gradient(135deg,#f7faff,#eef4fb);
+}
+.employee-access-paused-card{
+  width:min(520px,100%);
+  text-align:center;
+  padding:34px 30px;
+  border:1px solid #dfe8f1;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 18px 50px rgba(31,62,96,.09);
+}
+.employee-access-paused-card>img,
+.employee-access-paused-card>.brand-logo{
+  width:72px;
+  height:72px;
+  object-fit:contain;
+  margin:0 auto 15px;
+}
+.employee-access-paused-card>span{
+  display:block;
+  color:#607a94;
+  font-size:.6rem;
+  font-weight:850;
+  letter-spacing:.09em;
+}
+.employee-access-paused-card h1{
+  margin:9px 0 8px;
+  color:#294762;
+  font-size:1.55rem;
+}
+.employee-access-paused-card p{
+  margin:0 auto 18px;
+  max-width:430px;
+  color:#788b9e;
+  font-size:.72rem;
+  line-height:1.55;
+}
+.employee-access-paused-card .btn{
+  margin:0 auto;
+}
