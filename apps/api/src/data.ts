@@ -256,6 +256,11 @@ export class DataService {
         const byId=new Map(companies.map(c=>[c.id,c]));
         return {items:items.map((r:any)=>({...r,company:byId.get(r.tenantId)??null}))};
       }
+      if(type==='payments'){
+        const tenants=await this.db.tenant.findMany({select:{id:true,name:true,profile:true}});
+        const pending=tenants.flatMap((t:any)=>{const proof=(t.profile as any)?.pendingPaymentProof;if(!proof||proof.status!=='AWAITING_VERIFICATION')return [];return [{id:'pending-'+t.id,tenantId:t.id,tenantName:t.name,invoiceId:proof.invoiceId,amount:Number(proof.amount??0),reference:String(proof.utr??''),date:proof.submittedAt,status:'AWAITING_VERIFICATION',pendingProof:true}]});
+        return {items:[...pending,...items]};
+      }
       if(type!=='companies')return {items};
       const invoices=await this.db.invoice.findMany({select:{tenantId:true,total:true,paidAmount:true,status:true,dueDate:true}});
       return {items:items.map((company:any)=>{const billing=invoices.filter(i=>i.tenantId===company.id);return {...company,outstandingBalance:billing.reduce((sum,i)=>sum+Math.max(0,i.total-i.paidAmount),0),overdueInvoices:billing.filter(i=>i.status==='OVERDUE').length,suspensionReason:(company.profile as any)?.suspensionReason??null};})};
@@ -313,7 +318,7 @@ export class DataService {
         await tx.invoice.update({where:{id:invoice.id},data:{paidAmount,status:paidAmount===invoice.total?'PAID':overdue?'OVERDUE':'PART_PAID'}});
         if(paidAmount===invoice.total){
           const company=await tx.tenant.findUnique({where:{id:invoice.tenantId}});
-          if(company&&company.status==='EXPIRED'){const nextExpiry=new Date();nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry}});}
+          if(company){const nextExpiry=new Date();nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile);delete profile.pendingPaymentProof;delete profile.suspensionReason;await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,profile}});}
         }
         await audit(tx,ctx,'PAYMENT_RECORDED','payments',payment.id,undefined,payment);return payment;
       });

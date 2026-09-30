@@ -7789,3 +7789,52 @@ textarea,
     height:29px!important;
   }
 }
+
+
+/* v1.12.8 subscription UPI checkout */
+.upgrade-payment-options{max-width:1050px;margin:16px auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.payment-option-card{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px!important;border-radius:18px!important}
+.payment-option-card small,.upi-checkout-copy>small,.payment-settings-card .panel-heading small{color:#7f91a4;font-size:.6rem;font-weight:850;letter-spacing:.1em}
+.payment-option-card h2,.upi-checkout-copy h2{margin:4px 0 6px;color:#25435f;font-size:1rem}
+.payment-option-card p,.upi-checkout-copy p{margin:0;color:#7b8da0;font-size:.7rem;line-height:1.5}
+.upi-checkout-card{max-width:920px;margin:16px auto;padding:20px!important;display:grid;grid-template-columns:290px minmax(0,1fr);gap:24px;align-items:center;border-radius:20px!important}
+.upi-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px;border:1px solid #e1e8ef;border-radius:18px;background:#fff}
+.upi-qr-wrap img{width:250px;height:250px;object-fit:contain;border-radius:12px}
+.upi-qr-wrap small{color:#708398;font-size:.66rem;font-weight:700}
+.upi-id-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0;padding:10px 12px;border:1px solid #dfe7ef;border-radius:12px;background:#f8fbfe}
+.upi-id-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;color:#2f4b65;font-weight:750}
+.upi-open-button{width:100%;justify-content:center;margin-bottom:12px}
+.payment-safety-note{padding:10px 12px;border-radius:12px;background:#f5f9ff;color:#58718a!important}
+.payment-proof-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-top:12px}
+.payment-proof-row input,.payment-settings-grid input{min-height:46px;padding:10px 12px;border:1px solid #dce5ee;border-radius:12px;background:#fff;color:#29445f;font-size:16px}
+.payment-settings-card{margin-bottom:16px}
+.payment-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;padding-top:8px}
+.payment-settings-grid label{display:flex;flex-direction:column;gap:6px;color:#536b82;font-size:.72rem;font-weight:700}
+.payment-settings-note{display:flex;align-items:center;gap:8px;color:#6c8196;font-size:.68rem}
+@media(max-width:800px){
+ .upgrade-payment-options{grid-template-columns:1fr}
+ .payment-option-card{align-items:stretch;flex-direction:column}
+ .payment-option-card .btn{width:100%;justify-content:center}
+ .upi-checkout-card{grid-template-columns:1fr;padding:14px!important}
+ .upi-qr-wrap img{width:min(72vw,250px);height:auto;aspect-ratio:1}
+ .payment-proof-row,.payment-settings-grid{grid-template-columns:1fr}
+}
+
+
+.tcw-ios-notice{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));z-index:9995;transform:translateX(-50%);max-width:min(92vw,390px);padding:10px 14px;border:1px solid #cfe0f4;border-radius:999px;background:rgba(255,255,255,.97);color:#24588c;font-size:.68rem;font-weight:800;box-shadow:0 10px 28px rgba(26,62,99,.14);backdrop-filter:blur(12px)}
+
+
+.meghna-avatar{overflow:hidden!important;background:#fff!important}
+.meghna-avatar img{width:100%!important;height:100%!important;display:block!important;object-fit:cover!important;border-radius:50%!important}
+.tcw-agent-orb.meghna-avatar{width:38px!important;height:38px!important;border-radius:50%!important;padding:0!important}
+.tcw-agent-face.meghna-avatar{width:48px!important;height:48px!important;border-radius:50%!important;padding:0!important}
+.my-profile-photo{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;flex:0 0 84px!important;border-radius:50%!important;overflow:visible!important}
+.my-profile-photo>img,.image-field>img{border-radius:50%!important;clip-path:circle(50%)!important;object-fit:cover!important;object-position:center!important}
+.image-field>img{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;cursor:zoom-in!important}
+.avatar.has-photo img,.person-cell img,.my-profile-photo img{cursor:zoom-in}
+@media(max-width:520px){.my-profile-photo{width:76px!important;height:76px!important;min-width:76px!important;min-height:76px!important;flex-basis:76px!important}.image-field>img{width:76px!important;height:76px!important;min-width:76px!important;min-height:76px!important}}
+.tcw-photo-viewer{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:rgba(7,18,31,.84);backdrop-filter:blur(8px)}
+.tcw-photo-viewer>img{max-width:min(88vw,760px)!important;max-height:82vh!important;width:auto!important;height:auto!important;border-radius:18px!important;object-fit:contain!important;box-shadow:0 24px 80px rgba(0,0,0,.34)}
+.tcw-photo-viewer>button{position:absolute;top:max(18px,env(safe-area-inset-top));right:18px;width:44px;height:44px;border:0;border-radius:50%;background:#fff;color:#203a54;font-size:28px;cursor:pointer}
+.tcw-pull-refresh{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;z-index:99998;transform:translate(-50%,-70px);padding:8px 13px;border:1px solid #dce6ef;border-radius:999px;background:rgba(255,255,255,.97);color:#4f6780;font-size:.68rem;font-weight:750;box-shadow:0 8px 22px rgba(25,55,87,.12);transition:transform .18s ease;pointer-events:none}
+.tcw-pull-refresh.show{transform:translate(-50%,0)}
