@@ -4,6 +4,7 @@ import {Plus,Download,ChevronLeft,ChevronRight,CalendarDays,Clock3,UserCheck,Mon
 import {useApp,useData,api,PageTitle,Stat,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,currencyValue,displayDate} from './core';
 import {Row,Field,readable} from './config';
 import {ModulePage} from './modules';
+export {FaceScanAttendanceModal} from './face';
 import {FaceScanAttendanceModal} from './face';
 
 export function AttendancePage(){
