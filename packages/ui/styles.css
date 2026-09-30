@@ -8140,3 +8140,152 @@ textarea,
   .software-update-hero-copy h2{font-size:1.05rem}
   .software-version-list{grid-template-columns:1fr}
 }
+
+
+/* v1.13.3 Meghna text-only chat polish */
+.tcw-agent-panel{
+  transform-origin:calc(100% - 28px) 100%;
+  transition:opacity .2s ease,transform .28s cubic-bezier(.2,.82,.2,1),visibility .28s step-end;
+}
+.tcw-agent-panel.is-closed{
+  opacity:0;
+  transform:translateY(14px) scale(.94);
+  visibility:hidden;
+  pointer-events:none;
+  position:absolute;
+  right:0;
+  bottom:54px;
+}
+.tcw-agent-panel.is-open{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  visibility:visible;
+  pointer-events:auto;
+  position:relative;
+  animation:meghna-panel-in .3s cubic-bezier(.2,.82,.2,1) both;
+}
+@keyframes meghna-panel-in{
+  0%{opacity:0;transform:translateY(16px) scale(.93)}
+  60%{opacity:1;transform:translateY(-2px) scale(1.008)}
+  100%{opacity:1;transform:translateY(0) scale(1)}
+}
+.tcw-agent-fab{
+  transition:transform .22s cubic-bezier(.2,.82,.2,1),box-shadow .22s ease,border-color .22s ease;
+}
+.tcw-agent-fab:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 16px 38px rgba(23,63,97,.28)}
+.tcw-agent.open .tcw-agent-fab{transform:scale(.96)}
+.meghna-header-actions .icon-button.active{background:#edf4ff;color:#3474ef}
+.meghna-mode-strip{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:8px 12px;
+  border-bottom:1px solid #edf1f5;
+  background:#fbfdff;
+}
+.meghna-mode-strip>span{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:#49657f;
+  font-size:.62rem;
+  font-weight:800;
+}
+.meghna-mode-strip>small{color:#8b9aac;font-size:.56rem}
+.meghna-live-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#23b87a;
+  box-shadow:0 0 0 4px rgba(35,184,122,.09);
+}
+.tcw-agent-welcome{padding:18px 16px 16px;text-align:left}
+.meghna-welcome-mark{
+  width:38px;height:38px;display:grid;place-items:center;
+  border-radius:12px;background:#eef5ff;color:#3474ef;margin-bottom:2px;
+}
+.tcw-agent-welcome h3{margin:0;color:#294762;font-size:.92rem}
+.tcw-agent-welcome p{font-size:.71rem;line-height:1.6}
+.tcw-agent-welcome>div{gap:7px}
+.tcw-agent-welcome button{
+  min-height:34px;
+  padding:7px 10px;
+  border-radius:10px;
+  transition:transform .16s ease,background .16s ease,border-color .16s ease;
+}
+.tcw-agent-welcome button:hover{transform:translateY(-1px);background:#f1f6ff;border-color:#cbdcf2}
+.tcw-agent-messages{
+  min-height:170px;
+  max-height:min(390px,48dvh);
+  padding:14px 12px;
+  gap:10px;
+  scroll-behavior:smooth;
+}
+.tcw-agent-messages>div{
+  max-width:88%;
+  padding:10px 11px;
+  border-radius:14px 14px 14px 4px;
+  box-shadow:0 1px 0 rgba(35,62,90,.03);
+}
+.tcw-agent-messages>div.user{
+  border-radius:14px 14px 4px 14px;
+  background:#eaf2ff;
+}
+.tcw-agent-messages p{font-size:.72rem;line-height:1.55}
+.meghna-thinking{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  width:max-content;
+  padding:8px 10px;
+  border-radius:12px;
+  background:#f3f7fb;
+  color:#7e90a2;
+}
+.meghna-thinking i{
+  width:5px;height:5px;border-radius:50%;
+  background:#8096ab;
+  animation:meghna-dot 1s ease-in-out infinite;
+}
+.meghna-thinking i:nth-child(2){animation-delay:.14s}
+.meghna-thinking i:nth-child(3){animation-delay:.28s}
+.meghna-thinking em{font-style:normal;font-size:.57rem;margin-left:4px}
+@keyframes meghna-dot{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-3px);opacity:1}}
+.meghna-scroll-anchor{display:block;height:1px}
+.meghna-compose{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 44px!important;
+  gap:8px!important;
+  padding:10px!important;
+  align-items:center!important;
+  border-top:1px solid #e7edf3!important;
+  background:#fff!important;
+}
+.meghna-compose input{
+  min-height:42px!important;
+  border-radius:12px!important;
+  background:#f8fafc!important;
+  border-color:#e0e7ef!important;
+}
+.meghna-compose input:focus{background:#fff!important;border-color:#b7cff0!important;box-shadow:0 0 0 3px rgba(52,116,239,.08)}
+.meghna-compose .btn{
+  width:44px!important;
+  min-width:44px!important;
+  height:42px!important;
+  min-height:42px!important;
+  padding:0!important;
+  border-radius:12px!important;
+}
+.meghna-voice-bar,.meghna-compose .voice-button,.message-speak{display:none!important}
+@media(max-width:700px){
+  .tcw-agent-panel{
+    width:min(390px,calc(100vw - 20px));
+    max-height:calc(100dvh - 145px);
+  }
+  .tcw-agent-panel.is-closed{bottom:52px}
+  .tcw-agent-messages{max-height:45dvh}
+}
+@media(prefers-reduced-motion:reduce){
+  .tcw-agent-panel,.tcw-agent-fab,.meghna-thinking i{animation:none!important;transition:none!important}
+}
