@@ -49,7 +49,7 @@ export class AuthService {
     if(company){await syncCompanyAccess(this.db,company.id);company=await this.db.tenant.findUnique({where:{id:company.id}});}
     if(company&&company.status==='ARCHIVED')throw new ForbiddenException('This company account has been archived. Contact your software administrator.');
     if(company&&company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason!=='BILLING')throw new ForbiddenException('This company is suspended. Contact your software administrator.');
-    if(company&&user.role?.code==='COMPANY_OWNER'&&(company.profile as any)?.signupSource==='SELF_SERVICE'){
+    if(company&&user.role?.code==='COMPANY_OWNER'){
       const hrRole=await this.db.role.findUnique({where:{code:'HR_ADMIN'}});
       if(hrRole){
         const beforeRole=user.role.code;
