@@ -39,6 +39,17 @@ export function PwaClient(){
   useEffect(()=>{
     window.__tcwSystemNotify=tcwSystemNotify;
     window.__tcwEnableNotifications=enableNotifications;
+    let pullStart=0,pullDistance=0,pullActive=false,longPress:any=null;
+    const refreshBadge=document.createElement('div');refreshBadge.className='tcw-pull-refresh';refreshBadge.textContent='Pull to refresh';document.body.appendChild(refreshBadge);
+    const onTouchStart=(e:TouchEvent)=>{if(window.scrollY<=0&&e.touches.length===1){pullStart=e.touches[0].clientY;pullDistance=0;pullActive=true}};
+    const onTouchMove=(e:TouchEvent)=>{if(!pullActive)return;pullDistance=Math.max(0,e.touches[0].clientY-pullStart);if(pullDistance>18){refreshBadge.classList.add('show');refreshBadge.textContent=pullDistance>86?'Release to refresh':'Pull to refresh'}};
+    const onTouchEnd=()=>{if(pullActive&&pullDistance>86)window.location.reload();pullActive=false;pullDistance=0;refreshBadge.classList.remove('show')};
+    const photoSelector='.my-profile-photo img,.avatar.has-photo img,.image-field img,.person-cell img';
+    const openPhoto=(img:HTMLImageElement)=>{const overlay=document.createElement('div');overlay.className='tcw-photo-viewer';overlay.innerHTML='<button aria-label="Close photo">×</button><img alt="Photo preview"/>';const target=overlay.querySelector('img') as HTMLImageElement;target.src=img.src;overlay.addEventListener('click',ev=>{if(ev.target===overlay||ev.target===overlay.querySelector('button'))overlay.remove()});document.body.appendChild(overlay)};
+    const onPhotoClick=(e:MouseEvent)=>{const img=(e.target as Element)?.closest?.(photoSelector) as HTMLImageElement|null;if(img&&window.matchMedia('(hover:hover) and (pointer:fine)').matches){e.preventDefault();openPhoto(img)}};
+    const onPhotoTouchStart=(e:TouchEvent)=>{const img=(e.target as Element)?.closest?.(photoSelector) as HTMLImageElement|null;if(!img)return;longPress=setTimeout(()=>openPhoto(img),650)};
+    const clearLong=()=>{if(longPress){clearTimeout(longPress);longPress=null}};
+    document.addEventListener('touchstart',onTouchStart,{passive:true});document.addEventListener('touchmove',onTouchMove,{passive:true});document.addEventListener('touchend',onTouchEnd,{passive:true});document.addEventListener('click',onPhotoClick);document.addEventListener('touchstart',onPhotoTouchStart,{passive:true});document.addEventListener('touchend',clearLong,{passive:true});document.addEventListener('touchmove',clearLong,{passive:true});
     let cancelled=false;
     const syncVersion=async()=>{
       try{
@@ -102,7 +113,7 @@ export function PwaClient(){
       cancelled=true;
       document.removeEventListener('pointerdown',askOnFirstInteraction,true);
       delete window.__tcwSystemNotify;
-      delete window.__tcwEnableNotifications;
+      delete window.__tcwEnableNotifications;document.removeEventListener('touchstart',onTouchStart);document.removeEventListener('touchmove',onTouchMove);document.removeEventListener('touchend',onTouchEnd);document.removeEventListener('click',onPhotoClick);document.removeEventListener('touchstart',onPhotoTouchStart);document.removeEventListener('touchend',clearLong);document.removeEventListener('touchmove',clearLong);refreshBadge.remove();clearLong();
       window.removeEventListener('beforeinstallprompt',onPrompt as EventListener);
       window.removeEventListener('appinstalled',onInstalled);
     };
