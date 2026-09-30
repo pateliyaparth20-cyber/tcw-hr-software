@@ -214,7 +214,7 @@ export class DataService {
     if(!employee)throw new NotFoundException('Employee not found.');
     const existing=await this.db.user.findFirst({where:{tenantId:tid,employeeId:employee.id},include:{role:true}});
     const safe=(user:any)=>user?{id:user.id,name:user.name,email:user.email,loginId:user.loginId,active:user.active,mustChangePassword:user.mustChangePassword,role:user.role?.code??'',createdAt:user.createdAt,updatedAt:user.updatedAt}:null;
-    if(method==='GET')return {employee,user:safe(existing),employeePortal:'https://employee.techcyberwarrior.in'};
+    if(method==='GET'){const company=await this.db.tenant.findUnique({where:{id:tid},select:{code:true}});return {employee,user:safe(existing),companyCode:company?.code??'',employeePortal:'https://employee.techcyberwarrior.in/login'};}
     if(method!=='POST')throw new BadRequestException('Unsupported Employee App access operation.');
     const input=z.object({operation:z.enum(['CREATE','RESET_PASSWORD','SET_ACTIVE']),password:password.optional(),active:z.boolean().optional()}).strict().parse(body);
     if(input.operation==='CREATE'&&existing)throw new ConflictException('Employee App access already exists for this employee.');
@@ -245,7 +245,7 @@ export class DataService {
         await tx.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{to:employee.email,subject:'Your TCW Employee login',tempPassword:newPassword,text:`Your TCW Employee account is ready. Company Code: ${company?.code??''}. Employee ID: ${employee.employeeCode}. Temporary Password: ${newPassword}. Login: ${loginUrl}. You will be asked to change this temporary password after first sign in.`}}});
         if(employee.phone)await tx.outbox.create({data:{tenantId:tid,kind:'SMS',payload:{to:employee.phone,template:'EMPLOYEE_LOGIN',company:company?.name??'Your company',companyCode:company?.code??'',employeeCode:employee.employeeCode,tempPassword:newPassword,loginUrl,text:`TCW Employee login: Company ${company?.code??''}, Employee ID ${employee.employeeCode}, Temp Password ${newPassword}. Login ${loginUrl}.`}}});
       }
-      return {employee,user:safe(user),employeePortal:loginUrl,...(generatedPassword?{temporaryPassword:generatedPassword}:{})};
+      return {employee,user:safe(user),companyCode:company?.code??'',employeePortal:loginUrl,...(generatedPassword?{temporaryPassword:generatedPassword}:{})};
     });
   }
 
