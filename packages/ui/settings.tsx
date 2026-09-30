@@ -47,14 +47,14 @@ export function UsersPage(){
 }
 
 function ProfilePhotoEditor({value,name,onChange,notify}:{value?:string|null;name:string;onChange:(value:string|null)=>void;notify:(message:string,error?:boolean)=>void}){
- const[open,setOpen]=useState(false),[source,setSource]=useState(''),[zoom,setZoom]=useState(1),[x,setX]=useState(0),[y,setY]=useState(0),[meta,setMeta]=useState<{name:string;size:number;width:number;height:number}|null>(null);
+ const[open,setOpen]=useState(false),[source,setSource]=useState(''),[zoom,setZoom]=useState(1),[x,setX]=useState(0),[y,setY]=useState(0);
  function choose(file?:File){
   if(!file)return;
   if(file.size>5*1024*1024){notify('Choose a profile photo up to 5 MB.',true);return;}
   const reader=new FileReader();
   reader.onload=()=>{
    const data=String(reader.result??'');const image=new Image();
-   image.onload=()=>{if(image.naturalWidth<256||image.naturalHeight<256){notify('Choose a clearer photo of at least 256 × 256 px. 512 × 512 px or larger is recommended.',true);return;}setSource(data);setMeta({name:file.name,size:file.size,width:image.naturalWidth,height:image.naturalHeight});setZoom(1);setX(0);setY(0);setOpen(true)};
+   image.onload=()=>{if(image.naturalWidth<256||image.naturalHeight<256){notify('Choose a clearer photo of at least 256 × 256 px. 512 × 512 px or larger is recommended.',true);return;}setSource(data);setZoom(1);setX(0);setY(0);setOpen(true)};
    image.onerror=()=>notify('The selected photo could not be read on this device. Choose another image.',true);
    image.src=data;
   };
@@ -97,8 +97,8 @@ export function MyProfilePage(){
  useEffect(()=>{if(profile.data?.user)setForm({name:profile.data.user.name??'',email:profile.data.user.email??'',avatar:profile.data.user.avatar??null})},[profile.data]);
  async function save(e:React.FormEvent){e.preventDefault();setSaving(true);try{await api('auth/profile','PATCH',{name:form.name,email:form.email,avatar:form.avatar??null},session.csrf);await profile.refetch();notify('Profile saved.');setTimeout(()=>window.location.reload(),300)}catch(e:any){notify(e.message,true)}finally{setSaving(false)}}
  if(profile.isLoading)return <Loading/>;if(profile.error)return <Failure error={profile.error}/>;
- const user=profile.data?.user??session.user,employee=profile.data?.employee,personal=employee?.personal??{};
- return <><PageTitle title="My profile" subtitle="Manage your account identity, profile photo and linked employee information."/>
+ const user=profile.data?.user??session.user,employee=profile.data?.employee;
+ return <><PageTitle title="My profile" subtitle="Manage your account identity and profile photo."/>
   <div className="my-profile-layout single-profile-layout">
    <section className="panel my-profile-card">
     <div className="my-profile-cover"/>
