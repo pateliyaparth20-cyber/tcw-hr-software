@@ -100,14 +100,14 @@ export class DataService {
     const canSalary=hasPermission(ctx.user.role.permissions,'payroll','VIEW');
     const clean=(row:any)=>{if(canSalary)return row;const{monthlySalary,...rest}=row;const personal=this.object(rest.personal);for(const key of ['bankName','accountHolder','accountNumber','ifsc','bankBranch'])delete personal[key];return {...rest,personal};};
     if(method==='GET'){
-      if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();return clean(row);}
+      if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();let designation=row.designation;if(/^[0-9a-f-]{36}$/i.test(designation)){const master=await this.db.designation.findFirst({where:{id:designation,tenantId:tid},select:{name:true}});if(master)designation=master.name;}return clean({...row,designation});}
       if(query.q){const q=String(query.q).slice(0,100);where.OR=['firstName','lastName','email','employeeCode'].map(k=>({[k]:{contains:q,mode:'insensitive'}}));}
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
-      const [items,total,departments,branches]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
-      const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name]));
-      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null})),total,page,pageSize:take};
+      const [items,total,departments,branches,designations]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
+      const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name])),designationNames=new Map(designations.map(r=>[r.id,r.name]));
+      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null,designation:designationNames.get(row.designation)??row.designation})),total,page,pageSize:take};
     }
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Employee records are managed by HR.');
     return this.db.$transaction(async tx=>{
