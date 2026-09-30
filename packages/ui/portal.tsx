@@ -106,8 +106,7 @@ function SubscriptionLock({manage=false}:{manage?:boolean}){
 }
 function Shell({page}:{page:string}){
  const{session,can,notify}=useApp();const router=useRouter();const queryClient=useQueryClient();
- const[mobile,setMobile]=useState(false),[search,setSearch]=useState(false),[query,setQuery]=useState(''),[updateAvailable,setUpdateAvailable]=useState(false),[logoutConfirm,setLogoutConfirm]=useState(false);
- const versionRef=useRef<string|null>(null);
+ const[mobile,setMobile]=useState(false),[search,setSearch]=useState(false),[query,setQuery]=useState(''),[logoutConfirm,setLogoutConfirm]=useState(false);
  const allNavigation=session.user.scope==='PLATFORM'?adminNavigation:navigation;
  const nav=allNavigation.map(g=>({...g,items:g.items.filter(([, ,p])=>can(p)&&!(session.user.role==='EMPLOYEE'&&p==='support'))})).filter(g=>g.items.length);
  const flat=nav.flatMap(g=>g.items);const current=flat.find(([key])=>key===page);const navRef=useRef<HTMLElement>(null);
@@ -120,18 +119,6 @@ function Shell({page}:{page:string}){
 
  useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
  useEffect(()=>{if(page==='ai')router.replace('/dashboard')},[page,router]);
- useEffect(()=>{setUpdateAvailable(false)},[]);
- async function applySoftwareUpdate(){try{const reg=await navigator.serviceWorker?.getRegistration?.();await reg?.update?.();const cacheApi=(window as any).caches;if(cacheApi?.keys){for(const key of await cacheApi.keys())if(String(key).toLowerCase().includes('tcw'))await cacheApi.delete(key)}}catch{}const url=new URL(window.location.href);url.searchParams.set('tcw_update',String(Date.now()));window.location.replace(url.toString())}
- async function checkSoftwareUpdate(){try{
-   const reg=await navigator.serviceWorker?.getRegistration?.();await reg?.update?.();
-   const r=await fetch('/api/version?manual='+Date.now(),{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});
-   if(!r.ok)throw new Error('Unable to check for updates.');
-   const data=await r.json(),next=String(data.version??'');if(!next)throw new Error('Version information is unavailable.');
-   let previous=versionRef.current;try{previous=previous??window.localStorage.getItem('tcw_last_deployment_version')}catch{}
-   if(previous&&previous!==next){setUpdateAvailable(true);notify('Software update available. Tap Update app to install it.');}
-   else notify('TCW HR Software is up to date.');
-   versionRef.current=next;try{window.localStorage.setItem('tcw_last_deployment_version',next)}catch{}
- }catch(e:any){notify(e?.message??'Unable to check for updates.',true)}}
 
  useEffect(()=>{if(session.user.scope==='PLATFORM'||process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false')return;const localSession=getLocalSessionToken();const socket=io({path:'/socket.io',withCredentials:true,transports:['websocket','polling'],auth:localSession?{localSessionToken:localSession}:{}});socket.on('changed',()=>queryClient.invalidateQueries());return()=>{socket.disconnect()}},[queryClient,session.user.scope]);
  useEffect(()=>setMobile(false),[page]);
