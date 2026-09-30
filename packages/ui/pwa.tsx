@@ -59,7 +59,16 @@ export function PwaClient(){
       }catch{}
     };
     syncVersion();
-    const askOnFirstInteraction=()=>{enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
+    const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
+    let iosGuide:HTMLButtonElement|null=null;
+    if(isiOS&&(!standalone||('Notification' in window&&Notification.permission!=='granted'))){
+      iosGuide=document.createElement('button');iosGuide.type='button';iosGuide.className='tcw-ios-notice';
+      iosGuide.textContent=!standalone?'Enable iPhone notifications · Add to Home Screen':'Enable iPhone notifications';
+      iosGuide.onclick=async()=>{if(!standalone){window.alert('On iPhone: tap Share in Safari, choose Add to Home Screen, then open TCW HR from the Home Screen and allow notifications.');return;}const ok=await enableNotifications();iosGuide!.textContent=ok?'iPhone notifications enabled':'Notification permission is off';if(ok)setTimeout(()=>iosGuide?.remove(),1600)};
+      document.body.appendChild(iosGuide);
+    }
+    const askOnFirstInteraction=()=>{if(!isiOS||standalone)enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
     if(!window.TCWNative&&'Notification' in window&&Notification.permission==='default')document.addEventListener('pointerdown',askOnFirstInteraction,true);
     // Never let a development service worker cache Next.js bundles. Old cached
     // chunks can produce React hydration mismatches after a UI update.
