@@ -15,6 +15,7 @@ import {hasPermission} from '../../../packages/permissions';
 import {CompatibleProvider} from '../../../packages/ai';
 import {effectiveAIConfig,publicAIConfig,saveAIConfig,testAIConnection} from './ai-config';
 import {AuthService} from './auth';
+import {pushConfig,savePushSubscription,deletePushSubscription,sendPush} from './push';
 import {DataService} from './data';
 import {Workflows} from './workflows';
 import {FilesService} from './files';
@@ -74,7 +75,17 @@ export class Api {
     if(ctx.tenantId){
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
       const billingLocked=company&&(company.status==='EXPIRED'||(company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason==='BILLING')||(company.expiresAt&&company.expiresAt<new Date()));
-      if(billingLocked&&!['auth','subscription'].includes(resource))throw new ForbiddenException('Your trial or subscription has ended. Complete payment to unlock HR modules.');
+      if(billingLocked&&!['auth','subscription','push'].includes(resource))throw new ForbiddenException('Your trial or subscription has ended. Complete payment to unlock HR modules.');
+    }
+    if(resource==='push'&&key==='config'&&method==='GET')return pushConfig();
+    if(resource==='push'&&key==='subscription'&&method==='POST'){
+      const input=z.object({endpoint:z.string().url().max(4000),keys:z.object({p256dh:z.string().min(10).max(1000),auth:z.string().min(5).max(1000)}).strict()}).strict().parse(body);
+      await savePushSubscription(this.db,{tenantId:ctx.tenantId??null,userId:ctx.user.id,endpoint:input.endpoint,p256dh:input.keys.p256dh,auth:input.keys.auth,userAgent:String(req.headers['user-agent']??'').slice(0,500)});
+      return {ok:true};
+    }
+    if(resource==='push'&&key==='subscription'&&method==='DELETE'){
+      const input=z.object({endpoint:z.string().url().max(4000)}).strict().parse(body);
+      return deletePushSubscription(this.db,ctx.user.id,input.endpoint);
     }
     if(resource==='subscription'&&method==='GET'){
       const tid=tenant(ctx);const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans]=await Promise.all([
@@ -278,6 +289,7 @@ export class Api {
       const input=z.object({tenantId:id,title:z.string().trim().min(1).max(160),message:z.string().trim().min(1).max(2000)}).strict().parse(body);
       const company=await this.db.tenant.findUnique({where:{id:input.tenantId}});if(!company)throw new BadRequestException('Company was not found.');
       const notice=await this.db.notification.create({data:{tenantId:company.id,title:input.title,message:input.message}});
+      sendPush(this.db,{tenantId:company.id,title:notice.title,body:notice.message,url:'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});
       await audit(this.db,ctx,'COMPANY_UPDATE_SENT','notifications',notice.id,undefined,{tenantId:company.id,title:input.title});
       return {ok:true,company:{id:company.id,name:company.name,code:company.code},notice};
     }
