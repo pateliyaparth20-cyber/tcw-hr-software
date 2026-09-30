@@ -93,11 +93,10 @@ export class Workflows {
       const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone);
       const end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
       return this.db.$transaction(async tx=>{
-        const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:before.employeeId,punchTime:{gte:start,lt:end}},select:{id:true}});
-        await tx.attendancePunch.deleteMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}}});
-        await tx.attendanceDaily.delete({where:{id:before.id}});
-        await audit(tx,ctx,'ATTENDANCE_DELETED','attendance',before.id,before,{deletedPunches:punches.length});
-        return {ok:true,deleted:true,deletedPunches:punches.length};
+        const rawPunchesRetained=await tx.attendancePunch.count({where:{tenantId:tid,employeeId:before.employeeId,punchTime:{gte:start,lt:end}}});
+        const after=await tx.attendanceDaily.update({where:{id:before.id},data:{status:'VOID',dayType:'VOID',scheduledMinutes:0,payableUnits:0,leaveUnits:0,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0,exceptionCode:'',correctionNote:`VOIDED_BY_HR:${ctx.user.id}`}});
+        await audit(tx,ctx,'ATTENDANCE_VOIDED','attendance',before.id,before,{rawPunchesRetained});
+        return {ok:true,deleted:true,voided:true,rawPunchesRetained,record:after};
       });
     }
     if(recordId&&action==='correct'&&method==='POST'){
@@ -110,7 +109,7 @@ export class Workflows {
     if(method==='GET'){
       const start=query.from?date.parse(query.from):new Date(Date.now()-31*86400000);const end=query.to?date.parse(query.to):new Date();
       const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);
-      return {items:await this.db.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:start,lte:end},employeeId:{in:visibleEmployeeIds}},orderBy:{date:'desc'},take:1000})};
+      return {items:await this.db.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:start,lte:end},employeeId:{in:visibleEmployeeIds},status:{not:'VOID'}},orderBy:{date:'desc'},take:1000})};
     }
     const input=z.object({employeeId:id,punchTime:z.iso.datetime().transform(v=>new Date(v)),punchType:z.enum(['IN','OUT']),sourceId:z.string().min(1).max(100),shiftId:id.optional()}).strict().parse(body);
     await assertEmployee(this.db,ctx,input.employeeId);await assertAttendanceUnlocked(this.db,tid,input.punchTime);
