@@ -124,6 +124,7 @@ export class Workflows {
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+      if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing)return existing;}
       const leaveType=await tx.leaveType.findFirst({where:{id:input.leaveTypeId,tenantId:tid}});if(!leaveType)throw new BadRequestException('Leave type not found.');
       const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:monthsCovered(input.startDate,input.endDate)},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before creating leave that changes payroll.`);
       const overlap=await tx.leaveRequest.count({where:{tenantId:tid,employeeId:input.employeeId,status:{in:['PENDING','APPROVED']},startDate:{lte:input.endDate},endDate:{gte:input.startDate}}});
