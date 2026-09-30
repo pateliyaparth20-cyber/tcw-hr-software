@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.PermissionRequest;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -24,9 +25,11 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 1001;
     private static final int NOTIFICATION_PERMISSION_REQUEST = 1002;
+    private static final int CAMERA_PERMISSION_REQUEST = 1003;
     private static final String NOTIFICATION_CHANNEL = "tcw_hr_updates";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
+    private PermissionRequest pendingCameraPermission;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -55,6 +58,23 @@ public class MainActivity extends Activity {
                 catch(Exception error){ filePathCallback = null; return false; }
                 try { startActivityForResult(intent, FILE_CHOOSER_REQUEST); return true; }
                 catch(ActivityNotFoundException error){ filePathCallback = null; return false; }
+            }
+
+            @Override public void onPermissionRequest(PermissionRequest request){
+                runOnUiThread(() -> {
+                    boolean wantsCamera = false;
+                    for(String resource : request.getResources()){
+                        if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)){ wantsCamera = true; break; }
+                    }
+                    if(!wantsCamera){ request.deny(); return; }
+                    if(Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
+                        request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                        return;
+                    }
+                    if(pendingCameraPermission != null) pendingCameraPermission.deny();
+                    pendingCameraPermission = request;
+                    requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+                });
             }
         });
 
@@ -110,6 +130,14 @@ public class MainActivity extends Activity {
             if(target.startsWith("/"))target=BuildConfig.TCW_APP_URL.replaceAll("/$","")+target;
             showNativeNotification(title,body,target,tag==null?"tcw":tag);
         }
+
+        @JavascriptInterface public String getAppMode(){
+            return BuildConfig.TCW_APP_MODE;
+        }
+
+        @JavascriptInterface public boolean isEmployeeApp(){
+            return "EMPLOYEE".equals(BuildConfig.TCW_APP_MODE);
+        }
     }
 
     @Override protected void onNewIntent(Intent intent){
@@ -141,6 +169,19 @@ public class MainActivity extends Activity {
         catch(ActivityNotFoundException ignored) { }
     }
 
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == CAMERA_PERMISSION_REQUEST && pendingCameraPermission != null){
+            PermissionRequest request = pendingCameraPermission;
+            pendingCameraPermission = null;
+            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+            } else {
+                request.deny();
+            }
+        }
+    }
+
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data){
         if(requestCode == FILE_CHOOSER_REQUEST){
             if(filePathCallback != null){
@@ -163,6 +204,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy(){
         if(filePathCallback != null){ filePathCallback.onReceiveValue(null); filePathCallback = null; }
+        if(pendingCameraPermission != null){ pendingCameraPermission.deny(); pendingCameraPermission = null; }
         if(webView != null){ webView.stopLoading(); webView.destroy(); webView = null; }
         super.onDestroy();
     }
