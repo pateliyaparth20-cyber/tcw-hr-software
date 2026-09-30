@@ -6,8 +6,8 @@ import type {Context} from './context';
 import {audit,tenant} from './context';
 
 const descriptorSchema=z.array(z.number().min(-5).max(5)).length(128);
-export const FACE_MATCH_THRESHOLD=0.54;
-const TEMPLATE_VERSION='face-api-1.7.15';
+export const FACE_MATCH_THRESHOLD=0.60;
+const TEMPLATE_VERSION='face-api-1.7.15-v2';
 
 function masterKey(){
   const secret=process.env.CONFIG_ENCRYPTION_KEY?.trim();
@@ -29,19 +29,24 @@ function average(samples:number[][]){
   for(const sample of samples)for(let i=0;i<128;i++)out[i]+=sample[i]/samples.length;
   return normalize(out);
 }
-function encryptTemplate(values:number[]){
+type StoredFaceTemplate={centroid:number[];samples:number[][]};
+function encryptTemplate(value:StoredFaceTemplate){
   const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',masterKey(),iv);
-  const encrypted=Buffer.concat([cipher.update(JSON.stringify(values),'utf8'),cipher.final()]);
+  const encrypted=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);
   const tag=cipher.getAuthTag();
   return ['v1',iv.toString('base64url'),tag.toString('base64url'),encrypted.toString('base64url')].join(':');
 }
-function decryptTemplate(value:string){
+function decryptTemplate(value:string):StoredFaceTemplate{
   const parts=value.split(':');
   if(parts.length!==4||parts[0]!=='v1')throw new Error('Stored employee face template is invalid.');
   const decipher=createDecipheriv('aes-256-gcm',masterKey(),Buffer.from(parts[1],'base64url'));
   decipher.setAuthTag(Buffer.from(parts[2],'base64url'));
   const plain=Buffer.concat([decipher.update(Buffer.from(parts[3],'base64url')),decipher.final()]).toString('utf8');
-  return normalize(JSON.parse(plain));
+  const parsed=JSON.parse(plain);
+  if(Array.isArray(parsed))return {centroid:normalize(parsed),samples:[]};
+  const centroid=normalize(parsed?.centroid??[]);
+  const samples=Array.isArray(parsed?.samples)?parsed.samples.slice(0,5).map((sample:any)=>normalize(sample)):[];
+  return {centroid,samples};
 }
 function ownEmployee(ctx:Context){
   if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Face enrollment is only available from an Employee account.');
@@ -61,9 +66,9 @@ export async function enrollEmployeeFace(db:Database,ctx:Context,body:unknown){
   const samples=input.samples.map(normalize);
   let maxDistance=0;
   for(let i=0;i<samples.length;i++)for(let j=i+1;j<samples.length;j++)maxDistance=Math.max(maxDistance,distance(samples[i],samples[j]));
-  if(maxDistance>0.62)throw new BadRequestException('The three face captures do not match closely enough. Use the same person, good light, and try again.');
-  const template=average(samples);
-  const row=await db.employeeFaceProfile.create({data:{tenantId:tid,employeeId,templateCiphertext:encryptTemplate(template),templateVersion:TEMPLATE_VERSION,sampleCount:samples.length}});
+  if(maxDistance>0.70)throw new BadRequestException('The three face captures do not match closely enough. Use the same person, normal front light, and try again.');
+  const centroid=average(samples);
+  const row=await db.employeeFaceProfile.create({data:{tenantId:tid,employeeId,templateCiphertext:encryptTemplate({centroid,samples}),templateVersion:TEMPLATE_VERSION,sampleCount:samples.length}});
   await audit(db,ctx,'EMPLOYEE_FACE_ENROLLED','employees',employeeId,undefined,{templateVersion:row.templateVersion,sampleCount:row.sampleCount,enrolledAt:row.enrolledAt,maxEnrollmentDistance:Number(maxDistance.toFixed(4)),rawImageStored:false});
   return {enrolled:true,enrolledAt:row.enrolledAt,templateVersion:row.templateVersion,sampleCount:row.sampleCount};
 }
@@ -73,6 +78,7 @@ export async function verifyEmployeeFace(db:Database,ctx:Context,descriptor:numb
   if(!profile)return {enrolled:false,matched:false,distance:null,threshold:FACE_MATCH_THRESHOLD};
   const current=normalize(descriptorSchema.parse(descriptor));
   const stored=decryptTemplate(profile.templateCiphertext);
-  const d=distance(stored,current);
+  const candidates=[stored.centroid,...stored.samples];
+  const d=Math.min(...candidates.map(candidate=>distance(candidate,current)));
   return {enrolled:true,matched:d<=FACE_MATCH_THRESHOLD,distance:Number(d.toFixed(4)),threshold:FACE_MATCH_THRESHOLD};
 }

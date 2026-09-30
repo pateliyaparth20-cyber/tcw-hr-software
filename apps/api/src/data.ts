@@ -115,6 +115,7 @@ export class DataService {
       if(recordId&&!before)throw new NotFoundException('Employee not found.');
       if(method==='DELETE'){
         const employeeId=before!.id;
+        const rawPunchesRetained=await tx.attendancePunch.count({where:{tenantId:tid,employeeId}});
         const linkedUsers=await tx.user.findMany({where:{tenantId:tid,employeeId},select:{id:true}});
         const userIds=linkedUsers.map(u=>u.id);
         await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId}});

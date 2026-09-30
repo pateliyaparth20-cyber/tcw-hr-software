@@ -183,6 +183,13 @@ export class Api {
     }
     if(resource==='dashboard'&&method==='GET')return this.data.dashboard(ctx);
     if(resource==='support'&&key&&action==='messages')return this.data.supportMessages(ctx,key,method,body);
+    if(resource==='company'&&key==='branding'&&method==='GET'){
+      const tid=tenant(ctx);
+      const company=await this.db.tenant.findUnique({where:{id:tid},select:{id:true,name:true,code:true,logo:true,status:true,expiresAt:true,timezone:true,profile:true}});
+      if(!company)throw new NotFoundException('Company not found.');
+      const profile=company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile as any:{};
+      return {id:company.id,name:company.name,code:company.code,logo:company.logo,status:company.status,expiresAt:company.expiresAt,timezone:company.timezone,primaryColor:String(profile.primaryColor??'#3474ef')};
+    }
     if(resource==='company'&&['GET','PATCH'].includes(method))return this.data.company(ctx,method==='PATCH'?body:undefined);
     if(resource==='employees'&&key&&action==='app-access')return this.data.employeeAppAccess(ctx,key,method,body);
     if(resource==='employees')return this.data.employees(ctx,method,key,body,req.query);

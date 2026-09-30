@@ -6,12 +6,12 @@ import {useQueryClient} from '@tanstack/react-query';
 import {io} from 'socket.io-client';
 import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,CalendarClock,Wallet,Briefcase,Target,GraduationCap,Package,Receipt,Plane,Files,DoorOpen,BarChart3,Sparkles,Headphones,Settings,ShieldCheck,ScrollText,Search,Bell,ChevronDown,PanelLeft,LogOut,ArrowUpRight,Layers,TrendingUp,CreditCard,Server,LockKeyhole,ArrowRight,Command,X,PhoneCall,Send,RefreshCw,AlertTriangle,CheckCircle2,UserCircle,History,Trash2,Plus,UserCheck} from 'lucide-react';
 import {adminNavigation,navigation,employeeNavigation,modules,Row,readable} from './config';
-import {api,Providers,useApp,useData,Avatar,Modal,Confirm,Session,Empty,Loading,Failure,Badge,BrandLogo,notificationTarget,currencyValue,displayDate,getLocalSessionToken,getLocalSessionSnapshot,clearLocalSessionState,isLocalBrowser} from './core';
+import {api,Providers,useApp,useData,Avatar,Modal,Confirm,Session,Empty,Loading,Failure,Badge,BrandLogo,TCW_PRODUCT_LOGO,notificationTarget,currencyValue,displayDate,getLocalSessionToken,getLocalSessionSnapshot,clearLocalSessionState,isLocalBrowser} from './core';
 import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
 import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
-import {EmployeeFaceEnrollmentGate} from './face';
+import {EmployeeFaceEnrollmentGate,preloadFaceEngine} from './face';
 import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,MyProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
 import {SupportPage} from './support';
 import {MEGHNA_AVATAR} from './meghna-avatar';
@@ -118,6 +118,7 @@ function Shell({page}:{page:string}){
  const employees=useData('employees?q='+encodeURIComponent(query)+'&pageSize=6',search&&query.length>1&&session.user.scope==='TENANT'&&can('employees'));
  const notices=useData('notifications',session.user.scope==='TENANT');
  const faceProfile=useData('attendance/face-profile',session.user.role==='EMPLOYEE'&&!session.user.mustChangePassword&&(!session.company||['ACTIVE','TRIAL'].includes(session.company.status)));
+ const branding=useData('company/branding',session.user.scope==='TENANT');
  const lastNoticeRef=useRef<string|null>(null);
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setSearch(v=>!v)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
  useEffect(()=>{if(session.user.scope!=='TENANT')return;const timer=window.setInterval(()=>notices.refetch().catch(()=>{}),30000);return()=>window.clearInterval(timer)},[session.user.scope,notices.refetch]);
@@ -125,6 +126,7 @@ function Shell({page}:{page:string}){
 
  useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
  useEffect(()=>{if(page==='ai')router.replace('/dashboard')},[page,router]);
+ useEffect(()=>{if(session.user.role==='EMPLOYEE')preloadFaceEngine()},[session.user.role]);
 
  useEffect(()=>{if(session.user.scope==='PLATFORM'||process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false')return;const localSession=getLocalSessionToken();const socket=io({path:'/socket.io',withCredentials:true,transports:['websocket','polling'],auth:localSession?{localSessionToken:localSession}:{}});socket.on('changed',()=>queryClient.invalidateQueries());return()=>{socket.disconnect()}},[queryClient,session.user.scope]);
  useEffect(()=>setMobile(false),[page]);
@@ -157,21 +159,40 @@ function Shell({page}:{page:string}){
  else if(modules[page])content=<ModulePage key={page} name={page}/>;
  else content=<Empty title="Page not found" description="Choose a workspace from the sidebar."/>;
  const isAllowed=page==='notifications'?session.user.scope==='TENANT':!!current;
- const billingLocked=session.user.scope==='TENANT'&&session.company&&!['ACTIVE','TRIAL'].includes(session.company.status);
- const unreadNotices=notices.data?.unread ?? 0;
+ const workspaceBrand=branding.data??session.company??{};
+ const primaryColor=String(workspaceBrand.primaryColor??workspaceBrand.profile?.primaryColor??'#3474ef');
+ const companyLogo=String(workspaceBrand.logo??session.company?.logo??TCW_PRODUCT_LOGO);
+ const billingLocked=session.user.scope==='TENANT'&&workspaceBrand&&!['ACTIVE','TRIAL'].includes(String(workspaceBrand.status??session.company?.status??'ACTIVE'));
+ const unreadNotices=notices.data?.unread ?? (notices.data?.items??[]).filter((row:Row)=>!row.readAt).length;
  const searchEmployees=employees.data?.items ?? [];
  if(session.user.mustChangePassword)return <FirstPasswordChange/>;
  if(billingLocked&&!can('company','VIEW'))return <div className="employee-access-paused"><div className="employee-access-paused-card"><BrandLogo/><span>{session.user.role==='EMPLOYEE'?'EMPLOYEE SELF SERVICE':'COMPANY WORKSPACE'}</span><h1>Company access is temporarily paused</h1><p>Your company subscription needs attention. Billing details are available only to authorized company administrators. Please contact your HR administrator.</p><button className="btn secondary" type="button" onClick={logout}><LogOut size={16}/>Sign out</button></div></div>;
  if(billingLocked)return <SubscriptionLock/>;
- if(session.user.role==='EMPLOYEE'){
-  if(faceProfile.isLoading)return <div className="auth-session-loader"><div className="auth-session-loader-card"><span className="auth-session-logo"><BrandLogo/></span><span className="auth-spinner"/><strong>Checking Face Setup</strong><small>Preparing secure employee attendance…</small></div></div>;
-  if(faceProfile.error)return <div className="mandatory-overlay"><div className="mandatory-card"><BrandLogo/><span className="login-eyebrow">FACE ATTENDANCE</span><h2>Face Setup could not be checked</h2><p>{String(faceProfile.error?.message??'Please try again.')}</p><div className="face-enrollment-actions"><button className="btn secondary" onClick={logout}><LogOut size={16}/>Sign out</button><button className="btn primary" onClick={()=>faceProfile.refetch()}>Try again</button></div></div></div>;
-  if(!faceProfile.data?.enrolled)return <EmployeeFaceEnrollmentGate onComplete={()=>faceProfile.refetch()} onSignOut={logout}/>;
+ if(session.user.role==='EMPLOYEE'&&!faceProfile.isLoading&&!faceProfile.error&&faceProfile.data?.enrolled===false){
+  return <EmployeeFaceEnrollmentGate logo={companyLogo} companyName={workspaceBrand.name??session.company?.name} onComplete={()=>faceProfile.refetch()} onSignOut={logout}/>;
  }
- return <div className={'app-shell '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')+(session.user.role==='EMPLOYEE'?' employee-shell':'')} style={{'--primary':session.company?.profile?.primaryColor??'#3474ef'} as React.CSSProperties}>
+ if(session.user.role==='EMPLOYEE'){
+  const primaryKeys=['dashboard','attendance','leave','payroll'];
+  const moreItems=flat.filter(([key])=>!primaryKeys.includes(key)&&!['profile','security','notifications'].includes(key));
+  return <div className="employee-app-shell" style={{'--primary':primaryColor} as React.CSSProperties}>
+   <header className="employee-app-header">
+    <Link href="/dashboard" className="employee-app-brand" onClick={()=>setMobile(false)}><span><img src={companyLogo} alt={(workspaceBrand.name??'Company')+' logo'} onError={e=>{e.currentTarget.src=TCW_PRODUCT_LOGO}}/></span><div><strong>{workspaceBrand.name??session.company?.name??'TCW Employee'}</strong><small>Employee</small></div></Link>
+    <nav className="employee-desktop-nav" aria-label="Employee navigation">{primaryKeys.map(key=>{const item=flat.find(([k])=>k===key);if(!item)return null;const Icon=icons[key]??LayoutDashboard;return <Link key={key} href={'/'+key} className={page===key?'active':''}><Icon size={17}/>{item[1]}</Link>})}</nav>
+    <div className="employee-app-header-actions"><Link href="/notifications" className="employee-header-icon" aria-label="Notifications"><Bell size={20}/>{unreadNotices>0&&<i>{Math.min(unreadNotices,9)}</i>}</Link><Link href="/profile" className="employee-header-avatar" aria-label="My profile"><Avatar name={session.user.name} src={session.user.avatar}/></Link></div>
+   </header>
+   {session.company?.status==='TRIAL'&&session.company?.expiresAt&&<div className="employee-trial-strip">Trial · {Math.max(0,Math.ceil((new Date(session.company.expiresAt).getTime()-Date.now())/86400000))} day(s) remaining</div>}
+   {faceProfile.error&&<button className="employee-face-status-warning" type="button" onClick={()=>faceProfile.refetch()}>Face status unavailable · tap to retry</button>}
+   <main className="employee-app-main"><div key={page} className="employee-page-stage">{isAllowed?content:<Empty title="Access restricted" description="This section is not available for your Employee account."/>}</div></main>
+   <nav className="employee-app-bottom-nav" aria-label="Employee shortcuts">{primaryKeys.map(key=>{const item=flat.find(([k])=>k===key);if(!item)return null;const Icon=icons[key]??LayoutDashboard;return <Link key={key} href={'/'+key} className={page===key?'active':''} onClick={()=>setMobile(false)}><Icon size={21}/><span>{key==='dashboard'?'Home':key==='leave'?'Time off':key==='payroll'?'Payslips':item[1]}</span></Link>})}<button type="button" className={mobile?'active':''} onClick={()=>setMobile(v=>!v)} aria-expanded={mobile}><PanelLeft size={21}/><span>More</span></button></nav>
+   {mobile&&<><button className="employee-more-scrim" aria-label="Close menu" onClick={()=>setMobile(false)}/><section className="employee-more-sheet"><div className="employee-more-handle"/><div className="employee-more-profile"><Avatar name={session.user.name} src={session.user.avatar}/><div><strong>{session.user.name}</strong><small>{session.user.roleName}</small></div></div><div className="employee-more-links">{moreItems.map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <Link href={'/'+key} key={key} onClick={()=>setMobile(false)}><Icon size={19}/><span>{label}</span><ChevronRight size={16}/></Link>})}<Link href="/profile" onClick={()=>setMobile(false)}><UserCircle size={19}/><span>My profile</span><ChevronRight size={16}/></Link><Link href="/security" onClick={()=>setMobile(false)}><LockKeyhole size={19}/><span>Security</span><ChevronRight size={16}/></Link><Link href="/notifications" onClick={()=>setMobile(false)}><Bell size={19}/><span>Notifications</span><ChevronRight size={16}/></Link><button type="button" onClick={()=>{setMobile(false);setLogoutConfirm(true)}}><LogOut size={19}/><span>Sign out</span><ChevronRight size={16}/></button></div></section></>}
+   {logoutConfirm&&<Confirm title="Sign out?" description="You will need your Employee login details to sign in again." onClose={()=>setLogoutConfirm(false)} onConfirm={logout}/>}
+  </div>;
+ }
+
+ return <div className={'app-shell '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')} style={{'--primary':primaryColor} as React.CSSProperties}>
  {mobile&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
  <aside className={'sidebar '+(mobile?'open':'')}>
- <Link className="brand" href="/dashboard" onClick={()=>setMobile(false)}><span className="brand-mark brand-logo tcw-default-logo"><BrandLogo/></span><span><strong>TCW HR <span>Software</span></strong><small>{session.user.scope==='PLATFORM'?'SUPER ADMIN':session.user.role==='EMPLOYEE'?'EMPLOYEE SELF SERVICE':'HR MANAGEMENT'}</small></span></Link>
+ <Link className="brand" href="/dashboard" onClick={()=>setMobile(false)}><span className="brand-mark brand-logo tcw-default-logo">{session.user.scope==='TENANT'?<img src={companyLogo} alt={(workspaceBrand.name??'Company')+' logo'} onError={e=>{e.currentTarget.src=TCW_PRODUCT_LOGO}}/>:<BrandLogo/>}</span><span><strong>{session.user.scope==='TENANT'?(workspaceBrand.name??session.company?.name??'TCW HR Software'):<><span>TCW HR</span> <span>Software</span></>}</strong><small>{session.user.scope==='PLATFORM'?'SUPER ADMIN':'HR MANAGEMENT'}</small></span></Link>
   <nav ref={navRef} aria-label="Main navigation">{nav.map(g=><div className="nav-group" key={g.group}><span className="nav-group-label">{g.group}</span>{g.items.map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <Link href={'/'+key} key={key} className={'nav-item '+(page===key?'selected':'')} aria-current={page===key?'page':undefined} onClick={()=>setMobile(false)}><Icon size={19} strokeWidth={1.8}/><span>{label}</span></Link>})}</div>)}</nav>
  <div className="sidebar-bottom"><div className="account"><Link href="/profile" className="sidebar-profile-link" onClick={()=>setMobile(false)}><Avatar name={session.user.name} src={session.user.avatar}/><span><strong>{session.user.name}</strong><small>{session.user.roleName}</small></span></Link><button className="icon-button sidebar-signout" aria-label="Sign out" onClick={()=>setLogoutConfirm(true)}><LogOut size={17}/></button></div></div>
  </aside>

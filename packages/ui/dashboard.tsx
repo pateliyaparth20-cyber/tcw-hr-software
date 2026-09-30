@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard} from 'lucide-react';
 import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,BrandLogo,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
-import {FaceScanAttendanceModal} from './workflows';
+import {FaceScanAttendanceModal} from './face';
 function useTimeGreeting(timeZone?:string){
  const[greeting,setGreeting]=useState('GOOD MORNING');
  useEffect(()=>{
@@ -116,42 +116,54 @@ function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,out
 }
 
 
+function WorkingTimer({since}:{since?:string|null}){
+ const[now,setNow]=useState(()=>Date.now());
+ useEffect(()=>{if(!since)return;const timer=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(timer)},[since]);
+ if(!since)return <>00:00:00</>;
+ const total=Math.max(0,Math.floor((now-new Date(since).getTime())/1000)),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;
+ return <>{String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</>;
+}
+
 function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:string;d:Row;onRefresh:()=>void}){
  const[faceOpen,setFaceOpen]=useState(false);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=d.events??[];
  const timezone=d.company?.timezone??'Asia/Kolkata';
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const todayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
- const latest=[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
  const pending=leave.filter(r=>r.status==='PENDING');
  const approvedUpcoming=leave.filter(r=>r.status==='APPROVED'&&String(r.endDate).slice(0,10)>=today).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
  const payslip:Row|null=d.payroll??null;
  const firstName=String(session.user.name??employee.firstName??'Employee').split(' ')[0];
  const greeting=useTimeGreeting(timezone);
- const attendanceLabel=todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not recorded';
- return <div className="employee-self-dashboard">
-  <section className="employee-self-hero">
-   <div className="employee-self-user"><Avatar name={session.user.name} src={session.user.avatar||employee.photo}/><div><span>{greeting}</span><h1>{firstName}</h1><p>{employee.designation||'Employee'}{d.company?.name?' · '+d.company.name:''}</p></div></div>
-   <div className="employee-self-clock"><LiveClock timezone={timezone}/><button className="btn primary employee-face-hero-button" type="button" onClick={()=>setFaceOpen(true)}><UserCheck size={16}/>Face Scan</button><Link className="btn secondary small" href="/profile">My profile <ChevronRight size={15}/></Link></div>
+ const working=!!todayRecord?.firstIn&&!todayRecord?.lastOut;
+ const completed=!!todayRecord?.firstIn&&!!todayRecord?.lastOut;
+ const attendanceLabel=working?'Working':completed?'Day completed':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
+ const quick=[
+  {href:'/leave',title:'Time off',sub:pending.length?pending.length+' pending':'Apply leave',icon:<CalendarDays size={21}/>},
+  {href:'/payroll',title:'Payslips',sub:payslip?.run?.month??'Salary records',icon:<Wallet size={21}/>},
+  {href:'/expenses',title:'Expenses',sub:'Submit claim',icon:<Receipt size={21}/>},
+  {href:'/calendar',title:'Calendar',sub:events.length?events.length+' upcoming':'Company events',icon:<CalendarDays size={21}/>}
+ ];
+ return <div className="employee-home-dashboard">
+  <section className="employee-home-hero">
+   <div className="employee-home-person"><Avatar name={session.user.name} src={session.user.avatar||employee.photo}/><div><span>{greeting}</span><h1>{firstName}</h1><p>{employee.designation||'Employee'}{employee.departmentName?' · '+employee.departmentName:''}</p></div></div>
+   <button className="employee-home-face-button" type="button" onClick={()=>setFaceOpen(true)}><UserCheck size={22}/><span><strong>{working?'Check out':'Face Scan'}</strong><small>{working?'End work session':'Check in / check out'}</small></span><ChevronRight size={18}/></button>
   </section>
-  <div className="employee-self-stats">
-   <Link href="/attendance"><span className="mobile-stat-icon blue"><Clock3 size={20}/></span><div><small>Today</small><strong>{attendanceLabel}</strong><em>{todayRecord?.firstIn?new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'No check-in yet'}</em></div></Link>
-   <Link href="/leave"><span className="mobile-stat-icon violet"><CalendarDays size={20}/></span><div><small>Time off</small><strong>{pending.length} pending</strong><em>{approvedUpcoming.length?displayDate(approvedUpcoming[0].startDate)+' next':'No approved leave upcoming'}</em></div></Link>
-   <Link href="/payroll"><span className="mobile-stat-icon green"><Wallet size={20}/></span><div><small>Latest payslip</small><strong>{payslip?currencyValue(payslip.net,currency):'Not available'}</strong><em>{payslip?.run?.month?new Date(payslip.run.month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'}):'Locked payslips appear here'}</em></div></Link>
-   <Link href="/calendar"><span className="mobile-stat-icon amber"><CalendarDays size={20}/></span><div><small>Calendar</small><strong>{events.length} upcoming</strong><em>{events[0]?.title??'No upcoming company event'}</em></div></Link>
+
+  <section className={'employee-work-status '+(working?'working':completed?'complete':'idle')}>
+   <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Scan your face to start work'}</em></div></div>
+   <div className="employee-work-clock">{working?<><small>WORKING TIME</small><strong><WorkingTimer since={todayRecord?.firstIn}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{((todayRecord?.workMinutes??0)/60).toFixed(2)}h</strong></>:<LiveClock timezone={timezone}/>}</div>
+   <button type="button" className="btn primary" onClick={()=>setFaceOpen(true)}><Camera size={18}/>{working?'Face Scan & check out':'Face Scan & check in'}</button>
+  </section>
+
+  <div className="employee-home-quick">{quick.map(item=><Link href={item.href} key={item.href}><span>{item.icon}</span><div><strong>{item.title}</strong><small>{item.sub}</small></div><ChevronRight size={17}/></Link>)}</div>
+
+  <div className="employee-home-grid">
+   <section className="employee-home-card"><div className="employee-home-card-head"><div><small>ATTENDANCE</small><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=><div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'} → {r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'}</small></span><Badge value={r.firstIn&&!r.lastOut?'WORKING':r.status}/></div>)}</div>:<Empty title="No attendance yet" description="Your attendance will appear here after the first Face Scan."/>}</section>
+   <section className="employee-home-card"><div className="employee-home-card-head"><div><small>YOUR DAY</small><h2>What’s next</h2></div></div><div className="employee-home-next"><div><span><CalendarDays size={18}/></span><div><strong>{approvedUpcoming.length?'Approved time off':'No upcoming leave'}</strong><small>{approvedUpcoming.length?displayDate(approvedUpcoming[0].startDate):'You are scheduled to work normally.'}</small></div></div><div><span><Wallet size={18}/></span><div><strong>{payslip?currencyValue(payslip.net,currency):'Payslip not available'}</strong><small>{payslip?.run?.month?'Latest locked payslip · '+payslip.run.month:'Locked payslips will appear here.'}</small></div></div><div><span><CalendarDays size={18}/></span><div><strong>{events[0]?.title??'No company event'}</strong><small>{events[0]?.date?displayDate(events[0].date):'Nothing upcoming on the company calendar.'}</small></div></div></div></section>
   </div>
-  <div className="employee-self-grid">
-   <section className="panel employee-self-actions"><div className="panel-heading"><div><span className="digital-section-label">SELF SERVICE</span><h2>Quick actions</h2></div></div><div className="employee-action-grid">
-    <button type="button" className="employee-face-action" onClick={()=>setFaceOpen(true)}><UserCheck size={20}/><span><strong>Face Scan</strong><small>Check in / check out</small></span><ChevronRight size={16}/></button>
-    <Link href="/leave"><CalendarDays size={20}/><span><strong>Request time off</strong><small>Apply and track leave</small></span><ChevronRight size={16}/></Link>
-    <Link href="/payroll"><Wallet size={20}/><span><strong>Payslips</strong><small>View locked salary records</small></span><ChevronRight size={16}/></Link>
-    <Link href="/expenses"><Receipt size={20}/><span><strong>Expenses</strong><small>Submit your claim</small></span><ChevronRight size={16}/></Link>
-    <Link href="/travel"><Briefcase size={20}/><span><strong>Travel</strong><small>Request work travel</small></span><ChevronRight size={16}/></Link>
-    <Link href="/workforce"><ActivityIcon size={20}/><span><strong>Work status</strong><small>Share availability</small></span><ChevronRight size={16}/></Link>
-   </div></section>
-   <section className="panel employee-self-timeline"><div className="panel-heading"><div><span className="digital-section-label">ATTENDANCE</span><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=><div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'} → {r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'}</small></span><Badge value={r.status}/></div>)}</div>:<Empty title="No attendance yet" description="Your attendance records will appear here."/>}</section>
-  </div>
-  {faceOpen&&<FaceScanAttendanceModal onClose={()=>setFaceOpen(false)} onComplete={onRefresh}/>}
-  <section className="panel employee-self-upcoming"><div className="panel-heading"><div><span className="digital-section-label">COMPANY CALENDAR</span><h2>Upcoming events</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div>{events.length?<div className="employee-event-list">{events.slice(0,4).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}{e.endDate&&String(e.endDate).slice(0,10)>String(e.date).slice(0,10)?' · through '+displayDate(e.endDate):''}</small></span><ChevronRight size={16}/></Link>)}</div>:<Empty title="No upcoming events" description="Company holidays and events will appear here."/>}</section>
+
+  {events.length>1&&<section className="employee-home-card employee-home-events"><div className="employee-home-card-head"><div><small>COMPANY CALENDAR</small><h2>Upcoming</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div><div>{events.slice(0,4).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}</small></span><ChevronRight size={16}/></Link>)}</div></section>}
+  {faceOpen&&<FaceScanAttendanceModal onClose={()=>setFaceOpen(false)} onComplete={()=>onRefresh()}/>}
  </div>;
 }
 
