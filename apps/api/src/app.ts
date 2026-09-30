@@ -109,8 +109,16 @@ export class Api {
     if(resource==='auth'){
       if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
       if(key==='profile'&&method==='GET'){
+        let profileUser:any=ctx.user;
+        if(ctx.tenantId&&ctx.user.role?.code==='COMPANY_OWNER'){
+          const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId},select:{profile:true}});
+          if((company?.profile as any)?.signupSource==='SELF_SERVICE'){
+            const hrRole=await this.db.role.findUnique({where:{code:'HR_ADMIN'}});
+            if(hrRole)profileUser=await this.db.user.update({where:{id:ctx.user.id},data:{roleId:hrRole.id},include:{role:true}});
+          }
+        }
         const employee=ctx.user.employeeId?await this.db.employee.findFirst({where:{id:ctx.user.employeeId,tenantId:ctx.tenantId??undefined,deletedAt:null},select:{id:true,employeeCode:true,firstName:true,lastName:true,email:true,phone:true,designation:true,employmentType:true,status:true,joiningDate:true,personal:true}}):null;
-        return {user:this.auth.publicUser(ctx.user),employee};
+        return {user:this.auth.publicUser(profileUser),employee};
       }
       if(key==='profile'&&method==='PATCH'){
         const input=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200),avatar:z.string().max(8_000_000).nullable().optional()}).strict().parse(body);
