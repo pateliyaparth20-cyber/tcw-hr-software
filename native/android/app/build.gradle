@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 
-def hrUrl = project.findProperty('TCW_APP_URL') ?: 'https://YOUR-HR-DOMAIN.example'
+def hrUrl = project.findProperty('TCW_APP_URL') ?: 'https://hr.techcyberwarrior.in'
 def employeeUrl = project.findProperty('TCW_EMPLOYEE_APP_URL') ?: hrUrl
 
 android {
