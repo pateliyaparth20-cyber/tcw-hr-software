@@ -331,8 +331,15 @@ export class Api {
       else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=(failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.';
       else answer='I can help with login, password reset, email/SMS, attendance devices, payroll, leave, software updates and current system problems. '+summary;
       try{const cfg=await effectiveAIConfig(this.db);if(cfg.enabled){const enhanced=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,{conversationHistory:history,company:{name:company?.name,status:company?.status,plan:company?.plan},failedMessages,failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview,emailConfigured,smsConfigured});if(enhanced)answer=enhanced;}}catch{}
+      let agentAction:any=undefined;
+      if(/\b(open|go to|show)\b/.test(q)){
+        const routes:[RegExp,string][]=[[/employee|people/,'/employees'],[/attendance/,'/attendance'],[/leave|time off/,'/leave'],[/payroll|salary/,'/payroll'],[/company profile|company setting/,'/company-profile'],[/notification/,'/notifications'],[/device|biometric/,'/devices'],[/report/,'/reports'],[/plan|payment|subscription|billing/,'/subscription']];
+        const hit=routes.find(([rx])=>rx.test(q));if(hit)agentAction={type:'navigate',href:hit[1]};
+      }
+      if(/\b(refresh|reload)\b/.test(q))agentAction={type:'refresh'};
+      if(/password|credential|login id|api key|secret/.test(q)&&/(show|tell|give|change|reset|reveal)/.test(q)){answer='I can help you navigate account and security settings, but I will not reveal, request, change, or expose passwords, login IDs, API keys, or other credentials.';agentAction=undefined;}
       await audit(this.db,ctx,'AGENT_HELP','agent');
-      return {answer,model:'TCW AI Agent'};
+      return {answer,model:'Meghna',action:agentAction};
     }
     if(resource==='reports'&&method==='GET')return this.report(ctx,key,req,res);
     if(resource==='ai'&&key==='status'&&method==='GET'){tenant(ctx);requirePermission(ctx,'ai','VIEW');return publicAIConfig(this.db);}
