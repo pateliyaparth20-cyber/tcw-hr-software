@@ -4,6 +4,32 @@ import {useQuery,QueryClient,QueryClientProvider,useQueryClient} from '@tanstack
 import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight} from 'lucide-react';
 import {Field,Row,readable} from './config';
 export type Session={user:Row;csrf:string;company?:Row};
+export function notificationTarget(row:Row){
+  const explicit=String(row.target??row.url??'').trim();
+  if(explicit.startsWith('/'))return explicit;
+  const text=(String(row.title??'')+' '+String(row.message??'')).toLowerCase();
+  const routes:[RegExp,string][]=[
+    [/attendance|punch|clock.?in|clock.?out|late|absent/,'/attendance'],
+    [/leave|time.?off|holiday/,'/leave'],
+    [/payroll|salary|payslip|wage/,'/payroll'],
+    [/employee|people|joining|onboard/,'/employees'],
+    [/device|biometric|face|fingerprint/,'/devices'],
+    [/support|ticket/,'/support'],
+    [/invoice|payment|subscription|plan|trial|billing/,'/settings'],
+    [/document|policy|letter/,'/documents'],
+    [/recruit|candidate|interview|job/,'/recruitment'],
+    [/expense|reimbursement/,'/expenses'],
+    [/travel|trip/,'/travel'],
+    [/asset|laptop|equipment/,'/assets'],
+    [/performance|goal|review/,'/goals'],
+    [/company profile|company setting|workspace/,'/settings'],
+    [/profile|account|security|password/,'/profile'],
+    [/report|analytics/,'/reports'],
+    [/software update|new version|update available/,'/dashboard']
+  ];
+  return routes.find(([rx])=>rx.test(text))?.[1]??'/notifications';
+}
+
 export const TCW_PRODUCT_LOGO='/tcw-logo.png';
 export function BrandLogo({alt='TCW HR Software',className}:{alt?:string;className?:string}){
   const[src,setSrc]=useState(()=>{if(typeof window==='undefined')return TCW_PRODUCT_LOGO;try{return window.localStorage.getItem('tcw_brand_logo')||TCW_PRODUCT_LOGO}catch{return TCW_PRODUCT_LOGO}});
