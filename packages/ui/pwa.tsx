@@ -27,13 +27,38 @@ async function tcwSystemNotify(title:string,body='',url='/notifications',tag='tc
     await registration.showNotification(title,{body,icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag,data:{url}});
   }catch{}
 }
+function urlBase64ToUint8Array(value:string){
+  const padding='='.repeat((4-value.length%4)%4);
+  const base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)));
+}
+async function syncPushSubscription(){
+  if(typeof window==='undefined'||!('serviceWorker'in navigator)||!('PushManager'in window))return false;
+  try{
+    const configResponse=await fetch('/api/push/config',{credentials:'include',cache:'no-store'});
+    if(!configResponse.ok)return false;
+    const config=await configResponse.json();
+    if(!config?.enabled||!config?.publicKey)return false;
+    const registration=await navigator.serviceWorker.ready;
+    let subscription=await registration.pushManager.getSubscription();
+    if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(String(config.publicKey))});
+    const meResponse=await fetch('/api/auth/me',{credentials:'include',cache:'no-store'});
+    if(!meResponse.ok)return false;
+    const me=await meResponse.json();
+    const body=subscription.toJSON();
+    if(!body.endpoint||!body.keys?.p256dh||!body.keys?.auth)return false;
+    const save=await fetch('/api/push/subscription',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','x-csrf-token':String(me.csrf??'')},body:JSON.stringify({endpoint:body.endpoint,keys:{p256dh:body.keys.p256dh,auth:body.keys.auth}})});
+    return save.ok;
+  }catch{return false}
+}
 async function enableNotifications(){
   if(typeof window==='undefined')return false;
   if(window.TCWNative)return true;
   if(!('Notification' in window))return false;
-  if(Notification.permission==='granted')return true;
+  if(Notification.permission==='granted'){syncPushSubscription().catch(()=>{});return true;}
   if(Notification.permission==='denied')return false;
-  try{return (await Notification.requestPermission())==='granted'}catch{return false}
+  try{const granted=(await Notification.requestPermission())==='granted';if(granted)syncPushSubscription().catch(()=>{});return granted}catch{return false}
 }
 export function PwaClient(){
   useEffect(()=>{
@@ -108,6 +133,7 @@ export function PwaClient(){
           .catch(()=>{});
       }else{
         navigator.serviceWorker.register('/sw.js').then(registration=>{
+          if(Notification.permission==='granted')syncPushSubscription().catch(()=>{});
           registration.update().catch(()=>{});
           const announce=()=>{window.dispatchEvent(new Event('tcw-update-available'));tcwSystemNotify('TCW HR Software update available','A new software version is ready. Tap to view and install it.','/software-update','tcw-software-update').catch(()=>{})};
           if(registration.waiting)announce();
