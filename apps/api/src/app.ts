@@ -88,7 +88,7 @@ export class Api {
       return deletePushSubscription(this.db,ctx.user.id,input.endpoint);
     }
     if(resource==='subscription'&&method==='GET'){
-      const tid=tenant(ctx);const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans]=await Promise.all([
+      const tid=tenant(ctx);requirePermission(ctx,'company','VIEW');const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans]=await Promise.all([
         this.db.invoice.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:24}),
         this.db.plan.findMany({orderBy:{monthlyPrice:'asc'}})
       ]);
@@ -340,12 +340,12 @@ export class Api {
     if(resource==='agent'&&key==='status'&&method==='GET'){
       const tid=tenant(ctx),now=new Date(),company=await this.db.tenant.findUnique({where:{id:tid}});
       await this.db.$queryRaw`SELECT 1`;
-      const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW');
+      const employeeSelf=ctx.user.role.code==='EMPLOYEE',canDevices=!employeeSelf&&hasPermission(ctx.user.role.permissions,'devices','VIEW');
       const recentCutoff=new Date(now.getTime()-24*3600000);
       const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
       const [failedEmail,failedSms,deviceIssues]=await Promise.all([
-        this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}),
-        smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}):Promise.resolve(0),
+        employeeSelf?Promise.resolve(0):this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}),
+        employeeSelf?Promise.resolve(0):smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}):Promise.resolve(0),
         canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
       ]);
       const issues:any[]=[];
@@ -360,14 +360,15 @@ export class Api {
     if(resource==='agent'&&method==='POST'){
       const tid=tenant(ctx);const {question,history=[]}=z.object({question:z.string().trim().min(2).max(700),history:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().max(1600)}).strict()).max(12).optional()}).strict().parse(body);const q=question.toLowerCase(),now=new Date();
       const company=await this.db.tenant.findUnique({where:{id:tid}});
-      const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
+      const scopedEmployees=await employeeScope(this.db,ctx),employeeSelf=ctx.user.role.code==='EMPLOYEE';
+      const canDevices=!employeeSelf&&hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
       const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim(),recentDeliveryCutoff=new Date(now.getTime()-24*3600000);
       const [failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview]=await Promise.all([
-        this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}),
-        smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}):Promise.resolve(0),
+        employeeSelf?Promise.resolve(0):this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}),
+        employeeSelf?Promise.resolve(0):smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}):Promise.resolve(0),
         canDevices?this.db.attendanceDevice.count({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]}}):Promise.resolve(0),
-        canLeave?this.db.leaveRequest.count({where:{tenantId:tid,status:'PENDING'}}):Promise.resolve(0),
-        canPayroll?this.db.payrollRun.count({where:{tenantId:tid,status:{in:['DRAFT','REVIEW']}}}):Promise.resolve(0)
+        canLeave?this.db.leaveRequest.count({where:{tenantId:tid,status:'PENDING',...(scopedEmployees?{employeeId:{in:scopedEmployees}}:{})}}):Promise.resolve(0),
+        canPayroll?(employeeSelf&&ctx.user.employeeId?this.db.payrollItem.count({where:{tenantId:tid,employeeId:ctx.user.employeeId,run:{status:'LOCKED'}}}):this.db.payrollRun.count({where:{tenantId:tid,status:{in:['DRAFT','REVIEW']}}})):Promise.resolve(0)
       ]);
       const emailConfigured=!!(process.env.RESEND_API_KEY||process.env.SMTP_HOST);
       const failedMessages=failedEmail+failedSms;
@@ -378,8 +379,8 @@ export class Api {
       else if(q.includes('email')||q.includes('mail'))answer=emailConfigured?(failedEmail?'Email is configured, but '+failedEmail+' recent email delivery job(s) need attention. Verify the recipient address and delivery logs.':'Email delivery is configured and no repeated recent email failure is visible. Check Inbox/Spam for a fresh test message.'):'Email delivery is not configured yet.';
       else if(q.includes('sms')||q.includes('message'))answer=smsConfigured?('SMS provider is configured. '+(failedSms?failedSms+' recent SMS job(s) need attention.':'No repeated recent SMS delivery failure is visible.')):'SMS provider is not configured. Email works independently and SMS warnings are suppressed.';
       else if(q.includes('device')||q.includes('biometric')||q.includes('attendance'))answer=canAttendance?((deviceIssues?deviceIssues+' attendance device issue(s) need review. ':'')+'Open Attendance/Devices to check connectivity, mapping, punches and last-seen status.'):'Your role does not have access to attendance diagnostics.';
-      else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.':'Your role does not have payroll access.';
-      else if(q.includes('leave'))answer=canLeave?'There are '+pendingLeave+' pending leave request(s). Review dates and attendance impact before approval.':'Your role does not have leave access.';
+      else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?(employeeSelf?'You have '+payrollReview+' locked payslip(s) available. Open Payslips to view your own finalized salary records.':'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.'):'Your role does not have payroll access.';
+      else if(q.includes('leave'))answer=canLeave?(employeeSelf?'You have '+pendingLeave+' pending leave request(s). Open Time off to view or submit your own request.':'There are '+pendingLeave+' pending leave request(s). Review dates and attendance impact before approval.'):'Your role does not have leave access.';
       else if(q.includes('login')||q.includes('password')||q.includes('forgot'))answer='For login issues, confirm Company Code + User ID/email. Remember me keeps a valid session on this device. Forgot Password sends a one-time link that expires in 10 minutes.';
       else if(q.includes('update')||q.includes('version'))answer='TCW HR can notify you when a newer production build is available. Updates are manual: open Software Update and choose Install update when you are ready. The software will not auto-install or auto-reload.';
       else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=(failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.';
