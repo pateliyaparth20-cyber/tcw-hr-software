@@ -242,6 +242,7 @@ export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',pr
  const[companyName,setCompanyName]=useState(''),[ownerName,setOwnerName]=useState(''),[phone,setPhone]=useState(''),[plan,setPlan]=useState('STARTER'),[terms,setTerms]=useState(false),[contactConsent,setContactConsent]=useState(false),[created,setCreated]=useState<Row|null>(null),[employeeApp,setEmployeeApp]=useState(false);
  const signup=scope==='TENANT'&&mode==='signup';
  useEffect(()=>{setEmployeeApp(scope==='TENANT'&&isEmployeeNativeApp())},[scope]);
+ useEffect(()=>{if(scope==='TENANT'&&mode==='login'&&isEmployeeNativeApp())preloadFaceEngine()},[scope,mode]);
  useEffect(()=>{if(scope==='TENANT'&&mode==='signup'&&isEmployeeNativeApp())router.replace('/login')},[scope,mode,router]);
  useEffect(()=>{if(mode!=='login')return;let active=true;const key=`tcw_remember_${scope.toLowerCase()}`,activeKey=`tcw_active_window_${scope.toLowerCase()}`;let shouldResume=false;try{const saved=JSON.parse(window.localStorage.getItem(key)??'null');const windowActive=window.sessionStorage.getItem(activeKey)==='1';shouldResume=!!saved||windowActive;if(saved){setRemember(true);if(scope==='TENANT'&&saved.companyCode)setCompanyCode(String(saved.companyCode));if(saved.email)setEmail(String(saved.email));}}catch{}
  if(!shouldResume)return()=>{active=false};
