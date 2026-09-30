@@ -125,10 +125,12 @@ function WorkingTimer({since}:{since?:string|null}){
 }
 
 function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:string;d:Row;onRefresh:()=>void}){
- const[faceOpen,setFaceOpen]=useState(false);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=d.events??[];
+ const[faceOpen,setFaceOpen]=useState(false),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=d.events??[];
  const timezone=d.company?.timezone??'Asia/Kolkata';
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const todayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
+ const serverTodayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
+ const todayRecord=livePunch?{...(serverTodayRecord??{}),...(livePunch.punchType==='IN'?{firstIn:livePunch.firstIn??livePunch.punchTime,lastOut:null,status:livePunch.status??serverTodayRecord?.status??'PRESENT'}:{firstIn:livePunch.firstIn??serverTodayRecord?.firstIn,lastOut:livePunch.lastOut??livePunch.punchTime,status:livePunch.status??serverTodayRecord?.status??'PRESENT',workMinutes:livePunch.workMinutes??serverTodayRecord?.workMinutes??0})}:serverTodayRecord;
+ useEffect(()=>{if(!livePunch||!serverTodayRecord)return;const reflected=livePunch.punchType==='IN'?!!serverTodayRecord.firstIn&&!serverTodayRecord.lastOut:!!serverTodayRecord.lastOut;if(reflected)setLivePunch(null)},[livePunch,serverTodayRecord?.firstIn,serverTodayRecord?.lastOut]);
  const pending=leave.filter(r=>r.status==='PENDING');
  const approvedUpcoming=leave.filter(r=>r.status==='APPROVED'&&String(r.endDate).slice(0,10)>=today).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
  const payslip:Row|null=d.payroll??null;
@@ -163,7 +165,7 @@ function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:
   </div>
 
   {events.length>1&&<section className="employee-home-card employee-home-events"><div className="employee-home-card-head"><div><small>COMPANY CALENDAR</small><h2>Upcoming</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div><div>{events.slice(0,4).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}</small></span><ChevronRight size={16}/></Link>)}</div></section>}
-  {faceOpen&&<FaceScanAttendanceModal onClose={()=>setFaceOpen(false)} onComplete={()=>onRefresh()}/>}
+  {faceOpen&&<FaceScanAttendanceModal onClose={()=>setFaceOpen(false)} onComplete={async result=>{if(result)setLivePunch(result);await onRefresh()}}/>}
  </div>;
 }
 
