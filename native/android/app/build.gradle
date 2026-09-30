@@ -1,5 +1,8 @@
 plugins { id 'com.android.application' }
 
+def hrUrl = project.findProperty('TCW_APP_URL') ?: 'https://YOUR-HR-DOMAIN.example'
+def employeeUrl = project.findProperty('TCW_EMPLOYEE_APP_URL') ?: hrUrl
+
 android {
     namespace 'com.tcw.hrsoftware'
     compileSdk 35
@@ -8,13 +11,31 @@ android {
         applicationId 'com.tcw.hrsoftware'
         minSdk 26
         targetSdk 35
-        versionCode 130
-        versionName '1.3.0'
-        manifestPlaceholders = [usesCleartextTraffic: 'true']
-        def appUrl = project.findProperty('TCW_APP_URL') ?: 'https://YOUR-HR-DOMAIN.example'
-        buildConfigField 'String', 'TCW_APP_URL', '"' + appUrl + '"'
+        versionCode 131
+        versionName '1.3.1'
+        manifestPlaceholders = [usesCleartextTraffic: 'true', appLabel: 'TCW HR Software']
     }
+
+    flavorDimensions += 'portal'
+    productFlavors {
+        admin {
+            dimension 'portal'
+            buildConfigField 'String', 'TCW_APP_URL', '"' + hrUrl + '"'
+            buildConfigField 'String', 'TCW_APP_MODE', '"ADMIN"'
+            manifestPlaceholders = [appLabel: 'TCW HR Software']
+        }
+        employee {
+            dimension 'portal'
+            applicationIdSuffix '.employee'
+            versionNameSuffix '-employee'
+            buildConfigField 'String', 'TCW_APP_URL', '"' + employeeUrl + '"'
+            buildConfigField 'String', 'TCW_APP_MODE', '"EMPLOYEE"'
+            manifestPlaceholders = [appLabel: 'TCW Employee']
+        }
+    }
+
     buildFeatures { buildConfig true }
+
     buildTypes {
         debug {
             manifestPlaceholders.usesCleartextTraffic = 'true'
@@ -23,6 +44,13 @@ android {
             manifestPlaceholders.usesCleartextTraffic = 'false'
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            def prefix = variant.flavorName == 'employee' ? 'TCW-Employee' : 'TCW-HR'
+            outputFileName = "${prefix}-${variant.versionName}-${variant.buildType.name}.apk"
         }
     }
 }
