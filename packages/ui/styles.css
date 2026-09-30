@@ -8070,3 +8070,73 @@ textarea,
   transform:translate(-50%,10px)!important;
   pointer-events:none!important;
 }
+
+
+/* v1.13.2 professional software update center */
+.software-update-hero{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:18px;
+  padding:24px!important;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 88% 4%,rgba(63,137,237,.12),transparent 28%),
+    linear-gradient(135deg,#fff,#f8fbff);
+}
+.software-update-hero-icon{
+  width:58px;height:58px;display:grid;place-items:center;flex:0 0 58px;
+  border-radius:18px;background:linear-gradient(145deg,#e9f3ff,#f3f8ff);color:#2672df;
+  box-shadow:inset 0 0 0 1px #d9e8fb,0 8px 24px rgba(33,91,164,.08);
+}
+.software-update-hero-copy{min-width:0}
+.software-update-hero-copy>small{
+  display:block;margin-bottom:5px;color:#5e80a8;font-size:.58rem;font-weight:850;letter-spacing:.12em
+}
+.software-update-hero-copy h2{margin:0;color:#203e5b;font-size:1.28rem;letter-spacing:-.025em}
+.software-update-hero-copy p{max-width:650px;margin:6px 0 0;color:#7c8fa2;font-size:.74rem;line-height:1.55}
+.software-update-status{
+  padding:7px 10px;border-radius:999px;font-size:.57rem;font-weight:850;letter-spacing:.08em;white-space:nowrap
+}
+.software-update-status.current{background:#e8f7ef;color:#22714d;border:1px solid #cfeadb}
+.software-update-status.available{background:#eaf2ff;color:#2869c7;border:1px solid #cfdef5}
+.software-update-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.software-version-panel,.software-update-action-panel{padding:0!important;overflow:hidden}
+.software-version-panel .panel-heading{padding:18px!important}
+.software-version-panel .panel-heading small,.software-update-action-panel>small{
+  color:#6584a6;font-size:.57rem;font-weight:850;letter-spacing:.11em
+}
+.software-version-list{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e8eef4;background:#edf2f7;gap:1px}
+.software-version-list>div{padding:15px 17px;background:#fff;min-width:0}
+.software-version-list span{display:block;margin-bottom:5px;color:#8b9bac;font-size:.61rem}
+.software-version-list strong{display:block;color:#304e69;font-size:.78rem;overflow-wrap:anywhere}
+.software-update-action-panel{padding:20px!important}
+.software-update-action-panel h2{margin:5px 0 8px;color:#294762;font-size:1.05rem}
+.software-update-action-panel p{margin:0;color:#7a8da0;font-size:.72rem;line-height:1.58}
+.software-update-page-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+.software-update-notes{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  margin-top:16px;
+  padding:0!important;
+  overflow:hidden;
+  background:#e8eef4
+}
+.software-update-notes>div{display:flex;align-items:flex-start;gap:11px;padding:16px 18px;background:#fff;color:#47709e}
+.software-update-notes span{min-width:0}
+.software-update-notes strong{display:block;color:#36536d;font-size:.72rem}
+.software-update-notes small{display:block;margin-top:4px;color:#8697a8;font-size:.61rem;line-height:1.45}
+@media(max-width:760px){
+  .software-update-hero{grid-template-columns:auto minmax(0,1fr);gap:13px;padding:18px!important}
+  .software-update-status{grid-column:1/-1;width:max-content}
+  .software-update-grid{grid-template-columns:1fr}
+  .software-update-notes{grid-template-columns:1fr}
+  .software-update-page-actions{display:grid;grid-template-columns:1fr}
+  .software-update-page-actions .btn{width:100%;justify-content:center;min-height:44px}
+}
+@media(max-width:430px){
+  .software-update-hero-icon{width:48px;height:48px;border-radius:15px}
+  .software-update-hero-copy h2{font-size:1.05rem}
+  .software-version-list{grid-template-columns:1fr}
+}

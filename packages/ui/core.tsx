@@ -25,7 +25,7 @@ export function notificationTarget(row:Row){
     [/company profile|company setting|workspace/,'/settings'],
     [/profile|account|security|password/,'/profile'],
     [/report|analytics/,'/reports'],
-    [/software update|new version|update available/,'/dashboard']
+    [/software update|new version|update available/,'/software-update']
   ];
   return routes.find(([rx])=>rx.test(text))?.[1]??'/notifications';
 }
