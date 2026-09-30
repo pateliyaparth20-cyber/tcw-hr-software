@@ -22,12 +22,12 @@ export function FaceScanAttendanceModal({onClose,onComplete}:{onClose:()=>void;o
   try{
    const Detector=(window as any).FaceDetector;
    if(Detector){const faces=await new Detector({fastMode:true,maxDetectedFaces:2}).detect(video);if(faces.length!==1){setState('ready');setMessage(faces.length>1?'Only one person should be visible during Face Scan.':'No face detected. Center your face inside the guide and try again.');return;}}
-   const side=Math.min(video.videoWidth,video.videoHeight),sx=(video.videoWidth-side)/2,sy=(video.videoHeight-side)/2;canvas.width=360;canvas.height=360;
+   const side=Math.min(video.videoWidth,video.videoHeight),sx=(video.videoWidth-side)/2,sy=(video.videoHeight-side)/2;canvas.width=320;canvas.height=320;
    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Camera capture is unavailable.');
-   ctx.drawImage(video,sx,sy,side,side,0,0,360,360);
-   const pixels=ctx.getImageData(0,0,360,360).data;let total=0,totalSq=0,count=0;for(let i=0;i<pixels.length;i+=64){const l=(pixels[i]+pixels[i+1]+pixels[i+2])/3;total+=l;totalSq+=l*l;count++}const variance=totalSq/count-(total/count)**2;
+   ctx.drawImage(video,sx,sy,side,side,0,0,320,320);
+   const pixels=ctx.getImageData(0,0,320,320).data;let total=0,totalSq=0,count=0;for(let i=0;i<pixels.length;i+=64){const l=(pixels[i]+pixels[i+1]+pixels[i+2])/3;total+=l;totalSq+=l*l;count++}const variance=totalSq/count-(total/count)**2;
    if(variance<110){setState('ready');setMessage('Image is too dark or unclear. Face the camera in better light and try again.');return;}
-   const frame=canvas.toDataURL('image/jpeg',.78);const response=await api('attendance/face-scan','POST',{frame,clientNonce:crypto.randomUUID()},session.csrf);
+   const frame=canvas.toDataURL('image/jpeg',.68);const response=await api('attendance/face-scan','POST',{frame,clientNonce:crypto.randomUUID()},session.csrf);
    setResult(response);setState('success');setMessage(response.punchType==='IN'?'Check-in recorded':'Check-out recorded');stop();onComplete?.();
   }catch(e:any){setState('error');setMessage(e?.message??'Face Scan could not be completed. Try again.');}
  }
