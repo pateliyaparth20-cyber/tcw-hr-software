@@ -96,7 +96,7 @@ export function PwaClient(){
       }else{
         navigator.serviceWorker.register('/sw.js').then(registration=>{
           registration.update().catch(()=>{});
-          const announce=()=>{window.dispatchEvent(new Event('tcw-update-available'));tcwSystemNotify('TCW HR Software update available','A new software version is ready. Open the app to update.','/dashboard','tcw-software-update').catch(()=>{})};
+          const announce=()=>{window.dispatchEvent(new Event('tcw-update-available'));tcwSystemNotify('TCW HR Software update available','A new software version is ready. Tap to view and install it.','/software-update','tcw-software-update').catch(()=>{})};
           if(registration.waiting)announce();
           registration.addEventListener('updatefound',()=>{const worker=registration.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)announce()})});
         }).catch(()=>{});
