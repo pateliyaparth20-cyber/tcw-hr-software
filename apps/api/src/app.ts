@@ -96,7 +96,7 @@ export class Api {
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
       const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18));
-      return {company,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{id:upiId,payeeName},gstPercent};
+      return {company,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
@@ -125,7 +125,7 @@ export class Api {
       const amount=(invoice.total/100).toFixed(2);
       const upiUrl=`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent('TCW HR '+invoice.number)}`;
       const qrUrl=`https://quickchart.io/qr?size=280&margin=1&text=${encodeURIComponent(upiUrl)}`;
-      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{id:upiId,payeeName},amount,gstPercent,breakdown:{subtotal:invoice.amount,tax:invoice.tax,total:invoice.total}};
+      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{payeeName},amount,gstPercent,breakdown:{subtotal:invoice.amount,tax:invoice.tax,total:invoice.total}};
     }
     if(resource==='subscription'&&key==='manual-payment'&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
