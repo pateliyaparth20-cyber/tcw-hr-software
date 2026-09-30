@@ -1,5 +1,6 @@
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
 import {z} from 'zod';
+import {createHash} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {id,date,leaveSchema} from '../../../packages/validation';
 import {attendancePayableUnits,calculateAttendance,localDate,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
@@ -28,6 +29,37 @@ export class Workflows {
     if(recordId==='unlock'&&method==='POST'){
       requirePermission(ctx,'attendance','MANAGE');const {month}=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);
       const result=await unlockAttendanceMonth(this.db,tid,month,ctx.user.id);await audit(this.db,ctx,'ATTENDANCE_UNLOCKED','attendance',month);return result;
+    }
+    if(recordId==='face-scan'&&method==='POST'){
+      requirePermission(ctx,'attendance','VIEW');
+      if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Face Scan attendance is available from an Employee account.');
+      if(!ctx.user.employeeId)throw new BadRequestException('Link this user account to an employee before using Face Scan attendance.');
+      const input=z.object({frame:z.string().min(1000).max(800000),clientNonce:z.string().min(8).max(64)}).strict().parse(body);
+      const matched=input.frame.match(/^data:image\/(jpeg|png);base64,([A-Za-z0-9+/=]+)$/);if(!matched)throw new BadRequestException('Capture a valid camera image.');
+      const bytes=Buffer.from(matched[2],'base64');const png=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+      if(bytes.length<5000||bytes.length>500000||(!png&&!jpg))throw new BadRequestException('Face Scan image is invalid. Keep your face clearly inside the camera frame and try again.');
+      const employeeId=ctx.user.employeeId;await assertEmployee(this.db,ctx,employeeId);
+      const punchTime=new Date();await assertAttendanceUnlocked(this.db,tid,punchTime);
+      const shift=await employeeShift(this.db,tid,employeeId);let day=localDate(punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;
+      if(night&&punchTime<zonedMinute(day,shift.endMinute,shift.timezone))day=new Date(Date.parse(day)-86400000).toISOString().slice(0,10);
+      const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone),end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
+      const faceHash=createHash('sha256').update(bytes).digest('hex'),sourceId=`face-${ctx.user.id.slice(0,18)}-${input.clientNonce.slice(0,36)}`;
+      return this.db.$transaction(async tx=>{
+        await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+        const duplicate=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});if(duplicate)return {ok:true,duplicate:true,punchType:duplicate.punchType,punchTime:duplicate.punchTime};
+        const last=await tx.attendancePunch.findFirst({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'desc'}});
+        if(last&&punchTime.getTime()-last.punchTime.getTime()<45000)throw new ConflictException('A Face Scan punch was just recorded. Wait a few seconds before scanning again.');
+        const punchType:'IN'|'OUT'=last?.punchType==='IN'?'OUT':'IN';
+        const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',actorId:ctx.user.id,faceCaptureHash:faceHash,captureBytes:bytes.length,rawImageStored:false}}});
+        const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
+        const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
+        const calculated=calculateAttendance(punches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
+        const reportDate=new Date(day),payableUnits=attendancePayableUnits(calculated.status);
+        await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:reportDate}},create:{tenantId:tid,employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...calculated},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...calculated}});
+        await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});
+        await audit(tx,ctx,'FACE_PUNCH_RECORDED','attendance',row.id,undefined,{employeeId,punchTime,punchType,verificationType:'FACE_SCAN',faceCaptureHash:faceHash,rawImageStored:false});
+        return {ok:true,punchType,punchTime,status:calculated.status,workMinutes:calculated.workMinutes,firstIn:calculated.firstIn,lastOut:calculated.lastOut};
+      });
     }
     if(recordId&&action==='correct'&&method==='POST'){
       requirePermission(ctx,'attendance','MANAGE');const input=z.object({status:z.enum(['PRESENT','HALF_DAY','ABSENT']),workMinutes:z.number().int().min(0).max(1440).optional(),note:z.string().trim().min(5).max(1000)}).strict().parse(body);
