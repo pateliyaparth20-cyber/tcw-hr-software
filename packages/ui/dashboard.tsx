@@ -114,6 +114,45 @@ function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,out
  </section>;
 }
 
+
+function EmployeeDashboard({session,currency,d}:{session:any;currency:string;d:Row}){
+ const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=d.events??[];
+ const timezone=d.company?.timezone??'Asia/Kolkata';
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const todayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
+ const latest=[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+ const pending=leave.filter(r=>r.status==='PENDING');
+ const approvedUpcoming=leave.filter(r=>r.status==='APPROVED'&&String(r.endDate).slice(0,10)>=today).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
+ const payslip:Row|null=d.payroll??null;
+ const firstName=String(session.user.name??employee.firstName??'Employee').split(' ')[0];
+ const greeting=useTimeGreeting(timezone);
+ const attendanceLabel=todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not recorded';
+ return <div className="employee-self-dashboard">
+  <section className="employee-self-hero">
+   <div className="employee-self-user"><Avatar name={session.user.name} src={session.user.avatar||employee.photo}/><div><span>{greeting}</span><h1>{firstName}</h1><p>{employee.designation||'Employee'}{d.company?.name?' · '+d.company.name:''}</p></div></div>
+   <div className="employee-self-clock"><LiveClock timezone={timezone}/><Link className="btn secondary small" href="/profile">My profile <ChevronRight size={15}/></Link></div>
+  </section>
+  <div className="employee-self-stats">
+   <Link href="/attendance"><span className="mobile-stat-icon blue"><Clock3 size={20}/></span><div><small>Today</small><strong>{attendanceLabel}</strong><em>{todayRecord?.firstIn?new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'No check-in yet'}</em></div></Link>
+   <Link href="/leave"><span className="mobile-stat-icon violet"><CalendarDays size={20}/></span><div><small>Time off</small><strong>{pending.length} pending</strong><em>{approvedUpcoming.length?displayDate(approvedUpcoming[0].startDate)+' next':'No approved leave upcoming'}</em></div></Link>
+   <Link href="/payroll"><span className="mobile-stat-icon green"><Wallet size={20}/></span><div><small>Latest payslip</small><strong>{payslip?currencyValue(payslip.net,currency):'Not available'}</strong><em>{payslip?.run?.month?new Date(payslip.run.month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'}):'Locked payslips appear here'}</em></div></Link>
+   <Link href="/calendar"><span className="mobile-stat-icon amber"><CalendarDays size={20}/></span><div><small>Calendar</small><strong>{events.length} upcoming</strong><em>{events[0]?.title??'No upcoming company event'}</em></div></Link>
+  </div>
+  <div className="employee-self-grid">
+   <section className="panel employee-self-actions"><div className="panel-heading"><div><span className="digital-section-label">SELF SERVICE</span><h2>Quick actions</h2></div></div><div className="employee-action-grid">
+    <Link href="/attendance"><Clock3 size={20}/><span><strong>My attendance</strong><small>Check daily attendance</small></span><ChevronRight size={16}/></Link>
+    <Link href="/leave"><CalendarClock size={20}/><span><strong>Request time off</strong><small>Apply and track leave</small></span><ChevronRight size={16}/></Link>
+    <Link href="/payroll"><Wallet size={20}/><span><strong>Payslips</strong><small>View locked salary records</small></span><ChevronRight size={16}/></Link>
+    <Link href="/expenses"><Receipt size={20}/><span><strong>Expenses</strong><small>Submit your claim</small></span><ChevronRight size={16}/></Link>
+    <Link href="/travel"><Briefcase size={20}/><span><strong>Travel</strong><small>Request work travel</small></span><ChevronRight size={16}/></Link>
+    <Link href="/workforce"><ActivityIcon size={20}/><span><strong>Work status</strong><small>Share availability</small></span><ChevronRight size={16}/></Link>
+   </div></section>
+   <section className="panel employee-self-timeline"><div className="panel-heading"><div><span className="digital-section-label">ATTENDANCE</span><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=><div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'} → {r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'}</small></span><Badge value={r.status}/></div>)}</div>:<Empty title="No attendance yet" description="Your attendance records will appear here."/ >}</section>
+  </div>
+  <section className="panel employee-self-upcoming"><div className="panel-heading"><div><span className="digital-section-label">COMPANY CALENDAR</span><h2>Upcoming events</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div>{events.length?<div className="employee-event-list">{events.slice(0,5).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}{e.endDate&&String(e.endDate).slice(0,10)>String(e.date).slice(0,10)?' · through '+displayDate(e.endDate):''}</small></span><ChevronRight size={16}/></Link>)}</div>:<Empty title="No upcoming events" description="Company holidays and events will appear here."/>}</section>
+ </div>;
+}
+
 export function Dashboard(){
  const{session,can,currency}=useApp();const q=useData('dashboard');
  if(q.isLoading)return <Loading/>;if(q.error)return <Failure error={q.error} retry={()=>q.refetch()}/>;
@@ -134,7 +173,8 @@ export function Dashboard(){
    </div>
   </>;
  }
- const people:Row[]=d.employees??[],attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],devices:Row[]=d.devices??[],support:Row[]=d.support??[];
+ if(session.user.role==='EMPLOYEE')return <EmployeeDashboard session={session} currency={currency} d={d}/>;
+  const people:Row[]=d.employees??[],attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],devices:Row[]=d.devices??[],support:Row[]=d.support??[];
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:d.company?.timezone??'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const records=attendance.filter(r=>r.date.slice(0,10)===today),present=records.filter(r=>r.status==='PRESENT').length;
  const pending=leave.filter(r=>r.status==='PENDING'),onLeave=leave.filter(r=>r.status==='APPROVED'&&r.startDate.slice(0,10)<=today&&r.endDate.slice(0,10)>=today).length;
