@@ -10118,3 +10118,72 @@ input[type="month"]{
   box-shadow:none!important;
   background:#fff!important;
 }
+
+
+/* v1.14.6 single identity profile presentation */
+.company-profile-summary{
+  align-items:center!important;
+  gap:18px!important;
+}
+.company-profile-summary-copy{
+  min-width:0;
+  flex:1;
+}
+.company-summary-logo-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+.company-summary-logo-actions .btn{
+  min-height:36px!important;
+}
+.company-profile-panel>.brand-upload{
+  display:none!important;
+}
+.profile-photo-editor.profile-photo-actions-only{
+  display:block!important;
+  margin:0 0 16px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.profile-photo-actions-only .profile-photo-copy{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+}
+.profile-photo-actions-only .profile-photo-buttons{
+  margin:0!important;
+}
+.my-profile-card .my-profile-form{
+  padding-top:0!important;
+}
+.my-profile-main{
+  padding-bottom:12px!important;
+}
+.platform-admin-profile .profile-photo-actions-only{
+  margin-top:10px!important;
+}
+@media(max-width:700px){
+  .company-profile-summary{
+    align-items:flex-start!important;
+  }
+  .company-profile-summary-logo{
+    flex:0 0 auto!important;
+  }
+  .company-summary-logo-actions{
+    gap:6px;
+  }
+  .company-summary-logo-actions .btn{
+    padding:7px 9px!important;
+  }
+  .profile-photo-actions-only .profile-photo-buttons{
+    width:100%;
+  }
+  .profile-photo-actions-only .btn{
+    flex:1;
+    justify-content:center;
+  }
+}
