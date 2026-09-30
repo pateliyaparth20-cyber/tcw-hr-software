@@ -8766,3 +8766,166 @@ textarea,
   .direct-upi-card .upi-qr-wrap{width:min(190px,62vw);margin:0 auto}
   .upi-checkout-copy{text-align:left}
 }
+
+
+/* v1.13.8 profile photo crop + consistent circular avatars */
+.avatar,
+.header-avatar .avatar,
+.sidebar-profile-link .avatar,
+.my-profile-photo,
+.platform-admin-avatar,
+.profile-photo-preview{
+  border-radius:50%!important;
+  overflow:hidden!important;
+  flex:0 0 auto;
+}
+.avatar img,
+.header-avatar .avatar img,
+.sidebar-profile-link .avatar img,
+.my-profile-photo img,
+.platform-admin-avatar img,
+.profile-photo-preview img{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  object-fit:cover!important;
+  object-position:center center!important;
+  border-radius:50%!important;
+}
+.my-profile-photo{
+  width:104px!important;
+  height:104px!important;
+  min-width:104px!important;
+  min-height:104px!important;
+  background:#eef4fb;
+  border:4px solid #fff!important;
+  box-shadow:0 9px 26px rgba(28,63,98,.16)!important;
+}
+.platform-admin-avatar{
+  width:94px!important;
+  height:94px!important;
+  min-width:94px!important;
+  min-height:94px!important;
+  background:#eef4fb;
+  border:3px solid #fff!important;
+  box-shadow:0 8px 22px rgba(28,63,98,.14)!important;
+}
+.profile-photo-editor{
+  display:grid;
+  grid-template-columns:92px minmax(0,1fr);
+  align-items:center;
+  gap:16px;
+  margin:4px 0 18px;
+  padding:16px;
+  border:1px solid #e3eaf2;
+  border-radius:16px;
+  background:linear-gradient(180deg,#fbfdff,#f7faff);
+}
+.profile-photo-preview{
+  width:92px;
+  height:92px;
+  display:grid;
+  place-items:center;
+  background:#eaf2fb;
+  color:#4d6a86;
+  font-size:1.15rem;
+  font-weight:800;
+  border:3px solid #fff;
+  box-shadow:0 6px 18px rgba(36,70,104,.12);
+}
+.profile-photo-copy{min-width:0}
+.profile-photo-copy>strong{display:block;color:#294762;font-size:.82rem}
+.profile-photo-copy>p{margin:4px 0 10px;color:#7a8c9f;font-size:.65rem;line-height:1.45}
+.profile-photo-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.profile-photo-buttons .btn{cursor:pointer}
+.profile-crop-modal{padding:18px}
+.profile-crop-stage{
+  display:grid;
+  place-items:center;
+  min-height:310px;
+  padding:24px;
+  border-radius:18px;
+  background:
+    linear-gradient(45deg,#edf2f7 25%,transparent 25%) 0 0/18px 18px,
+    linear-gradient(-45deg,#edf2f7 25%,transparent 25%) 0 0/18px 18px,
+    linear-gradient(45deg,transparent 75%,#edf2f7 75%) 0 0/18px 18px,
+    linear-gradient(-45deg,transparent 75%,#edf2f7 75%) 0 0/18px 18px,
+    #f8fbfe;
+}
+.profile-crop-circle{
+  width:min(270px,64vw);
+  aspect-ratio:1;
+  border-radius:50%;
+  overflow:hidden;
+  position:relative;
+  background:#dfe8f1;
+  border:5px solid #fff;
+  box-shadow:0 18px 42px rgba(27,60,94,.18);
+}
+.profile-crop-circle img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  transform-origin:center center;
+  will-change:transform;
+}
+.profile-crop-meta{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:12px 0 4px;
+}
+.profile-crop-meta span{
+  padding:5px 8px;
+  border-radius:999px;
+  background:#f1f6fb;
+  color:#708398;
+  font-size:.58rem;
+  font-weight:700;
+}
+.profile-crop-controls{
+  display:grid;
+  gap:10px;
+  margin-top:14px;
+}
+.profile-crop-controls label{
+  display:grid;
+  grid-template-columns:85px minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+}
+.profile-crop-controls label>span{
+  color:#536b82;
+  font-size:.65rem;
+  font-weight:750;
+}
+.profile-crop-controls input[type=range]{
+  width:100%;
+  min-height:28px;
+  padding:0;
+  accent-color:#3474ef;
+}
+.profile-crop-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:9px;
+  margin-top:16px;
+}
+.profile-photo-action{display:none!important}
+@media(max-width:700px){
+  .profile-photo-editor{
+    grid-template-columns:76px minmax(0,1fr);
+    gap:12px;
+    padding:12px;
+  }
+  .profile-photo-preview{width:76px;height:76px}
+  .my-profile-photo{width:88px!important;height:88px!important;min-width:88px!important;min-height:88px!important}
+  .platform-admin-avatar{width:82px!important;height:82px!important;min-width:82px!important;min-height:82px!important}
+  .profile-crop-modal{padding:12px}
+  .profile-crop-stage{min-height:250px;padding:16px}
+  .profile-crop-circle{width:min(230px,66vw)}
+  .profile-crop-controls label{grid-template-columns:72px minmax(0,1fr)}
+  .profile-photo-buttons .btn{min-height:36px!important;padding:7px 10px!important}
+}
