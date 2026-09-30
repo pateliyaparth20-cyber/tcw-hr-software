@@ -55,7 +55,7 @@ export class DataService {
       const trials=hasPermission(ctx.user.role.permissions,'tenants','VIEW')?await this.trialRows():{items:[],summary:{total:0,active:0,expiringSoon:0,callDue:0,contacted:0,converted:0}};
       return {companies,leads,invoices,activity,support,employeeCount:employees,trials:trials.items.slice(0,8),trialSummary:trials.summary};
     }
-    const tid=tenant(ctx),scope=await employeeScope(this.db,ctx);
+    const tid=tenant(ctx),scope=await employeeScope(this.db,ctx),employeeSelf=ctx.user.role.code==='EMPLOYEE';
     const employeeWhere={tenantId:tid,deletedAt:null,...(scope?{id:{in:scope}}:{})};
     const owned={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
     const [company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications]=await Promise.all([
@@ -67,9 +67,9 @@ export class DataService {
       this.db.department.findMany({where:{tenantId:tid}}),
       this.db.calendarEvent.findMany({where:{tenantId:tid,OR:[{date:{gte:new Date(new Date().toISOString().slice(0,10))}},{endDate:{gte:new Date(new Date().toISOString().slice(0,10))}}]},orderBy:{date:'asc'},take:5}),
       hasPermission(ctx.user.role.permissions,'audit','VIEW')?this.db.auditLog.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:6}):[],
-      hasPermission(ctx.user.role.permissions,'payroll','VIEW')?this.db.payrollRun.findFirst({where:{tenantId:tid},orderBy:{month:'desc'}}):null,
+      hasPermission(ctx.user.role.permissions,'payroll','VIEW')?(employeeSelf&&ctx.user.employeeId?this.db.payrollItem.findFirst({where:{tenantId:tid,employeeId:ctx.user.employeeId,run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true}}},orderBy:{createdAt:'desc'}}):this.db.payrollRun.findFirst({where:{tenantId:tid},orderBy:{month:'desc'}})):null,
       hasPermission(ctx.user.role.permissions,'devices','VIEW')?this.db.attendanceDevice.findMany({where:{tenantId:tid},select:{id:true,name:true,status:true,lastSeenAt:true}}):[],
-      hasPermission(ctx.user.role.permissions,'support','VIEW')?this.db.supportTicket.findMany({where:{tenantId:tid,status:{not:'RESOLVED'}},orderBy:{updatedAt:'desc'},take:8}):[],
+      !employeeSelf&&hasPermission(ctx.user.role.permissions,'support','VIEW')?this.db.supportTicket.findMany({where:{tenantId:tid,status:{not:'RESOLVED'}},orderBy:{updatedAt:'desc'},take:8}):[],
       this.db.notification.count({where:{tenantId:tid,readAt:null,OR:[{userId:ctx.user.id},{userId:null}]}})]);
     return {company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications};
   }
