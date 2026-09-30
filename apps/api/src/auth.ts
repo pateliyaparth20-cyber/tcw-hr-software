@@ -36,7 +36,12 @@ export class AuthService {
     // more than one NULL-scoped row. Older local seeds could therefore leave duplicate platform
     // admins behind. Never authenticate an arbitrary findFirst() result: verify every matching
     // candidate and select the account whose password actually matches.
-    const candidates=input.companyCode&&!company?[]:await this.db.user.findMany({where:{tenantId:company?.id??null,OR:[{email:input.email.toLowerCase()},{loginId:input.email.toUpperCase()}]},include:{role:true},orderBy:{updatedAt:'desc'}});
+    let employeeLoginId:string|null=null;
+    if(company){
+      const employee=await this.db.employee.findFirst({where:{tenantId:company.id,deletedAt:null,employeeCode:{equals:input.email,mode:'insensitive'}},select:{id:true}});
+      employeeLoginId=employee?.id??null;
+    }
+    const candidates=input.companyCode&&!company?[]:await this.db.user.findMany({where:{tenantId:company?.id??null,OR:[{email:input.email.toLowerCase()},{loginId:input.email.toUpperCase()},...(employeeLoginId?[{employeeId:employeeLoginId}]:[])]},include:{role:true},orderBy:{updatedAt:'desc'}});
     let user:any=null;
     for(const candidate of candidates){if(candidate.active&&await verifyPassword(input.password,candidate.passwordHash)){user=candidate;break;}}
     if(!candidates.length)await verifyPassword(input.password,await dummyHash);
