@@ -8367,3 +8367,164 @@ textarea,
     backdrop-filter:none!important;
   }
 }
+
+
+/* v1.13.5 mobile bottom fade + isolated premium Meghna chat */
+@media(max-width:650px){
+  .workspace-main{
+    padding-bottom:calc(132px + env(safe-area-inset-bottom))!important;
+  }
+  .mobile-bottom-nav{
+    overflow:visible!important;
+  }
+  .mobile-bottom-nav::before{
+    content:"";
+    position:absolute;
+    left:-8px;
+    right:-8px;
+    top:-34px;
+    height:38px;
+    pointer-events:none;
+    border-radius:24px 24px 0 0;
+    background:linear-gradient(to top,rgba(246,248,252,.94) 0%,rgba(246,248,252,.67) 44%,rgba(246,248,252,.24) 72%,rgba(246,248,252,0) 100%);
+    -webkit-backdrop-filter:blur(5px);
+    backdrop-filter:blur(5px);
+    -webkit-mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.92) 48%,transparent 100%);
+    mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.92) 48%,transparent 100%);
+  }
+  .tcw-ai-open .mobile-bottom-nav{
+    opacity:.38;
+    pointer-events:none;
+    transform:translateY(6px) scale(.985);
+    filter:blur(.35px);
+    transition:opacity .2s ease,transform .24s ease;
+  }
+}
+.tcw-agent{isolation:isolate}
+.tcw-agent.open::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:rgba(18,34,52,.18);
+  -webkit-backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);
+  animation:meghna-backdrop-in .2s ease both;
+}
+@keyframes meghna-backdrop-in{from{opacity:0}to{opacity:1}}
+.tcw-agent-panel{
+  border-color:rgba(205,219,234,.94)!important;
+  background:rgba(255,255,255,.96)!important;
+  -webkit-backdrop-filter:saturate(145%) blur(20px);
+  backdrop-filter:saturate(145%) blur(20px);
+  box-shadow:0 30px 90px rgba(20,47,76,.25)!important;
+}
+.tcw-agent-panel>header{
+  position:sticky;
+  top:0;
+  z-index:4;
+  background:rgba(248,252,255,.92)!important;
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+.tcw-agent-orb,
+.tcw-agent-face{
+  border-radius:50%!important;
+  overflow:hidden!important;
+  background:#fff!important;
+  border:2px solid rgba(99,151,218,.28)!important;
+  box-shadow:0 5px 16px rgba(35,73,111,.16)!important;
+}
+.tcw-agent-orb{width:38px!important;height:38px!important}
+.tcw-agent-face{width:48px!important;height:48px!important;display:block!important}
+.tcw-agent-orb img,
+.tcw-agent-face img,
+.meghna-avatar img{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  object-fit:cover!important;
+  object-position:center 32%!important;
+  border-radius:50%!important;
+}
+.tcw-agent-face::after{
+  content:"";
+  position:absolute;
+  right:1px;
+  bottom:1px;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#24b979;
+  border:2px solid #fff;
+  box-shadow:0 0 0 2px rgba(36,185,121,.12);
+}
+.tcw-agent-messages,
+.meghna-history-list{
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y!important;
+}
+.tcw-agent-messages{
+  flex:1 1 auto;
+  max-height:none!important;
+  min-height:190px;
+}
+.tcw-agent-messages>div{
+  background:#f4f7fa!important;
+  border:1px solid rgba(224,231,239,.76);
+}
+.tcw-agent-messages>div.user{
+  background:linear-gradient(145deg,#e8f1ff,#eef6ff)!important;
+  border-color:#d6e6fa;
+}
+.meghna-compose{
+  position:sticky;
+  bottom:0;
+  z-index:5;
+  background:rgba(255,255,255,.94)!important;
+  -webkit-backdrop-filter:blur(15px);
+  backdrop-filter:blur(15px);
+}
+@media(max-width:700px){
+  .tcw-agent{
+    right:10px!important;
+    bottom:calc(86px + env(safe-area-inset-bottom))!important;
+  }
+  .tcw-agent.open{
+    left:10px;
+  }
+  .tcw-agent-panel{
+    position:fixed!important;
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(84px + env(safe-area-inset-bottom))!important;
+    width:auto!important;
+    height:min(76dvh,700px)!important;
+    max-height:calc(100dvh - 118px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+    border-radius:24px!important;
+  }
+  .tcw-agent-panel.is-closed{
+    transform:translateY(24px) scale(.965)!important;
+  }
+  .tcw-agent.open .tcw-agent-fab{
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(12px) scale(.82)!important;
+  }
+  .tcw-agent-welcome{
+    margin:auto 0;
+    padding:22px 18px!important;
+  }
+  .tcw-agent-welcome h3{font-size:1rem}
+  .tcw-agent-welcome p{font-size:.75rem}
+  .meghna-mode-strip{
+    flex:0 0 auto;
+  }
+  .meghna-history{
+    max-height:38dvh!important;
+  }
+  .meghna-history-list{
+    max-height:calc(38dvh - 44px)!important;
+  }
+}
