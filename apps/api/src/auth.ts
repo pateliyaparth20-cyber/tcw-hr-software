@@ -150,6 +150,15 @@ export class AuthService {
     const input=z.object({currentPassword:z.string().max(128),password}).strict().parse(body);
     if(!await verifyPassword(input.currentPassword,ctx.user.passwordHash))throw new BadRequestException('Current password is incorrect.');
     const passwordHash=await hashPassword(input.password);
+    if(ctx.user.role.code==='EMPLOYEE'){
+      const updated=await this.db.$transaction(async tx=>{
+        const user=await tx.user.update({where:{id:ctx.user.id},data:{passwordHash,mustChangePassword:false},include:{role:true}});
+        await tx.session.deleteMany({where:{userId:ctx.user.id,id:{not:ctx.session.id}}});
+        await tx.auditLog.create({data:{tenantId:ctx.user.tenantId,actorId:ctx.user.id,action:'FIRST_PASSWORD_SET',entity:'auth',entityId:ctx.user.id}});
+        return user;
+      });
+      return {message:'Password changed. Continue with Face Setup.',user:this.publicUser(updated)};
+    }
     await this.db.$transaction([this.db.user.update({where:{id:ctx.user.id},data:{passwordHash,mustChangePassword:false}}),this.db.session.deleteMany({where:{userId:ctx.user.id}})]);
     const names=ctx.user.role.scope==='PLATFORM'?[sessionCookieName('PLATFORM'),'tcw_admin_session','peopleos_session']:[sessionCookieName('TENANT'),'tcw_hr_session','peopleos_session'];for(const name of names)res.clearCookie(name,{path:'/'});return {message:'Password changed. Please sign in again.'};
   }
