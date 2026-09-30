@@ -1,0 +1,31 @@
+name: Android APKs
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'native/android/**'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build HR and Employee debug APKs
+        run: gradle -p native/android :app:assembleAdminDebug :app:assembleEmployeeDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TCW-HR-Android
+          path: native/android/app/build/outputs/apk/admin/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TCW-Employee-Android
+          path: native/android/app/build/outputs/apk/employee/debug/*.apk
