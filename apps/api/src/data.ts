@@ -117,16 +117,10 @@ export class DataService {
         const employeeId=before!.id;
         const linkedUsers=await tx.user.findMany({where:{tenantId:tid,employeeId},select:{id:true}});
         const userIds=linkedUsers.map(u=>u.id);
-        const payrollItems=await tx.payrollItem.findMany({where:{tenantId:tid,employeeId},select:{runId:true}});
-        const runIds=[...new Set(payrollItems.map(i=>i.runId))];
-
         await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.deviceEmployeeMap.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.attendanceDaily.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.leaveRequest.deleteMany({where:{tenantId:tid,employeeId}});
-        await tx.payrollPayout.deleteMany({where:{tenantId:tid,employeeId}});
-        await tx.payrollAdjustment.deleteMany({where:{tenantId:tid,employeeId}});
-        await tx.payrollItem.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.goal.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.expenseClaim.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.travelRequest.deleteMany({where:{tenantId:tid,employeeId}});
@@ -147,13 +141,7 @@ export class DataService {
 
         await tx.employee.update({where:{id:employeeId},data:{deletedAt:new Date(),status:'INACTIVE',managerId:null}});
 
-        for(const runId of runIds){
-          const totals=await tx.payrollItem.aggregate({where:{tenantId:tid,runId},_sum:{gross:true,deductions:true,net:true}});
-          await tx.payrollRun.updateMany({where:{tenantId:tid,id:runId},data:{totalGross:totals._sum.gross??0,totalDeductions:totals._sum.deductions??0,totalNet:totals._sum.net??0}});
-        }
-
-        const rawPunchesRetained=await tx.attendancePunch.count({where:{tenantId:tid,employeeId}});
-        await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{operationalDataCleared:true,rawPunchesRetained,linkedUsers:userIds.length});
+        await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{operationalDataCleared:true,rawPunchesRetained,historicalPayrollRetained:true,linkedUsers:userIds.length});
         return {ok:true,deleted:true,rawPunchesRetained};
       }
       const input=employeeSchema.parse(body);
