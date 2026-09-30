@@ -10107,3 +10107,14 @@ input[type="month"]{
 .record-form .field:has(#field-addressLine){
   grid-column:auto!important;
 }
+
+
+/* v1.14.5 search toolbar has one visual container only */
+.tenant-shell .panel>.toolbar,
+.platform-shell .panel>.toolbar{
+  border:0!important;
+  border-bottom:1px solid #e8edf3!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
