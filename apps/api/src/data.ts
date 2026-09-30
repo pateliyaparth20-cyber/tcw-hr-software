@@ -113,7 +113,48 @@ export class DataService {
     return this.db.$transaction(async tx=>{
       const before=recordId?await tx.employee.findFirst({where:{...where,id:id.parse(recordId)}}):null;
       if(recordId&&!before)throw new NotFoundException('Employee not found.');
-      if(method==='DELETE'){await tx.employee.update({where:{id:before!.id},data:{deletedAt:new Date(),status:'INACTIVE'}});await tx.user.updateMany({where:{tenantId:tid,employeeId:before!.id},data:{active:false}});await audit(tx,ctx,'EMPLOYEE_ARCHIVED','employees',before!.id,before);return {ok:true};}
+      if(method==='DELETE'){
+        const employeeId=before!.id;
+        const linkedUsers=await tx.user.findMany({where:{tenantId:tid,employeeId},select:{id:true}});
+        const userIds=linkedUsers.map(u=>u.id);
+        const payrollItems=await tx.payrollItem.findMany({where:{tenantId:tid,employeeId},select:{runId:true}});
+        const runIds=[...new Set(payrollItems.map(i=>i.runId))];
+
+        await tx.deviceEmployeeMap.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.attendanceDaily.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.leaveRequest.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.payrollPayout.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.payrollAdjustment.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.payrollItem.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.goal.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.expenseClaim.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.travelRequest.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.employeeExit.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.document.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.activityEvent.deleteMany({where:{tenantId:tid,employeeId}});
+        await tx.asset.updateMany({where:{tenantId:tid,employeeId},data:{employeeId:null,status:'AVAILABLE'}});
+        await tx.employee.updateMany({where:{tenantId:tid,managerId:employeeId},data:{managerId:null}});
+
+        if(userIds.length){
+          await tx.pushSubscription.deleteMany({where:{userId:{in:userIds}}});
+          await tx.passwordReset.deleteMany({where:{userId:{in:userIds}}});
+          await tx.notification.deleteMany({where:{tenantId:tid,userId:{in:userIds}}});
+          await tx.meghnaConversation.deleteMany({where:{tenantId:tid,userId:{in:userIds}}});
+          await tx.session.deleteMany({where:{userId:{in:userIds}}});
+          await tx.user.deleteMany({where:{id:{in:userIds},tenantId:tid}});
+        }
+
+        await tx.employee.delete({where:{id:employeeId}});
+
+        for(const runId of runIds){
+          const totals=await tx.payrollItem.aggregate({where:{tenantId:tid,runId},_sum:{gross:true,deductions:true,net:true}});
+          await tx.payrollRun.updateMany({where:{tenantId:tid,id:runId},data:{totalGross:totals._sum.gross??0,totalDeductions:totals._sum.deductions??0,totalNet:totals._sum.net??0}});
+        }
+
+        await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{hardDelete:true,linkedUsers:userIds.length});
+        return {ok:true,deleted:true};
+      }
       const input=employeeSchema.parse(body);
       if(input.photo){
         if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.photo))throw new BadRequestException('Use a PNG or JPEG employee photo up to 5 MB.');
