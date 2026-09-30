@@ -9017,3 +9017,91 @@ textarea,
   .tcw-agent-messages{padding-top:12px!important}
   .meghna-compose{padding-bottom:10px!important}
 }
+
+
+/* v1.14.0 long record forms: reliable Add Employee scrolling */
+.modal:has(> .record-form){
+  display:flex!important;
+  flex-direction:column!important;
+  overflow:hidden!important;
+  max-height:min(90dvh,900px)!important;
+}
+.modal:has(> .record-form)>.modal-head{
+  flex:0 0 auto!important;
+  position:relative!important;
+  top:auto!important;
+  z-index:3!important;
+}
+.modal:has(> .record-form)>.record-form{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  width:100%!important;
+  display:flex!important;
+  flex-direction:column!important;
+  overflow:hidden!important;
+  padding:0!important;
+}
+.modal:has(> .record-form)>.record-form>.form-grid{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  width:100%!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  padding:20px 22px 28px!important;
+  scrollbar-gutter:stable;
+}
+.modal:has(> .record-form)>.record-form>.form-error{
+  flex:0 0 auto!important;
+  margin:10px 22px!important;
+}
+.modal:has(> .record-form)>.record-form>.form-actions-end{
+  flex:0 0 auto!important;
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  margin:0!important;
+  padding:14px 18px!important;
+  border-top:1px solid #e4eaf1!important;
+  background:rgba(255,255,255,.96)!important;
+  -webkit-backdrop-filter:blur(14px);
+  backdrop-filter:blur(14px);
+  box-shadow:0 -8px 24px rgba(30,58,88,.045)!important;
+  z-index:4!important;
+}
+@media(max-width:950px){
+  .modal:has(> .record-form){
+    height:calc(100dvh - 14px)!important;
+    max-height:calc(100dvh - 14px)!important;
+    margin:7px auto!important;
+  }
+  .modal:has(> .record-form)>.record-form{
+    overflow:hidden!important;
+  }
+  .modal:has(> .record-form)>.record-form>.form-grid{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    align-content:start!important;
+    gap:13px!important;
+    height:auto!important;
+    overflow-y:auto!important;
+    padding:14px 14px 34px!important;
+  }
+  .modal:has(> .record-form)>.record-form>.form-actions-end{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    padding:11px 12px max(11px,env(safe-area-inset-bottom))!important;
+    border-radius:0!important;
+  }
+  .modal:has(> .record-form)>.record-form>.form-actions-end .btn{
+    width:100%!important;
+    min-height:44px!important;
+  }
+}
+@media(max-width:420px){
+  .modal:has(> .record-form)>.record-form>.form-actions-end{
+    grid-template-columns:1fr 1fr!important;
+  }
+}
