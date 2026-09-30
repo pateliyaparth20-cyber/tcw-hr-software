@@ -1,12 +1,38 @@
-# TCW HR Software Android wrapper
+# TCW Android apps
 
-This is a minimal Android WebView wrapper for the hosted HR portal. It does not store biometric face/fingerprint templates; biometric recognition stays on the approved attendance device.
+The Android project now builds two separate APK flavours from the same secure portal codebase:
+
+- **TCW HR Software** — package `com.tcw.hrsoftware`, for HR/Admin users.
+- **TCW Employee** — package `com.tcw.hrsoftware.employee`, for Employee Self Service and Face Scan attendance.
+
+Both APKs can be installed side-by-side on the same Android phone. The Employee APK identifies itself to the portal and only accepts Employee-role accounts.
+
+## URLs
+
+Set Gradle properties as needed:
+
+`TCW_APP_URL=https://hr.yourdomain.com`
+
+`TCW_EMPLOYEE_APP_URL=https://hr.yourdomain.com`
+
+The Employee URL defaults to the HR URL because both apps use the same tenant/backend and role-based portal.
 
 ## Build
-1. Install Android Studio / Android SDK 35 and JDK 21.
-2. Open this `native/android` folder in Android Studio.
-3. Set the portal URL as Gradle property `TCW_APP_URL`, for example:
-   `https://hr.yourdomain.com`
-4. Build a debug APK for testing, then configure a signing key and build a signed release APK for client distribution.
 
-Debug builds allow cleartext HTTP so LAN/USB development URLs can be tested. Release builds disable cleartext traffic and should use HTTPS.
+Requirements: Android SDK 35, JDK 21, Gradle 8.9.
+
+HR/Admin debug APK:
+
+`gradle -p native/android :app:assembleAdminDebug`
+
+Employee debug APK:
+
+`gradle -p native/android :app:assembleEmployeeDebug`
+
+Release variants:
+
+`gradle -p native/android :app:assembleAdminRelease :app:assembleEmployeeRelease`
+
+Configure a signing key before distributing production release APKs.
+
+The Employee APK requests Android camera permission only when the web Face Scan flow asks for camera access. Face Scan attendance is linked to the **TCW Employee Mobile App** source under Devices / Attendance sources.
