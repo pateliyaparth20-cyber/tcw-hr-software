@@ -60,7 +60,8 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
  return <div className="auth-session-loader"><div className="auth-session-loader-card"><span className="auth-session-logo"><BrandLogo/></span>{checking&&!error&&<span className="auth-spinner"/>}<strong>{error?'Unable to open workspace':'Opening your workspace'}</strong><small>{error||'Checking your secure session…'}</small>{error&&<div className="auth-session-actions"><button className="btn secondary" onClick={()=>{setError('');setChecking(true);setAttempt(v=>v+1)}}>Try again</button><button className="btn primary" onClick={()=>{clearLocalSessionState();router.replace(scope==='PLATFORM'?'/admin-login':'/login')}}>Sign in again</button></div>}</div></div>;
 }
 function FirstPasswordChange(){
- const{session}=useApp();const branding=useData('company/branding',session.user.scope==='TENANT');const brand=branding.data??session.company??{};const brandLogo=String(brand.logo??TCW_PRODUCT_LOGO);const brandName=String(brand.name??(session.user.scope==='TENANT'?'TCW HR Software':'Tech Cyber Warrior'));const brandColor=String(brand.primaryColor??brand.profile?.primaryColor??'#3474ef');const[currentPassword,setCurrent]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const{session}=useApp();const branding=useData('company/branding',session.user.scope==='TENANT');
+ useEffect(()=>{if(session.user.role==='EMPLOYEE')preloadFaceEngine()},[session.user.role]);const brand=branding.data??session.company??{};const brandLogo=String(brand.logo??TCW_PRODUCT_LOGO);const brandName=String(brand.name??(session.user.scope==='TENANT'?'TCW HR Software':'Tech Cyber Warrior'));const brandColor=String(brand.primaryColor??brand.profile?.primaryColor??'#3474ef');const[currentPassword,setCurrent]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function save(e:React.FormEvent){e.preventDefault();if(password!==confirm){setError('New passwords do not match.');return;}setBusy(true);setError('');try{await api('auth/change-password','POST',{currentPassword,password},session.csrf);if(session.user.role==='EMPLOYEE'){window.location.reload();return;}clearLocalSessionState();window.location.assign(session.user.scope==='PLATFORM'?'/admin-login':'/login')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
  async function signOut(){setBusy(true);try{await api('auth/logout','POST',{},session.csrf)}catch{}finally{clearLocalSessionState();window.location.assign(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
  return <div className="mandatory-overlay" style={{'--primary':brandColor} as React.CSSProperties}><div className="mandatory-card"><div className="auth-text-brand first-login-brand"><img src={brandLogo} alt={brandName+' logo'} onError={e=>{e.currentTarget.src=TCW_PRODUCT_LOGO}}/><span><strong>{brandName}</strong><small>SECURE ACCOUNT SETUP</small></span></div><span className="login-eyebrow">SECURE FIRST LOGIN</span><h2>Set your own password</h2><p>Your temporary password worked. Before using HR data, create a private password for this account.</p><form className="login-form" onSubmit={save}><label>Temporary password<input type="password" required value={currentPassword} onChange={e=>setCurrent(e.target.value)}/></label><label>New password<input type="password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)}/></label><label>Confirm new password<input type="password" required minLength={8} value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>{error&&<p className="form-error">{error}</p>}<button className="btn primary login-submit" disabled={busy}>{busy?'Saving…':session.user.role==='EMPLOYEE'?'Set password & Add Face':'Set password & continue'}<ArrowRight size={18}/></button><button type="button" className="btn secondary login-submit" disabled={busy} onClick={signOut}>Sign out & use another account</button></form></div></div>;
@@ -118,6 +119,8 @@ function Shell({page}:{page:string}){
  const employees=useData('employees?q='+encodeURIComponent(query)+'&pageSize=6',search&&query.length>1&&session.user.scope==='TENANT'&&can('employees'));
  const notices=useData('notifications',session.user.scope==='TENANT');
  const faceProfile=useData('attendance/face-profile',session.user.role==='EMPLOYEE'&&!session.user.mustChangePassword&&(!session.company||['ACTIVE','TRIAL'].includes(session.company.status)));
+ const faceEnrollmentKey='tcw_face_enrolled:'+String(session.user.employeeId??session.user.id);
+ const[faceEnrollmentHint,setFaceEnrollmentHint]=useState(()=>{if(typeof window==='undefined')return false;try{return window.localStorage.getItem(faceEnrollmentKey)==='1'}catch{return false}});const faceFalseRetryRef=useRef(false);
  const branding=useData('company/branding',session.user.scope==='TENANT');
  useEffect(()=>{if(session.user.scope!=='TENANT'||!branding.data)return;const mergedCompany={...(session.company??{}),...branding.data,profile:{...(session.company?.profile??{}),primaryColor:branding.data.primaryColor??session.company?.profile?.primaryColor}};saveLocalSessionSnapshot({...session,company:mergedCompany})},[branding.data,session.user.scope]);
  useEffect(()=>{if(session.user.scope!=='TENANT')return;const refresh=()=>{branding.refetch().catch(()=>{})};const timer=window.setInterval(refresh,10000);window.addEventListener('focus',refresh);return()=>{window.clearInterval(timer);window.removeEventListener('focus',refresh)}},[session.user.scope,branding.refetch]);
@@ -128,8 +131,25 @@ function Shell({page}:{page:string}){
 
  useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
  useEffect(()=>{if(page==='ai')router.replace('/dashboard')},[page,router]);
- useEffect(()=>{if(session.user.role==='EMPLOYEE')preloadFaceEngine()},[session.user.role]);
-
+ useEffect(()=>{if(session.user.role!=='EMPLOYEE')return;preloadFaceEngine();try{setFaceEnrollmentHint(window.localStorage.getItem(faceEnrollmentKey)==='1')}catch{}},[session.user.role,faceEnrollmentKey]);
+ useEffect(()=>{
+  if(session.user.role!=='EMPLOYEE')return;
+  const enrolled=faceProfile.data?.enrolled;
+  if(enrolled===true){
+   faceFalseRetryRef.current=false;setFaceEnrollmentHint(true);
+   try{window.localStorage.setItem(faceEnrollmentKey,'1')}catch{}
+   return;
+  }
+  if(enrolled!==false)return;
+  if(faceEnrollmentHint&&!faceFalseRetryRef.current){
+   faceFalseRetryRef.current=true;
+   const timer=window.setTimeout(()=>faceProfile.refetch().catch(()=>{}),350);
+   return()=>window.clearTimeout(timer);
+  }
+  faceFalseRetryRef.current=false;setFaceEnrollmentHint(false);
+  try{window.localStorage.removeItem(faceEnrollmentKey)}catch{}
+ },[session.user.role,faceEnrollmentKey,faceEnrollmentHint,faceProfile.data?.enrolled,faceProfile.dataUpdatedAt]);
+ 
  useEffect(()=>{if(session.user.scope==='PLATFORM'||process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false')return;const localSession=getLocalSessionToken();const socket=io({path:'/socket.io',withCredentials:true,transports:['websocket','polling'],auth:localSession?{localSessionToken:localSession}:{}});socket.on('changed',()=>queryClient.invalidateQueries());return()=>{socket.disconnect()}},[queryClient,session.user.scope]);
  useEffect(()=>setMobile(false),[page]);
  useEffect(()=>{if(!mobile)return;const previous=document.body.style.overflow;const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};document.body.style.overflow='hidden';window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',onKey)}},[mobile]);
@@ -170,8 +190,8 @@ function Shell({page}:{page:string}){
  if(session.user.mustChangePassword)return <FirstPasswordChange/>;
  if(billingLocked&&!can('company','VIEW'))return <div className="employee-access-paused"><div className="employee-access-paused-card"><BrandLogo/><span>{session.user.role==='EMPLOYEE'?'EMPLOYEE SELF SERVICE':'COMPANY WORKSPACE'}</span><h1>Company access is temporarily paused</h1><p>Your company subscription needs attention. Billing details are available only to authorized company administrators. Please contact your HR administrator.</p><button className="btn secondary" type="button" onClick={logout}><LogOut size={16}/>Sign out</button></div></div>;
  if(billingLocked)return <SubscriptionLock/>;
- if(session.user.role==='EMPLOYEE'&&!faceProfile.isLoading&&!faceProfile.error&&faceProfile.data?.enrolled===false){
-  return <EmployeeFaceEnrollmentGate logo={companyLogo} companyName={workspaceBrand.name??session.company?.name} onComplete={()=>faceProfile.refetch()} onSignOut={logout}/>;
+ if(session.user.role==='EMPLOYEE'&&!faceProfile.isLoading&&!faceProfile.error&&faceProfile.data?.enrolled===false&&!faceEnrollmentHint){
+  return <EmployeeFaceEnrollmentGate logo={companyLogo} companyName={workspaceBrand.name??session.company?.name} onComplete={async()=>{setFaceEnrollmentHint(true);faceFalseRetryRef.current=false;try{window.localStorage.setItem(faceEnrollmentKey,'1')}catch{}await faceProfile.refetch()}} onSignOut={logout}/>;
  }
  if(session.user.role==='EMPLOYEE'){
   const primaryKeys=['dashboard','attendance','leave','payroll'];
