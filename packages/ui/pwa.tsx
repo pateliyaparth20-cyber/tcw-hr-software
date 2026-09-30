@@ -40,10 +40,10 @@ export function PwaClient(){
     window.__tcwSystemNotify=tcwSystemNotify;
     window.__tcwEnableNotifications=enableNotifications;
     let pullStart=0,pullDistance=0,pullActive=false,longPress:any=null;
-    const refreshBadge=document.createElement('div');refreshBadge.className='tcw-pull-refresh';refreshBadge.textContent='Pull to refresh';document.body.appendChild(refreshBadge);
+    const refreshBadge=document.createElement('div');refreshBadge.className='tcw-pull-refresh';refreshBadge.innerHTML='<span aria-hidden="true"></span>';refreshBadge.setAttribute('aria-label','Refresh');document.body.appendChild(refreshBadge);
     const onTouchStart=(e:TouchEvent)=>{if(window.scrollY<=0&&e.touches.length===1){pullStart=e.touches[0].clientY;pullDistance=0;pullActive=true}};
-    const onTouchMove=(e:TouchEvent)=>{if(!pullActive)return;pullDistance=Math.max(0,e.touches[0].clientY-pullStart);if(pullDistance>18){refreshBadge.classList.add('show');refreshBadge.textContent=pullDistance>86?'Release to refresh':'Pull to refresh'}};
-    const onTouchEnd=()=>{if(pullActive&&pullDistance>86)window.location.reload();pullActive=false;pullDistance=0;refreshBadge.classList.remove('show')};
+    const onTouchMove=(e:TouchEvent)=>{if(!pullActive)return;pullDistance=Math.max(0,e.touches[0].clientY-pullStart);if(pullDistance>18){refreshBadge.classList.add('show');refreshBadge.classList.toggle('ready',pullDistance>86)}};
+    const onTouchEnd=()=>{if(pullActive&&pullDistance>86)window.location.reload();pullActive=false;pullDistance=0;refreshBadge.classList.remove('show','ready')};
     const photoSelector='.my-profile-photo img,.avatar.has-photo img,.image-field img,.person-cell img';
     const openPhoto=(img:HTMLImageElement)=>{const overlay=document.createElement('div');overlay.className='tcw-photo-viewer';overlay.innerHTML='<button aria-label="Close photo">×</button><img alt="Photo preview"/>';const target=overlay.querySelector('img') as HTMLImageElement;target.src=img.src;overlay.addEventListener('click',ev=>{if(ev.target===overlay||ev.target===overlay.querySelector('button'))overlay.remove()});document.body.appendChild(overlay)};
     const onPhotoClick=(e:MouseEvent)=>{const img=(e.target as Element)?.closest?.(photoSelector) as HTMLImageElement|null;if(img&&window.matchMedia('(hover:hover) and (pointer:fine)').matches){e.preventDefault();openPhoto(img)}};

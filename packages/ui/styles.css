@@ -7838,3 +7838,28 @@ textarea,
 .tcw-photo-viewer>button{position:absolute;top:max(18px,env(safe-area-inset-top));right:18px;width:44px;height:44px;border:0;border-radius:50%;background:#fff;color:#203a54;font-size:28px;cursor:pointer}
 .tcw-pull-refresh{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;z-index:99998;transform:translate(-50%,-70px);padding:8px 13px;border:1px solid #dce6ef;border-radius:999px;background:rgba(255,255,255,.97);color:#4f6780;font-size:.68rem;font-weight:750;box-shadow:0 8px 22px rgba(25,55,87,.12);transition:transform .18s ease;pointer-events:none}
 .tcw-pull-refresh.show{transform:translate(-50%,0)}
+
+
+/* v1.12.8 round-only pull refresh */
+.tcw-pull-refresh{
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:50%!important;
+  font-size:0!important;
+}
+.tcw-pull-refresh>span{
+  width:20px;
+  height:20px;
+  display:block;
+  border:3px solid #d7e4f5;
+  border-top-color:#2f74e8;
+  border-radius:50%;
+  animation:tcw-pull-spin .72s linear infinite;
+}
+.tcw-pull-refresh.ready>span{border-top-color:#16a36f}
+@keyframes tcw-pull-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.tcw-pull-refresh>span{animation:none}}

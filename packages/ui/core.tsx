@@ -5,16 +5,15 @@ import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight} from 'lucide-react'
 import {Field,Row,readable} from './config';
 export type Session={user:Row;csrf:string;company?:Row};
 export const TCW_PRODUCT_LOGO='/tcw-logo.png';
-const TRANSPARENT_LOGO='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 export function BrandLogo({alt='TCW HR Software',className}:{alt?:string;className?:string}){
-  const[src,setSrc]=useState(''),[ready,setReady]=useState(false);
-  useEffect(()=>{let active=true;setReady(false);fetch('/api/branding',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{
+  const[src,setSrc]=useState(()=>{if(typeof window==='undefined')return TCW_PRODUCT_LOGO;try{return window.localStorage.getItem('tcw_brand_logo')||TCW_PRODUCT_LOGO}catch{return TCW_PRODUCT_LOGO}});
+  useEffect(()=>{let active=true;fetch('/api/branding',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{
     if(!active)return;
     const next=String(v?.logo||TCW_PRODUCT_LOGO);
-    setSrc(next);
     try{window.localStorage.setItem('tcw_brand_logo',next)}catch{}
-  }).catch(()=>{if(active)setSrc(TCW_PRODUCT_LOGO)});return()=>{active=false}},[]);
-  return <img src={src||TRANSPARENT_LOGO} alt={alt} className={className} decoding="async" draggable={false} style={{opacity:ready?1:0,transition:'opacity .16s ease'}} onLoad={()=>{if(src)setReady(true)}} onError={()=>{if(src!==TCW_PRODUCT_LOGO){setReady(false);setSrc(TCW_PRODUCT_LOGO)}else setReady(true)}}/>;
+    if(next!==src)setSrc(next);
+  }).catch(()=>{});return()=>{active=false}},[]);
+  return <img src={src} alt={alt} className={className} decoding="async" draggable={false} onError={()=>{if(src!==TCW_PRODUCT_LOGO)setSrc(TCW_PRODUCT_LOGO)}}/>;
 }
 
 const LOCAL_SESSION_KEY='tcw_local_session';

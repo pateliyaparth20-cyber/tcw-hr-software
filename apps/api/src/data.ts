@@ -306,6 +306,17 @@ export class DataService {
       if(!await this.db.tenant.findUnique({where:{id:input.tenantId}}))throw new BadRequestException('Company not found.');
       return this.db.$transaction(async tx=>{const after=await tx.invoice.create({data:{...input,total:input.amount+input.tax}});await audit(tx,ctx,'INVOICE_CREATED','invoices',after.id,undefined,after);return after;});
     }
+    if(type==='invoices'&&recordId&&method==='DELETE'){
+      return this.db.$transaction(async tx=>{
+        const invoice=await tx.invoice.findUnique({where:{id:id.parse(recordId)}});
+        if(!invoice)throw new NotFoundException('Invoice not found.');
+        const paymentCount=await tx.payment.count({where:{invoiceId:invoice.id}});
+        if(invoice.paidAmount>0||paymentCount>0)throw new BadRequestException('Invoices with recorded payments cannot be deleted.');
+        await tx.invoice.delete({where:{id:invoice.id}});
+        await audit(tx,ctx,'INVOICE_DELETED','invoices',invoice.id,invoice,undefined);
+        return {ok:true};
+      });
+    }
     if(type==='payments'&&method==='POST'){
       const input=z.object({invoiceId:id,amount:z.number().int().min(1).max(1e9),reference:z.string().min(1).max(100),date}).strict().parse(body);
       const after=await this.db.$transaction(async tx=>{
