@@ -289,7 +289,6 @@ model Shift {
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@unique([tenantId, id])
-  @@unique([tenantId, requestKey])
   @@index([tenantId])
   @@map("shifts")
 }
@@ -455,6 +454,7 @@ model LeaveRequest {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@unique([tenantId, id])
+  @@unique([tenantId, requestKey])
   @@index([tenantId])
   @@index([tenantId, status, startDate])
   @@map("leave_requests")
