@@ -25,8 +25,8 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    assert.equal((await call('platform/companies','GET',undefined,alpha)).status,403);
   });
   let beta=await login('owner@example.test',betaTempPassword!,betaCode!);
-  const changed=await call('auth/change-password','POST',{currentPassword:betaTempPassword!,password:'test-beta-strong-password'},beta);assert.equal(changed.status,200,JSON.stringify(changed.data));
-  beta=await login('owner@example.test','test-beta-strong-password',betaCode!);
+  const changed=await call('auth/change-password','POST',{currentPassword:betaTempPassword!,password:'BetaStrong!2026'},beta);assert.equal(changed.status,200,JSON.stringify(changed.data));
+  beta=await login('owner@example.test','BetaStrong!2026',betaCode!);
   const depA=await call('departments','POST',{name:'Engineering',code:'ENG'},alpha);assert.equal(depA.status,200,JSON.stringify(depA.data));
   const depB=await call('departments','POST',{name:'Finance',code:'FIN'},beta);assert.equal(depB.status,200,JSON.stringify(depB.data));
   const employeeInput={employeeCode:'A01',firstName:'Test',lastName:'Employee',email:'employee@example.test',departmentId:depA.data.id,joiningDate:'2025-01-01',monthlySalary:5000000};
@@ -78,8 +78,8 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await t.test('password resets are single-use and revoke existing sessions',async()=>{
    assert.equal((await call('auth/forgot-password','POST',{email:'owner@example.test',companyCode:'ALPHA'})).status,200);
    const mail=await db.outbox.findFirstOrThrow({where:{tenantId:alphaTenant},orderBy:{createdAt:'desc'}});const text=(mail.payload as any).text as string;const raw=new URL(text.match(/http[^ ]+/)![0].replace(/\.$/,'')).searchParams.get('token');
-   assert.equal((await call('auth/reset-password','POST',{token:raw,password:'changed-test-owner-password'})).status,200);
-   assert.equal((await call('employees','GET',undefined,alpha)).status,401);assert.equal((await call('auth/reset-password','POST',{token:raw,password:'another-test-owner-password'})).status,400);
+   assert.equal((await call('auth/reset-password','POST',{token:raw,password:'OwnerChanged!2026'})).status,200);
+   assert.equal((await call('employees','GET',undefined,alpha)).status,401);assert.equal((await call('auth/reset-password','POST',{token:raw,password:'OwnerAgain!2026'})).status,400);
   });
  }finally{io.close();await app.close();await fixture.close()}
 });
