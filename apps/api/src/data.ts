@@ -308,9 +308,10 @@ export class DataService {
     }
     if(type==='invoices'&&recordId&&method==='DELETE'){
       return this.db.$transaction(async tx=>{
-        const invoice=await tx.invoice.findUnique({where:{id:id.parse(recordId)},include:{payments:true}});
+        const invoice=await tx.invoice.findUnique({where:{id:id.parse(recordId)}});
         if(!invoice)throw new NotFoundException('Invoice not found.');
-        if(invoice.paidAmount>0||invoice.payments.length)throw new BadRequestException('Invoices with recorded payments cannot be deleted.');
+        const paymentCount=await tx.payment.count({where:{invoiceId:invoice.id}});
+        if(invoice.paidAmount>0||paymentCount>0)throw new BadRequestException('Invoices with recorded payments cannot be deleted.');
         await tx.invoice.delete({where:{id:invoice.id}});
         await audit(tx,ctx,'INVOICE_DELETED','invoices',invoice.id,invoice,undefined);
         return {ok:true};
