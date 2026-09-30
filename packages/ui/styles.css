@@ -7396,3 +7396,103 @@ textarea,
  .upgrade-pay-button{width:100%;min-width:0}
  .upgrade-lock .lock-hero h1{font-size:1.55rem}
 }
+
+
+/* v1.12.4 final auth brand visibility fix */
+@media(max-width:700px){
+  .auth-pro-mobile-brand,
+  .auth-pro-platform .auth-pro-mobile-brand,
+  .auth-pro-tenant .auth-pro-mobile-brand{
+    display:flex!important;
+    align-items:center!important;
+    gap:14px!important;
+    margin:0 0 18px!important;
+    padding:0 0 17px!important;
+    border-bottom:1px solid #e8eef4!important;
+    color:#203a54!important;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo,
+  .auth-pro-platform .auth-pro-mobile-brand .auth-pro-logo,
+  .auth-pro-tenant .auth-pro-mobile-brand .auth-pro-logo{
+    width:66px!important;
+    height:66px!important;
+    min-width:66px!important;
+    flex:0 0 66px!important;
+    padding:5px!important;
+    border-radius:18px!important;
+    background:#fff!important;
+    border:1px solid #d8e3ee!important;
+    box-shadow:0 8px 20px rgba(31,65,100,.10)!important;
+    overflow:hidden!important;
+  }
+  .auth-pro-mobile-brand .auth-pro-logo img,
+  .auth-pro-platform .auth-pro-mobile-brand .auth-pro-logo img,
+  .auth-pro-tenant .auth-pro-mobile-brand .auth-pro-logo img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+    object-fit:contain!important;
+    opacity:1!important;
+    filter:none!important;
+  }
+  .auth-pro-mobile-brand>span:last-child,
+  .auth-pro-platform .auth-pro-mobile-brand>span:last-child,
+  .auth-pro-tenant .auth-pro-mobile-brand>span:last-child{
+    min-width:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    gap:6px!important;
+  }
+  .auth-pro-mobile-brand strong,
+  .auth-pro-platform .auth-pro-mobile-brand strong,
+  .auth-pro-tenant .auth-pro-mobile-brand strong{
+    display:block!important;
+    margin:0!important;
+    color:#1d3852!important;
+    opacity:1!important;
+    font-size:1.22rem!important;
+    line-height:1.08!important;
+    font-weight:850!important;
+    letter-spacing:-.035em!important;
+    text-shadow:none!important;
+    white-space:normal!important;
+  }
+  .auth-pro-mobile-brand small,
+  .auth-pro-platform .auth-pro-mobile-brand small,
+  .auth-pro-tenant .auth-pro-mobile-brand small{
+    display:block!important;
+    margin:0!important;
+    color:#6f8296!important;
+    opacity:1!important;
+    font-size:.66rem!important;
+    line-height:1.2!important;
+    font-weight:800!important;
+    letter-spacing:.11em!important;
+    text-transform:uppercase!important;
+    white-space:normal!important;
+  }
+}
+
+@media(max-width:380px){
+  .auth-pro-mobile-brand .auth-pro-logo,
+  .auth-pro-platform .auth-pro-mobile-brand .auth-pro-logo,
+  .auth-pro-tenant .auth-pro-mobile-brand .auth-pro-logo{
+    width:58px!important;
+    height:58px!important;
+    min-width:58px!important;
+    flex-basis:58px!important;
+  }
+  .auth-pro-mobile-brand strong,
+  .auth-pro-platform .auth-pro-mobile-brand strong,
+  .auth-pro-tenant .auth-pro-mobile-brand strong{
+    font-size:1.08rem!important;
+  }
+  .auth-pro-mobile-brand small,
+  .auth-pro-platform .auth-pro-mobile-brand small,
+  .auth-pro-tenant .auth-pro-mobile-brand small{
+    font-size:.6rem!important;
+  }
+}
