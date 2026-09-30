@@ -73,9 +73,9 @@ export function PwaClient(){
     const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
     let iosGuide:HTMLButtonElement|null=null,iosGuideTimer:ReturnType<typeof setTimeout>|undefined;
-    const iosGuideKey='tcw_ios_notice_seen_session';
-    let iosGuideSeen=false;try{iosGuideSeen=sessionStorage.getItem(iosGuideKey)==='1'}catch{}
-    const dismissIosGuide=()=>{try{sessionStorage.setItem(iosGuideKey,'1')}catch{};if(iosGuide){iosGuide.classList.add('leaving');const el=iosGuide;setTimeout(()=>el.remove(),180)}};
+    const iosGuideKey='tcw_ios_notice_seen_at';
+    let iosGuideSeen=false;try{const seen=Number(localStorage.getItem(iosGuideKey)??0);iosGuideSeen=seen>0&&Date.now()-seen<7*24*3600000}catch{}
+    const dismissIosGuide=()=>{try{localStorage.setItem(iosGuideKey,String(Date.now()))}catch{};if(iosGuide){iosGuide.classList.add('leaving');const el=iosGuide;setTimeout(()=>el.remove(),180)}};
     if(isiOS&&!iosGuideSeen&&(!standalone||('Notification' in window&&Notification.permission!=='granted'))){
       iosGuide=document.createElement('button');iosGuide.type='button';iosGuide.className='tcw-ios-notice';
       iosGuide.textContent=!standalone?'iPhone setup · Add to Home Screen':'Enable iPhone notifications';
