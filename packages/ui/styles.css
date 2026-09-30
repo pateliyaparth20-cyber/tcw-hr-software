@@ -7822,3 +7822,19 @@ textarea,
 
 
 .tcw-ios-notice{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));z-index:9995;transform:translateX(-50%);max-width:min(92vw,390px);padding:10px 14px;border:1px solid #cfe0f4;border-radius:999px;background:rgba(255,255,255,.97);color:#24588c;font-size:.68rem;font-weight:800;box-shadow:0 10px 28px rgba(26,62,99,.14);backdrop-filter:blur(12px)}
+
+
+.meghna-avatar{overflow:hidden!important;background:#fff!important}
+.meghna-avatar img{width:100%!important;height:100%!important;display:block!important;object-fit:cover!important;border-radius:50%!important}
+.tcw-agent-orb.meghna-avatar{width:38px!important;height:38px!important;border-radius:50%!important;padding:0!important}
+.tcw-agent-face.meghna-avatar{width:48px!important;height:48px!important;border-radius:50%!important;padding:0!important}
+.my-profile-photo{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;flex:0 0 84px!important;border-radius:50%!important;overflow:visible!important}
+.my-profile-photo>img,.image-field>img{border-radius:50%!important;clip-path:circle(50%)!important;object-fit:cover!important;object-position:center!important}
+.image-field>img{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;cursor:zoom-in!important}
+.avatar.has-photo img,.person-cell img,.my-profile-photo img{cursor:zoom-in}
+@media(max-width:520px){.my-profile-photo{width:76px!important;height:76px!important;min-width:76px!important;min-height:76px!important;flex-basis:76px!important}.image-field>img{width:76px!important;height:76px!important;min-width:76px!important;min-height:76px!important}}
+.tcw-photo-viewer{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:rgba(7,18,31,.84);backdrop-filter:blur(8px)}
+.tcw-photo-viewer>img{max-width:min(88vw,760px)!important;max-height:82vh!important;width:auto!important;height:auto!important;border-radius:18px!important;object-fit:contain!important;box-shadow:0 24px 80px rgba(0,0,0,.34)}
+.tcw-photo-viewer>button{position:absolute;top:max(18px,env(safe-area-inset-top));right:18px;width:44px;height:44px;border:0;border-radius:50%;background:#fff;color:#203a54;font-size:28px;cursor:pointer}
+.tcw-pull-refresh{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;z-index:99998;transform:translate(-50%,-70px);padding:8px 13px;border:1px solid #dce6ef;border-radius:999px;background:rgba(255,255,255,.97);color:#4f6780;font-size:.68rem;font-weight:750;box-shadow:0 8px 22px rgba(25,55,87,.12);transition:transform .18s ease;pointer-events:none}
+.tcw-pull-refresh.show{transform:translate(-50%,0)}
