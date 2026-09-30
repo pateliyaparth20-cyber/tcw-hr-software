@@ -358,7 +358,7 @@ export class Api {
       return {healthy:issues.filter(v=>v.severity==='warning').length===0,checkedAt:now,issues,checks:{api:'ONLINE',database:'CONNECTED',email:(process.env.RESEND_API_KEY||process.env.SMTP_HOST)?'CONFIGURED':'NOT_CONFIGURED',sms:process.env.SMS_PROVIDER?'CONFIGURED':'NOT_CONFIGURED',devices:canDevices?(deviceIssues.length?'ATTENTION':'OK'):'ROLE_RESTRICTED'},company:{status:company?.status,daysRemaining},version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.npm_package_version??'local'};
     }
     if(resource==='agent'&&method==='POST'){
-      const tid=tenant(ctx);const {question,history=[]}=z.object({question:z.string().trim().min(2).max(700),history:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().max(1200)}).strict()).max(8).optional()}).strict().parse(body);const q=question.toLowerCase(),now=new Date();
+      const tid=tenant(ctx);const {question,history=[]}=z.object({question:z.string().trim().min(2).max(700),history:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().max(1600)}).strict()).max(12).optional()}).strict().parse(body);const q=question.toLowerCase(),now=new Date();
       const company=await this.db.tenant.findUnique({where:{id:tid}});
       const canDevices=hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
       const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim(),recentDeliveryCutoff=new Date(now.getTime()-24*3600000);
@@ -381,9 +381,9 @@ export class Api {
       else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.':'Your role does not have payroll access.';
       else if(q.includes('leave'))answer=canLeave?'There are '+pendingLeave+' pending leave request(s). Review dates and attendance impact before approval.':'Your role does not have leave access.';
       else if(q.includes('login')||q.includes('password')||q.includes('forgot'))answer='For login issues, confirm Company Code + User ID/email. Remember me keeps a valid session on this device. Forgot Password sends a one-time link that expires in 10 minutes.';
-      else if(q.includes('update')||q.includes('version'))answer='TCW HR checks for a newer deployment while the software is open. When one is detected, an Update now banner appears; use it to reload into the new version.';
+      else if(q.includes('update')||q.includes('version'))answer='TCW HR can notify you when a newer production build is available. Updates are manual: open Software Update and choose Install update when you are ready. The software will not auto-install or auto-reload.';
       else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=(failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.';
-      else answer='I’m Meghna. We can talk normally about whatever is on your mind, and I can also help with TCW HR Software when you need it. '+summary;
+      else answer='I’m Meghna. Ask me anything naturally. I can chat with you or help with TCW HR Software, and I’ll use the available workspace facts when your question is about HR data.';
       try{const cfg=await effectiveAIConfig(this.db);if(cfg.enabled){const enhanced=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,{conversationHistory:history,company:{name:company?.name,status:company?.status,plan:company?.plan},failedMessages,failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview,emailConfigured,smsConfigured});if(enhanced)answer=enhanced;}}catch{}
       let agentAction:any=undefined;
       if(/\b(open|go to|show)\b/.test(q)){
