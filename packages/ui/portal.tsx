@@ -119,6 +119,7 @@ function Shell({page}:{page:string}){
  const notices=useData('notifications',session.user.scope==='TENANT');
  const faceProfile=useData('attendance/face-profile',session.user.role==='EMPLOYEE'&&!session.user.mustChangePassword&&(!session.company||['ACTIVE','TRIAL'].includes(session.company.status)));
  const branding=useData('company/branding',session.user.scope==='TENANT');
+ useEffect(()=>{if(session.user.scope!=='TENANT')return;const refresh=()=>{branding.refetch().catch(()=>{})};const timer=window.setInterval(refresh,10000);window.addEventListener('focus',refresh);return()=>{window.clearInterval(timer);window.removeEventListener('focus',refresh)}},[session.user.scope,branding.refetch]);
  const lastNoticeRef=useRef<string|null>(null);
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setSearch(v=>!v)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
  useEffect(()=>{if(session.user.scope!=='TENANT')return;const timer=window.setInterval(()=>notices.refetch().catch(()=>{}),30000);return()=>window.clearInterval(timer)},[session.user.scope,notices.refetch]);

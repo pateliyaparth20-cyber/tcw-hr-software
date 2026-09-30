@@ -47,6 +47,8 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await t.test('payroll transitions and database immutability hold',async()=>{
    const run=await call('payroll','POST',{month:'2026-08'},alpha);assert.equal(run.status,200,JSON.stringify(run.data));
    assert.equal((await call(`payroll/${run.data.id}/lock`,'POST',{},alpha)).status,400);
+   const reconciled=await call('attendance/reconcile','POST',{month:'2026-08'},alpha);assert.equal(reconciled.status,200,JSON.stringify(reconciled.data));
+   const attendanceLock=await call('attendance/lock','POST',{month:'2026-08'},alpha);assert.equal(attendanceLock.status,200,JSON.stringify(attendanceLock.data));
    for(const step of ['calculate','approve','lock']){const r=await call(`payroll/${run.data.id}/${step}`,'POST',{},alpha);assert.equal(r.status,200,JSON.stringify(r.data));}
    assert.equal((await call(`payroll/${run.data.id}/reopen`,'POST',{},alpha)).status,400);
    await assert.rejects(()=>db.payrollRun.update({where:{id:run.data.id},data:{totalNet:1}}));
@@ -78,8 +80,11 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await t.test('password resets are single-use and revoke existing sessions',async()=>{
    assert.equal((await call('auth/forgot-password','POST',{email:'owner@example.test',companyCode:'ALPHA'})).status,200);
    const mail=await db.outbox.findFirstOrThrow({where:{tenantId:alphaTenant},orderBy:{createdAt:'desc'}});const text=(mail.payload as any).text as string;const raw=new URL(text.match(/http[^ ]+/)![0].replace(/\.$/,'')).searchParams.get('token');
-   assert.equal((await call('auth/reset-password','POST',{token:raw,password:'OwnerChanged!2026'})).status,200);
-   assert.equal((await call('employees','GET',undefined,alpha)).status,401);assert.equal((await call('auth/reset-password','POST',{token:raw,password:'OwnerAgain!2026'})).status,400);
+   const claim=await call('auth/reset-password/claim','POST',{token:raw});assert.equal(claim.status,200,JSON.stringify(claim.data));
+   const claimCookie=claim.response.headers.get('set-cookie')!.split(';')[0];
+   assert.equal((await call('auth/reset-password','POST',{password:'OwnerChanged!2026'},{cookie:claimCookie,csrf:'',scope:'TENANT'})).status,200);
+   assert.equal((await call('employees','GET',undefined,alpha)).status,401);
+   assert.equal((await call('auth/reset-password','POST',{password:'OwnerAgain!2026'},{cookie:claimCookie,csrf:'',scope:'TENANT'})).status,400);
   });
  }finally{io.close();await app.close();await fixture.close()}
 });
