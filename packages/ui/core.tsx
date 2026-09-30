@@ -181,7 +181,14 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
   const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const notify=(text:string,error=false)=>{setToast({text,error});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);};
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
-  const mutate=async(path:string,method:string,data?:any)=>{try{const r=await api(path,method,data,session.csrf);await client.invalidateQueries();notify('Changes saved.');return r;}catch(e:any){notify(e.message,true);throw e;}};
+  const mutate=async(path:string,method:string,data?:any)=>{try{
+    const r=await api(path,method,data,session.csrf);await client.invalidateQueries();
+    const verb=method.toUpperCase(),root=path.split(/[/?]/)[0],labels:Record<string,string>={employees:'Employee',users:'User',company:'Company',organization:'Record',leave:'Request',expenses:'Expense',travel:'Travel request',assets:'Asset',documents:'Document',support:'Support ticket',subscription:'Subscription',payroll:'Payroll',attendance:'Attendance',recruitment:'Recruitment record',goals:'Goal',courses:'Training record',devices:'Device',plans:'Plan',companies:'Company',leads:'Lead',invoices:'Invoice',payments:'Payment'};
+    const noun=labels[root]??'Record';
+    const nested=path.split('/').length>1;
+    const message=verb==='DELETE'?noun+' deleted.':verb==='POST'?(nested?'Action completed.':noun+' added.'):verb==='PATCH'||verb==='PUT'?noun+' updated.':'Done.';
+    notify(message);return r;
+  }catch(e:any){notify(e.message,true);throw e;}};
   return <QueryClientProvider client={client}><Context.Provider value={{session,can:(r:string,a='VIEW')=>r==='self'||session.user.permissions.includes(`${r}:${a}`),notify,mutate,currency:session.company?.currency??'INR'}}>{children}{toast&&<div role={toast.error?'alert':'status'} className={'toast '+(toast.error?'error':'')}>{toast.error?<AlertCircle size={19}/>:<Check size={19}/>}<span>{toast.text}</span><button aria-label="Dismiss notification" onClick={()=>setToast(null)}><X size={16}/></button></div>}</Context.Provider></QueryClientProvider>;
 }
 export function useData(path:string,enabled=true){return useQuery<Row>({queryKey:[path],queryFn:()=>api(path),enabled});}
