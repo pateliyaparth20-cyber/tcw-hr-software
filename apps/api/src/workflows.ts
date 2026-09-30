@@ -96,7 +96,8 @@ export class Workflows {
     requirePermission(ctx,'attendance',method==='GET'?'VIEW':'CREATE');
     if(method==='GET'){
       const start=query.from?date.parse(query.from):new Date(Date.now()-31*86400000);const end=query.to?date.parse(query.to):new Date();
-      return {items:await this.db.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:start,lte:end},...(scope?{employeeId:{in:scope}}:{})},orderBy:{date:'desc'},take:1000})};
+      const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);
+      return {items:await this.db.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:start,lte:end},employeeId:{in:visibleEmployeeIds}},orderBy:{date:'desc'},take:1000})};
     }
     const input=z.object({employeeId:id,punchTime:z.iso.datetime().transform(v=>new Date(v)),punchType:z.enum(['IN','OUT']),sourceId:z.string().min(1).max(100),shiftId:id.optional()}).strict().parse(body);
     await assertEmployee(this.db,ctx,input.employeeId);await assertAttendanceUnlocked(this.db,tid,input.punchTime);
@@ -120,7 +121,7 @@ export class Workflows {
   async leave(ctx:Context,method:string,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'leave',method==='GET'?'VIEW':'CREATE');
     const scope=await employeeScope(this.db,ctx);
-    if(method==='GET')return {items:await this.db.leaveRequest.findMany({where:{tenantId:tid,...(scope?{employeeId:{in:scope}}:{})},orderBy:{createdAt:'desc'},take:500})};
+    if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500})};}
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
