@@ -50,7 +50,7 @@ export class Api {
     const parts=req.path.replace(/^\/api\/?/,'').split('/').filter(Boolean),[resource,key,action]=parts;
     const method=req.method;
     if(resource==='health'&&method==='GET')return {status:'ok',service:'tcw-hr-api'};
-    if(resource==='version'&&method==='GET')return {version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GIT_COMMIT_SHA??process.env.npm_package_version??'local'};
+    if(resource==='version'&&method==='GET')return {version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GIT_COMMIT_SHA??process.env.npm_package_version??'local',release:process.env.APP_VERSION??process.env.npm_package_version??'1.3.0',channel:process.env.APP_RELEASE_CHANNEL??'Production'};
     if(resource==='branding'&&method==='GET'){
       const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});
       const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};
