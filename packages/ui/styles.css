@@ -9883,3 +9883,156 @@ input[type="month"]{
 .employee-access-paused-card .btn{
   margin:0 auto;
 }
+
+
+/* v1.14.3 employee Face Scan attendance */
+.face-scan-modal{
+  display:grid;
+  gap:14px;
+  padding:16px;
+}
+.face-camera{
+  position:relative;
+  width:min(100%,430px);
+  aspect-ratio:1/1;
+  margin:0 auto;
+  overflow:hidden;
+  border-radius:24px;
+  background:#0e1722;
+  box-shadow:0 16px 42px rgba(15,35,55,.18);
+}
+.face-camera video{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  transform:scaleX(-1);
+}
+.face-scan-shade{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:radial-gradient(circle at 50% 48%,transparent 0 34%,rgba(6,16,28,.28) 35%,rgba(6,16,28,.58) 70%);
+}
+.face-scan-guide{
+  position:absolute;
+  left:50%;
+  top:49%;
+  width:62%;
+  aspect-ratio:.78;
+  transform:translate(-50%,-50%);
+  border:2px solid rgba(255,255,255,.86);
+  border-radius:48% 48% 44% 44% / 43% 43% 54% 54%;
+  box-shadow:0 0 0 1px rgba(64,156,255,.45),0 0 30px rgba(55,139,238,.16);
+  pointer-events:none;
+}
+.face-scan-guide>span{
+  position:absolute;
+  left:50%;
+  bottom:-34px;
+  transform:translateX(-50%);
+  width:132px;
+  height:28px;
+  border-radius:999px;
+  background:rgba(11,27,44,.64);
+  backdrop-filter:blur(8px);
+}
+.face-scan-guide i{
+  position:absolute;
+  width:22px;
+  height:22px;
+  border-color:#63b1ff;
+  border-style:solid;
+}
+.face-scan-guide i:nth-of-type(1){left:-5px;top:-5px;border-width:3px 0 0 3px;border-radius:8px 0 0 0}
+.face-scan-guide i:nth-of-type(2){right:-5px;top:-5px;border-width:3px 3px 0 0;border-radius:0 8px 0 0}
+.face-scan-guide i:nth-of-type(3){left:-5px;bottom:-5px;border-width:0 0 3px 3px;border-radius:0 0 0 8px}
+.face-scan-guide i:nth-of-type(4){right:-5px;bottom:-5px;border-width:0 3px 3px 0;border-radius:0 0 8px 0}
+.face-scan-overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  background:rgba(9,21,34,.55);
+  color:#fff;
+  text-align:center;
+  backdrop-filter:blur(3px);
+}
+.face-scan-overlay.success{
+  background:linear-gradient(180deg,rgba(19,73,56,.72),rgba(11,45,38,.84));
+}
+.face-scan-overlay.success>span{
+  width:58px;height:58px;border-radius:50%;display:grid;place-items:center;
+  background:#fff;color:#218660;
+  box-shadow:0 10px 28px rgba(0,0,0,.2);
+}
+.face-scan-overlay strong{font-size:.9rem}
+.face-scan-overlay small{font-size:.68rem;opacity:.82}
+.face-scan-status{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px 13px;
+  border:1px solid #e2e9f1;
+  border-radius:13px;
+  background:#fbfdff;
+}
+.face-status-icon{
+  width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;
+  border-radius:10px;background:#edf5ff;color:#3978cf;
+}
+.face-status-icon.success{background:#ebf8f2;color:#25835e}
+.face-status-icon.error{background:#fff2f1;color:#bd554d}
+.face-scan-status>div{min-width:0}
+.face-scan-status strong{display:block;color:#34516c;font-size:.7rem}
+.face-scan-status p{margin:3px 0 0;color:#7d8fa1;font-size:.62rem;line-height:1.45}
+.face-scan-privacy{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f3f7fb;
+  color:#5e7488;
+}
+.face-scan-privacy svg{flex:0 0 auto;margin-top:1px}
+.face-scan-privacy p{margin:0;font-size:.58rem;line-height:1.5}
+.face-scan-actions{
+  display:flex;
+  justify-content:flex-end;
+}
+.face-scan-actions .btn{min-width:190px;justify-content:center}
+.face-scan-title-button{
+  box-shadow:0 8px 18px rgba(45,112,201,.16);
+}
+.employee-face-action{
+  width:100%;
+  appearance:none;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.employee-face-hero-button{
+  white-space:nowrap;
+}
+@media(max-width:700px){
+  .face-scan-modal{padding:10px}
+  .face-camera{width:100%;border-radius:20px}
+  .face-scan-actions .btn{width:100%;min-height:46px}
+  .employee-self-clock{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+  }
+  .employee-self-clock .employee-face-hero-button{
+    grid-column:2;
+    grid-row:1;
+  }
+  .employee-self-clock>a{
+    grid-column:1/-1;
+    width:100%;
+    justify-content:center;
+  }
+}
