@@ -10832,3 +10832,158 @@ input[type="month"]{
     flex-basis:82px!important;
   }
 }
+
+
+/* v1.14.9 professional checkbox/switch controls + Employee leave form */
+.checkbox-field{
+  min-width:0;
+}
+.form-switch-row{
+  position:relative;
+  width:100%;
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:9px 11px;
+  border:1px solid #e0e7ef;
+  border-radius:12px;
+  background:#fbfdff;
+  cursor:pointer;
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.form-switch-row:hover{
+  border-color:#ccd9e8;
+  background:#fff;
+}
+.form-switch-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.form-switch-copy strong{
+  color:#3b5671;
+  font-size:.72rem;
+  font-weight:750;
+}
+.form-switch-copy small{
+  color:#8a9aab!important;
+  font-size:.56rem!important;
+  line-height:1.35;
+}
+.form-switch-input{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  min-width:1px!important;
+  min-height:1px!important;
+  margin:0!important;
+  padding:0!important;
+  opacity:0!important;
+  pointer-events:none;
+}
+.form-switch-ui{
+  width:46px;
+  height:26px;
+  flex:0 0 46px;
+  display:flex;
+  align-items:center;
+  padding:3px;
+  border-radius:999px;
+  background:#dce4ed;
+  box-shadow:inset 0 0 0 1px rgba(73,96,120,.06);
+  transition:background .18s ease,box-shadow .18s ease;
+}
+.form-switch-ui>span{
+  width:20px;
+  height:20px;
+  display:block;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 2px 7px rgba(42,65,91,.18);
+  transform:translateX(0);
+  transition:transform .18s ease;
+}
+.form-switch-input:checked + .form-switch-ui{
+  background:var(--primary,#3474ef);
+}
+.form-switch-input:checked + .form-switch-ui>span{
+  transform:translateX(20px);
+}
+.form-switch-input:focus-visible + .form-switch-ui{
+  box-shadow:0 0 0 3px rgba(52,116,239,.14);
+}
+
+.leave-request-form .field input,
+.leave-request-form .field select{
+  min-height:48px!important;
+  border-radius:12px!important;
+}
+.leave-request-form .field textarea{
+  min-height:104px!important;
+  border-radius:12px!important;
+  resize:vertical;
+}
+.leave-request-form .checkbox-field{
+  grid-column:1/-1;
+}
+.leave-request-form>.form-grid{
+  align-content:start!important;
+}
+.leave-request-form .form-actions-end{
+  background:#fff!important;
+}
+.modal:has(> .leave-request-form) .modal-head h2{
+  color:#294761!important;
+  font-weight:750!important;
+}
+
+@media(max-width:700px){
+  .modal:has(> .leave-request-form){
+    width:calc(100vw - 12px)!important;
+    max-height:calc(100dvh - 12px)!important;
+    border-radius:20px!important;
+  }
+  .modal:has(> .leave-request-form)>.modal-head{
+    min-height:58px!important;
+    padding:12px 14px!important;
+  }
+  .modal:has(> .leave-request-form)>.record-form>.form-grid{
+    gap:14px!important;
+    padding:14px 14px 22px!important;
+  }
+  .leave-request-form .field{
+    gap:6px!important;
+  }
+  .leave-request-form .field>span{
+    font-size:.72rem!important;
+    font-weight:700!important;
+    color:#62758a!important;
+  }
+  .leave-request-form .field input,
+  .leave-request-form .field select{
+    min-height:50px!important;
+    padding:10px 12px!important;
+    border-radius:13px!important;
+    background:#fff!important;
+  }
+  .leave-request-form .field textarea{
+    min-height:108px!important;
+    padding:11px 12px!important;
+    border-radius:13px!important;
+  }
+  .leave-request-form .form-switch-row{
+    min-height:52px!important;
+    padding:9px 11px!important;
+  }
+  .leave-request-form>.form-actions-end{
+    grid-template-columns:1fr 1.25fr!important;
+    padding:10px 12px max(10px,env(safe-area-inset-bottom))!important;
+  }
+  .leave-request-form>.form-actions-end .btn{
+    min-height:46px!important;
+    border-radius:12px!important;
+  }
+}
