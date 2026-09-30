@@ -88,26 +88,7 @@ export function PwaClient(){
     const clearLong=()=>{if(longPress){clearTimeout(longPress);longPress=null}};
     document.addEventListener('touchstart',onTouchStart,{passive:true});document.addEventListener('touchmove',onTouchMove,{passive:true});document.addEventListener('touchend',onTouchEnd,{passive:true});document.addEventListener('click',onPhotoClick);document.addEventListener('touchstart',onPhotoTouchStart,{passive:true});document.addEventListener('touchend',clearLong,{passive:true});document.addEventListener('touchmove',clearLong,{passive:true});
     let cancelled=false;
-    const syncVersion=async()=>{
-      try{
-        const response=await fetch('/api/version?ts='+Date.now(),{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});
-        if(!response.ok||cancelled)return;
-        const data=await response.json(),next=String(data.version??'');
-        if(!next)return;
-        const key='tcw_loaded_deployment_version';
-        const previous=window.localStorage.getItem(key);
-        if(!previous){window.localStorage.setItem(key,next);return;}
-        if(previous!==next){
-          const pendingKey='tcw_pending_deployment_version';
-          const alreadyNotified=window.localStorage.getItem(pendingKey)===next;
-          window.localStorage.setItem(pendingKey,next);
-          window.dispatchEvent(new Event('tcw-update-available'));
-          if(!alreadyNotified)await tcwSystemNotify('TCW HR Software update available','A new version is ready. Open Software update when you want to install it.','/software-update','tcw-software-update').catch(()=>{});
-        }
-      }catch{}
-    };
-    syncVersion();
-    const versionTimer=window.setInterval(syncVersion,5*60*1000);
+    const versionTimer=0;
     const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
     let iosGuide:HTMLButtonElement|null=null,iosGuideTimer:ReturnType<typeof setTimeout>|undefined;
@@ -135,9 +116,7 @@ export function PwaClient(){
         navigator.serviceWorker.register('/sw.js').then(registration=>{
           if(Notification.permission==='granted')syncPushSubscription().catch(()=>{});
           registration.update().catch(()=>{});
-          const announce=()=>{window.dispatchEvent(new Event('tcw-update-available'));tcwSystemNotify('TCW HR Software update available','A new software version is ready. Tap to view and install it.','/software-update','tcw-software-update').catch(()=>{})};
-          if(registration.waiting)announce();
-          registration.addEventListener('updatefound',()=>{const worker=registration.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)announce()})});
+
         }).catch(()=>{});
       }
     }
@@ -159,7 +138,7 @@ export function PwaClient(){
       delete window.__tcwEnableNotifications;document.removeEventListener('touchstart',onTouchStart);document.removeEventListener('touchmove',onTouchMove);document.removeEventListener('touchend',onTouchEnd);document.removeEventListener('click',onPhotoClick);document.removeEventListener('touchstart',onPhotoTouchStart);document.removeEventListener('touchend',clearLong);document.removeEventListener('touchmove',clearLong);refreshBadge.remove();clearLong();
       window.removeEventListener('beforeinstallprompt',onPrompt as EventListener);
       window.removeEventListener('appinstalled',onInstalled);
-      if(iosGuideTimer)clearTimeout(iosGuideTimer);window.clearInterval(versionTimer);iosGuide?.remove();
+      if(iosGuideTimer)clearTimeout(iosGuideTimer);if(versionTimer)window.clearInterval(versionTimer);iosGuide?.remove();
     };
   },[]);
   return null;
