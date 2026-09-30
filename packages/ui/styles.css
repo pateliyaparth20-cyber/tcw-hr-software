@@ -7496,3 +7496,213 @@ textarea,
     font-size:.6rem!important;
   }
 }
+
+
+/* v1.12.5 final auth card + remember row + unified logo rendering */
+.auth-pro-card,
+.auth-pro-platform .auth-pro-card,
+.auth-pro-tenant .auth-pro-card{
+  border:1px solid #dce5ee!important;
+  border-radius:26px!important;
+  background:#fff!important;
+  box-shadow:0 18px 48px rgba(30,61,94,.10)!important;
+}
+.auth-pro-signup .auth-pro-card{
+  border-radius:26px!important;
+}
+.auth-pro-options{
+  width:100%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  margin:2px 0 4px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+.auth-pro-options .auth-remember{
+  min-width:0!important;
+  display:inline-flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:9px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#75879a!important;
+  font-size:.78rem!important;
+  font-weight:600!important;
+  line-height:1.2!important;
+  cursor:pointer;
+}
+.auth-pro-options .auth-remember input[type="checkbox"]{
+  appearance:auto!important;
+  -webkit-appearance:checkbox!important;
+  width:19px!important;
+  height:19px!important;
+  min-width:19px!important;
+  min-height:19px!important;
+  max-width:19px!important;
+  max-height:19px!important;
+  flex:0 0 19px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:4px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  outline:none!important;
+  accent-color:#3474ef!important;
+}
+.auth-pro-options .auth-remember span{
+  display:inline!important;
+  margin:0!important;
+  padding:0!important;
+  white-space:nowrap!important;
+}
+.auth-pro-options .auth-forgot-link{
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:3px 0!important;
+  color:#2f70c9!important;
+  font-size:.78rem!important;
+  line-height:1.25!important;
+  font-weight:750!important;
+  text-align:right!important;
+  text-decoration:none!important;
+}
+.auth-pro-options .auth-forgot-link:hover{
+  color:#1f5fb8!important;
+  text-decoration:underline!important;
+}
+.mobile-unified-logo img,
+.brand-mark.brand-logo img,
+.auth-pro-logo img{
+  object-fit:contain!important;
+  object-position:center!important;
+}
+
+@media(max-width:700px){
+  .auth-pro-main,
+  .auth-pro-platform .auth-pro-main,
+  .auth-pro-tenant .auth-pro-main,
+  .auth-pro-signup .auth-pro-main{
+    min-height:100dvh!important;
+    align-items:flex-start!important;
+    justify-content:center!important;
+    padding:
+      calc(18px + env(safe-area-inset-top))
+      12px
+      calc(24px + env(safe-area-inset-bottom))!important;
+    overflow:visible!important;
+  }
+  .auth-pro-card,
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    width:100%!important;
+    max-width:440px!important;
+    margin:0 auto!important;
+    padding:20px 18px 21px!important;
+    border-radius:24px!important;
+    box-shadow:0 12px 34px rgba(29,61,94,.085)!important;
+    overflow:visible!important;
+  }
+  .auth-pro-signup .auth-pro-card{
+    max-width:520px!important;
+  }
+  .auth-pro-mobile-brand,
+  .auth-pro-platform .auth-pro-mobile-brand,
+  .auth-pro-tenant .auth-pro-mobile-brand{
+    margin-bottom:16px!important;
+    padding-bottom:15px!important;
+  }
+  .auth-pro-head{
+    margin-bottom:12px!important;
+  }
+  .auth-pro-badge{
+    font-size:.59rem!important;
+    padding:6px 9px!important;
+  }
+  .auth-pro-secure{
+    font-size:.6rem!important;
+  }
+  .auth-pro-card h2,
+  .auth-pro-signup .auth-pro-card h2{
+    font-size:1.62rem!important;
+    line-height:1.1!important;
+    margin-bottom:6px!important;
+  }
+  .auth-pro-subtitle{
+    margin-bottom:17px!important;
+    font-size:.78rem!important;
+    line-height:1.5!important;
+  }
+  .auth-pro-form{
+    gap:13px!important;
+  }
+  .auth-pro-form>label,
+  .auth-pro-form .signup-all-grid>label{
+    gap:6px!important;
+    font-size:.76rem!important;
+    font-weight:720!important;
+  }
+  .auth-pro-form input:not([type="checkbox"]),
+  .auth-pro-form select,
+  .auth-pro-form textarea{
+    min-height:50px!important;
+    padding:11px 13px!important;
+    border-radius:13px!important;
+    font-size:16px!important;
+  }
+  .auth-pro-options{
+    min-height:30px!important;
+    gap:12px!important;
+    flex-wrap:nowrap!important;
+  }
+  .auth-pro-options .auth-remember,
+  .auth-pro-options .auth-forgot-link{
+    font-size:.72rem!important;
+  }
+  .auth-pro-options .auth-forgot-link{
+    max-width:130px!important;
+  }
+  .auth-pro-submit{
+    min-height:52px!important;
+    border-radius:14px!important;
+    font-size:.86rem!important;
+  }
+  .auth-pro-signup .signup-all-grid,
+  .auth-pro-signup .signup-grid{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .auth-pro-legal{
+    margin-top:14px!important;
+  }
+  .auth-pro-legal-row{
+    padding-top:13px!important;
+    border-top:1px solid #edf1f5!important;
+  }
+}
+
+@media(max-width:370px){
+  .auth-pro-card,
+  .auth-pro-platform .auth-pro-card,
+  .auth-pro-tenant .auth-pro-card,
+  .auth-pro-signup .auth-pro-card{
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+  .auth-pro-options .auth-remember,
+  .auth-pro-options .auth-forgot-link{
+    font-size:.68rem!important;
+  }
+  .auth-pro-options .auth-forgot-link{
+    max-width:112px!important;
+  }
+}
