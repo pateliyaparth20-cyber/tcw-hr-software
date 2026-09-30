@@ -1,4 +1,5 @@
-const CACHE='tcw-shell-v1.12.3-notifications';
+const CACHE='tcw-shell-v1.15.1-face-cache';
+const FACE_CACHE='tcw-face-assets-v1.7.15';
 const STATIC=['/offline.html','/tcw-logo.png','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting())
@@ -11,7 +12,21 @@ self.addEventListener('activate',event=>event.waitUntil(
 self.addEventListener('fetch',event=>{
   const req=event.request;
   const url=new URL(req.url);
-  if(req.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.startsWith('/socket.io')) return;
+  if(req.method!=='GET') return;
+
+  const faceAsset=url.hostname==='cdn.jsdelivr.net'&&url.pathname.includes('/@vladmandic/face-api@1.7.15/');
+  if(faceAsset){
+    event.respondWith(caches.open(FACE_CACHE).then(async cache=>{
+      const cached=await cache.match(req);
+      if(cached)return cached;
+      const response=await fetch(req);
+      if(response.ok||response.type==='opaque')cache.put(req,response.clone()).catch(()=>{});
+      return response;
+    }));
+    return;
+  }
+
+  if(url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.startsWith('/socket.io')) return;
   if(req.mode==='navigate'){
     event.respondWith(fetch(req).catch(()=>caches.match('/offline.html')));
     return;
