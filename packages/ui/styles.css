@@ -9739,3 +9739,100 @@ input[type="month"]{
 @media(max-width:420px){
   .employee-self-stats{grid-template-columns:1fr}
 }
+
+
+/* v1.14.3 employee mobile/laptop usability */
+.employee-shell .sidebar .brand small{
+  font-size:.52rem!important;
+  letter-spacing:.05em!important;
+}
+.employee-shell .breadcrumb strong{
+  color:#31516f;
+}
+.employee-shell .workspace-main{
+  background:linear-gradient(180deg,#f8fafc 0,#f6f9fc 100%);
+}
+@media(max-width:700px){
+  .employee-shell .workspace-main{
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+  .employee-shell .page-stage{
+    min-width:0!important;
+  }
+  .employee-shell .panel{
+    max-width:100%!important;
+    overflow:hidden;
+  }
+  .employee-shell .table-scroll{
+    width:100%!important;
+    overflow-x:auto!important;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+    border-radius:12px;
+  }
+  .employee-shell .table-scroll table{
+    min-width:760px;
+  }
+  .employee-shell .table-scroll th,
+  .employee-shell .table-scroll td{
+    white-space:nowrap;
+  }
+  .employee-shell .date-filters{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+  .employee-shell .date-filters label{
+    min-width:0!important;
+  }
+  .employee-shell .date-filters input{
+    width:100%!important;
+    min-width:0!important;
+  }
+  .employee-shell .toolbar{
+    align-items:stretch!important;
+  }
+  .employee-shell .toolbar>.date-filters{
+    flex:1 1 100%!important;
+  }
+  .employee-shell .stats.four{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+  .employee-shell .stats.four>div{
+    min-width:0!important;
+  }
+  .employee-shell .payroll-list{
+    display:grid!important;
+    gap:10px!important;
+  }
+  .employee-shell .payroll-card{
+    border-radius:16px!important;
+    padding:14px!important;
+  }
+  .employee-shell .payroll-totals{
+    grid-template-columns:1fr 1fr 1fr!important;
+    gap:6px!important;
+  }
+  .employee-shell .payroll-totals>div{
+    min-width:0!important;
+    padding:9px!important;
+  }
+  .employee-shell .payroll-totals strong{
+    font-size:.72rem!important;
+    overflow-wrap:anywhere;
+  }
+  .employee-shell .card-actions{
+    flex-wrap:wrap!important;
+  }
+}
+@media(max-width:420px){
+  .employee-shell .stats.four{
+    grid-template-columns:1fr!important;
+  }
+  .employee-shell .payroll-totals{
+    grid-template-columns:1fr!important;
+  }
+}
