@@ -74,7 +74,8 @@
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.14",
@@ -90,7 +91,8 @@
     "pglite-prisma-adapter": "0.6.1",
     "prisma": "6.19.3",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/web-push": "^3.6.4"
   },
   "overrides": {
     "pglite-prisma-adapter": {
