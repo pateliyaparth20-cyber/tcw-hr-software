@@ -116,6 +116,19 @@ export function MyProfilePage(){
      </div>
      <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
     </form>
+    {user.role==='EMPLOYEE'&&employee&&<section className="employee-profile-details">
+     <div className="employee-profile-details-head"><div><small>EMPLOYEE INFORMATION</small><h3>Your work profile</h3><p>Employment details are maintained by your HR team.</p></div><Badge value={employee.status??'ACTIVE'}/></div>
+     <div className="employee-profile-detail-grid">
+      <div><span>Employee ID</span><strong>{employee.employeeCode||'—'}</strong></div>
+      <div><span>Phone</span><strong>{employee.phone||'—'}</strong></div>
+      <div><span>Department</span><strong>{employee.departmentName||'—'}</strong></div>
+      <div><span>Designation</span><strong>{employee.designation||'—'}</strong></div>
+      <div><span>Branch</span><strong>{employee.branchName||'—'}</strong><small>{[employee.branchLocation,employee.branchCity].filter(Boolean).join(' · ')}</small></div>
+      <div><span>Employment type</span><strong>{readable(String(employee.employmentType??'').toLowerCase())||'—'}</strong></div>
+      <div><span>Joining date</span><strong>{employee.joiningDate?new Date(employee.joiningDate).toLocaleDateString('en-IN'):'—'}</strong></div>
+      <div><span>Shift</span><strong>{employee.shiftName||(employee.personal as any)?.shiftName||'—'}</strong></div>
+     </div>
+    </section>}
    </section>
   </div>
  </>;
