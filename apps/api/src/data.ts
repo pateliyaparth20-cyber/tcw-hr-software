@@ -167,6 +167,13 @@ export class DataService {
       if(ctx.user.role.code==='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId)throw new ForbiddenException();
       if(type==='goals'&&input.progress>input.target)throw new BadRequestException('Progress cannot exceed the target.');
       if(type==='devices'&&!before){
+        if(input.connectionMode==='EMPLOYEE_APP'||input.vendor==='TCW_MOBILE'){
+          const existingMobile=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP'}});
+          if(existingMobile)throw new ConflictException('TCW Employee Mobile App attendance is already enabled for this company.');
+          const after=await table.create({data:{tenantId:tid,...input,vendor:'TCW_MOBILE',connectionMode:'EMPLOYEE_APP',model:input.model||'TCW Employee Face Scan',host:'',port:443,status:'READY'}});
+          await tx.deviceSyncLog.create({data:{tenantId:tid,deviceId:after.id,action:'MOBILE_APP_ENABLED',message:'TCW Employee Mobile App Face Scan attendance enabled.'}});
+          const{apiSecretHash:_hash,...safe}=after;await audit(tx,ctx,'CREATED',type,after.id,before,safe);return safe;
+        }
         const pushSecret=randomBytes(24).toString('base64url');
         const apiSecretHash=createHash('sha256').update(pushSecret).digest('hex');
         const after=await table.create({data:{tenantId:tid,...input,apiSecretHash,apiSecretHint:pushSecret.slice(-6),status:'AWAITING_CONNECTION'}});
