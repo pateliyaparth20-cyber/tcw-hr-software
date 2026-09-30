@@ -39,7 +39,7 @@ export const navigation=[
  {group:'Workspace',items:[['dashboard','Overview','dashboard'],['employees','People','employees'],['organization','Organization','organization'],['calendar','Calendar','calendar']]},
  {group:'Time & work',items:[['attendance','Attendance','attendance'],['devices','Devices','devices'],['workforce','Live workforce','workforce'],['leave','Time off','leave']]},
  {group:'Talent & finance',items:[['payroll','Payroll','payroll'],['recruitment','Recruitment','recruitment'],['goals','Performance','performance'],['courses','Training','training'],['assets','Assets','assets'],['expenses','Expenses','expenses'],['travel','Travel','travel'],['documents','Documents','documents'],['exit','Offboarding','exit']]},
- {group:'Intelligence',items:[['reports','Reports','reports'],['support','Support','support'],['profile','My profile','self'],['settings','Company profile','company'],['subscription','Subscription','self'],['software-update','Software update','self'],['users','Users & roles','users'],['audit','Audit log','audit'],['security','My security','self']]}
+ {group:'Intelligence',items:[['reports','Reports','reports'],['support','Support','support'],['profile','My profile','self'],['settings','Company profile','company'],['subscription','Subscription','company'],['software-update','Software update','self'],['users','Users & roles','users'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
 export const employeeNavigation=[
  {group:'My workspace',items:[['dashboard','Home','dashboard'],['attendance','My attendance','attendance'],['leave','Time off','leave'],['payroll','Payslips','payroll'],['calendar','Calendar','calendar']]},
