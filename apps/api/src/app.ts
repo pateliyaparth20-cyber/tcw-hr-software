@@ -57,6 +57,13 @@ export class Api {
       const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};
       return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};
     }
+    if(resource==='tenant-branding'&&key&&method==='GET'){
+      const code=z.string().trim().toUpperCase().min(3).max(60).regex(/^[A-Z0-9-]+$/).parse(key);
+      const company=await this.db.tenant.findUnique({where:{code},select:{name:true,logo:true,profile:true}});
+      if(!company)return {found:false};
+      const profile=company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile as any:{};
+      return {found:true,name:company.name,logo:company.logo??null,primaryColor:String(profile.primaryColor??'#3474ef')};
+    }
     if(resource==='biometric'&&key==='push'&&method==='POST')return this.biometric.genericPush(req.headers as any,req.body);
     if(resource==='biometric'&&key==='biomax'&&action==='push'&&method==='POST')return this.biometric.biomaxPush(req.headers as any,req.body);
     if(!['GET','HEAD','OPTIONS'].includes(method)){
