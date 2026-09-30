@@ -485,6 +485,21 @@ export async function createApp(db:Database){
     res.setHeader('Cache-Control','no-store');next();
   });
   await app.init();
+  if(process.env.NODE_ENV==='production'&&String(process.env.RAILWAY_SERVICE_NAME??'')==='tcw-hr-software'){
+    const deployment=String(process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??'').trim();
+    if(deployment){
+      setTimeout(async()=>{
+        try{
+          const key='last-web-push-software-release';
+          const previous=await db.platformSetting.findUnique({where:{key}});
+          const last=previous?.value&&typeof previous.value==='object'&&!Array.isArray(previous.value)?String((previous.value as any).deployment??''):'';
+          if(last===deployment)return;
+          await db.platformSetting.upsert({where:{key},create:{key,value:{deployment,at:new Date().toISOString()}},update:{value:{deployment,at:new Date().toISOString()}}});
+          await sendPush(db,{title:'TCW HR Software update available',body:'A new version is ready. Open Software update when you want to install it.',url:'/software-update',tag:'tcw-software-update'});
+        }catch{}
+      },8000);
+    }
+  }
   const io=new Server(app.getHttpServer(),{path:'/socket.io',cors:{origin:(origin,callback)=>{if(!origin||allowedAppOrigin(origin))callback(null,true);else callback(new Error('Origin not allowed'));},credentials:true}});api.io=io;
   io.use(async(socket,next)=>{try{
     const header=socket.handshake.headers.cookie??'';const cookies=Object.fromEntries(header.split(';').map(s=>s.trim().split('=')));
