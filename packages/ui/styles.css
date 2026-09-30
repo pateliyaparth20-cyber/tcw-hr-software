@@ -10779,3 +10779,56 @@ input[type="month"]{
 .first-login-brand>span{display:flex;flex-direction:column;gap:2px;min-width:0}
 .first-login-brand strong{color:#29475f;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .first-login-brand small{color:#8796a4;font-size:.53rem;letter-spacing:.08em}
+
+
+/* v1.15.4 one round profile-photo treatment everywhere */
+.my-profile-photo,
+.platform-admin-avatar.has-upload,
+.profile-photo-preview{
+  width:96px!important;
+  height:96px!important;
+  min-width:96px!important;
+  min-height:96px!important;
+  flex:0 0 96px!important;
+  border-radius:50%!important;
+  overflow:hidden!important;
+  padding:0!important;
+  border:3px solid #fff!important;
+  outline:0!important;
+  background:#fff!important;
+  box-shadow:0 7px 20px rgba(25,45,66,.10)!important;
+}
+.my-profile-photo>img,
+.platform-admin-avatar.has-upload>img,
+.profile-photo-preview>img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  border-radius:50%!important;
+  clip-path:circle(50%)!important;
+  border:0!important;
+  background:transparent!important;
+}
+.my-profile-photo .profile-photo-action,
+.platform-admin-avatar.has-upload .profile-photo-action{
+  right:-2px!important;
+  bottom:2px!important;
+  width:32px!important;
+  height:32px!important;
+  border:3px solid #fff!important;
+  border-radius:50%!important;
+  background:#34495e!important;
+  box-shadow:0 4px 12px rgba(28,45,62,.18)!important;
+}
+@media(max-width:700px){
+  .my-profile-photo,
+  .platform-admin-avatar.has-upload,
+  .profile-photo-preview{
+    width:82px!important;
+    height:82px!important;
+    min-width:82px!important;
+    min-height:82px!important;
+    flex-basis:82px!important;
+  }
+}
