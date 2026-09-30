@@ -106,6 +106,10 @@ export class BiometricService{
   async test(ctx:Context,deviceId:string){
     const tid=tenant(ctx);requirePermission(ctx,'devices','MANAGE');
     const row=await this.db.attendanceDevice.findFirst({where:{id:deviceId,tenantId:tid}});if(!row)throw new NotFoundException('Device not found.');
+    if(row.connectionMode==='EMPLOYEE_APP'){
+      const seen=row.lastSeenAt&&Date.now()-+row.lastSeenAt<24*60*60_000;
+      return {online:true,status:seen?'ONLINE':'READY',message:seen?'Employee Mobile App Face Scan was used recently.':'Employee Mobile App Face Scan is enabled and ready for employees.',lastSeenAt:row.lastSeenAt};
+    }
     if(['CLOUD_PUSH','NATIVE_PUSH','MIDDLEWARE'].includes(row.connectionMode)){
       const seen=row.lastSeenAt&&Date.now()-+row.lastSeenAt<10*60_000;
       return {online:!!seen,status:seen?'ONLINE':'AWAITING_CONNECTION',message:seen?'Recent biometric heartbeat/punch received.':'Push receiver is ready; waiting for BioMax to connect.',lastSeenAt:row.lastSeenAt};
