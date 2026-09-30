@@ -148,7 +148,15 @@ export class Api {
             if(hrRole)profileUser=await this.db.user.update({where:{id:ctx.user.id},data:{roleId:hrRole.id},include:{role:true}});
           }
         }
-        const employee=ctx.user.employeeId?await this.db.employee.findFirst({where:{id:ctx.user.employeeId,tenantId:ctx.tenantId??undefined,deletedAt:null},select:{id:true,employeeCode:true,firstName:true,lastName:true,email:true,phone:true,designation:true,employmentType:true,status:true,joiningDate:true,personal:true}}):null;
+        const employee=ctx.user.employeeId?await this.db.employee.findFirst({where:{id:ctx.user.employeeId,tenantId:ctx.tenantId??undefined,deletedAt:null},select:{id:true,employeeCode:true,firstName:true,lastName:true,email:true,phone:true,photo:true,departmentId:true,branchId:true,shiftId:true,designation:true,employmentType:true,status:true,joiningDate:true,personal:true}}):null;
+        if(employee&&ctx.tenantId){
+          const [department,branch,shift]=await Promise.all([
+            employee.departmentId?this.db.department.findFirst({where:{id:employee.departmentId,tenantId:ctx.tenantId},select:{name:true}}):null,
+            employee.branchId?this.db.branch.findFirst({where:{id:employee.branchId,tenantId:ctx.tenantId},select:{name:true,location:true,city:true}}):null,
+            employee.shiftId?this.db.shift.findFirst({where:{id:employee.shiftId,tenantId:ctx.tenantId},select:{name:true}}):null
+          ]);
+          return {user:this.auth.publicUser(profileUser),employee:{...employee,departmentName:department?.name??'',branchName:branch?.name??'',branchLocation:branch?.location??'',branchCity:branch?.city??'',shiftName:shift?.name??''}};
+        }
         return {user:this.auth.publicUser(profileUser),employee};
       }
       if(key==='profile'&&method==='PATCH'){
