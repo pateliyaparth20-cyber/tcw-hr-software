@@ -10187,3 +10187,83 @@ input[type="month"]{
     justify-content:center;
   }
 }
+
+
+/* v1.14.7 employee-specific login + work profile */
+.auth-field-hint{
+  display:block;
+  margin-top:5px;
+  color:#8797a8;
+  font-size:.58rem;
+  line-height:1.4;
+  font-weight:600;
+}
+.employee-profile-details{
+  margin:4px 18px 20px;
+  padding:16px;
+  border:1px solid #e1e8ef;
+  border-radius:16px;
+  background:linear-gradient(180deg,#fbfdff,#f7faff);
+}
+.employee-profile-details-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}
+.employee-profile-details-head small{
+  display:block;
+  color:#4f79a5;
+  font-size:.56rem;
+  font-weight:850;
+  letter-spacing:.08em;
+}
+.employee-profile-details-head h3{
+  margin:3px 0 2px;
+  color:#2d4b66;
+  font-size:.92rem;
+}
+.employee-profile-details-head p{
+  margin:0;
+  color:#8393a3;
+  font-size:.6rem;
+}
+.employee-profile-detail-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.employee-profile-detail-grid>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:10px 11px;
+  border:1px solid #e6ecf2;
+  border-radius:11px;
+  background:#fff;
+}
+.employee-profile-detail-grid span{
+  color:#8898a8;
+  font-size:.55rem;
+  font-weight:700;
+}
+.employee-profile-detail-grid strong{
+  color:#385570;
+  font-size:.68rem;
+  overflow-wrap:anywhere;
+}
+.employee-profile-detail-grid small{
+  color:#93a1ae;
+  font-size:.54rem;
+}
+@media(max-width:600px){
+  .employee-profile-details{
+    margin:4px 12px 16px;
+    padding:12px;
+  }
+  .employee-profile-detail-grid{
+    grid-template-columns:1fr;
+  }
+}
