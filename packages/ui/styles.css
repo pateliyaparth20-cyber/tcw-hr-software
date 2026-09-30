@@ -10267,3 +10267,118 @@ input[type="month"]{
     grid-template-columns:1fr;
   }
 }
+
+
+/* v1.14.8 Employee App access lives under People */
+.profile-action-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:16px;
+}
+.employee-app-access{
+  display:grid;
+  gap:14px;
+}
+.employee-app-access-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:12px 14px;
+  border:1px solid #e3eaf2;
+  border-radius:14px;
+  background:linear-gradient(180deg,#fbfdff,#f7faff);
+}
+.employee-app-access-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#eef5ff;
+  color:#3d72bc;
+  font-size:.62rem;
+  font-weight:800;
+  white-space:nowrap;
+}
+.employee-app-access-card{
+  display:grid;
+  gap:14px;
+  padding:16px;
+  border:1px solid #e2e9f1;
+  border-radius:15px;
+  background:#fff;
+}
+.employee-app-access-card>div>small,
+.employee-app-access-card .row-between>div>small{
+  display:block;
+  color:#4f79a5;
+  font-size:.55rem;
+  font-weight:850;
+  letter-spacing:.08em;
+}
+.employee-app-access-card h3{
+  margin:3px 0 4px;
+  color:#2f4d69;
+  font-size:.95rem;
+}
+.employee-app-access-card p{
+  margin:0;
+  color:#7f90a1;
+  font-size:.62rem;
+  line-height:1.5;
+}
+.employee-app-login-preview{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.employee-app-login-preview>div{
+  min-width:0;
+  padding:10px 11px;
+  border:1px solid #e6ecf2;
+  border-radius:11px;
+  background:#fbfdff;
+}
+.employee-app-login-preview span{
+  display:block;
+  margin-bottom:3px;
+  color:#8999a9;
+  font-size:.54rem;
+  font-weight:700;
+}
+.employee-app-login-preview strong{
+  display:block;
+  color:#36536e;
+  font-size:.67rem;
+  overflow-wrap:anywhere;
+}
+.employee-app-access-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
+.employee-app-credentials{
+  padding:16px;
+  border:1px solid #dfe8f2;
+  border-radius:14px;
+  background:#fbfdff;
+}
+@media(max-width:700px){
+  .employee-app-access-head{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .employee-app-login-preview{
+    grid-template-columns:1fr;
+  }
+  .employee-app-access-actions{
+    flex-direction:column;
+  }
+  .employee-app-access-actions .btn,
+  .profile-action-row .btn{
+    width:100%;
+    justify-content:center;
+  }
+}
