@@ -41,6 +41,11 @@ export const navigation=[
  {group:'Talent & finance',items:[['payroll','Payroll','payroll'],['recruitment','Recruitment','recruitment'],['goals','Performance','performance'],['courses','Training','training'],['assets','Assets','assets'],['expenses','Expenses','expenses'],['travel','Travel','travel'],['documents','Documents','documents'],['exit','Offboarding','exit']]},
  {group:'Intelligence',items:[['reports','Reports','reports'],['support','Support','support'],['profile','My profile','self'],['settings','Company profile','company'],['subscription','Subscription','self'],['software-update','Software update','self'],['users','Users & roles','users'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
+export const employeeNavigation=[
+ {group:'My workspace',items:[['dashboard','Home','dashboard'],['attendance','My attendance','attendance'],['leave','Time off','leave'],['payroll','Payslips','payroll'],['calendar','Calendar','calendar']]},
+ {group:'My requests',items:[['expenses','Expenses','expenses'],['travel','Travel','travel'],['goals','Performance','performance'],['workforce','Work status','workforce']]},
+ {group:'My account',items:[['profile','My profile','self'],['security','Security','self']]}
+];
 export const adminNavigation=[
  {group:'Platform',items:[['dashboard','Overview','dashboard'],['trials','Trial follow-up','tenants'],['companies','Companies','tenants'],['plans','Plans','plans']]},
  {group:'Business',items:[['leads','Sales pipeline','sales'],['invoices','Invoices','billing'],['payments','Payments','billing'],['support','Support tickets','support']]},
