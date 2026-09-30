@@ -41,7 +41,19 @@ export function PwaClient(){
     window.__tcwEnableNotifications=enableNotifications;
     let pullStart=0,pullDistance=0,pullActive=false,longPress:any=null;
     const refreshBadge=document.createElement('div');refreshBadge.className='tcw-pull-refresh';refreshBadge.innerHTML='<span aria-hidden="true"></span>';refreshBadge.setAttribute('aria-label','Refresh');document.body.appendChild(refreshBadge);
-    const onTouchStart=(e:TouchEvent)=>{if(window.scrollY<=0&&e.touches.length===1){pullStart=e.touches[0].clientY;pullDistance=0;pullActive=true}};
+    const blocksPullRefresh=(target:EventTarget|null)=>{
+      const start=target instanceof Element?target:null;
+      if(!start)return false;
+      if(start.closest('input,textarea,select,button,a,[role="button"],dialog,.modal,.tcw-agent-panel,.sidebar,.table-scroll,.chat-messages,.meghna-history-list'))return true;
+      let node:HTMLElement|null=start instanceof HTMLElement?start:start.parentElement as HTMLElement|null;
+      while(node&&node!==document.body){
+        const style=getComputedStyle(node);
+        if(/auto|scroll/.test(style.overflowY)&&node.scrollHeight>node.clientHeight+2)return true;
+        node=node.parentElement;
+      }
+      return false;
+    };
+    const onTouchStart=(e:TouchEvent)=>{if(window.scrollY<=0&&e.touches.length===1&&!blocksPullRefresh(e.target)){pullStart=e.touches[0].clientY;pullDistance=0;pullActive=true}else pullActive=false};
     const onTouchMove=(e:TouchEvent)=>{if(!pullActive)return;pullDistance=Math.max(0,e.touches[0].clientY-pullStart);if(pullDistance>18){refreshBadge.classList.add('show');refreshBadge.classList.toggle('ready',pullDistance>86)}};
     const onTouchEnd=()=>{if(pullActive&&pullDistance>86)window.location.reload();pullActive=false;pullDistance=0;refreshBadge.classList.remove('show','ready')};
     const photoSelector='.my-profile-photo img,.avatar.has-photo img,.image-field img,.person-cell img';
