@@ -77,8 +77,34 @@ export class Api {
       if(billingLocked&&!['auth','subscription'].includes(resource))throw new ForbiddenException('Your trial or subscription has ended. Complete payment to unlock HR modules.');
     }
     if(resource==='subscription'&&method==='GET'){
-      const tid=tenant(ctx);const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const invoices=await this.db.invoice.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:24});
-      return {company,invoices,gatewayConfigured:!!process.env.PAYMENT_GATEWAY_PROVIDER,paymentMessage:process.env.PAYMENT_INSTRUCTIONS??'Contact TCW HR Software billing support to complete payment. Access is restored after payment confirmation.'};
+      const tid=tenant(ctx);const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans]=await Promise.all([
+        this.db.invoice.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:24}),
+        this.db.plan.findMany({orderBy:{monthlyPrice:'asc'}})
+      ]);
+      return {company,invoices,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim()};
+    }
+    if(resource==='subscription'&&method==='POST'){
+      const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
+      const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE'])}).strict().parse(body);
+      const [company,plan]=await Promise.all([
+        this.db.tenant.findUniqueOrThrow({where:{id:tid}}),
+        this.db.plan.findUnique({where:{name:input.plan}})
+      ]);
+      if(!plan)throw new BadRequestException('Selected subscription plan is unavailable.');
+      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:plan.monthlyPrice},orderBy:{createdAt:'desc'}});
+      const invoice=open??await this.db.invoice.create({data:{
+        tenantId:tid,
+        number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,
+        amount:plan.monthlyPrice,
+        tax:0,
+        total:plan.monthlyPrice,
+        dueDate:new Date(new Date().toISOString().slice(0,10))
+      }});
+      await this.db.tenant.update({where:{id:tid},data:{plan:plan.name,employeeLimit:plan.employeeLimit,profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString()}}});
+      await audit(this.db,ctx,'SUBSCRIPTION_PAYMENT_REQUESTED','tenants',tid,undefined,{plan:plan.name,invoiceId:invoice.id,total:invoice.total});
+      const base=String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim();
+      const checkoutUrl=base?`${base}${base.includes('?')?'&':'?'}invoice=${encodeURIComponent(invoice.id)}&tenant=${encodeURIComponent(tid)}&plan=${encodeURIComponent(plan.name)}&amount=${invoice.total}`:null;
+      return {ok:true,invoice,plan,checkoutUrl};
     }
     if(resource==='auth'){
       if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
