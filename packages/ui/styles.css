@@ -7917,3 +7917,156 @@ textarea,
  .meghna-voice-bar{padding:7px 10px}
  .meghna-voice-bar select{max-width:145px}
 }
+
+
+/* v1.13.1 canonical person photos + Meghna history + dismissible iOS notice */
+.avatar,
+.avatar.large,
+.platform-admin-avatar,
+.my-profile-photo,
+.image-field>img,
+.image-field>span{
+  aspect-ratio:1/1!important;
+  border-radius:50%!important;
+}
+.avatar{
+  overflow:hidden!important;
+}
+.avatar img,
+.avatar.has-photo img,
+.platform-admin-avatar>img,
+.my-profile-photo>img,
+.image-field>img,
+.person-cell .avatar img,
+.person-inline .avatar img{
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  display:block!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  clip-path:circle(50%)!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+.platform-admin-avatar{
+  width:54px!important;
+  height:54px!important;
+  min-width:54px!important;
+  min-height:54px!important;
+  flex:0 0 54px!important;
+  overflow:visible!important;
+  border:3px solid #fff!important;
+  box-shadow:0 7px 20px rgba(31,66,104,.12)!important;
+}
+.platform-admin-avatar>img{
+  overflow:hidden!important;
+}
+.my-profile-photo{
+  width:80px!important;
+  height:80px!important;
+  min-width:80px!important;
+  min-height:80px!important;
+  flex:0 0 80px!important;
+  overflow:visible!important;
+}
+.image-field{
+  grid-template-columns:82px minmax(0,1fr)!important;
+  align-items:center!important;
+}
+.image-field>img,
+.image-field>span{
+  width:82px!important;
+  height:82px!important;
+  min-width:82px!important;
+  min-height:82px!important;
+  object-position:center!important;
+  overflow:hidden!important;
+}
+.profile-photo-action{
+  z-index:6!important;
+}
+@media(max-width:520px){
+  .my-profile-photo{width:74px!important;height:74px!important;min-width:74px!important;min-height:74px!important;flex-basis:74px!important}
+  .image-field{grid-template-columns:74px minmax(0,1fr)!important}
+  .image-field>img,.image-field>span{width:74px!important;height:74px!important;min-width:74px!important;min-height:74px!important}
+}
+
+.meghna-history{
+  max-height:220px;
+  overflow:hidden;
+  border-bottom:1px solid #e8eef4;
+  background:#f8fbff;
+}
+.meghna-history-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 12px 7px;
+}
+.meghna-history-head strong{color:#35516b;font-size:.68rem}
+.meghna-history-head small,.meghna-history-empty{color:#8a9bad;font-size:.56rem}
+.meghna-history-empty{display:block;padding:12px;text-align:center}
+.meghna-history-list{
+  max-height:172px;
+  overflow:auto;
+  padding:0 8px 8px;
+}
+.meghna-history-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 30px;
+  align-items:center;
+  gap:5px;
+  margin:4px 0;
+  border:1px solid #e5ebf2;
+  border-radius:11px;
+  background:#fff;
+}
+.meghna-history-row.active{border-color:#bdd4f4;background:#f3f8ff}
+.meghna-history-row>button:first-child{
+  min-width:0;
+  padding:8px 9px;
+  text-align:left;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+.meghna-history-row strong{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#36526c;
+  font-size:.63rem;
+}
+.meghna-history-row small{
+  display:block;
+  margin-top:3px;
+  color:#95a4b3;
+  font-size:.52rem;
+}
+.history-delete{
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#9aabba;
+  cursor:pointer;
+}
+.history-delete:hover{background:#fff0f0;color:#c94a4a}
+
+.tcw-ios-notice{
+  transition:opacity .18s ease,transform .18s ease!important;
+}
+.tcw-ios-notice.leaving{
+  opacity:0!important;
+  transform:translate(-50%,10px)!important;
+  pointer-events:none!important;
+}

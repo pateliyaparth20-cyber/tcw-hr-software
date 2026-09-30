@@ -72,12 +72,16 @@ export function PwaClient(){
     syncVersion();
     const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
-    let iosGuide:HTMLButtonElement|null=null;
-    if(isiOS&&(!standalone||('Notification' in window&&Notification.permission!=='granted'))){
+    let iosGuide:HTMLButtonElement|null=null,iosGuideTimer:ReturnType<typeof setTimeout>|undefined;
+    const iosGuideKey='tcw_ios_notice_seen_at';
+    let iosGuideSeen=false;try{const seen=Number(localStorage.getItem(iosGuideKey)??0);iosGuideSeen=seen>0&&Date.now()-seen<7*24*3600000}catch{}
+    const dismissIosGuide=()=>{try{localStorage.setItem(iosGuideKey,String(Date.now()))}catch{};if(iosGuide){iosGuide.classList.add('leaving');const el=iosGuide;setTimeout(()=>el.remove(),180)}};
+    if(isiOS&&!iosGuideSeen&&(!standalone||('Notification' in window&&Notification.permission!=='granted'))){
       iosGuide=document.createElement('button');iosGuide.type='button';iosGuide.className='tcw-ios-notice';
-      iosGuide.textContent=!standalone?'Enable iPhone notifications · Add to Home Screen':'Enable iPhone notifications';
-      iosGuide.onclick=async()=>{if(!standalone){window.alert('On iPhone: tap Share in Safari, choose Add to Home Screen, then open TCW HR from the Home Screen and allow notifications.');return;}const ok=await enableNotifications();iosGuide!.textContent=ok?'iPhone notifications enabled':'Notification permission is off';if(ok)setTimeout(()=>iosGuide?.remove(),1600)};
+      iosGuide.textContent=!standalone?'iPhone setup · Add to Home Screen':'Enable iPhone notifications';
+      iosGuide.onclick=async()=>{if(!standalone){window.alert('On iPhone: tap Share in Safari, choose Add to Home Screen, then open TCW HR from the Home Screen and allow notifications.');dismissIosGuide();return;}const ok=await enableNotifications();iosGuide!.textContent=ok?'Notifications enabled':'Notification permission is off';setTimeout(dismissIosGuide,900)};
       document.body.appendChild(iosGuide);
+      iosGuideTimer=setTimeout(dismissIosGuide,6000);
     }
     const askOnFirstInteraction=()=>{if(!isiOS||standalone)enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
     if(!window.TCWNative&&'Notification' in window&&Notification.permission==='default')document.addEventListener('pointerdown',askOnFirstInteraction,true);
@@ -116,6 +120,7 @@ export function PwaClient(){
       delete window.__tcwEnableNotifications;document.removeEventListener('touchstart',onTouchStart);document.removeEventListener('touchmove',onTouchMove);document.removeEventListener('touchend',onTouchEnd);document.removeEventListener('click',onPhotoClick);document.removeEventListener('touchstart',onPhotoTouchStart);document.removeEventListener('touchend',clearLong);document.removeEventListener('touchmove',clearLong);refreshBadge.remove();clearLong();
       window.removeEventListener('beforeinstallprompt',onPrompt as EventListener);
       window.removeEventListener('appinstalled',onInstalled);
+      if(iosGuideTimer)clearTimeout(iosGuideTimer);iosGuide?.remove();
     };
   },[]);
   return null;

@@ -288,6 +288,43 @@ export class Api {
       if(action==='test'&&method==='POST'){requirePermission(ctx,'system','EDIT');try{return await testAIConnection(this.db);}catch(e:any){throw new ServiceUnavailableException(e.message);}}
     }
     if(resource==='system'&&method==='GET'){platform(ctx);requirePermission(ctx,'system','VIEW');await this.db.$queryRaw`SELECT 1`;const ai=await publicAIConfig(this.db);const sms=String(process.env.SMS_PROVIDER??'').trim();const payouts=process.env.PAYROLL_PAYOUTS_ENABLED==='true'&&process.env.PAYOUT_PROVIDER==='RAZORPAYX';return {database:'CONNECTED',email:(process.env.RESEND_API_KEY||process.env.SMTP_HOST)?'CONFIGURED':'NOT_CONFIGURED',sms:sms?'CONFIGURED':'NOT_CONFIGURED',storage:process.env.S3_ENDPOINT?'CONFIGURED':'NOT_CONFIGURED',ai:ai.configured?'CONFIGURED':'NOT_CONFIGURED',salaryPayouts:payouts?'CONFIGURED':'SAFE_MODE',pendingMessages:await this.db.outbox.count({where:{sentAt:null}})};}
+    if(resource==='agent'&&key==='history'&&method==='GET'&&!action){
+      const tid=tenant(ctx);
+      const items=await this.db.meghnaConversation.findMany({where:{tenantId:tid,userId:ctx.user.id},orderBy:{updatedAt:'desc'},take:30,select:{id:true,title:true,createdAt:true,updatedAt:true,messages:true}});
+      return {items:items.map((r:any)=>({id:r.id,title:r.title,createdAt:r.createdAt,updatedAt:r.updatedAt,messageCount:Array.isArray(r.messages)?r.messages.length:0}))};
+    }
+    if(resource==='agent'&&key==='history'&&method==='GET'&&action){
+      const tid=tenant(ctx);
+      const row=await this.db.meghnaConversation.findFirst({where:{id:id.parse(action),tenantId:tid,userId:ctx.user.id}});
+      if(!row)throw new NotFoundException('Conversation not found.');
+      return row;
+    }
+    if(resource==='agent'&&key==='history'&&method==='POST'){
+      const tid=tenant(ctx);
+      const input=z.object({messages:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().min(1).max(4000)}).strict()).min(1).max(100)}).strict().parse(body);
+      const first=input.messages.find(m=>m.role==='user')?.text??'Conversation';
+      const title=first.replace(/\s+/g,' ').trim().slice(0,72)||'Conversation';
+      const row=await this.db.meghnaConversation.create({data:{tenantId:tid,userId:ctx.user.id,title,messages:input.messages}});
+      await audit(this.db,ctx,'MEGHNA_CONVERSATION_SAVED','meghna-history',row.id,undefined,{title,messageCount:input.messages.length});
+      return row;
+    }
+    if(resource==='agent'&&key==='history'&&method==='PUT'&&action){
+      const tid=tenant(ctx);
+      const input=z.object({messages:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().min(1).max(4000)}).strict()).min(1).max(100)}).strict().parse(body);
+      const existing=await this.db.meghnaConversation.findFirst({where:{id:id.parse(action),tenantId:tid,userId:ctx.user.id}});
+      if(!existing)throw new NotFoundException('Conversation not found.');
+      const first=input.messages.find(m=>m.role==='user')?.text??existing.title;
+      const title=first.replace(/\s+/g,' ').trim().slice(0,72)||existing.title;
+      return this.db.meghnaConversation.update({where:{id:existing.id},data:{title,messages:input.messages}});
+    }
+    if(resource==='agent'&&key==='history'&&method==='DELETE'&&action){
+      const tid=tenant(ctx);
+      const existing=await this.db.meghnaConversation.findFirst({where:{id:id.parse(action),tenantId:tid,userId:ctx.user.id}});
+      if(!existing)throw new NotFoundException('Conversation not found.');
+      await this.db.meghnaConversation.delete({where:{id:existing.id}});
+      await audit(this.db,ctx,'MEGHNA_CONVERSATION_DELETED','meghna-history',existing.id,{title:existing.title},undefined);
+      return {ok:true};
+    }
     if(resource==='agent'&&key==='status'&&method==='GET'){
       const tid=tenant(ctx),now=new Date(),company=await this.db.tenant.findUnique({where:{id:tid}});
       await this.db.$queryRaw`SELECT 1`;
