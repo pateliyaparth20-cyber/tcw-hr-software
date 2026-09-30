@@ -50,13 +50,12 @@ function ProfilePhotoEditor({value,name,onChange,notify}:{value?:string|null;nam
  const[open,setOpen]=useState(false),[source,setSource]=useState(''),[zoom,setZoom]=useState(1),[x,setX]=useState(0),[y,setY]=useState(0),[meta,setMeta]=useState<{name:string;size:number;width:number;height:number}|null>(null);
  function choose(file?:File){
   if(!file)return;
-  if(!/^image\/(png|jpeg)$/.test(file.type)){notify('Choose a PNG or JPEG profile photo.',true);return;}
   if(file.size>5*1024*1024){notify('Choose a profile photo up to 5 MB.',true);return;}
   const reader=new FileReader();
   reader.onload=()=>{
    const data=String(reader.result??'');const image=new Image();
    image.onload=()=>{if(image.naturalWidth<256||image.naturalHeight<256){notify('Choose a clearer photo of at least 256 × 256 px. 512 × 512 px or larger is recommended.',true);return;}setSource(data);setMeta({name:file.name,size:file.size,width:image.naturalWidth,height:image.naturalHeight});setZoom(1);setX(0);setY(0);setOpen(true)};
-   image.onerror=()=>notify('The selected photo could not be read. Choose another PNG or JPEG.',true);
+   image.onerror=()=>notify('The selected photo could not be read on this device. Choose another image.',true);
    image.src=data;
   };
   reader.readAsDataURL(file);
@@ -80,7 +79,7 @@ function ProfilePhotoEditor({value,name,onChange,notify}:{value?:string|null;nam
  return <>
   <div className="profile-photo-editor">
    <div className="profile-photo-preview">{value?<img src={value} alt={name+' profile photo'}/>:<span>{initials}</span>}</div>
-   <div className="profile-photo-copy"><strong>Profile photo</strong><p>Square crop · saved at 512 × 512 px · PNG/JPEG up to 5 MB.</p><div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>Upload photo<input className="sr-only" type="file" accept="image/png,image/jpeg" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
+   <div className="profile-photo-copy"><strong>Profile photo</strong><p>Square crop · saved at 512 × 512 px · image file up to 5 MB.</p><div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>Upload photo<input className="sr-only" type="file" accept="image/*" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
   </div>
   {open&&<Modal title="Crop profile photo" onClose={()=>setOpen(false)}>
    <div className="profile-crop-modal">
