@@ -101,7 +101,7 @@ export class DataService {
     const clean=(row:any)=>{if(canSalary)return row;const{monthlySalary,...rest}=row;const personal=this.object(rest.personal);for(const key of ['bankName','accountHolder','accountNumber','ifsc','bankBranch'])delete personal[key];return {...rest,personal};};
     if(method==='GET'){
       if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();let designation=row.designation;if(/^[0-9a-f-]{36}$/i.test(designation)){const master=await this.db.designation.findFirst({where:{id:designation,tenantId:tid},select:{name:true}});if(master)designation=master.name;}return clean({...row,designation});}
-      if(query.q){const q=String(query.q).slice(0,100);where.OR=['firstName','lastName','email','employeeCode'].map(k=>({[k]:{contains:q,mode:'insensitive'}}));}
+      if(query.q){const q=String(query.q).trim().slice(0,100),parts=q.split(/\s+/).filter(Boolean);where.OR=[{firstName:{contains:q,mode:'insensitive'}},{lastName:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{employeeCode:{contains:q,mode:'insensitive'}},...(parts.length>1?[{AND:[{firstName:{contains:parts[0],mode:'insensitive'}},{lastName:{contains:parts.slice(1).join(' '),mode:'insensitive'}}]}]:[])];}
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
