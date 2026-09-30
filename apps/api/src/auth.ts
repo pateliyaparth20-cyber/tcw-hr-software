@@ -49,6 +49,14 @@ export class AuthService {
     if(company){await syncCompanyAccess(this.db,company.id);company=await this.db.tenant.findUnique({where:{id:company.id}});}
     if(company&&company.status==='ARCHIVED')throw new ForbiddenException('This company account has been archived. Contact your software administrator.');
     if(company&&company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason!=='BILLING')throw new ForbiddenException('This company is suspended. Contact your software administrator.');
+    if(company&&user.role?.code==='COMPANY_OWNER'&&(company.profile as any)?.signupSource==='SELF_SERVICE'){
+      const hrRole=await this.db.role.findUnique({where:{code:'HR_ADMIN'}});
+      if(hrRole){
+        const beforeRole=user.role.code;
+        user=await this.db.user.update({where:{id:user.id},data:{roleId:hrRole.id},include:{role:true}});
+        await this.db.auditLog.create({data:{tenantId:user.tenantId,actorId:user.id,action:'LEGACY_SIGNUP_ROLE_MIGRATED',entity:'users',entityId:user.id,before:{role:beforeRole},after:{role:'HR_ADMIN'},ip:req.ip}});
+      }
+    }
     await this.db.loginAttempt.deleteMany({where:{key}});
     await this.db.auditLog.create({data:{tenantId:user.tenantId,actorId:user.id,action:'LOGIN_SUCCEEDED',entity:'auth',ip:req.ip}});
     return this.setSession(user,req,res,input.remember);
