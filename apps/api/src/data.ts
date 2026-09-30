@@ -122,7 +122,6 @@ export class DataService {
 
         await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.deviceEmployeeMap.deleteMany({where:{tenantId:tid,employeeId}});
-        await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.attendanceDaily.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.leaveRequest.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.payrollPayout.deleteMany({where:{tenantId:tid,employeeId}});
@@ -146,15 +145,16 @@ export class DataService {
           await tx.user.deleteMany({where:{id:{in:userIds},tenantId:tid}});
         }
 
-        await tx.employee.delete({where:{id:employeeId}});
+        await tx.employee.update({where:{id:employeeId},data:{deletedAt:new Date(),status:'INACTIVE',managerId:null}});
 
         for(const runId of runIds){
           const totals=await tx.payrollItem.aggregate({where:{tenantId:tid,runId},_sum:{gross:true,deductions:true,net:true}});
           await tx.payrollRun.updateMany({where:{tenantId:tid,id:runId},data:{totalGross:totals._sum.gross??0,totalDeductions:totals._sum.deductions??0,totalNet:totals._sum.net??0}});
         }
 
-        await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{hardDelete:true,linkedUsers:userIds.length});
-        return {ok:true,deleted:true};
+        const rawPunchesRetained=await tx.attendancePunch.count({where:{tenantId:tid,employeeId}});
+        await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{operationalDataCleared:true,rawPunchesRetained,linkedUsers:userIds.length});
+        return {ok:true,deleted:true,rawPunchesRetained};
       }
       const input=employeeSchema.parse(body);
       if(input.photo){
