@@ -208,14 +208,55 @@ export class DataService {
       await audit(tx,ctx,isPlatform?'TICKET_SUPPORT_REPLY':'TICKET_CUSTOMER_REPLY','support',ticket.id,ticket,after);return row;
     });
   }
+  async employeeAppAccess(ctx:Context,employeeId:string,method:string,body?:unknown){
+    const tid=tenant(ctx);requirePermission(ctx,'employees',method==='GET'?'VIEW':'EDIT');if(method!=='GET')requirePermission(ctx,'users','MANAGE');
+    const employee=await this.db.employee.findFirst({where:{id:id.parse(employeeId),tenantId:tid,deletedAt:null},select:{id:true,employeeCode:true,firstName:true,lastName:true,email:true,phone:true,status:true}});
+    if(!employee)throw new NotFoundException('Employee not found.');
+    const existing=await this.db.user.findFirst({where:{tenantId:tid,employeeId:employee.id},include:{role:true}});
+    const safe=(user:any)=>user?{id:user.id,name:user.name,email:user.email,loginId:user.loginId,active:user.active,mustChangePassword:user.mustChangePassword,role:user.role?.code??'',createdAt:user.createdAt,updatedAt:user.updatedAt}:null;
+    if(method==='GET')return {employee,user:safe(existing),employeePortal:'https://employee.techcyberwarrior.in'};
+    if(method!=='POST')throw new BadRequestException('Unsupported Employee App access operation.');
+    const input=z.object({operation:z.enum(['CREATE','RESET_PASSWORD','SET_ACTIVE']),password:password.optional(),active:z.boolean().optional()}).strict().parse(body);
+    if(input.operation==='CREATE'&&existing)throw new ConflictException('Employee App access already exists for this employee.');
+    if(input.operation!=='CREATE'&&!existing)throw new NotFoundException('Create Employee App access first.');
+    const generatedPassword=input.operation!=='SET_ACTIVE'&&!input.password?temporaryPassword8():null;
+    const newPassword=input.password??generatedPassword??undefined;
+    const company=await this.db.tenant.findUnique({where:{id:tid},select:{name:true,code:true}});
+    const loginUrl='https://employee.techcyberwarrior.in/login';
+    return this.db.$transaction(async tx=>{
+      let user:any=existing;
+      if(input.operation==='CREATE'){
+        const role=await tx.role.findUnique({where:{code:'EMPLOYEE'}});if(!role||role.scope!=='TENANT')throw new BadRequestException('Employee role is not configured.');
+        const duplicateEmail=await tx.user.findFirst({where:{tenantId:tid,email:employee.email.toLowerCase()}});if(duplicateEmail)throw new ConflictException('This employee email is already used by another login account.');
+        const loginId=await allocateShortLoginId(tx as unknown as Database,tid);
+        user=await tx.user.create({data:{tenantId:tid,name:`${employee.firstName} ${employee.lastName}`.trim(),email:employee.email.toLowerCase(),loginId,roleId:role.id,employeeId:employee.id,active:true,passwordHash:await hashPassword(newPassword!),mustChangePassword:true},include:{role:true}});
+        await audit(tx,ctx,'EMPLOYEE_APP_ACCESS_CREATED','users',user.id,undefined,{employeeId:employee.id,employeeCode:employee.employeeCode,email:user.email});
+      }else if(input.operation==='RESET_PASSWORD'){
+        user=await tx.user.update({where:{id:existing!.id},data:{passwordHash:await hashPassword(newPassword!),mustChangePassword:true,active:true},include:{role:true}});
+        await tx.session.deleteMany({where:{userId:user.id}});
+        await audit(tx,ctx,'EMPLOYEE_APP_PASSWORD_RESET','users',user.id,existing,{employeeId:employee.id,employeeCode:employee.employeeCode});
+      }else{
+        if(input.active===undefined)throw new BadRequestException('Choose whether Employee App access should be active.');
+        user=await tx.user.update({where:{id:existing!.id},data:{active:input.active},include:{role:true}});
+        if(!input.active)await tx.session.deleteMany({where:{userId:user.id}});
+        await audit(tx,ctx,input.active?'EMPLOYEE_APP_ACCESS_ENABLED':'EMPLOYEE_APP_ACCESS_DISABLED','users',user.id,existing,{employeeId:employee.id});
+      }
+      if(newPassword){
+        await tx.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{to:employee.email,subject:'Your TCW Employee login',tempPassword:newPassword,text:`Your TCW Employee account is ready. Company Code: ${company?.code??''}. Employee ID: ${employee.employeeCode}. Temporary Password: ${newPassword}. Login: ${loginUrl}. You will be asked to change this temporary password after first sign in.`}}});
+        if(employee.phone)await tx.outbox.create({data:{tenantId:tid,kind:'SMS',payload:{to:employee.phone,template:'EMPLOYEE_LOGIN',company:company?.name??'Your company',companyCode:company?.code??'',employeeCode:employee.employeeCode,tempPassword:newPassword,loginUrl,text:`TCW Employee login: Company ${company?.code??''}, Employee ID ${employee.employeeCode}, Temp Password ${newPassword}. Login ${loginUrl}.`}}});
+      }
+      return {employee,user:safe(user),employeePortal:loginUrl,...(generatedPassword?{temporaryPassword:generatedPassword}:{})};
+    });
+  }
+
   async users(ctx:Context,method:string,body?:unknown,recordId?:string){
     const tid=tenant(ctx);requirePermission(ctx,'users',method==='GET'?'VIEW':'MANAGE');
     if(method==='GET')return {items:await this.db.user.findMany({where:{tenantId:tid},select:{id:true,name:true,email:true,loginId:true,active:true,employeeId:true,role:{select:{code:true,name:true}},createdAt:true}})};
     const input=z.object({name:z.string().min(1).max(200),email:z.email().transform(v=>v.toLowerCase()),loginId:z.string().trim().min(3).max(80).regex(/^[A-Za-z0-9._-]+$/).optional(),password:password.optional(),role:z.string(),employeeId:id.nullable().optional(),active:z.boolean().default(true)}).strict().parse(body);
     const role=await this.db.role.findUnique({where:{code:input.role}});
     if(!role||role.scope!=='TENANT')throw new BadRequestException('Invalid company role.');
-    if(['EMPLOYEE','MANAGER','TEAM_LEADER'].includes(input.role)&&!input.employeeId)throw new BadRequestException('This role must be linked to an employee.');
-    if(input.employeeId)await assertEmployee(this.db,ctx,input.employeeId);
+    if(['EMPLOYEE','MANAGER','TEAM_LEADER'].includes(input.role))throw new BadRequestException('Employee access is managed from People → Employee App Access.');
+    if(input.employeeId)throw new BadRequestException('Linked employee accounts are managed from People → Employee App Access.');
     if(recordId===ctx.user.id&&(!input.active||input.role!=='COMPANY_OWNER'))throw new BadRequestException('You cannot remove your own owner access.');
     return this.db.$transaction(async tx=>{
       const before=recordId?await tx.user.findFirst({where:{id:id.parse(recordId),tenantId:tid}}):null;
