@@ -81,30 +81,47 @@ export class Api {
         this.db.invoice.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:24}),
         this.db.plan.findMany({orderBy:{monthlyPrice:'asc'}})
       ]);
-      return {company,invoices,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim()};
+      const payRow=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});
+      const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
+      const upiId=String(pay.upiId??'').trim(),payeeName=String(pay.payeeName??'TCW HR Software').trim();
+      return {company,invoices,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{id:upiId,payeeName}};
     }
-    if(resource==='subscription'&&method==='POST'){
+    if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
-      const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE'])}).strict().parse(body);
-      const [company,plan]=await Promise.all([
+      const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),mode:z.enum(['GATEWAY','UPI']).default('UPI')}).strict().parse(body);
+      const [company,plan,payRow]=await Promise.all([
         this.db.tenant.findUniqueOrThrow({where:{id:tid}}),
-        this.db.plan.findUnique({where:{name:input.plan}})
+        this.db.plan.findUnique({where:{name:input.plan}}),
+        this.db.platformSetting.findUnique({where:{key:'billing-payment'}})
       ]);
       if(!plan)throw new BadRequestException('Selected subscription plan is unavailable.');
-      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:plan.monthlyPrice},orderBy:{createdAt:'desc'}});
-      const invoice=open??await this.db.invoice.create({data:{
-        tenantId:tid,
-        number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,
-        amount:plan.monthlyPrice,
-        tax:0,
-        total:plan.monthlyPrice,
-        dueDate:new Date(new Date().toISOString().slice(0,10))
-      }});
-      await this.db.tenant.update({where:{id:tid},data:{plan:plan.name,employeeLimit:plan.employeeLimit,profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString()}}});
-      await audit(this.db,ctx,'SUBSCRIPTION_PAYMENT_REQUESTED','tenants',tid,undefined,{plan:plan.name,invoiceId:invoice.id,total:invoice.total});
+      const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const base=String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim();
-      const checkoutUrl=base?`${base}${base.includes('?')?'&':'?'}invoice=${encodeURIComponent(invoice.id)}&tenant=${encodeURIComponent(tid)}&plan=${encodeURIComponent(plan.name)}&amount=${invoice.total}`:null;
-      return {ok:true,invoice,plan,checkoutUrl};
+      const upiId=String(pay.upiId??'').trim(),payeeName=String(pay.payeeName??'TCW HR Software').trim();
+      if(input.mode==='GATEWAY'&&!base)throw new ServiceUnavailableException('Card/online gateway is not configured yet.');
+      if(input.mode==='UPI'&&!upiId)throw new ServiceUnavailableException('UPI payment is not configured yet.');
+      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:plan.monthlyPrice},orderBy:{createdAt:'desc'}});
+      const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount:plan.monthlyPrice,tax:0,total:plan.monthlyPrice,dueDate:new Date(new Date().toISOString().slice(0,10))}});
+      await this.db.tenant.update({where:{id:tid},data:{plan:plan.name,employeeLimit:plan.employeeLimit,profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString(),paymentMode:input.mode,pendingInvoiceId:invoice.id}}});
+      await audit(this.db,ctx,'SUBSCRIPTION_PAYMENT_STARTED','tenants',tid,undefined,{plan:plan.name,invoiceId:invoice.id,total:invoice.total,mode:input.mode});
+      if(input.mode==='GATEWAY'){
+        const checkoutUrl=`${base}${base.includes('?')?'&':'?'}invoice=${encodeURIComponent(invoice.id)}&tenant=${encodeURIComponent(tid)}&plan=${encodeURIComponent(plan.name)}&amount=${invoice.total}`;
+        return {ok:true,invoice,plan,mode:'GATEWAY',checkoutUrl};
+      }
+      const amount=(invoice.total/100).toFixed(2);
+      const upiUrl=`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent('TCW HR '+invoice.number)}`;
+      const qrUrl=`https://quickchart.io/qr?size=280&margin=1&text=${encodeURIComponent(upiUrl)}`;
+      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{id:upiId,payeeName},amount};
+    }
+    if(resource==='subscription'&&key==='manual-payment'&&method==='POST'){
+      const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
+      const input=z.object({invoiceId:id,utr:z.string().trim().min(6).max(100)}).strict().parse(body);
+      const invoice=await this.db.invoice.findFirst({where:{id:input.invoiceId,tenantId:tid}});if(!invoice)throw new NotFoundException('Invoice not found.');
+      const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});
+      const profile={...(company.profile as any??{}),pendingPaymentProof:{invoiceId:invoice.id,utr:input.utr,submittedAt:new Date().toISOString(),amount:invoice.total,status:'AWAITING_VERIFICATION'}};
+      await this.db.tenant.update({where:{id:tid},data:{profile}});
+      await audit(this.db,ctx,'MANUAL_PAYMENT_PROOF_SUBMITTED','invoices',invoice.id,undefined,{utr:input.utr,amount:invoice.total});
+      return {ok:true,status:'AWAITING_VERIFICATION',message:'Payment reference submitted. Access will unlock after payment verification.'};
     }
     if(resource==='auth'){
       if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
@@ -244,6 +261,12 @@ export class Api {
       platform(ctx);
       if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};}
       if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({logo:z.string().max(8_000_000).nullable()}).strict().parse(body);if(input.logo){if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.logo))throw new BadRequestException('Use a PNG or JPEG logo up to 5 MB.');const raw=Buffer.from(input.logo.split(',')[1],'base64');const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG logo up to 5 MB.');}const value={logo:input.logo??'/tcw-logo.png'};const row=await this.db.platformSetting.upsert({where:{key:'branding'},update:{value},create:{key:'branding',value}});await audit(this.db,ctx,'PLATFORM_BRANDING_UPDATED','system');return {logo:(row.value as any)?.logo??'/tcw-logo.png',updatedAt:row.updatedAt};}
+      throw new NotFoundException();
+    }
+    if(resource==='system'&&key==='payment-settings'){
+      platform(ctx);
+      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {upiId:String(value.upiId??''),payeeName:String(value.payeeName??'TCW HR Software')};}
+      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({upiId:z.string().trim().max(120),payeeName:z.string().trim().min(1).max(120)}).strict().parse(body);if(input.upiId&&!/^[A-Za-z0-9._-]{2,}@[A-Za-z0-9.-]{2,}$/.test(input.upiId))throw new BadRequestException('Enter a valid UPI ID, for example name@bank.');const row=await this.db.platformSetting.upsert({where:{key:'billing-payment'},update:{value:input},create:{key:'billing-payment',value:input}});await audit(this.db,ctx,'PAYMENT_SETTINGS_UPDATED','system');return row.value;}
       throw new NotFoundException();
     }
     if(resource==='system'&&key==='company-update'){
