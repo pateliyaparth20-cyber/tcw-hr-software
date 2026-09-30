@@ -1,11 +1,19 @@
 package com.tcw.hrsoftware;
 
 import android.app.Activity;
+import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -15,6 +23,8 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 1001;
+    private static final int NOTIFICATION_PERMISSION_REQUEST = 1002;
+    private static final String NOTIFICATION_CHANNEL = "tcw_hr_updates";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
 
@@ -22,6 +32,9 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         webView = new WebView(this);
         setContentView(webView);
+        createNotificationChannel();
+        requestNotificationPermission();
+        webView.addJavascriptInterface(new NativeBridge(), "TCWNative");
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -55,6 +68,55 @@ public class MainActivity extends Activity {
         });
 
         if(state == null || webView.restoreState(state) == null) webView.loadUrl(BuildConfig.TCW_APP_URL);
+    }
+
+    private void createNotificationChannel(){
+        NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        if(manager==null)return;
+        NotificationChannel channel=new NotificationChannel(NOTIFICATION_CHANNEL,"TCW HR notifications",NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("HR alerts, approvals and software updates");
+        manager.createNotificationChannel(channel);
+    }
+
+    private void requestNotificationPermission(){
+        if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},NOTIFICATION_PERMISSION_REQUEST);
+        }
+    }
+
+    private void showNativeNotification(String title,String body,String url,String tag){
+        runOnUiThread(()->{
+            if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
+            Intent intent=new Intent(this,MainActivity.class);
+            intent.setData(Uri.parse(isAppOrigin(Uri.parse(url))?url:BuildConfig.TCW_APP_URL+"/notifications"));
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pending=PendingIntent.getActivity(this,Math.abs((tag+url).hashCode()),intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+            Notification notification=new Notification.Builder(this,NOTIFICATION_CHANNEL)
+                .setSmallIcon(com.tcw.hrsoftware.R.drawable.tcw_logo)
+                .setContentTitle(title==null||title.isEmpty()?"TCW HR Software":title)
+                .setContentText(body==null?"":body)
+                .setStyle(new Notification.BigTextStyle().bigText(body==null?"":body))
+                .setAutoCancel(true)
+                .setContentIntent(pending)
+                .build();
+            NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+            if(manager!=null)manager.notify(Math.abs(tag.hashCode()),notification);
+        });
+    }
+
+    private class NativeBridge {
+        @JavascriptInterface public void showNotification(String title,String body,String url,String tag){
+            String target=url==null||url.isEmpty()?BuildConfig.TCW_APP_URL+"/notifications":url;
+            if(target.startsWith("/"))target=BuildConfig.TCW_APP_URL.replaceAll("/$","")+target;
+            showNativeNotification(title,body,target,tag==null?"tcw":tag);
+        }
+    }
+
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);
+        setIntent(intent);
+        Uri target=intent.getData();
+        if(target!=null&&webView!=null&&isAppOrigin(target))webView.loadUrl(target.toString());
     }
 
     private boolean isAppOrigin(Uri uri){

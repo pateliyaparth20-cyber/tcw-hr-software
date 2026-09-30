@@ -4,6 +4,9 @@ import {useEffect} from 'react';
 declare global {
   interface Window {
     __tcwInstallPrompt?: any;
+    __tcwSystemNotify?: (title:string,body?:string,url?:string,tag?:string)=>Promise<void>;
+    __tcwEnableNotifications?: ()=>Promise<boolean>;
+    TCWNative?: {showNotification:(title:string,body:string,url:string,tag:string)=>void};
   }
 }
 
@@ -15,8 +18,27 @@ async function clearLegacyTcwCaches(){
   await Promise.all(keys.filter(key=>key.startsWith(TCW_CACHE_PREFIX)).map(key=>caches.delete(key)));
 }
 
+async function tcwSystemNotify(title:string,body='',url='/notifications',tag='tcw-notification'){
+  if(typeof window==='undefined')return;
+  try{
+    if(window.TCWNative?.showNotification){window.TCWNative.showNotification(title,body,url,tag);return;}
+    if(!('Notification' in window)||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
+    const registration=await navigator.serviceWorker.ready;
+    await registration.showNotification(title,{body,icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag,data:{url}});
+  }catch{}
+}
+async function enableNotifications(){
+  if(typeof window==='undefined')return false;
+  if(window.TCWNative)return true;
+  if(!('Notification' in window))return false;
+  if(Notification.permission==='granted')return true;
+  if(Notification.permission==='denied')return false;
+  try{return (await Notification.requestPermission())==='granted'}catch{return false}
+}
 export function PwaClient(){
   useEffect(()=>{
+    window.__tcwSystemNotify=tcwSystemNotify;
+    window.__tcwEnableNotifications=enableNotifications;
     let cancelled=false;
     const syncVersion=async()=>{
       try{
@@ -37,6 +59,8 @@ export function PwaClient(){
       }catch{}
     };
     syncVersion();
+    const askOnFirstInteraction=()=>{enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
+    if(!window.TCWNative&&'Notification' in window&&Notification.permission==='default')document.addEventListener('pointerdown',askOnFirstInteraction,true);
     // Never let a development service worker cache Next.js bundles. Old cached
     // chunks can produce React hydration mismatches after a UI update.
     if('serviceWorker' in navigator){
@@ -48,7 +72,7 @@ export function PwaClient(){
       }else{
         navigator.serviceWorker.register('/sw.js').then(registration=>{
           registration.update().catch(()=>{});
-          const announce=()=>window.dispatchEvent(new Event('tcw-update-available'));
+          const announce=()=>{window.dispatchEvent(new Event('tcw-update-available'));tcwSystemNotify('TCW HR Software update available','A new software version is ready. Open the app to update.','/dashboard','tcw-software-update').catch(()=>{})};
           if(registration.waiting)announce();
           registration.addEventListener('updatefound',()=>{const worker=registration.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)announce()})});
         }).catch(()=>{});
@@ -67,6 +91,9 @@ export function PwaClient(){
     window.addEventListener('appinstalled',onInstalled);
     return()=>{
       cancelled=true;
+      document.removeEventListener('pointerdown',askOnFirstInteraction,true);
+      delete window.__tcwSystemNotify;
+      delete window.__tcwEnableNotifications;
       window.removeEventListener('beforeinstallprompt',onPrompt as EventListener);
       window.removeEventListener('appinstalled',onInstalled);
     };
