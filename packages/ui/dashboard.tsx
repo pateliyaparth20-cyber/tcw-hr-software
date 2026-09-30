@@ -2,7 +2,7 @@
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
 import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard} from 'lucide-react';
-import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,currencyValue,displayDate} from './core';
+import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,BrandLogo,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
 function useTimeGreeting(timeZone?:string){
  const[greeting,setGreeting]=useState('GOOD MORNING');
@@ -56,7 +56,7 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
  const latestEmployee=people[0];
  return <section className="hr-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-tenant">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src={d.company?.logo||'/tcw-logo.png'} alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo">{d.company?.logo?<img src={d.company.logo} alt={d.company?.name??'Company'}/>:<BrandLogo alt="TCW HR Software"/>}</span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div>
    <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
   </div>
 
@@ -89,7 +89,7 @@ function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,out
  const greeting=useTimeGreeting('Asia/Kolkata');
  return <section className="platform-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-platform">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><img src="/tcw-logo.png" alt="Tech Cyber Warrior"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="mobile-unified-action" aria-label="System health"><Server size={19}/></Link></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><BrandLogo alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="mobile-unified-action" aria-label="System health"><Server size={19}/></Link></div>
    <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>Platform administrator</span></div></div>
   </div>
   <div className="platform-mobile-stats">
