@@ -73,15 +73,16 @@ export function PwaClient(){
         const previous=window.localStorage.getItem(key);
         if(!previous){window.localStorage.setItem(key,next);return;}
         if(previous!==next){
-          window.localStorage.setItem(key,next);
-          await clearLegacyTcwCaches().catch(()=>{});
-          const url=new URL(window.location.href);
-          url.searchParams.set('tcw_refresh',String(Date.now()));
-          window.location.replace(url.toString());
+          const pendingKey='tcw_pending_deployment_version';
+          const alreadyNotified=window.localStorage.getItem(pendingKey)===next;
+          window.localStorage.setItem(pendingKey,next);
+          window.dispatchEvent(new Event('tcw-update-available'));
+          if(!alreadyNotified)await tcwSystemNotify('TCW HR Software update available','A new version is ready. Open Software update when you want to install it.','/software-update','tcw-software-update').catch(()=>{});
         }
       }catch{}
     };
     syncVersion();
+    const versionTimer=window.setInterval(syncVersion,5*60*1000);
     const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
     let iosGuide:HTMLButtonElement|null=null,iosGuideTimer:ReturnType<typeof setTimeout>|undefined;
@@ -132,7 +133,7 @@ export function PwaClient(){
       delete window.__tcwEnableNotifications;document.removeEventListener('touchstart',onTouchStart);document.removeEventListener('touchmove',onTouchMove);document.removeEventListener('touchend',onTouchEnd);document.removeEventListener('click',onPhotoClick);document.removeEventListener('touchstart',onPhotoTouchStart);document.removeEventListener('touchend',clearLong);document.removeEventListener('touchmove',clearLong);refreshBadge.remove();clearLong();
       window.removeEventListener('beforeinstallprompt',onPrompt as EventListener);
       window.removeEventListener('appinstalled',onInstalled);
-      if(iosGuideTimer)clearTimeout(iosGuideTimer);iosGuide?.remove();
+      if(iosGuideTimer)clearTimeout(iosGuideTimer);window.clearInterval(versionTimer);iosGuide?.remove();
     };
   },[]);
   return null;
