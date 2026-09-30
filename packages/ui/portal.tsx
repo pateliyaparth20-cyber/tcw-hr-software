@@ -155,6 +155,7 @@ function Shell({page}:{page:string}){
  const unreadNotices=notices.data?.unread ?? 0;
  const searchEmployees=employees.data?.items ?? [];
  if(session.user.mustChangePassword)return <FirstPasswordChange/>;
+ if(billingLocked&&session.user.role==='EMPLOYEE')return <div className="employee-access-paused"><div className="employee-access-paused-card"><BrandLogo/><span>EMPLOYEE SELF SERVICE</span><h1>Company access is temporarily paused</h1><p>Your company subscription needs attention. No payment or billing details are shown to employee accounts. Please contact your HR administrator.</p><button className="btn secondary" type="button" onClick={logout}><LogOut size={16}/>Sign out</button></div></div>;
  if(billingLocked)return <SubscriptionLock/>;
  return <div className={'app-shell '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')+(session.user.role==='EMPLOYEE'?' employee-shell':'')} style={{'--primary':session.company?.profile?.primaryColor??'#3474ef'} as React.CSSProperties}>
  {mobile&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
