@@ -181,7 +181,7 @@ export class Api {
       await this.db.tenant.update({where:{id:tid},data:{profile}});
       await audit(this.db,ctx,'SUBSCRIPTION_PAYMENT_STARTED','tenants',tid,undefined,{plan:plan.name,invoiceId:invoice.id,total:invoice.total,mode:'AUTO',provider:checkout.provider,expiresAt:checkout.expiresAt});
       const qrUrl=`https://quickchart.io/qr?size=300&margin=1&text=${encodeURIComponent(checkout.checkoutUrl)}`;
-      return {ok:true,invoice,plan,mode:'AUTO',provider:checkout.provider,checkoutUrl:checkout.checkoutUrl,qrUrl,expiresAt:checkout.expiresAt,qrLifetimeSeconds:50,gstPercent:paymentCfg.gstPercent,breakdown};
+      return {ok:true,invoice,plan,mode:'AUTO',paymentMethod:'UPI',provider:checkout.provider,checkoutUrl:checkout.checkoutUrl,qrUrl,expiresAt:checkout.expiresAt,qrLifetimeSeconds:50,gstPercent:paymentCfg.gstPercent,breakdown};
     }
     // Legacy manual proof endpoint remains only to settle payment attempts created before automatic gateway rollout.
     if(resource==='subscription'&&key==='manual-payment'&&method==='POST'){
