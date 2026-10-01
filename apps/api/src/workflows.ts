@@ -12,6 +12,11 @@ import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-pr
 import {finalizePayrollMonth,preparePayrollMonth,reopenPayrollMonth} from './payroll-service';
 
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
+async function reconcileLeaveMonths(db:Database,tenantId:string,months:string[]){
+  const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
+  const currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
+  for(const month of months)if(month<=currentMonth)await reconcileAttendanceMonth(db,tenantId,month);
+}
 export class Workflows {
   constructor(public db:Database){}
   private async closeOpenWorkForApprovedFullDayLeave(ctx:Context,row:any){
@@ -165,10 +170,10 @@ export class Workflows {
         const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});
         if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before deleting this leave.`);
         await tx.leaveRequest.delete({where:{id:before.id}});
-        await audit(tx,ctx,'LEAVE_DELETED','leave',before.id,before,{deleted:true});
+        if(before.status==='APPROVED')await reconcileLeaveMonths(tx as unknown as Database,tid,affectedMonths);
+        await audit(tx,ctx,'LEAVE_DELETED','leave',before.id,before,{deleted:true,attendanceReconciled:before.status==='APPROVED'});
         deleted=before;
       });
-      if(deleted?.status==='APPROVED')for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
       const user=deleted?await this.db.user.findFirst({where:{tenantId:tid,employeeId:deleted.employeeId,active:true}}):null;
       if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave removed',message:'HR removed a leave record from your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
       return {ok:true,id:leaveId};
@@ -198,7 +203,7 @@ export class Workflows {
     });
     if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
-      for(const month of monthsCovered(after.startDate,after.endDate))await reconcileAttendanceMonth(this.db,tid,month);
+      await reconcileLeaveMonths(this.db,tid,monthsCovered(after.startDate,after.endDate));
       const user=await this.db.user.findFirst({where:{tenantId:tid,employeeId:after.employeeId}});
       if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave assigned',message:'HR assigned approved leave to your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
     }
@@ -217,7 +222,7 @@ export class Workflows {
     });
     if(type==='leave'&&input.decision==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,reviewed);
-      for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
+      await reconcileLeaveMonths(this.db,tid,affectedMonths);
     }
     return reviewed;
   }
