@@ -11434,3 +11434,23 @@ input[type="month"]{
  .profile-field-control>svg{margin-left:13px;width:18px;height:18px}
  .my-profile-form .platform-profile-fields .profile-field-control input{min-height:44px!important;font-size:16px!important;padding:9px 11px!important}
 }
+
+
+/* Profile photo actions — detach controls from identity divider */
+.profile-photo-actions-only{
+ border:0!important;
+ margin-top:0!important;
+ padding-top:18px!important;
+ position:relative;
+ background:#fff;
+}
+@media(max-width:650px){
+ .profile-photo-actions-only{
+   border:0!important;
+   margin-top:0!important;
+   padding-top:18px!important;
+   padding-bottom:18px!important;
+ }
+ .my-profile-main{border-bottom:0!important}
+ .profile-photo-actions-only .profile-photo-buttons{margin-top:0!important}
+}
