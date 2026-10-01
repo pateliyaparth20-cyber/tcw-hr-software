@@ -203,7 +203,7 @@ export class Workflows {
     return reviewed;
   }
   async payroll(ctx:Context,method:string,recordId?:string,action?:string,body:any={}){
-    const tid=tenant(ctx);requirePermission(ctx,'payroll',method==='GET'?'VIEW':action==='approve'||action==='lock'?'APPROVE':'CREATE');
+    const tid=tenant(ctx);requirePermission(ctx,'payroll',method==='GET'?'VIEW':action==='approve'||action==='lock'||action==='unlock'?'APPROVE':'CREATE');
     const scope=await employeeScope(this.db,ctx);
     if(method==='GET'){
       if(scope){return {items:await this.db.payrollItem.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId??'00000000-0000-0000-0000-000000000000',run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true}}}})};}
@@ -259,6 +259,14 @@ export class Workflows {
         const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'REVIEW',totalGross,totalDeductions,totalNet,attendanceLockId:period.id}});
         const reviewNotice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} ready for review`,message:`Attendance is locked and payroll has been calculated for ${employees.length} eligible employee(s). Net payroll: ${(totalNet/100).toLocaleString('en-IN',{style:'currency',currency:'INR'})}. Review before approval.`}});sendPush(this.db,{tenantId:tid,title:reviewNotice.title,body:reviewNotice.message,url:'/payroll',tag:'tcw-'+reviewNotice.id}).catch(()=>{});
         await audit(tx,ctx,'PAYROLL_CALCULATED','payroll',recordId,run,{...after,attendanceMonth:summary.totals});return after;
+      }
+      if(action==='unlock'){
+        if(run.status!=='LOCKED')throw new ConflictException('Only a locked payroll can be unlocked.');
+        const payoutCount=await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}});
+        if(payoutCount)throw new ConflictException('This payroll has payout records and cannot be unlocked. Keep the finalized payroll for audit and use a later-month adjustment for corrections.');
+        const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'REVIEW',lockedAt:null,approvedBy:null}});
+        await audit(tx,ctx,'PAYROLL_UNLOCKED','payroll',recordId,run,{...after,reason:'Reopened before payout'});
+        return after;
       }
       const target=action==='approve'?'APPROVED':action==='lock'?'LOCKED':action==='reopen'?'DRAFT':null;
       if(!target)throw new BadRequestException('Unknown payroll action.');assertPayrollTransition(run.status,target);
