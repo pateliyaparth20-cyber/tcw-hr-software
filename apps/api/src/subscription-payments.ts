@@ -127,7 +127,7 @@ export async function createAutomaticCheckout(db:Database,args:{invoice:any;comp
     customer,
     notify:{sms:false,email:false},
     reminder_enable:false,
-    options:{checkout:{method:{upi:1,card:0,netbanking:0,wallet:0},prefill:{method:'upi'}}},
+    options:{checkout:{method:{upi:true,card:false,netbanking:false,wallet:false},prefill:{method:'upi'}}},
     notes:{invoiceId:args.invoice.id,tenantId:args.company.id,plan:args.plan.name,paymentMode:'UPI_ONLY'}
   };
   const row=await razorpayRequest(cfg,'/v1/payment_links',{method:'POST',body:JSON.stringify(payload)});
