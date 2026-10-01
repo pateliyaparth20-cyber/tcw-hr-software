@@ -72,10 +72,13 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),1);
    const punch=await db.attendancePunch.findFirstOrThrow({where:{sourceId}});await assert.rejects(()=>db.attendancePunch.update({where:{id:punch.id},data:{punchType:'OUT'}}));
   });
-  await t.test('invoice payments cannot overpay and references are unique',async()=>{
+  await t.test('verified invoice payments require exact total and provider references are idempotent',async()=>{
    const invoice=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-001',amount:100000,tax:18000,dueDate:'2026-10-01'},root);assert.equal(invoice.status,200,JSON.stringify(invoice.data));
    const payment={invoiceId:invoice.data.id,amount:118000,reference:'BANK-001',date:'2026-09-25'};
-   assert.equal((await call('platform/payments','POST',payment,root)).status,200);assert.equal((await call('platform/payments','POST',{...payment,reference:'BANK-002'},root)).status,400);
+   assert.equal((await call('platform/payments','POST',{...payment,amount:117999},root)).status,400);
+   assert.equal((await call('platform/payments','POST',payment,root)).status,200);
+   assert.equal((await call('platform/payments','POST',payment,root)).status,200);
+   assert.equal((await call('platform/payments','POST',{...payment,reference:'BANK-002'},root)).status,409);
   });
   await t.test('tenant suspension invalidates existing sessions',async()=>{await db.tenant.update({where:{id:betaTenant!},data:{status:'SUSPENDED'}});assert.equal((await call('employees','GET',undefined,beta)).status,403)});
   await t.test('password resets are single-use and revoke existing sessions',async()=>{
