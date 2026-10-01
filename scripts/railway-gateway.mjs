@@ -26,7 +26,12 @@ function shutdown(code=0){
 start('api','npm',['run','start:api'],{PORT:'4000',API_PORT:'4000',API_BIND_HOST:'127.0.0.1'});
 start('web','npm',['run','start:web'],{PORT:'3000',API_INTERNAL_URL:process.env.API_INTERNAL_URL??'http://127.0.0.1:4000'});
 start('admin','npm',['run','start:admin'],{PORT:'3001',API_INTERNAL_URL:process.env.API_INTERNAL_URL??'http://127.0.0.1:4000'});
-start('worker','npm',['run','start:worker']);
+
+const railwayService=String(process.env.RAILWAY_SERVICE_NAME??'').trim().toLowerCase();
+const explicitWorker=String(process.env.RUN_WORKER??'').trim().toLowerCase();
+const runWorker=explicitWorker?['1','true','yes','on'].includes(explicitWorker):(!railwayService||railwayService==='tcw-hr-software');
+if(runWorker)start('worker','npm',['run','start:worker']);
+else console.log(`TCW automation worker disabled on Railway service ${railwayService||'unknown'}; the HR service owns scheduled automation.`);
 
 function targetPort(req){
  const path=String(req.url??'/');
