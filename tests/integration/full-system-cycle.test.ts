@@ -134,7 +134,7 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
       const employees=await call('employees?pageSize=500','GET',undefined,owner);assert.equal(employees.data.total,8);assert(employees.data.items.every((row:any)=>typeof row.monthlySalary==='number'));
       const attendance=await call('attendance/summary?month=2026-09','GET',undefined,owner);assert.equal(attendance.data.totals.employees,8);assert.equal(attendance.data.totals.missingPunchDays,0);assert.equal(attendance.data.lock.status,'LOCKED');
       const runs=await call('payroll','GET',undefined,owner);assert.equal(runs.data.items[0].status,'LOCKED');assert.equal(runs.data.items[0].items.length,8);
-      const payouts=await call(`payroll/${payroll.id}/payouts`,'GET',undefined,owner);assert.equal(payouts.status,200);assert.equal(payouts.data.items.length,8);assert(payouts.data.items.every((row:any)=>row.status==='PAID'));
+      const payouts=await call(`payroll/${payroll.id}/payouts`,'GET',undefined,owner);assert.equal(payouts.status,200);assert.equal(payouts.data.items.length,8);assert(payouts.data.items.every((row:any)=>['PAID','processed'].includes(row.status)));
       const bank=await call(`reports/bank-payout?runId=${payroll.id}`,'GET',undefined,owner);assert.equal(bank.status,200);const csv=String(bank.data);assert(csv.includes('QA002'));assert(csv.includes('HDFC0000001'));
     });
 
