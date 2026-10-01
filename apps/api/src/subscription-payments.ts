@@ -118,6 +118,7 @@ export async function createAutomaticCheckout(db:Database,args:{invoice:any;comp
   if(email)customer.email=email;
   if(phone)customer.contact=phone;
   const payload:any={
+    upi_link:true,
     amount:args.invoice.total,
     currency:'INR',
     accept_partial:false,
