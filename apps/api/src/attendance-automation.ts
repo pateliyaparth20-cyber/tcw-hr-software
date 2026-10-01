@@ -30,7 +30,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
   const processNext=month===currentMonth?new Date(+atDate(today)+86400000):next;
   const lock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
   if(lock?.status==='LOCKED')throw new ConflictException(`${month} attendance is locked.`);
-  if(month===currentMonth)await db.attendanceDaily.updateMany({where:{tenantId,date:{gte:processNext,lt:next},correctionNote:null,firstIn:null,lastOut:null,status:{not:'VOID'}},data:{status:'VOID',scheduledMinutes:0,payableUnits:0,leaveUnits:0,exceptionCode:''}});
+  if(month===currentMonth)await db.attendanceDaily.updateMany({where:{tenantId,date:{gte:processNext,lt:next},correctionNote:'',firstIn:null,lastOut:null,status:{not:'VOID'}},data:{status:'VOID',scheduledMinutes:0,payableUnits:0,leaveUnits:0,exceptionCode:''}});
   const [employees,shifts,holidays,leaves,leaveTypes,existing,punches]=await Promise.all([
     db.employee.findMany({where:{tenantId,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:next}},orderBy:{employeeCode:'asc'}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
