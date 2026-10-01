@@ -74,6 +74,18 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
       const system=await call('system','GET',undefined,platform);assert.equal(system.status,200);assert.equal(system.data.database,'CONNECTED');
     });
 
+    await t.test('platform support staff have least-privilege access and ticket assignment',async()=>{
+      const created=await call('platform/users','POST',{name:'Support Agent QA',email:'support.agent.qa@example.test',loginId:'TCW-SUPPORT-QA',password:'Support@2026-QA!',role:'SUPPORT_AGENT',active:true},platform);
+      assert.equal(created.status,200,JSON.stringify(created.data));assert.equal(created.data.roleCode,'SUPPORT_AGENT');
+      const supportAgent=await login('support.agent.qa@example.test','Support@2026-QA!');
+      const team=await call('platform/users','GET',undefined,platform);assert.equal(team.status,200);assert(team.data.items.some((row:any)=>row.id===created.data.id&&row.roleCode==='SUPPORT_AGENT'));
+      const queue=await call('platform/support','GET',undefined,supportAgent);assert.equal(queue.status,200,JSON.stringify(queue.data));assert(queue.data.items.length>=1);
+      const forbidden=await call('platform/companies','GET',undefined,supportAgent);assert.equal(forbidden.status,403);
+      const ticket=queue.data.items[0];
+      const assigned=await call(`platform/support/${ticket.id}`,'PATCH',{status:'IN_PROGRESS',assignedTo:created.data.id,response:'Assigned to QA support agent.'},supportAgent);
+      assert.equal(assigned.status,200,JSON.stringify(assigned.data));assert.equal(assigned.data.assignedTo,created.data.id);assert.equal(assigned.data.assignedUser.name,'Support Agent QA');
+    });
+
     await t.test('HR owner can read every core real-HR workspace without broken endpoints',async()=>{
       for(const path of [
         'dashboard','employees?pageSize=500','branches?pageSize=500','departments?pageSize=500','designations?pageSize=500','teams?pageSize=500','locations?pageSize=500','cost-centers?pageSize=500',
