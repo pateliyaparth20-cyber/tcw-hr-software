@@ -11605,3 +11605,60 @@ input[type="month"]{
   .auth-pro-head>*{min-width:0}
   .password-visibility{width:40px;height:40px;right:4px}
 }
+
+
+/* v1.4.1 mobile scroll restoration — keep document scrolling native */
+@media(max-width:950px){
+  html{
+    height:auto!important;
+    min-height:100%!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:auto!important;
+    touch-action:pan-y!important;
+  }
+  body{
+    height:auto!important;
+    min-height:100dvh!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:auto!important;
+    touch-action:pan-y!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .app-shell,
+  .tenant-shell,
+  .platform-shell,
+  .main-shell{
+    height:auto!important;
+    min-height:100dvh!important;
+    overflow-y:visible!important;
+    touch-action:pan-y!important;
+  }
+  .workspace-main,
+  .page-stage{
+    height:auto!important;
+    overflow-y:visible!important;
+    touch-action:pan-y!important;
+  }
+  .workspace-main{
+    padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .modal{
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    touch-action:pan-y!important;
+  }
+  .modal-body{
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y!important;
+  }
+  .table-scroll{
+    overflow-x:auto!important;
+    overflow-y:visible;
+    touch-action:pan-x pan-y!important;
+  }
+  .mobile-bottom-nav{
+    touch-action:manipulation!important;
+  }
+}
