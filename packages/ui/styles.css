@@ -11454,3 +11454,39 @@ input[type="month"]{
  .my-profile-main{border-bottom:0!important}
  .profile-photo-actions-only .profile-photo-buttons{margin-top:0!important}
 }
+
+
+/* Profile desktop/mobile final alignment — remove divider and anchor actions cleanly */
+.my-profile-card .my-profile-main{
+ border-bottom:0!important;
+}
+.my-profile-card .my-profile-form{
+ border-top:0!important;
+}
+.my-profile-card .profile-photo-actions-only{
+ border:0!important;
+ box-shadow:none!important;
+ margin:0!important;
+ padding:16px 0 22px!important;
+}
+.my-profile-card .profile-photo-actions-only::before,
+.my-profile-card .profile-photo-actions-only::after{display:none!important;content:none!important}
+.my-profile-card .profile-photo-buttons{
+ display:flex!important;align-items:center!important;gap:12px!important;margin:0!important;
+}
+.my-profile-card .profile-photo-buttons .btn{
+ width:auto!important;min-width:150px!important;min-height:44px!important;
+ padding:10px 16px!important;border-radius:12px!important;
+}
+@media(min-width:651px){
+ .my-profile-card .my-profile-main{padding-bottom:18px!important}
+ .my-profile-card .my-profile-form{padding-top:0!important}
+ .my-profile-card .profile-photo-actions-only{padding:0 0 24px!important}
+ .my-profile-card .profile-photo-buttons{justify-content:flex-start!important}
+ .my-profile-card .platform-profile-fields{padding-top:0!important}
+}
+@media(max-width:650px){
+ .my-profile-card .profile-photo-actions-only{padding:10px 0 18px!important}
+ .my-profile-card .profile-photo-buttons{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+ .my-profile-card .profile-photo-buttons .btn{width:100%!important;min-width:0!important;min-height:46px!important;padding:9px 8px!important}
+}
