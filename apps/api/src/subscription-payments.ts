@@ -136,8 +136,9 @@ export async function createAutomaticCheckout(db:Database,args:{invoice:any;comp
 
 export async function cancelAutomaticCheckout(db:Database,session:any){
   if(!session?.id||session.provider!=='RAZORPAY')return;
-  const cfg=await effectivePaymentConfig(db);if(!cfg.automatic)return;
-  try{await razorpayRequest(cfg,`/v1/payment_links/${encodeURIComponent(String(session.id))}/cancel`,{method:'POST',body:'{}'});}catch{}
+  const cfg=await effectivePaymentConfig(db);
+  if(!cfg.automatic)throw new ServiceUnavailableException('Automatic payment gateway is not configured.');
+  await razorpayRequest(cfg,`/v1/payment_links/${encodeURIComponent(String(session.id))}/cancel`,{method:'POST',body:'{}'});
 }
 
 export async function fetchAutomaticCheckout(db:Database,session:any){
