@@ -1,6 +1,6 @@
 {
   "name": "@peopleos/super-admin",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0 -p 3001",
