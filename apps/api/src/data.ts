@@ -403,9 +403,12 @@ export class DataService {
       const items=await(this.db as any)[model].findMany({...(visibleWhere?{where:visibleWhere}:{}),orderBy:{createdAt:'desc'},take:500});
       if(type==='support'){
         const tenantIds:string[]=[...new Set<string>(items.map((r:any)=>String(r.tenantId)).filter(Boolean))];
-        const companies=tenantIds.length?await this.db.tenant.findMany({where:{id:{in:tenantIds}},select:{id:true,name:true,code:true}}):[];
-        const byId=new Map(companies.map(c=>[c.id,c]));
-        return {items:items.map((r:any)=>({...r,company:byId.get(r.tenantId)??null}))};
+        const [companies,platformUsers]=await Promise.all([
+          tenantIds.length?this.db.tenant.findMany({where:{id:{in:tenantIds}},select:{id:true,name:true,code:true}}):[],
+          this.db.user.findMany({where:{tenantId:null,active:true},include:{role:true}})
+        ]);
+        const byId=new Map(companies.map(c=>[c.id,c])),usersById=new Map(platformUsers.filter(u=>hasPermission(u.role.permissions,'support','VIEW')).map(u=>[u.id,{id:u.id,name:u.name,email:u.email,role:u.role.code}]));
+        return {items:items.map((r:any)=>({...r,company:byId.get(r.tenantId)??null,assignedUser:r.assignedTo?usersById.get(String(r.assignedTo))??null:null}))};
       }
       if(type==='payments'){
         const tenants=await this.db.tenant.findMany({where:{status:{not:'ARCHIVED'}},select:{id:true,name:true,profile:true}});
@@ -476,7 +479,19 @@ export class DataService {
       await syncCompanyAccess(this.db,result.tenantId);
       return result.payment??await this.db.payment.findUnique({where:{reference:input.reference}});
     }
-    if(type==='support'&&recordId){const input=z.object({status:z.enum(['OPEN','IN_PROGRESS','RESOLVED']),response:z.string().max(5000),assignedTo:z.string().max(120).optional().nullable()}).strict().parse(body);return this.db.$transaction(async tx=>{const before=await tx.supportTicket.findUniqueOrThrow({where:{id:id.parse(recordId)}});const after=await tx.supportTicket.update({where:{id:recordId},data:{...input,closedAt:input.status==='RESOLVED'?new Date():null}});if(input.response.trim())await tx.supportTicketMessage.create({data:{tenantId:after.tenantId,ticketId:after.id,authorId:ctx.user.id,authorScope:'PLATFORM',authorName:input.assignedTo?.trim()||ctx.user.name,message:input.response.trim()}});await tx.notification.create({data:{tenantId:after.tenantId,title:`Support ticket ${after.ticketNumber} updated`,message:`Status: ${after.status}. ${after.response?after.response.slice(0,300):'TCW Support updated your request.'}`}});await audit(tx,ctx,'TICKET_UPDATED','support',recordId,before,after);return after;});}
+    if(type==='support'&&recordId){
+      const input=z.object({status:z.enum(['OPEN','IN_PROGRESS','RESOLVED']),response:z.string().max(5000).default(''),assignedTo:z.union([id,z.literal('')]).optional().nullable().transform(v=>v||null)}).strict().parse(body);
+      return this.db.$transaction(async tx=>{
+        const before=await tx.supportTicket.findUniqueOrThrow({where:{id:id.parse(recordId)}});
+        const assignee=input.assignedTo?await tx.user.findFirst({where:{id:input.assignedTo,tenantId:null,active:true},include:{role:true}}):null;
+        if(input.assignedTo&&(!assignee||!hasPermission(assignee.role.permissions,'support','VIEW')))throw new BadRequestException('Choose an active platform user with Support access.');
+        const after=await tx.supportTicket.update({where:{id:recordId},data:{status:input.status,response:input.response,assignedTo:assignee?.id??null,closedAt:input.status==='RESOLVED'?new Date():null}});
+        if(input.response.trim())await tx.supportTicketMessage.create({data:{tenantId:after.tenantId,ticketId:after.id,authorId:ctx.user.id,authorScope:'PLATFORM',authorName:ctx.user.name,message:input.response.trim()}});
+        await tx.notification.create({data:{tenantId:after.tenantId,title:`Support ticket ${after.ticketNumber} updated`,message:`Status: ${after.status}. ${after.response?after.response.slice(0,300):'TCW Support updated your request.'}`}});
+        await audit(tx,ctx,'TICKET_UPDATED','support',recordId,before,{...after,assignedUser:assignee?{id:assignee.id,name:assignee.name,role:assignee.role.code}:null});
+        return {...after,assignedUser:assignee?{id:assignee.id,name:assignee.name,email:assignee.email,role:assignee.role.code}:null};
+      });
+    }
     throw new BadRequestException('Unsupported operation.');
   }
 }
