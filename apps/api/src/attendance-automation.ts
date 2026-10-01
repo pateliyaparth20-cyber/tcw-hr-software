@@ -31,14 +31,15 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
   const lock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
   if(lock?.status==='LOCKED')throw new ConflictException(`${month} attendance is locked.`);
   if(month===currentMonth)await db.attendanceDaily.updateMany({where:{tenantId,date:{gte:processNext,lt:next},correctionNote:'',firstIn:null,lastOut:null,status:{not:'VOID'}},data:{status:'VOID',scheduledMinutes:0,payableUnits:0,leaveUnits:0,exceptionCode:''}});
-  const [employees,shifts,holidays,leaves,leaveTypes,existing,punches]=await Promise.all([
+  const [employees,shifts,holidays,leaves,leaveTypes,existing,punches,exits]=await Promise.all([
     db.employee.findMany({where:{tenantId,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:next}},orderBy:{employeeCode:'asc'}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
     db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:next},OR:[{endDate:null},{endDate:{gte:first}}]}}),
     db.leaveRequest.findMany({where:{tenantId,status:'APPROVED',startDate:{lt:next},endDate:{gte:first}}}),
     db.leaveType.findMany({where:{tenantId}}),
     db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:next}}}),
-    db.attendancePunch.findMany({where:{tenantId,punchTime:{gte:new Date(+first-86400000),lt:new Date(+next+86400000)}},orderBy:{punchTime:'asc'}})
+    db.attendancePunch.findMany({where:{tenantId,punchTime:{gte:new Date(+first-86400000),lt:new Date(+next+86400000)}},orderBy:{punchTime:'asc'}}),
+    db.employeeExit.findMany({where:{tenantId,status:{in:['APPROVED','CLEARANCE','COMPLETED']},lastWorkingDate:{gte:first,lt:next}},select:{employeeId:true,lastWorkingDate:true,status:true}})
   ]);
   if(!shifts.length)throw new BadRequestException('Create a shift before reconciling attendance.');
   const shiftMap=new Map(shifts.map(s=>[s.id,s]));
@@ -46,15 +47,17 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
   const holidaySet=new Set<string>();
   for(const h of holidays){const end=h.endDate??h.date;for(let t=+h.date;t<=+end;t+=86400000)holidaySet.add(key(new Date(t)));}
   const existingMap=new Map(existing.map(r=>[`${r.employeeId}:${key(r.date)}`,r]));
+  const exitMap=new Map(exits.map(row=>[row.employeeId,row.lastWorkingDate]));
   let generated=0,exceptions=0;
   for(const employee of employees){
     const shift=(employee.shiftId&&shiftMap.get(employee.shiftId))||shifts[0];
     const workDays=workingDaySet(shift.workingDays);
     const start=employee.joiningDate>first?employee.joiningDate:first;
+    const exitDate=exitMap.get(employee.id),employmentNext=exitDate?new Date(+exitDate+86400000):processNext,employeeProcessNext=employmentNext<processNext?employmentNext:processNext;
     const employeeLeaves=leaves.filter(l=>l.employeeId===employee.id);
     const punchesByDay=new Map<string,typeof punches>();
     for(const punch of punches.filter(p=>p.employeeId===employee.id)){let punchDay=localDate(punch.punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;if(night&&punch.punchTime<zonedMinute(punchDay,shift.endMinute,shift.timezone))punchDay=new Date(Date.parse(punchDay)-86400000).toISOString().slice(0,10);if(punchDay.slice(0,7)!==month)continue;const list=punchesByDay.get(punchDay)??[];list.push(punch);punchesByDay.set(punchDay,list);}
-    for(const day of eachDay(start,processNext)){
+    for(const day of eachDay(start,employeeProcessNext)){
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`),dayPunches=punchesByDay.get(dateKey)??[];
       let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){const night=shift.endMinute<=shift.startMinute;punchCalc=calculateAttendance(dayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd:zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
       const holiday=holidaySet.has(dateKey),weeklyOff=!workDays.has(day.getUTCDay());
@@ -87,14 +90,16 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
   const reportNext=month<currentMonth?next:month===currentMonth?new Date(+atDate(today)+86400000):first;
-  const [rows,employees,lock,shifts,holidays]=await Promise.all([
+  const [rows,employees,lock,shifts,holidays,exits]=await Promise.all([
     db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:reportNext},status:{not:'VOID'},...(employeeIds?{employeeId:{in:employeeIds}}:{})},orderBy:[{employeeId:'asc'},{date:'asc'}]}),
     db.employee.findMany({where:{tenantId,deletedAt:null,...(employeeIds?{id:{in:employeeIds}}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,shiftId:true,joiningDate:true}}),
     db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
-    db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:reportNext},OR:[{endDate:null},{endDate:{gte:first}}]}})
+    db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:reportNext},OR:[{endDate:null},{endDate:{gte:first}}]}}),
+    db.employeeExit.findMany({where:{tenantId,status:{in:['APPROVED','CLEARANCE','COMPLETED']},lastWorkingDate:{lt:reportNext}},select:{employeeId:true,lastWorkingDate:true,status:true}})
   ]);
   const employeeMap=new Map(employees.map(e=>[e.id,e]));
+  const exitMap=new Map(exits.map(row=>[row.employeeId,row.lastWorkingDate]));
   const shiftMap=new Map(shifts.map(s=>[s.id,s]));
   const holidaySet=new Set<string>();
   for(const h of holidays){const end=h.endDate??h.date;for(let t=Math.max(+first,+h.date);t<+next&&t<=+end;t+=86400000)holidaySet.add(key(new Date(t)));}
@@ -128,7 +133,8 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
     if(shift){
       for(const d of eachDay(first,next))if(workDays.has(d.getUTCDay())&&!holidaySet.has(key(d)))fullScheduledDays++;
       const employeeStart=e.joiningDate>first?e.joiningDate:first;
-      for(const d of eachDay(employeeStart,reportNext))if(workDays.has(d.getUTCDay())&&!holidaySet.has(key(d)))elapsedScheduledDays++;
+      const exitDate=exitMap.get(e.id),employmentNext=exitDate?new Date(+exitDate+86400000):reportNext,employeeReportNext=employmentNext<reportNext?employmentNext:reportNext;
+      for(const d of eachDay(employeeStart,employeeReportNext))if(workDays.has(d.getUTCDay())&&!holidaySet.has(key(d)))elapsedScheduledDays++;
     }
     return {...g,scheduledDays:Math.max(g.scheduledDays,elapsedScheduledDays),fullScheduledDays};
   }).sort((a,b)=>a.employeeCode.localeCompare(b.employeeCode));
