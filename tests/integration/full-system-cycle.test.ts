@@ -110,6 +110,25 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
       const bank=await call(`reports/bank-payout?runId=${payroll.id}`,'GET',undefined,owner);assert.equal(bank.status,200);const csv=String(bank.data);assert(csv.includes('QA002'));assert(csv.includes('HDFC0000001'));
     });
 
+    await t.test('Face Scan rejects legacy payloads and a different face without creating attendance',async()=>{
+      const enrolledBase=Array(128).fill(0);enrolledBase[0]=1;
+      const sample2=[...enrolledBase];sample2[1]=0.02;
+      const sample3=[...enrolledBase];sample3[2]=-0.02;
+      const enrolled=await call('attendance/face-profile','POST',{samples:[enrolledBase,sample2,sample3],engine:'face-api-1.7.15-v3'},employee);
+      assert.equal(enrolled.status,200,JSON.stringify(enrolled.data));
+      const jpeg=(seed:number)=>'data:image/jpeg;base64,'+Buffer.concat([Buffer.from([255,216,255,seed]),Buffer.alloc(6200,seed)]).toString('base64');
+      const legacy=await call('attendance/face-scan','POST',{frame:jpeg(1),descriptor:enrolledBase,clientNonce:'legacy-face-payload-test'},employee);
+      assert.equal(legacy.status,403,JSON.stringify(legacy.data));assert.match(String(legacy.data?.message??''),/security was upgraded/i);
+      const other=Array(128).fill(0);other[7]=1;
+      const other2=[...other];other2[8]=0.01;
+      const other3=[...other];other3[9]=-0.01;
+      const before=await db.attendancePunch.count({where:{tenantId:tenant.id,employeeId:(await db.employee.findUniqueOrThrow({where:{tenantId_employeeCode:{tenantId:tenant.id,employeeCode:'QA002'}}})).id}});
+      const rejected=await call('attendance/face-scan','POST',{frames:[jpeg(2),jpeg(3),jpeg(4)],descriptors:[other,other2,other3],liveness:{challenge:'TURN_AND_RETURN',durationMs:1500,turnOffset:0.3,returnOffset:0.04},clientNonce:'different-face-security-test'},employee);
+      assert.equal(rejected.status,403,JSON.stringify(rejected.data));assert.match(String(rejected.data?.message??''),/did not match/i);
+      const after=await db.attendancePunch.count({where:{tenantId:tenant.id,employeeId:(await db.employee.findUniqueOrThrow({where:{tenantId_employeeCode:{tenantId:tenant.id,employeeCode:'QA002'}}})).id}});
+      assert.equal(after,before,'rejected face must never create an attendance punch');
+    });
+
     await t.test('Employee is self-scoped and sees finalized salary/payslip only for self',async()=>{
       const people=await call('employees?pageSize=500','GET',undefined,employee);assert.equal(people.status,200);assert.equal(people.data.total,1);assert.equal(people.data.items[0].employeeCode,'QA002');
       const salary=await call('payroll','GET',undefined,employee);assert.equal(salary.status,200);assert.equal(salary.data.items.length,1);assert.equal(salary.data.items[0].employeeCode,'QA002');assert.equal(salary.data.items[0].run.status,'LOCKED');
