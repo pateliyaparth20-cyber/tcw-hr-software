@@ -133,7 +133,7 @@ export class Api {
       const profile=(company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile:{}) as any;
       const session=profile.pendingPaymentSession;
       if(!session||session.invoiceId!==invoice.id)return {status:'NOT_STARTED',invoice};
-      if(new Date(session.expiresAt).getTime()<=Date.now())return {status:'EXPIRED',invoice,expiresAt:session.expiresAt};
+      const locallyExpired=new Date(session.expiresAt).getTime()<=Date.now();
       const provider=await fetchAutomaticCheckout(this.db,session);
       if(provider.status==='paid'&&provider.amountPaid===invoice.total){
         const reference=provider.paymentId||`RAZORPAY-${provider.id}`;
@@ -142,7 +142,7 @@ export class Api {
         this.io?.to(tid).emit('changed',{resource:'subscription'});
         return {status:'PAID',invoice:completed.invoice,activated:true,plan:completed.plan,expiresAt:completed.expiresAt};
       }
-      if(['expired','cancelled'].includes(provider.status))return {status:'EXPIRED',invoice,expiresAt:provider.expiresAt};
+      if(locallyExpired||['expired','cancelled'].includes(provider.status))return {status:'EXPIRED',invoice,expiresAt:provider.expiresAt};
       return {status:'PENDING',invoice,expiresAt:provider.expiresAt};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
@@ -157,10 +157,25 @@ export class Api {
       if(!plan)throw new BadRequestException('Selected subscription plan is unavailable.');
       if(!paymentCfg.automatic)throw new ServiceUnavailableException('Automatic online payments are not configured yet. Super Admin must configure Razorpay in Settings.');
       const breakdown=inclusiveTax(plan.monthlyPrice,paymentCfg.gstPercent);
+      const currentProfile=(company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?{...(company.profile as any)}:{});
+      const previousSession=currentProfile.pendingPaymentSession;
+      if(previousSession?.invoiceId){
+        const previousInvoice=await this.db.invoice.findFirst({where:{id:String(previousSession.invoiceId),tenantId:tid}});
+        if(previousInvoice&&previousInvoice.status!=='PAID'&&previousInvoice.paidAmount<previousInvoice.total){
+          const previous=await fetchAutomaticCheckout(this.db,previousSession);
+          if(previous.status==='paid'){
+            if(previous.amountPaid!==previousInvoice.total)throw new ConflictException('Verified payment amount does not match the invoice total.');
+            const reference=previous.paymentId||`RAZORPAY-${previous.id}`;
+            const completed=await completeSubscriptionPayment(this.db,{invoiceId:previousInvoice.id,reference,amount:previous.amountPaid,provider:'RAZORPAY'});
+            await syncCompanyAccess(this.db,tid);
+            this.io?.to(tid).emit('changed',{resource:'subscription'});
+            return {ok:true,status:'PAID',invoice:completed.invoice,activated:true,plan:completed.plan,expiresAt:completed.expiresAt};
+          }
+          if(!['expired','cancelled'].includes(previous.status))await cancelAutomaticCheckout(this.db,previousSession);
+        }
+      }
       const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:breakdown.subtotal,tax:breakdown.tax,total:breakdown.total},orderBy:{createdAt:'desc'}});
       const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount:breakdown.subtotal,tax:breakdown.tax,total:breakdown.total,dueDate:new Date(new Date().toISOString().slice(0,10))}});
-      const currentProfile=(company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?{...(company.profile as any)}:{});
-      if(currentProfile.pendingPaymentSession)await cancelAutomaticCheckout(this.db,currentProfile.pendingPaymentSession);
       const checkout=await createAutomaticCheckout(this.db,{invoice,company:{...company,profile:currentProfile},plan,owner});
       const profile={...currentProfile,pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString(),paymentMode:'AUTO',pendingInvoiceId:invoice.id,pendingPaymentSession:{...checkout,invoiceId:invoice.id,plan:plan.name}};
       await this.db.tenant.update({where:{id:tid},data:{profile}});
