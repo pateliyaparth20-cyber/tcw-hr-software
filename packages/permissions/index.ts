@@ -2,7 +2,7 @@ export type Scope = 'PLATFORM' | 'TENANT';
 export type Action = 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'APPROVE' | 'REJECT' | 'EXPORT' | 'IMPORT' | 'MANAGE';
 const actions: Action[] = ['VIEW','CREATE','EDIT','DELETE','APPROVE','REJECT','EXPORT','IMPORT','MANAGE'];
 export const tenantResources = ['dashboard','company','organization','employees','attendance','devices','shifts','leave','calendar','payroll','recruitment','performance','training','documents','assets','expenses','travel','exit','workforce','users','reports','audit','support','ai'];
-export const platformResources = ['dashboard','tenants','plans','sales','billing','support','audit','system'];
+export const platformResources = ['dashboard','tenants','plans','sales','billing','support','users','audit','system'];
 const grants = (resources: string[], allowed: Action[] = actions) => resources.flatMap(r => allowed.map(a => `${r}:${a}`));
 export const roleDefinitions = [
   {code:'SUPER_ADMIN',name:'Super Admin',scope:'PLATFORM',permissions:grants(platformResources)},
