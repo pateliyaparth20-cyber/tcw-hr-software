@@ -62,7 +62,7 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
    <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div><LiveClock timezone={d.company?.timezone}/></div>
   </div>
 
-  <div className="mobile-app-welcome"><div><small>ALL-IN-ONE HR WORKSPACE</small><strong>Everything your people team needs, in one place.</strong></div><span><ActivityIcon size={21}/></span></div>
+  <div className="mobile-app-welcome"><div><small>ALL-IN-ONE HR SOFTWARE</small><strong>Simplify your HR processes from one place.</strong></div><span><ActivityIcon size={21}/></span></div>
 
   <div className="mobile-app-stats">
    <div><span className="mobile-stat-icon blue"><Users size={19}/></span><strong>{people.length}</strong><small>Total Employees</small></div>
@@ -212,7 +212,7 @@ export function Dashboard(){
   <MobileTenantDashboard session={session} can={can} currency={currency} d={d} people={people} present={present} onLeave={onLeave} pending={pending} payroll={payroll} attendanceRate={attendanceRate}/>
   <div className="hr-desktop-dashboard">
   <section className="hr-welcome-card">
-   <div className="hr-welcome-copy"><span className="hr-welcome-kicker">ALL-IN-ONE HR SOFTWARE</span><h1><Greeting timezone={timezone} name={session.user.name.split(' ')[0]}/></h1><p>Run people, attendance, leave, payroll and workforce operations from one clean workspace.</p><div className="hr-welcome-company"><span>{d.company?.name??'Company workspace'}</span><small>{deviceOffline?`${deviceOffline} attendance device(s) need attention`:'Workforce systems are operating normally'}</small></div></div>
+   <div className="hr-welcome-copy"><span className="hr-welcome-kicker">ALL-IN-ONE HR SOFTWARE</span><h1><Greeting timezone={timezone} name={session.user.name.split(' ')[0]}/></h1><p>Simplify people, attendance, leave, payroll, hiring and daily HR processes from one clean workspace.</p><div className="hr-welcome-company"><span>{d.company?.name??'Company workspace'}</span><small>{deviceOffline?`${deviceOffline} attendance device(s) need attention`:'Workforce systems are operating normally'}</small></div></div>
    <div className="hr-welcome-tools"><LiveClock timezone={timezone}/><div className="hr-welcome-actions">{can('employees')&&<Link className="btn primary" href="/employees"><Users size={16}/>People</Link>}{can('attendance')&&<Link className="btn secondary" href="/attendance"><Clock3 size={16}/>Attendance</Link>}{can('payroll')&&<Link className="btn secondary" href="/payroll"><Wallet size={16}/>Payroll</Link>}</div></div>
   </section>
 
