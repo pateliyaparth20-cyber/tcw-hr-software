@@ -7,6 +7,7 @@ import {createApp} from '../../apps/api/src/app';
 
 test('full HR Admin Employee month cycle is production-safe',async t=>{
   process.env.NODE_ENV='test';
+  process.env.CONFIG_ENCRYPTION_KEY='full-system-cycle-config-encryption-key-2026';
   process.env.APP_ORIGINS='http://localhost:3000,http://localhost:3001,http://localhost:3002';
   const fixture=await embeddedDatabase();const db=fixture.db;
   const adminEmail='admin@example.test',adminPassword='test-admin-strong-password';
@@ -84,6 +85,14 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
       const ticket=queue.data.items[0];
       const assigned=await call(`platform/support/${ticket.id}`,'PATCH',{status:'IN_PROGRESS',assignedTo:created.data.id,response:'Assigned to QA support agent.'},supportAgent);
       assert.equal(assigned.status,200,JSON.stringify(assigned.data));assert.equal(assigned.data.assignedTo,created.data.id);assert.equal(assigned.data.assignedUser.name,'Support Agent QA');
+    });
+
+    await t.test('company salary payout credentials are encrypted and explicitly enabled',async()=>{
+      const before=await call('company/payout-settings','GET',undefined,owner);assert.equal(before.status,200,JSON.stringify(before.data));assert.equal(before.data.enabled,false);
+      const saved=await call('company/payout-settings','PUT',{provider:'RAZORPAYX',razorpayKeyId:'rzp_test_company_salary',razorpayKeySecret:'company-salary-secret-2026',sourceAccount:'23232323232323',mode:'IMPS',accountLabel:'Company salary account',liveEnabled:true},owner);
+      assert.equal(saved.status,200,JSON.stringify(saved.data));assert.equal(saved.data.enabled,true);assert.equal(saved.data.keySecretConfigured,true);assert.equal(saved.data.sourceAccountConfigured,true);assert.equal(saved.data.sourceAccountHint,'••••2323');assert.equal(Object.prototype.hasOwnProperty.call(saved.data,'keySecret'),false);assert.equal(Object.prototype.hasOwnProperty.call(saved.data,'sourceAccount'),false);
+      const stored=await db.platformSetting.findUniqueOrThrow({where:{key:`tenant-payout:${tenant.id}`}});const raw=JSON.stringify(stored.value);assert(!raw.includes('company-salary-secret-2026'));assert(!raw.includes('23232323232323'));
+      const bankFile=await call('company/payout-settings','PUT',{provider:'BANK_FILE',razorpayKeyId:'rzp_test_company_salary',razorpayKeySecret:'',sourceAccount:'',mode:'IMPS',accountLabel:'Company salary account',liveEnabled:false},owner);assert.equal(bankFile.status,200);assert.equal(bankFile.data.provider,'BANK_FILE');assert.equal(bankFile.data.enabled,false);
     });
 
     await t.test('HR owner can read every core real-HR workspace without broken endpoints',async()=>{
