@@ -44,15 +44,16 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await db.user.create({data:{tenantId:alphaTenant,name:'Test Employee',email:'employee-login@example.test',passwordHash:await hashPassword('test-employee-password'),employeeId:a.data.id,roleId:employeeRole.id}});
   const self=await login('employee-login@example.test','test-employee-password','ALPHA');
   await t.test('employee permissions and personal scope are enforced',async()=>{assert.equal((await call('employees','POST',employeeInput,self)).status,403);assert.equal((await call('payroll','POST',{month:'2026-08'},self)).status,403);const rows=await call('employees','GET',undefined,self);assert.equal(rows.data.items.length,1);assert.equal(rows.data.items[0].id,a.data.id);assert.equal((await call('users','GET',undefined,self)).status,403)});
-  await t.test('payroll transitions and database immutability hold',async()=>{
-   const run=await call('payroll','POST',{month:'2026-08'},alpha);assert.equal(run.status,200,JSON.stringify(run.data));
-   assert.equal((await call(`payroll/${run.data.id}/lock`,'POST',{},alpha)).status,400);
-   const reconciled=await call('attendance/reconcile','POST',{month:'2026-08'},alpha);assert.equal(reconciled.status,200,JSON.stringify(reconciled.data));
-   const attendanceLock=await call('attendance/lock','POST',{month:'2026-08'},alpha);assert.equal(attendanceLock.status,200,JSON.stringify(attendanceLock.data));
-   for(const step of ['calculate','approve','lock']){const r=await call(`payroll/${run.data.id}/${step}`,'POST',{},alpha);assert.equal(r.status,200,JSON.stringify(r.data));}
-   assert.equal((await call(`payroll/${run.data.id}/reopen`,'POST',{},alpha)).status,400);
-   await assert.rejects(()=>db.payrollRun.update({where:{id:run.data.id},data:{totalNet:1}}));
-   const item=await db.payrollItem.findFirstOrThrow({where:{runId:run.data.id}});await assert.rejects(()=>db.payrollItem.update({where:{id:item.id},data:{net:1}}));
+  await t.test('payroll prepare, reopen and finalization use one safe workflow',async()=>{
+   assert.equal((await call('payroll','POST',{month:'2026-10'},alpha)).status,400);
+   const prepared=await call('payroll','POST',{month:'2026-08'},alpha);assert.equal(prepared.status,200,JSON.stringify(prepared.data));assert.equal(prepared.data.status,'REVIEW');assert(prepared.data.items.length>0);
+   const attendanceLock=await db.attendancePeriodLock.findUniqueOrThrow({where:{tenantId_month:{tenantId:alphaTenant,month:'2026-08'}}});assert.equal(attendanceLock.status,'LOCKED');
+   const reopened=await call(`payroll/${prepared.data.id}/reopen`,'POST',{},alpha);assert.equal(reopened.status,200,JSON.stringify(reopened.data));assert.equal(reopened.data.status,'DRAFT');
+   const reopenedAttendance=await db.attendancePeriodLock.findUniqueOrThrow({where:{tenantId_month:{tenantId:alphaTenant,month:'2026-08'}}});assert.equal(reopenedAttendance.status,'UNLOCKED');assert.equal(await db.payrollItem.count({where:{runId:prepared.data.id}}),0);
+   const recalculated=await call('payroll','POST',{month:'2026-08'},alpha);assert.equal(recalculated.status,200,JSON.stringify(recalculated.data));assert.equal(recalculated.data.status,'REVIEW');
+   const finalized=await call(`payroll/${prepared.data.id}/finalize`,'POST',{},alpha);assert.equal(finalized.status,200,JSON.stringify(finalized.data));assert.equal(finalized.data.status,'LOCKED');
+   await assert.rejects(()=>db.payrollRun.update({where:{id:prepared.data.id},data:{totalNet:1}}));
+   const item=await db.payrollItem.findFirstOrThrow({where:{runId:prepared.data.id}});await assert.rejects(()=>db.payrollItem.update({where:{id:item.id},data:{net:1}}));
    const slips=await call('payroll','GET',undefined,self);assert.equal(slips.data.items.length,1);assert.equal(slips.data.items[0].employeeId,a.data.id);
   });
   await t.test('leave overlap, review transitions, and self-approval controls',async()=>{

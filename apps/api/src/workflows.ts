@@ -3,13 +3,13 @@ import {z} from 'zod';
 import {createHash} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {id,date,leaveSchema} from '../../../packages/validation';
-import {attendancePayableUnits,calculateAttendance,localDate,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
-import {calculatePay,assertPayrollTransition} from '../../../packages/payroll-engine';
+import {attendancePayableUnits,calculateAttendance,localDate,monthBounds,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
 import {hasPermission} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,unlockAttendanceMonth} from './attendance-automation';
 import {sendPush} from './push';
 import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-profile';
+import {finalizePayrollMonth,preparePayrollMonth,reopenPayrollMonth} from './payroll-service';
 
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
 export class Workflows {
@@ -203,87 +203,90 @@ export class Workflows {
     return reviewed;
   }
   async payroll(ctx:Context,method:string,recordId?:string,action?:string,body:any={}){
-    const tid=tenant(ctx);requirePermission(ctx,'payroll',method==='GET'?'VIEW':action==='approve'||action==='lock'||action==='unlock'?'APPROVE':'CREATE');
+    const tid=tenant(ctx);
+    const permission=method==='GET'?'VIEW':action==='finalize'||action==='lock'||action==='approve'||action==='reopen'||action==='unlock'?'APPROVE':'CREATE';
+    requirePermission(ctx,'payroll',permission);
     const scope=await employeeScope(this.db,ctx);
+
     if(method==='GET'){
-      if(scope){return {items:await this.db.payrollItem.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId??'00000000-0000-0000-0000-000000000000',run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true}}}})};}
-      return {items:await this.db.payrollRun.findMany({where:{tenantId:tid,...(recordId?{id:id.parse(recordId)}:{})},include:{items:true},orderBy:{month:'desc'},take:120})};
+      if(scope){
+        return {items:await this.db.payrollItem.findMany({
+          where:{tenantId:tid,employeeId:ctx.user.employeeId??'00000000-0000-0000-0000-000000000000',run:{status:'LOCKED'}},
+          include:{run:{select:{month:true,status:true,lockedAt:true}}},
+          orderBy:{createdAt:'desc'}
+        })};
+      }
+      return {items:await this.db.payrollRun.findMany({
+        where:{tenantId:tid,...(recordId?{id:id.parse(recordId)}:{})},
+        include:{items:true},
+        orderBy:{month:'desc'},take:120
+      })};
     }
     if(scope)throw new ForbiddenException('Payroll is managed by your payroll team.');
+
     if(method==='DELETE'){
       if(!recordId)throw new BadRequestException('Payroll run id is required.');
       return this.db.$transaction(async tx=>{
         await tx.$queryRaw`SELECT id FROM payroll_runs WHERE id = ${id.parse(recordId)}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
         const run=await tx.payrollRun.findFirst({where:{id:recordId,tenantId:tid}});
         if(!run)throw new NotFoundException('Payroll run not found.');
-        const payoutCount=await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}});
-        if(payoutCount)throw new ConflictException('Payroll with payout records cannot be deleted.');
-        if(!['DRAFT','REVIEW'].includes(run.status)||run.approvedBy||run.lockedAt)throw new ConflictException('Only an unapproved Draft or Review payroll can be deleted. Approved, locked or paid payroll must be preserved.');
+        if(await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}}))throw new ConflictException('Payroll with payout records cannot be deleted.');
+        if(!['DRAFT','REVIEW'].includes(run.status)||run.approvedBy||run.lockedAt)throw new ConflictException('Only an unfinalized payroll can be deleted. Reopen finalized payroll first.');
         await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
         await tx.payrollItem.deleteMany({where:{tenantId:tid,runId:recordId}});
-        await audit(tx,ctx,'PAYROLL_RUN_DELETED','payroll-month',run.month,run,{deleted:true,month:run.month,previousRunId:run.id,previousStatus:run.status,skipAutomaticRecreation:true});
+        const period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:tid,month:run.month}}});
+        if(period?.status==='LOCKED'){
+          const {first,next}=monthBounds(run.month),now=new Date();
+          await tx.attendanceDaily.updateMany({where:{tenantId:tid,date:{gte:first,lt:next}},data:{lockedAt:null}});
+          await tx.attendancePeriodLock.update({where:{id:period.id},data:{status:'UNLOCKED',unlockedBy:ctx.user.id,unlockedAt:now}});
+        }
+        await audit(tx,ctx,'PAYROLL_RUN_DELETED','payroll-month',run.month,run,{deleted:true,month:run.month,skipAutomaticRecreation:true,attendanceReopened:period?.status==='LOCKED'});
         await tx.payrollRun.delete({where:{id:recordId}});
         await tx.notification.deleteMany({where:{tenantId:tid,title:{in:['Automatic payroll could not be prepared','Automatic payroll needs attendance review']},message:{contains:run.month}}});
         return {ok:true,id:recordId,month:run.month};
       });
     }
-    if(!recordId){const input=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);const currentMonth=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'}).format(new Date());if(input.month>currentMonth)throw new BadRequestException('Future payroll months cannot be created. Choose the current month or an earlier month.');return this.db.$transaction(async tx=>{const row=await tx.payrollRun.create({data:{tenantId:tid,...input}});await audit(tx,ctx,'PAYROLL_CREATED','payroll',row.id,undefined,row);return row;});}
-    return this.db.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT id FROM payroll_runs WHERE id = ${id.parse(recordId)}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
-      const run=await tx.payrollRun.findFirst({where:{id:recordId,tenantId:tid}});if(!run)throw new NotFoundException();
-      if(action==='calculate'){
-        assertPayrollTransition(run.status,'REVIEW');
-        const period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:tid,month:run.month}}});
-        if(!period||period.status!=='LOCKED')throw new BadRequestException('Lock attendance for this month before calculating payroll.');
-        const summary=await attendanceMonthSummary(tx as any,tid,run.month);
-        if(summary.totals.missingPunchDays)throw new BadRequestException('Resolve missing attendance punches before payroll calculation.');
-        const [employees,rules,adjustments]=await Promise.all([
-          tx.employee.findMany({where:{tenantId:tid,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:new Date(Date.UTC(Number(run.month.slice(0,4)),Number(run.month.slice(5,7)),1))}}}),
-          tx.salaryRule.findMany({where:{tenantId:tid,active:true}}),
-          tx.payrollAdjustment.findMany({where:{tenantId:tid,targetMonth:run.month,appliedRunId:null}})
-        ]);
-        if(!employees.length)throw new BadRequestException('No active employees are eligible for this month.');
-        const attendanceByEmployee=new Map(summary.items.map((r:any)=>[r.employeeId,r]));
-        await tx.payrollItem.deleteMany({where:{tenantId:tid,runId:recordId}});
-        let totalGross=0,totalDeductions=0,totalNet=0;
-        for(const employee of employees){
-          const attendance:any=attendanceByEmployee.get(employee.id);
-          if(!attendance)continue;
-          const denominator=Math.max(1,attendance.fullScheduledDays*100);
-          const attendanceGross=Math.round(employee.monthlySalary*Math.min(attendance.payableUnits,denominator)/denominator);
-          const adjustment=adjustments.filter(a=>a.employeeId===employee.id).reduce((sum,a)=>sum+a.amount,0);
-          const result=calculatePay(attendanceGross,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
-          await tx.payrollItem.create({data:{tenantId:tid,runId:recordId,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,gross:result.gross,deductions:result.deductions,net:result.net,components:[...result.components,{name:'Attendance payable',units:attendance.payableUnits,fullScheduledDays:attendance.fullScheduledDays,eligibleScheduledDays:attendance.scheduledDays}],scheduledDays:attendance.scheduledDays,payableUnits:attendance.payableUnits,presentDays:attendance.presentDays,halfDays:attendance.halfDays,paidLeaveUnits:attendance.paidLeaveUnits,unpaidLeaveUnits:attendance.unpaidLeaveUnits,absentDays:attendance.absentDays,lateMinutes:attendance.lateMinutes,overtimeMinutes:attendance.overtimeMinutes}});
-          totalGross+=result.gross;totalDeductions+=result.deductions;totalNet+=result.net;
-        }
-        await tx.payrollAdjustment.updateMany({where:{id:{in:adjustments.map(a=>a.id)},tenantId:tid},data:{appliedRunId:recordId}});
-        const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'REVIEW',totalGross,totalDeductions,totalNet,attendanceLockId:period.id}});
-        const reviewNotice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} ready for review`,message:`Attendance is locked and payroll has been calculated for ${employees.length} eligible employee(s). Net payroll: ${(totalNet/100).toLocaleString('en-IN',{style:'currency',currency:'INR'})}. Review before approval.`}});sendPush(this.db,{tenantId:tid,title:reviewNotice.title,body:reviewNotice.message,url:'/payroll',tag:'tcw-'+reviewNotice.id}).catch(()=>{});
-        await audit(tx,ctx,'PAYROLL_CALCULATED','payroll',recordId,run,{...after,attendanceMonth:summary.totals});return after;
+
+    if(!recordId){
+      if(method!=='POST')throw new BadRequestException('Unsupported payroll request.');
+      const input=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);
+      const before=await this.db.payrollRun.findUnique({where:{tenantId_month:{tenantId:tid,month:input.month}}});
+      const after=await preparePayrollMonth(this.db,tid,input.month,ctx.user.id);
+      await audit(this.db,ctx,'PAYROLL_PREPARED','payroll',after.id,before,after);
+      await this.db.notification.deleteMany({where:{tenantId:tid,title:{in:['Automatic payroll could not be prepared','Automatic payroll needs attendance review']},message:{contains:input.month}}}).catch(()=>{});
+      return after;
+    }
+
+    if(action==='calculate'||action==='prepare'){
+      const before=await this.db.payrollRun.findFirst({where:{id:id.parse(recordId),tenantId:tid}});
+      if(!before)throw new NotFoundException('Payroll run not found.');
+      const after=await preparePayrollMonth(this.db,tid,before.month,ctx.user.id);
+      await audit(this.db,ctx,'PAYROLL_PREPARED','payroll',recordId,before,after);
+      return after;
+    }
+    if(action==='finalize'||action==='lock'||action==='approve'){
+      const before=await this.db.payrollRun.findFirst({where:{id:id.parse(recordId),tenantId:tid}});
+      if(!before)throw new NotFoundException('Payroll run not found.');
+      const after=await finalizePayrollMonth(this.db,tid,recordId,ctx.user.id);
+      await audit(this.db,ctx,'PAYROLL_FINALIZED','payroll',recordId,before,after);
+      if(before.status!=='LOCKED'){
+        const finalNotice=await this.db.notification.create({data:{tenantId:tid,title:`Payroll ${after.month} finalized`,message:'Payroll is finalized. Payslips and payout data now use this locked payroll.'}});
+        sendPush(this.db,{tenantId:tid,title:finalNotice.title,body:finalNotice.message,url:'/payroll',tag:'tcw-'+finalNotice.id}).catch(()=>{});
+        const items=after.items??[];
+        const linked=await this.db.user.findMany({where:{tenantId:tid,employeeId:{in:items.map((i:any)=>i.employeeId)},active:true},select:{id:true,employeeId:true}});
+        const netByEmployee=new Map(items.map((i:any)=>[i.employeeId,i.net]));
+        if(linked.length)await this.db.notification.createMany({data:linked.map(user=>({tenantId:tid,userId:user.id,title:`Payslip ready for ${after.month}`,message:`Your finalized net salary is ${(Number(netByEmployee.get(user.employeeId!)??0)/100).toLocaleString('en-IN',{style:'currency',currency:'INR'})}.`}))});
       }
-      if(action==='unlock'){
-        if(run.status!=='LOCKED')throw new ConflictException('Only a locked payroll can be unlocked.');
-        const payoutCount=await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}});
-        if(payoutCount)throw new ConflictException('This payroll has payout records and cannot be unlocked. Keep the finalized payroll for audit and use a later-month adjustment for corrections.');
-        await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
-        const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'DRAFT',lockedAt:null,approvedBy:null,attendanceLockId:null}});
-        await audit(tx,ctx,'PAYROLL_UNLOCKED','payroll',recordId,run,{...after,reason:'Reopened to draft before payout so attendance can be corrected'});
-        return after;
-      }
-      const target=action==='approve'?'APPROVED':action==='lock'?'LOCKED':action==='reopen'?'DRAFT':null;
-      if(!target)throw new BadRequestException('Unknown payroll action.');assertPayrollTransition(run.status,target);
-      if(target==='DRAFT')await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
-      const after=await tx.payrollRun.update({where:{id:recordId},data:{status:target,...(target==='APPROVED'?{approvedBy:ctx.user.id}:{}),...(target==='LOCKED'?{lockedAt:new Date()}: {})}});
-      if(target==='APPROVED'){const notice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} approved`,message:'Payroll has been approved and is ready for final lock / payout preparation.'}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/payroll',tag:'tcw-'+notice.id}).catch(()=>{});}
-      if(target==='LOCKED'){
-        const finalNotice=await tx.notification.create({data:{tenantId:tid,title:`Payroll ${run.month} finalized`,message:'Payroll is locked. Employee payslips and bank payout export are now based on the finalized run.'}});sendPush(this.db,{tenantId:tid,title:finalNotice.title,body:finalNotice.message,url:'/payroll',tag:'tcw-'+finalNotice.id}).catch(()=>{});
-        const items=await tx.payrollItem.findMany({where:{tenantId:tid,runId:recordId},select:{employeeId:true,net:true}});
-        const linked=await tx.user.findMany({where:{tenantId:tid,employeeId:{in:items.map(i=>i.employeeId)},active:true},select:{id:true,employeeId:true}});
-        const netByEmployee=new Map(items.map(i=>[i.employeeId,i.net]));
-        if(linked.length)await tx.notification.createMany({data:linked.map(user=>({tenantId:tid,userId:user.id,title:`Payslip ready for ${run.month}`,message:`Your finalized net salary is ${(Number(netByEmployee.get(user.employeeId!)??0)/100).toLocaleString('en-IN',{style:'currency',currency:'INR'})}. Open Payroll to view the finalized record.`}))});
-      }
-      await audit(tx,ctx,`PAYROLL_${target}`,'payroll',recordId,run,after);return after;
-    },{timeout:30000});
+      return after;
+    }
+    if(action==='reopen'||action==='unlock'){
+      const before=await this.db.payrollRun.findFirst({where:{id:id.parse(recordId),tenantId:tid}});
+      if(!before)throw new NotFoundException('Payroll run not found.');
+      const after=await reopenPayrollMonth(this.db,tid,recordId,ctx.user.id);
+      await audit(this.db,ctx,'PAYROLL_REOPENED','payroll',recordId,before,{...after,attendanceReopened:true});
+      return after;
+    }
+    throw new BadRequestException('Unknown payroll action.');
   }
   async adjustment(ctx:Context,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'payroll','MANAGE');

@@ -23,7 +23,7 @@ test('early out, working weekdays, and payable attendance units are deterministi
 });
 
 test('payroll uses integer minor units, configured caps, and adjustments',()=>{assert.deepEqual(calculatePay(100000,[{name:'Configured',percent:12,cap:10000}],5000),{gross:105000,deductions:10000,net:95000,components:[{name:'Configured',amount:10000},{name:'Adjustment',amount:5000}]});assert.throws(()=>calculatePay(100,[{name:'A',percent:80},{name:'B',percent:80}]))});
-test('final payroll has no outgoing edit transition',()=>{assert.throws(()=>assertPayrollTransition('LOCKED','DRAFT'));assert.throws(()=>assertPayrollTransition('DRAFT','LOCKED'));assert.doesNotThrow(()=>assertPayrollTransition('REVIEW','APPROVED'))});
+test('payroll v2 moves review directly to final and keeps locked payroll immutable',()=>{assert.throws(()=>assertPayrollTransition('LOCKED','DRAFT'));assert.throws(()=>assertPayrollTransition('DRAFT','LOCKED'));assert.doesNotThrow(()=>assertPayrollTransition('REVIEW','LOCKED'))});
 test('password hashes have unique salts and reject incorrect passwords',async()=>{const a=await hashPassword('test-only-long-password'),b=await hashPassword('test-only-long-password');assert.notEqual(a,b);assert(await verifyPassword('test-only-long-password',a));assert(!await verifyPassword('incorrect',a))});
 test('CSV quotes multiline cells and neutralizes spreadsheet formulas',()=>{const csv=toCsv([{name:'=HYPERLINK("bad")',notes:'line1\nline2'}]);assert(csv.includes("\"'=HYPERLINK(\"\"bad\"\")\""));assert(csv.includes('"line1\nline2"'))});
 test('unconfigured device adapters never claim hardware success',async()=>{await assert.rejects(()=>new ZktecoAdapter().testConnection(),/requires a vendor SDK/)});

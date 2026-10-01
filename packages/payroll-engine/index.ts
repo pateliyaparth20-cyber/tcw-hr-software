@@ -11,7 +11,7 @@ export function calculatePay(gross:number,rules:DeductionRule[],adjustment=0) {
   if(net<0) throw new Error('Deductions exceed pay');
   return {gross: gross+adjustment,deductions,net,components:[...components,...(adjustment?[{name:'Adjustment',amount:adjustment}]:[])]};
 }
-export const payrollTransitions: Record<string,string[]> = {DRAFT:['REVIEW'],REVIEW:['DRAFT','APPROVED'],APPROVED:['LOCKED'],LOCKED:[]};
+export const payrollTransitions: Record<string,string[]> = {DRAFT:['REVIEW'],REVIEW:['DRAFT','LOCKED'],APPROVED:['DRAFT','LOCKED'],LOCKED:[]};
 export function assertPayrollTransition(from:string,to:string) {
   if(!payrollTransitions[from]?.includes(to)) throw new Error(`Payroll cannot transition from ${from} to ${to}`);
 }

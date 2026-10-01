@@ -1,7 +1,7 @@
 import type {Database} from '../../../packages/database';
-import {calculatePay} from '../../../packages/payroll-engine';
-import {attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth} from './attendance-automation';
+import {employeeShift,reconcileAttendanceMonth} from './attendance-automation';
 import {localDate,monthBounds,zonedMinute} from '../../../packages/attendance-engine';
+import {preparePayrollMonth} from './payroll-service';
 
 const previousMonth=(localToday:string)=>{const y=Number(localToday.slice(0,4)),m=Number(localToday.slice(5,7));const d=new Date(Date.UTC(y,m-2,1));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;};
 const AUTO_PAYROLL_FAILURE='Automatic payroll could not be prepared',AUTO_PAYROLL_REVIEW='Automatic payroll needs attendance review';
@@ -47,10 +47,11 @@ export async function prepareScheduledPayroll(db:Database){
   const profile=(company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile:{}) as any;
   if(!profile.autoPayroll)continue;
   const localToday=localDate(now,company.timezone||'Asia/Kolkata'),year=Number(localToday.slice(0,4)),monthNumber=Number(localToday.slice(5,7)),day=Number(localToday.slice(8,10));
-  const lastDay=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),configured=Math.max(1,Math.min(31,Number(profile.salaryDay)||1)),scheduled=Math.min(configured,lastDay);if(day<scheduled)continue;
+  const lastDay=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),configured=Math.max(1,Math.min(31,Number(profile.salaryDay)||1)),scheduled=Math.min(configured,lastDay);
+  if(day<scheduled)continue;
   const month=previousMonth(localToday);
-  const existingRun=await db.payrollRun.findUnique({where:{tenantId_month:{tenantId:company.id,month}}});
-  if(existingRun){
+  const existing=await db.payrollRun.findUnique({where:{tenantId_month:{tenantId:company.id,month}}});
+  if(existing){
    await db.notification.deleteMany({where:{tenantId:company.id,title:{in:[AUTO_PAYROLL_FAILURE,AUTO_PAYROLL_REVIEW]},message:{contains:month}}}).catch(()=>{});
    continue;
   }
@@ -60,39 +61,16 @@ export async function prepareScheduledPayroll(db:Database){
    continue;
   }
   try{
-   const existingLock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:company.id,month}}});
-   if(existingLock?.status!=='LOCKED')await reconcileAttendanceMonth(db,company.id,month);
-   const preview=await attendanceMonthSummary(db,company.id,month);
-   if(preview.totals.missingPunchDays){
-    const message=`${month} has ${preview.totals.missingPunchDays} missing-punch day(s). Resolve attendance exceptions and lock the month before payroll.`;
-    await createAutomationNoticeOnce(db,company.id,AUTO_PAYROLL_REVIEW,message);continue;
-   }
-   const locked=existingLock?.status==='LOCKED'?existingLock:(preview.lock?.status==='LOCKED'?preview.lock:(await lockAttendanceMonth(db,company.id,month,'SYSTEM_AUTOMATION')).lock);
-   const summary=await attendanceMonthSummary(db,company.id,month),attendanceByEmployee=new Map(summary.items.map((r:any)=>[r.employeeId,r]));
-   await db.$transaction(async tx=>{
-    const run=await tx.payrollRun.create({data:{tenantId:company.id,month,attendanceLockId:locked.id}});
-    const next=new Date(Date.UTC(year,monthNumber-1,1));
-    const [employees,rules,adjustments]=await Promise.all([
-      tx.employee.findMany({where:{tenantId:company.id,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:next}}}),
-      tx.salaryRule.findMany({where:{tenantId:company.id,active:true}}),
-      tx.payrollAdjustment.findMany({where:{tenantId:company.id,targetMonth:month,appliedRunId:null}})
-    ]);
-    let totalGross=0,totalDeductions=0,totalNet=0;
-    for(const employee of employees){const attendance:any=attendanceByEmployee.get(employee.id);if(!attendance)continue;const denominator=Math.max(1,attendance.fullScheduledDays*100),attendanceGross=Math.round(employee.monthlySalary*Math.min(attendance.payableUnits,denominator)/denominator),adjustment=adjustments.filter(a=>a.employeeId===employee.id).reduce((sum,a)=>sum+a.amount,0),result=calculatePay(attendanceGross,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
-      await tx.payrollItem.create({data:{tenantId:company.id,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,gross:result.gross,deductions:result.deductions,net:result.net,components:[...result.components,{name:'Attendance payable',units:attendance.payableUnits,fullScheduledDays:attendance.fullScheduledDays,eligibleScheduledDays:attendance.scheduledDays}],scheduledDays:attendance.scheduledDays,payableUnits:attendance.payableUnits,presentDays:attendance.presentDays,halfDays:attendance.halfDays,paidLeaveUnits:attendance.paidLeaveUnits,unpaidLeaveUnits:attendance.unpaidLeaveUnits,absentDays:attendance.absentDays,lateMinutes:attendance.lateMinutes,overtimeMinutes:attendance.overtimeMinutes}});totalGross+=result.gross;totalDeductions+=result.deductions;totalNet+=result.net;}
-    await tx.payrollAdjustment.updateMany({where:{id:{in:adjustments.map(a=>a.id)},tenantId:company.id},data:{appliedRunId:run.id}});
-    await tx.payrollRun.update({where:{id:run.id},data:{status:'REVIEW',totalGross,totalDeductions,totalNet}});
-    await tx.notification.create({data:{tenantId:company.id,title:'Payroll prepared automatically',message:`${month} attendance is locked and payroll is ready for human review. No bank payout has been sent.`}});
-    await tx.notification.deleteMany({where:{tenantId:company.id,title:{in:[AUTO_PAYROLL_FAILURE,AUTO_PAYROLL_REVIEW]},message:{contains:month}}});
-    await tx.auditLog.create({data:{tenantId:company.id,action:'PAYROLL_AUTO_PREPARED',entity:'payroll',entityId:run.id,after:{month,totalNet,attendanceLockId:locked.id}}});
-   });
+   const run=await preparePayrollMonth(db,company.id,month,'SYSTEM_AUTOMATION');
+   await db.notification.create({data:{tenantId:company.id,title:'Payroll prepared automatically',message:`${month} attendance is closed and payroll is ready for review. No salary payout has been sent.`}});
+   await db.notification.deleteMany({where:{tenantId:company.id,title:{in:[AUTO_PAYROLL_FAILURE,AUTO_PAYROLL_REVIEW]},message:{contains:month}}});
+   await db.auditLog.create({data:{tenantId:company.id,action:'PAYROLL_AUTO_PREPARED',entity:'payroll',entityId:run.id,after:{month,totalNet:run.totalNet,attendanceLockId:run.attendanceLockId}}});
   }catch(error:any){
-   const message=String(error?.message??'Review attendance and payroll settings.').slice(0,500);
+   const message=`${month}: ${String(error?.message??'Review attendance and payroll settings.').slice(0,450)}`;
    await createAutomationNoticeOnce(db,company.id,AUTO_PAYROLL_FAILURE,message).catch(()=>{});
   }
  }
 }
-
 
 const HR_ASSIGN_ROLES=new Set(['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE']);
 const coveredMonths=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};

@@ -11167,3 +11167,63 @@ input[type="month"]{
     justify-content:center;
   }
 }
+
+
+/* Payroll v2 — single Prepare → Review → Finalize → Pay workflow */
+.payroll-v2-controls{display:flex;align-items:flex-end;gap:16px;padding:18px 20px;margin-bottom:18px}
+.payroll-v2-controls .field{width:180px;flex:0 0 180px}
+.payroll-v2-controls-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.payroll-v2-controls-copy strong{font-size:.95rem;color:#60738f}
+.payroll-v2-controls-copy span{font-size:.75rem;color:#95a1b2}
+.payroll-v2-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-bottom:22px;overflow:hidden}
+.payroll-v2-step{display:flex;gap:11px;align-items:flex-start;padding:18px;border-right:1px solid var(--line);min-width:0;background:#fff}
+.payroll-v2-step:last-child{border-right:0}
+.payroll-v2-step>span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:0 0 28px;background:#f2f5fa;color:#8b98aa;font-size:.75rem;font-weight:650}
+.payroll-v2-step>div{min-width:0}
+.payroll-v2-step strong{display:block;color:#6b7d96;font-size:.8125rem}
+.payroll-v2-step small{display:block;color:#a0aabc;font-size:.6875rem;line-height:1.45;margin-top:3px}
+.payroll-v2-step.done>span{background:#e9f7f0;color:#2c9a70}
+.payroll-v2-step.active{background:#f8fbff}
+.payroll-v2-step.active>span{background:var(--primary);color:#fff}
+.payroll-v2-step.active strong{color:var(--primary)}
+.payroll-v2-stats .stat>strong{font-size:1.35rem}
+.payroll-v2-empty{padding:42px 24px;text-align:center;margin-bottom:22px}
+.payroll-v2-empty .card-symbol{margin:0 auto 14px}
+.payroll-v2-empty h2{font-size:1rem;color:#62758e;margin-bottom:8px}
+.payroll-v2-empty p{max-width:650px;margin:0 auto 18px;font-size:.8125rem}
+.payroll-v2-run{margin-bottom:22px}
+.payroll-v2-heading{align-items:flex-start}
+.payroll-v2-title-row{display:flex;align-items:center;gap:10px}
+.payroll-v2-title-row h2{font-size:1rem;color:#5d718c}
+.payroll-v2-actions{border:0;margin:0;padding:0;max-width:58%;justify-content:flex-end}
+.payroll-v2-reopened{display:flex;gap:12px;align-items:flex-start;margin:0 20px 20px;padding:17px;border:1px solid #dce8fb;border-radius:10px;background:#f6f9ff;color:#7995c0}
+.payroll-v2-reopened strong{display:block;color:#6782aa;font-size:.8125rem}
+.payroll-v2-reopened p{margin:4px 0 0;font-size:.75rem}
+.payroll-v2-final-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:16px 20px;border-top:1px solid var(--line)}
+.payroll-v2-history{margin-top:22px}
+.payroll-v2-history-list{display:grid}
+.payroll-v2-history-list>button{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-top:1px solid #f0f3f8;text-align:left}
+.payroll-v2-history-list>button:hover,.payroll-v2-history-list>button.active{background:#f8faff}
+.payroll-v2-history-list>button>span{display:flex;align-items:center;gap:12px;min-width:0}
+.payroll-v2-history-list>button>span:first-child{flex-direction:column;align-items:flex-start;gap:2px}
+.payroll-v2-history-list strong{font-size:.8rem;color:#687c96}
+.payroll-v2-history-list small{font-size:.68rem;color:#a0aabc}
+@media(max-width:950px){
+ .payroll-v2-controls{align-items:stretch;flex-direction:column}
+ .payroll-v2-controls .field{width:100%;flex:auto}
+ .payroll-v2-controls .btn{width:100%}
+ .payroll-v2-flow{grid-template-columns:1fr 1fr}
+ .payroll-v2-step:nth-child(2){border-right:0}
+ .payroll-v2-step:nth-child(-n+2){border-bottom:1px solid var(--line)}
+ .payroll-v2-heading{flex-direction:column}
+ .payroll-v2-actions{max-width:none;width:100%;justify-content:flex-start}
+ .payroll-v2-actions .btn{flex:1 1 auto}
+}
+@media(max-width:560px){
+ .payroll-v2-flow{grid-template-columns:1fr}
+ .payroll-v2-step{border-right:0;border-bottom:1px solid var(--line)!important;padding:14px}
+ .payroll-v2-step:last-child{border-bottom:0!important}
+ .payroll-v2-history-list>button{align-items:flex-start;flex-direction:column}
+ .payroll-v2-history-list>button>span:last-child{width:100%;justify-content:space-between}
+ .payroll-v2-final-actions .btn{width:100%}
+}
