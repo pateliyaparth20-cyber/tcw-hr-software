@@ -376,6 +376,11 @@ export class DataService {
 
   async platformResource(ctx:Context,type:string,method:string,recordId?:string,body?:unknown){
     if(type==='users')return this.platformUsers(ctx,method,recordId,body);
+    if(type==='support-agents'){
+      platform(ctx);requirePermission(ctx,'support','VIEW');if(method!=='GET')throw new BadRequestException('Support agents are read-only here.');
+      const users=await this.db.user.findMany({where:{tenantId:null,active:true},include:{role:true},orderBy:{name:'asc'}});
+      return {items:users.filter(user=>hasPermission(user.role.permissions,'support','VIEW')).map(user=>({id:user.id,name:user.name,email:user.email,role:user.role.code}))};
+    }
     platform(ctx);const resource=type==='companies'||type==='trials'?'tenants':type==='leads'?'sales':type==='invoices'||type==='payments'?'billing':type;
     requirePermission(ctx,resource,method==='GET'?'VIEW':method==='POST'?'CREATE':method==='DELETE'?'DELETE':'EDIT');
     if(type==='trials'){
