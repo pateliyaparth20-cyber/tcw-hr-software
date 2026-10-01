@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {embeddedDatabase} from '../helpers/database';
-import {seed} from '../../prisma/seed';
+import {resetQaUserPasswords,seed} from '../../prisma/seed';
 import {resetAndSeedFullQa} from '../../prisma/qa-full-reset';
 import {createApp} from '../../apps/api/src/app';
 
@@ -39,6 +39,9 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
   assert.equal(await db.lead.count(),2);
   assert.equal((await db.invoice.findFirstOrThrow({where:{tenantId:tenant.id}})).total,10000);
   assert.equal((await db.payment.findFirstOrThrow({where:{tenantId:tenant.id}})).amount,10000);
+  const resetPassword='qa-reset-integration-password';
+  const passwordReset=await resetQaUserPasswords(db,{companyCode:'TCW-QA',password:resetPassword});
+  assert.deepEqual(passwordReset,{companyCode:'TCW-QA',users:6});
   const payroll=await db.payrollRun.findUniqueOrThrow({where:{tenantId_month:{tenantId:tenant.id,month:'2026-09'}},include:{items:true}});
   assert.equal(payroll.status,'LOCKED');assert.equal(payroll.items.length,8);
   assert.equal(await db.payrollPayout.count({where:{tenantId:tenant.id,runId:payroll.id,status:'PAID'}}),8);
@@ -61,8 +64,8 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
 
   try{
     const platform=await login(adminEmail,adminPassword);
-    const owner=await login(qaEmail,qaPassword,'TCW-QA');
-    const employee=await login('aarav.shah.qa@example.test',qaPassword,'TCW-QA');
+    const owner=await login(qaEmail,resetPassword,'TCW-QA');
+    const employee=await login('aarav.shah.qa@example.test',resetPassword,'TCW-QA');
 
     await t.test('Super Admin sees clean company billing and automatic payment history',async()=>{
       const companies=await call('platform/companies','GET',undefined,platform);assert.equal(companies.status,200);assert.equal(companies.data.items.length,1);assert.equal(companies.data.items[0].code,'TCW-QA');
