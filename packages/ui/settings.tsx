@@ -5,24 +5,79 @@ import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye
 import {useApp,useData,api,PageTitle,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,notificationTarget,displayDate,currencyValue} from './core';
 import {Row,Field,readable} from './config';
 export function SoftwareUpdatePage(){
- const{notify}=useApp();const[current,setCurrent]=useState<Row|null>(null),[loaded,setLoaded]=useState(''),[checking,setChecking]=useState(false),[installing,setInstalling]=useState(false),[lastChecked,setLastChecked]=useState<Date|null>(null);
+ const{notify}=useApp();const[current,setCurrent]=useState<Row|null>(null),[loaded,setLoaded]=useState(''),[loadedRelease,setLoadedRelease]=useState(''),[checking,setChecking]=useState(false),[installing,setInstalling]=useState(false),[lastChecked,setLastChecked]=useState<Date|null>(null);
  const readLoaded=()=>{try{return localStorage.getItem('tcw_loaded_deployment_version')??localStorage.getItem('tcw_last_deployment_version')??''}catch{return ''}};
- async function check(show=true){setChecking(true);try{const r=await fetch('/api/version?ts='+Date.now(),{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});if(!r.ok)throw new Error('Unable to check for updates.');const data=await r.json();setCurrent(data);const local=readLoaded();setLoaded(local);setLastChecked(new Date());if(show)notify(local&&String(data.version)!==local?'Software update available.':'TCW HR Software is up to date.')}catch(e:any){if(show)notify(e.message??'Unable to check for updates.',true)}finally{setChecking(false)}}
+ const readLoadedRelease=()=>{try{return localStorage.getItem('tcw_loaded_release_version')??''}catch{return ''}};
+ async function check(show=true){
+  setChecking(true);
+  try{
+   const r=await fetch('/api/version?ts='+Date.now(),{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});
+   if(!r.ok)throw new Error('Unable to check for updates.');
+   const data=await r.json();setCurrent(data);
+   let local=readLoaded(),localRelease=readLoadedRelease();
+   // First run after manual-update support is installed becomes this device's baseline.
+   if(!local&&data.version){
+    local=String(data.version);localRelease=String(data.release??'');
+    try{localStorage.setItem('tcw_loaded_deployment_version',local);localStorage.setItem('tcw_last_deployment_version',local);localStorage.setItem('tcw_loaded_release_version',localRelease)}catch{}
+   }
+   setLoaded(local);setLoadedRelease(localRelease);setLastChecked(new Date());
+   if(show)notify(local&&String(data.version)!==local?'Software update available. Install it when you are ready.':'TCW HR Software is up to date.');
+  }catch(e:any){if(show)notify(e.message??'Unable to check for updates.',true)}
+  finally{setChecking(false)}
+ }
  useEffect(()=>{check(false).catch(()=>{})},[]);
  const available=!!(current?.version&&loaded&&String(current.version)!==loaded);
- async function install(){setInstalling(true);try{const reg=await navigator.serviceWorker?.getRegistration?.();await reg?.update?.();const cacheApi=(window as any).caches;if(cacheApi?.keys){for(const key of await cacheApi.keys())if(String(key).toLowerCase().includes('tcw'))await cacheApi.delete(key)}if(current?.version)try{localStorage.setItem('tcw_loaded_deployment_version',String(current.version));localStorage.setItem('tcw_last_deployment_version',String(current.version))}catch{}const url=new URL(location.href);url.searchParams.set('tcw_update',String(Date.now()));location.replace(url.toString())}catch(e:any){notify(e.message??'Unable to install the update.',true);setInstalling(false)}}
- const release=String(current?.release??'1.3.0'),build=String(current?.version??'').slice(0,12)||'Checking…',channel=String(current?.channel??'Production');
- return <><PageTitle title="Software update" subtitle="Keep TCW HR Software on the latest verified production build."/ >
+ async function waitForInstalled(reg:ServiceWorkerRegistration){
+  let worker=reg.waiting??reg.installing;
+  if(!worker)return null;
+  if(worker.state==='installed')return worker;
+  await new Promise<void>((resolve,reject)=>{
+   const timer=window.setTimeout(()=>reject(new Error('Update worker took too long to install.')),15000);
+   const onState=()=>{if(worker?.state==='installed'){window.clearTimeout(timer);resolve()}else if(worker?.state==='redundant'){window.clearTimeout(timer);reject(new Error('Update worker installation failed.'))}};
+   worker!.addEventListener('statechange',onState);
+  });
+  return reg.waiting??worker;
+ }
+ async function install(){
+  if(!current?.version){await check(true);return}
+  setInstalling(true);
+  try{
+   if('serviceWorker' in navigator){
+    const build=encodeURIComponent(String(current.version));
+    const reg=await navigator.serviceWorker.register('/sw.js?tcw_build='+build,{updateViaCache:'none'});
+    await reg.update().catch(()=>{});
+    const worker=await waitForInstalled(reg);
+    if(worker){
+     const changed=new Promise<void>(resolve=>{
+      let finished=false;
+      const done=()=>{if(finished)return;finished=true;resolve()};
+      navigator.serviceWorker.addEventListener('controllerchange',done,{once:true});
+      window.setTimeout(done,6000);
+     });
+     worker.postMessage({type:'TCW_ACTIVATE_UPDATE'});
+     await changed;
+    }
+   }
+   try{
+    localStorage.setItem('tcw_loaded_deployment_version',String(current.version));
+    localStorage.setItem('tcw_last_deployment_version',String(current.version));
+    localStorage.setItem('tcw_loaded_release_version',String(current.release??''));
+   }catch{}
+   const url=new URL(location.href);url.searchParams.set('tcw_update',String(Date.now()));location.replace(url.toString());
+  }catch(e:any){notify(e.message??'Unable to install the update.',true);setInstalling(false)}
+ }
+ const latestRelease=String(current?.release??'1.3.0'),installedRelease=loadedRelease||latestRelease,latestBuild=String(current?.version??'').slice(0,12)||'Checking…',installedBuild=loaded?String(loaded).slice(0,12):'Not recorded',channel=String(current?.channel??'Production');
+ return <><PageTitle title="Software update" subtitle="New builds stay pending on this device until you explicitly install them."/ >
   <section className="software-update-hero panel">
    <div className="software-update-hero-icon"><RefreshCw size={28}/></div>
-   <div className="software-update-hero-copy"><small>TCW HR SOFTWARE</small><h2>{available?'A new update is ready':'Your software is up to date'}</h2><p>{available?'Install the latest verified build to receive fixes, performance improvements and new features.':'This device is running the latest build currently available from TCW HR Software.'}</p></div>
+   <div className="software-update-hero-copy"><small>TCW HR SOFTWARE</small><h2>{available?'A new update is ready':'Your installed version is current'}</h2><p>{available?'Your current version remains active until you press Install update.':'No newer verified build is waiting for this device.'}</p></div>
    <span className={'software-update-status '+(available?'available':'current')}>{available?'UPDATE AVAILABLE':'UP TO DATE'}</span>
   </section>
   <div className="software-update-grid">
-   <section className="panel software-version-panel"><div className="panel-heading"><div><small>VERSION INFORMATION</small><h2>Release details</h2></div><ShieldCheck size={21}/></div><div className="software-version-list"><div><span>Version</span><strong>v{release}</strong></div><div><span>Build</span><strong>{build}</strong></div><div><span>Release channel</span><strong>{channel}</strong></div><div><span>Last checked</span><strong>{lastChecked?lastChecked.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'Checking…'}</strong></div></div></section>
-   <section className="panel software-update-action-panel"><small>UPDATE CONTROL</small><h2>{available?'Install the latest version':'No action required'}</h2><p>{available?'The update refreshes application files and reloads the current device. Your account data remains on the server.':'Updates are never installed automatically. Check whenever you want; installation only starts after you press Install update.'}</p><div className="software-update-page-actions"><button type="button" className="btn secondary" disabled={checking||installing} onClick={()=>check(true)}><RefreshCw size={16}/>{checking?'Checking…':'Check for update'}</button>{available&&<button type="button" className="btn primary" disabled={checking||installing} onClick={install}>{installing?'Installing…':'Install update'}</button>}</div></section>
+   <section className="panel software-version-panel"><div className="panel-heading"><div><small>VERSION INFORMATION</small><h2>Installed vs latest</h2></div><ShieldCheck size={21}/></div><div className="software-version-list"><div><span>Installed version</span><strong>v{installedRelease}</strong></div><div><span>Installed build</span><strong>{installedBuild}</strong></div><div><span>Latest version</span><strong>v{latestRelease}</strong></div><div><span>Latest build</span><strong>{latestBuild}</strong></div><div><span>Release channel</span><strong>{channel}</strong></div><div><span>Last checked</span><strong>{lastChecked?lastChecked.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'Checking…'}</strong></div></div></section>
+   <section className="panel software-update-action-panel"><small>MANUAL UPDATE CONTROL</small><h2>{available?'Install when you are ready':'No action required'}</h2><p>{available?'Nothing is activated automatically. Install update switches the service worker, refreshes the app and records the new build as installed.':'Checking for updates never installs them. Only the Install update button activates a waiting build.'}</p><div className="software-update-page-actions"><button type="button" className="btn secondary" disabled={checking||installing} onClick={()=>check(true)}><RefreshCw size={16}/>{checking?'Checking…':'Check for update'}</button>{available&&<button type="button" className="btn primary" disabled={checking||installing} onClick={install}>{installing?'Installing…':'Install update'}</button>}</div></section>
   </div>
-  <section className="panel software-update-notes"><div><ShieldCheck size={20}/><span><strong>Verified production updates</strong><small>Only the deployed TCW HR Software production build is installed from this screen.</small></span></div><div><Clock3 size={20}/><span><strong>Manual update control</strong><small>New builds can alert you, but TCW HR Software will not install or reload until you choose Install update.</small></span></div></section>
+  <section className="panel software-update-notes"><div><ShieldCheck size={20}/><span><strong>Manual activation</strong><small>A newer service worker can wait in the background, but it cannot take control until you press Install update.</small></span></div><div><Clock3 size={20}/><span><strong>Version changes together</strong><small>After installation, the app reloads once and Installed version / build are moved to the verified latest values.</small></span></div></section>
  </>;
 }
 function PaymentSettingsCard(){
