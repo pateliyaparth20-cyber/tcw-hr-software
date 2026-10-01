@@ -346,7 +346,9 @@ export class DataService {
     const model=modelMap[type];if(!model)throw new NotFoundException();
     if(method==='GET'){
       if(type==='companies'||type==='invoices')await syncCompanyAccess(this.db);
-      const items=await(this.db as any)[model].findMany({orderBy:{createdAt:'desc'},take:500});
+      const activeTenantIds=['companies','invoices','payments','support'].includes(type)?(await this.db.tenant.findMany({where:{status:{not:'ARCHIVED'}},select:{id:true}})).map(t=>t.id):[];
+      const visibleWhere=type==='companies'?{status:{not:'ARCHIVED'}}:['invoices','payments','support'].includes(type)?{tenantId:{in:activeTenantIds}}:undefined;
+      const items=await(this.db as any)[model].findMany({...(visibleWhere?{where:visibleWhere}:{}),orderBy:{createdAt:'desc'},take:500});
       if(type==='support'){
         const tenantIds:string[]=[...new Set<string>(items.map((r:any)=>String(r.tenantId)).filter(Boolean))];
         const companies=tenantIds.length?await this.db.tenant.findMany({where:{id:{in:tenantIds}},select:{id:true,name:true,code:true}}):[];
@@ -354,7 +356,7 @@ export class DataService {
         return {items:items.map((r:any)=>({...r,company:byId.get(r.tenantId)??null}))};
       }
       if(type==='payments'){
-        const tenants=await this.db.tenant.findMany({select:{id:true,name:true,profile:true}});
+        const tenants=await this.db.tenant.findMany({where:{status:{not:'ARCHIVED'}},select:{id:true,name:true,profile:true}});
         const pending=tenants.flatMap((t:any)=>{const proof=(t.profile as any)?.pendingPaymentProof;if(!proof||proof.status!=='AWAITING_VERIFICATION')return [];return [{id:'pending-'+t.id,tenantId:t.id,tenantName:t.name,invoiceId:proof.invoiceId,amount:Number(proof.amount??0),reference:String(proof.utr??''),date:proof.submittedAt,status:'AWAITING_VERIFICATION',pendingProof:true}]});
         return {items:[...pending,...items]};
       }
