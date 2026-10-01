@@ -88,7 +88,7 @@ export function PwaClient(){
     const clearLong=()=>{if(longPress){clearTimeout(longPress);longPress=null}};
     document.addEventListener('touchstart',onTouchStart,{passive:true});document.addEventListener('touchmove',onTouchMove,{passive:true});document.addEventListener('touchend',onTouchEnd,{passive:true});document.addEventListener('click',onPhotoClick);document.addEventListener('touchstart',onPhotoTouchStart,{passive:true});document.addEventListener('touchend',clearLong,{passive:true});document.addEventListener('touchmove',clearLong,{passive:true});
     let cancelled=false;
-    let versionTimer:ReturnType<typeof setInterval>|undefined;
+    let versionTimer:number|undefined;
     const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
     let iosGuide:HTMLButtonElement|null=null,iosGuideTimer:ReturnType<typeof setTimeout>|undefined;
