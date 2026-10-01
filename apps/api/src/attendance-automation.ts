@@ -97,7 +97,8 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
     if(row.dayType==='PAID_LEAVE')g.paidLeaveUnits+=row.leaveUnits;
     if(row.dayType==='UNPAID_LEAVE')g.unpaidLeaveUnits+=row.leaveUnits;
     if(row.status==='ABSENT')g.absentDays++;
-    if(row.status==='MISSING_PUNCH')g.missingPunchDays++;
+    const shift=(e.shiftId&&shiftMap.get(e.shiftId))||shifts[0],activeToday=!!shift&&row.status==='MISSING_PUNCH'&&!!row.firstIn&&!row.lastOut&&key(row.date)===localDate(new Date(),shift.timezone);
+    if(row.status==='MISSING_PUNCH'&&!activeToday)g.missingPunchDays++;
     g.lateMinutes+=row.lateMinutes;g.earlyOutMinutes+=row.earlyOutMinutes;g.overtimeMinutes+=row.overtimeMinutes;
     groups.set(row.employeeId,g);
   }
@@ -116,6 +117,8 @@ export async function lockAttendanceMonth(db:Database,tenantId:string,month:stri
   const summary=await attendanceMonthSummary(db,tenantId,month);
   if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before locking attendance.`);
   const {first,next}=monthBounds(month),now=new Date();
+  const activeOpen=await db.attendanceDaily.findFirst({where:{tenantId,date:{gte:first,lt:next},status:'MISSING_PUNCH',firstIn:{not:null},lastOut:null}});
+  if(activeOpen)throw new BadRequestException('An employee is still working with an open IN punch. Check out or close the work session before locking attendance.');
   const row=await db.$transaction(async tx=>{
     await tx.attendanceDaily.updateMany({where:{tenantId,date:{gte:first,lt:next}},data:{lockedAt:now}});
     return tx.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId,month}},create:{tenantId,month,status:'LOCKED',lockedBy:userId,lockedAt:now,summary:summary.totals},update:{status:'LOCKED',lockedBy:userId,lockedAt:now,unlockedBy:null,unlockedAt:null,summary:summary.totals}});
