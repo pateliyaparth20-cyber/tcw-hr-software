@@ -48,7 +48,17 @@ export async function prepareScheduledPayroll(db:Database){
   if(!profile.autoPayroll)continue;
   const localToday=localDate(now,company.timezone||'Asia/Kolkata'),year=Number(localToday.slice(0,4)),monthNumber=Number(localToday.slice(5,7)),day=Number(localToday.slice(8,10));
   const lastDay=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),configured=Math.max(1,Math.min(31,Number(profile.salaryDay)||1)),scheduled=Math.min(configured,lastDay);if(day<scheduled)continue;
-  const month=previousMonth(localToday);if(await db.payrollRun.findUnique({where:{tenantId_month:{tenantId:company.id,month}}}))continue;
+  const month=previousMonth(localToday);
+  const existingRun=await db.payrollRun.findUnique({where:{tenantId_month:{tenantId:company.id,month}}});
+  if(existingRun){
+   await db.notification.deleteMany({where:{tenantId:company.id,title:{in:[AUTO_PAYROLL_FAILURE,AUTO_PAYROLL_REVIEW]},message:{contains:month}}}).catch(()=>{});
+   continue;
+  }
+  const manualDelete=await db.auditLog.findFirst({where:{tenantId:company.id,action:'PAYROLL_RUN_DELETED',entity:'payroll-month',entityId:month},select:{id:true}});
+  if(manualDelete){
+   await db.notification.deleteMany({where:{tenantId:company.id,title:{in:[AUTO_PAYROLL_FAILURE,AUTO_PAYROLL_REVIEW]},message:{contains:month}}}).catch(()=>{});
+   continue;
+  }
   try{
    const existingLock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:company.id,month}}});
    if(existingLock?.status!=='LOCKED')await reconcileAttendanceMonth(db,company.id,month);

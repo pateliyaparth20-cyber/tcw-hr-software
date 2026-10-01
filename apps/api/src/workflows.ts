@@ -216,13 +216,14 @@ export class Workflows {
         await tx.$queryRaw`SELECT id FROM payroll_runs WHERE id = ${id.parse(recordId)}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
         const run=await tx.payrollRun.findFirst({where:{id:recordId,tenantId:tid}});
         if(!run)throw new NotFoundException('Payroll run not found.');
-        if(run.status!=='DRAFT')throw new ConflictException('Only draft payroll runs can be deleted. Reopen review payroll to draft first; approved or locked payroll must be preserved.');
         const payoutCount=await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}});
         if(payoutCount)throw new ConflictException('Payroll with payout records cannot be deleted.');
+        if(!['DRAFT','REVIEW'].includes(run.status)||run.approvedBy||run.lockedAt)throw new ConflictException('Only an unapproved Draft or Review payroll can be deleted. Approved, locked or paid payroll must be preserved.');
         await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
         await tx.payrollItem.deleteMany({where:{tenantId:tid,runId:recordId}});
-        await audit(tx,ctx,'PAYROLL_DRAFT_DELETED','payroll',recordId,run,{deleted:true,month:run.month});
+        await audit(tx,ctx,'PAYROLL_RUN_DELETED','payroll-month',run.month,run,{deleted:true,month:run.month,previousRunId:run.id,previousStatus:run.status,skipAutomaticRecreation:true});
         await tx.payrollRun.delete({where:{id:recordId}});
+        await tx.notification.deleteMany({where:{tenantId:tid,title:{in:['Automatic payroll could not be prepared','Automatic payroll needs attendance review']},message:{contains:run.month}}});
         return {ok:true,id:recordId,month:run.month};
       });
     }
