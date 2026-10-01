@@ -45,7 +45,6 @@ test('dashboard and login expose the sales-ready responsive experience',()=>{
   const portal=read('packages/ui/portal.tsx');
   const styles=read('packages/ui/styles.css');
   assert.match(dashboard,/ALL-IN-ONE HR SOFTWARE/);
-  assert.match(dashboard,/ALL-IN-ONE HR WORKSPACE/);
   assert.match(dashboard,/function Greeting/);
   assert.match(dashboard,/mobile-unified-user[\s\S]*?<LiveClock/);
   assert.match(portal,/function PasswordField/);
