@@ -34,59 +34,43 @@ function workdays(month:string){
   return days;
 }
 
-async function clearBusinessData(db:PrismaClient){
-  await db.$transaction(async tx=>{
-    await tx.supportTicketMessage.deleteMany({});
-    await tx.payrollItem.deleteMany({});
-    await tx.payrollPayout.deleteMany({});
-    await tx.payrollAdjustment.deleteMany({});
-    await tx.session.deleteMany({where:{tenantId:{not:null}}});
-    await tx.pushSubscription.deleteMany({where:{tenantId:{not:null}}});
-    await tx.passwordReset.deleteMany({where:{tenantId:{not:null}}});
-    await tx.employeeFaceProfile.deleteMany({});
-    await tx.deviceEmployeeMap.deleteMany({});
-    await tx.deviceSyncLog.deleteMany({});
-    await tx.attendancePunch.deleteMany({});
-    await tx.attendanceDaily.deleteMany({});
-    await tx.attendancePeriodLock.deleteMany({});
-    await tx.leaveRequest.deleteMany({});
-    await tx.calendarEvent.deleteMany({});
-    await tx.payrollRun.deleteMany({});
-    await tx.salaryRule.deleteMany({});
-    await tx.candidate.deleteMany({});
-    await tx.job.deleteMany({});
-    await tx.goal.deleteMany({});
-    await tx.course.deleteMany({});
-    await tx.asset.deleteMany({});
-    await tx.expenseClaim.deleteMany({});
-    await tx.travelRequest.deleteMany({});
-    await tx.employeeExit.deleteMany({});
-    await tx.document.deleteMany({});
-    await tx.activityEvent.deleteMany({});
-    await tx.productivityRule.deleteMany({});
-    await tx.notification.deleteMany({});
-    await tx.payment.deleteMany({});
-    await tx.invoice.deleteMany({});
-    await tx.supportTicket.deleteMany({});
-    await tx.meghnaConversation.deleteMany({});
-    await tx.outbox.deleteMany({where:{tenantId:{not:null}}});
-    await tx.auditLog.deleteMany({where:{tenantId:{not:null}}});
-    await tx.deviceEmployeeMap.deleteMany({});
-    await tx.attendanceDevice.deleteMany({});
-    await tx.branch.deleteMany({});
-    await tx.department.deleteMany({});
-    await tx.designation.deleteMany({});
-    await tx.team.deleteMany({});
-    await tx.location.deleteMany({});
-    await tx.costCenter.deleteMany({});
-    await tx.shift.deleteMany({});
-    await tx.leaveType.deleteMany({});
-    await tx.employee.deleteMany({});
-    await tx.user.deleteMany({where:{tenantId:{not:null}}});
-    await tx.tenant.deleteMany({});
-    await tx.lead.deleteMany({});
-    await tx.loginAttempt.deleteMany({});
-  },{timeout:60000});
+async function archiveBusinessData(db:PrismaClient,now:Date){
+  const tenants=await db.tenant.findMany({orderBy:{createdAt:'asc'}});
+  let archived=0;
+  for(const tenant of tenants){
+    const profile=tenant.profile&&typeof tenant.profile==='object'&&!Array.isArray(tenant.profile)?tenant.profile as Record<string,any>:{};
+    if(tenant.status==='ARCHIVED'&&profile.qaResetArchived===true)continue;
+    const users=await db.user.findMany({where:{tenantId:tenant.id},select:{id:true}});
+    const employees=await db.employee.findMany({where:{tenantId:tenant.id},select:{id:true}});
+    await db.$transaction(async tx=>{
+      await tx.session.deleteMany({where:{tenantId:tenant.id}});
+      await tx.pushSubscription.deleteMany({where:{tenantId:tenant.id}});
+      await tx.passwordReset.deleteMany({where:{tenantId:tenant.id}});
+      await tx.outbox.deleteMany({where:{tenantId:tenant.id,sentAt:null}});
+      await tx.deviceEmployeeMap.updateMany({where:{tenantId:tenant.id},data:{active:false}});
+      await tx.attendanceDevice.updateMany({where:{tenantId:tenant.id},data:{status:'OFFLINE',apiSecretHash:null,apiSecretHint:null,lastError:'Archived by full QA reset'}});
+      for(let index=0;index<users.length;index++){
+        const user=users[index];
+        await tx.user.update({where:{id:user.id},data:{name:`Archived User ${index+1}`,email:`archived-user-${user.id}@example.invalid`,loginId:`ARCH-${user.id.slice(0,8).toUpperCase()}`,active:false,mustChangePassword:true,avatar:null}});
+      }
+      await tx.employee.updateMany({where:{tenantId:tenant.id},data:{managerId:null}});
+      for(let index=0;index<employees.length;index++){
+        const employee=employees[index];
+        await tx.employee.update({where:{id:employee.id},data:{employeeCode:`ARCH-${employee.id.slice(0,8).toUpperCase()}`,firstName:'Archived',lastName:`Employee ${index+1}`,email:`archived-employee-${employee.id}@example.invalid`,phone:'',photo:'',designation:'',status:'INACTIVE',monthlySalary:0,personal:{},deletedAt:now}});
+      }
+      await tx.tenant.update({where:{id:tenant.id},data:{
+        name:`Archived workspace ${tenant.id.slice(0,8)}`,
+        code:`ARCH-${tenant.id.slice(0,8).toUpperCase()}`,
+        status:'ARCHIVED',expiresAt:now,logo:null,
+        profile:{qaResetArchived:true,archivedAt:now.toISOString(),suspensionReason:'ARCHIVED_QA_RESET'}
+      }});
+      await tx.auditLog.create({data:{tenantId:tenant.id,action:'QA_RESET_ARCHIVED',entity:'tenants',entityId:tenant.id,after:{archivedAt:now.toISOString(),reason:'FULL_QA_RESET'}}});
+    },{timeout:60000});
+    archived++;
+  }
+  await db.lead.deleteMany({});
+  await db.loginAttempt.deleteMany({});
+  return archived;
 }
 
 export async function resetAndSeedFullQa(db:PrismaClient,options:FullQaResetOptions){
@@ -101,7 +85,7 @@ export async function resetAndSeedFullQa(db:PrismaClient,options:FullQaResetOpti
   const markerValue=marker?.value&&typeof marker.value==='object'&&!Array.isArray(marker.value)?marker.value as any:{};
   if(String(markerValue.runKey??'')===runKey)return {skipped:true,runKey,month:String(markerValue.month??'')};
 
-  await clearBusinessData(db);
+  const archivedTenants=await archiveBusinessData(db,now);
 
   const ownerRole=await db.role.findUniqueOrThrow({where:{code:'COMPANY_OWNER'}});
   const employeeRole=await db.role.findUniqueOrThrow({where:{code:'EMPLOYEE'}});
@@ -261,5 +245,5 @@ export async function resetAndSeedFullQa(db:PrismaClient,options:FullQaResetOpti
     payments:await db.payment.count({where:{tenantId:tenant.id}})
   };
   await db.platformSetting.upsert({where:{key:markerKey},create:{key:markerKey,value:{runKey,month,tenantId:tenant.id,at:now.toISOString(),counts}},update:{value:{runKey,month,tenantId:tenant.id,at:now.toISOString(),counts}}});
-  return {skipped:false,runKey,month,tenantId:tenant.id,companyCode:tenant.code,payrollRunId:finalized.id,counts,attendanceTotals:attendance.totals};
+  return {skipped:false,runKey,month,tenantId:tenant.id,companyCode:tenant.code,payrollRunId:finalized.id,archivedTenants,counts,attendanceTotals:attendance.totals};
 }
