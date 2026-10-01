@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard,Camera} from 'lucide-react';
+import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard,Camera,Menu,Home} from 'lucide-react';
 import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,BrandLogo,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
 import {FaceScanAttendanceModal} from './face';
@@ -90,9 +90,10 @@ function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,out
  const greeting=useTimeGreeting('Asia/Kolkata');
  return <section className="platform-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-platform">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><BrandLogo alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><Link href="/system" className="mobile-unified-action" aria-label="System health"><Server size={19}/></Link></div>
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>Platform administrator</span></div></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><BrandLogo alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><div className="mobile-hero-actions"><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={19}/><i>3</i></Link><Link href="/settings" className="mobile-unified-action" aria-label="Menu"><Menu size={20}/></Link></div></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>Platform Administrator</span></div><div className="mobile-hero-date"><span>{new Date().toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</span><strong>☀️ 26°C</strong><small>Ahmedabad</small></div></div>
   </div>
+  <Link href="/companies" className="mobile-business-banner"><div><strong>Manage Your<br/>Business Smarter</strong><small>All-in-One HR Management Platform</small></div><TrendingUp size={52}/><ChevronRight size={20}/></Link>
   <div className="platform-mobile-stats">
    <Link href="/companies"><span className="mobile-stat-icon blue"><Building2 size={19}/></span><strong>{companies.length}</strong><small>Companies · {active} active</small></Link>
    <Link href="/trials"><span className="mobile-stat-icon violet"><PhoneCall size={19}/></span><strong>{trialSummary.callDue??0}</strong><small>Trial calls due</small></Link>
