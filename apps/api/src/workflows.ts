@@ -109,7 +109,8 @@ export class Workflows {
     if(method==='GET'){
       const start=query.from?date.parse(query.from):new Date(Date.now()-31*86400000);const end=query.to?date.parse(query.to):new Date();
       const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);
-      return {items:await this.db.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:start,lte:end},employeeId:{in:visibleEmployeeIds},status:{not:'VOID'}},orderBy:{date:'desc'},take:1000})};
+      const items=await this.db.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:start,lte:end},employeeId:{in:visibleEmployeeIds},status:{not:'VOID'}},orderBy:{date:'desc'},take:1000});
+      return {items:items.map(row=>{const fullDayLeave=['PAID_LEAVE','UNPAID_LEAVE'].includes(row.dayType)&&row.leaveUnits>=100;if(!fullDayLeave)return row;return {...row,status:row.dayType,exceptionCode:'',lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};})};
     }
     const input=z.object({employeeId:id,punchTime:z.iso.datetime().transform(v=>new Date(v)),punchType:z.enum(['IN','OUT']),sourceId:z.string().min(1).max(100),shiftId:id.optional()}).strict().parse(body);
     await assertEmployee(this.db,ctx,input.employeeId);await assertAttendanceUnlocked(this.db,tid,input.punchTime);
