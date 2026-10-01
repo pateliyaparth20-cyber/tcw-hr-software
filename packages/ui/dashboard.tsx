@@ -138,7 +138,7 @@ function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:
  const approvedUpcoming=leave.filter(r=>r.status==='APPROVED'&&String(r.endDate).slice(0,10)>=today).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
  const approvedLeaveToday=approvedUpcoming.find(r=>String(r.startDate).slice(0,10)<=today&&String(r.endDate).slice(0,10)>=today);
  const fullDayLeaveToday=!!approvedLeaveToday&&Number(approvedLeaveToday.days)!==0.5;
- const leaveDayType=['PAID_LEAVE','UNPAID_LEAVE'].includes(String(todayRecord?.dayType??''))?String(todayRecord.dayType):'APPROVED';
+ const leaveDayType=['PAID_LEAVE','UNPAID_LEAVE'].includes(String(todayRecord?.dayType??''))?String(todayRecord?.dayType??'APPROVED'):'APPROVED';
  const payslip:Row|null=d.payroll??null;
  const firstName=String(session.user.name??employee.firstName??'Employee').split(' ')[0];
  const greeting=useTimeGreeting(timezone);
