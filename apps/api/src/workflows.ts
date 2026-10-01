@@ -150,10 +150,29 @@ export class Workflows {
       await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});await audit(tx,ctx,'PUNCH_RECORDED','attendance',row.id,undefined,{employeeId:input.employeeId,punchTime:input.punchTime,punchType:input.punchType});return calculated;
     });
   }
-  async leave(ctx:Context,method:string,body:any){
-    const tid=tenant(ctx);requirePermission(ctx,'leave',method==='GET'?'VIEW':'CREATE');
+  async leave(ctx:Context,method:string,body:any,recordId?:string){
+    const tid=tenant(ctx);requirePermission(ctx,'leave',method==='GET'?'VIEW':method==='DELETE'?'DELETE':'CREATE');
     const scope=await employeeScope(this.db,ctx);
     if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500})};}
+    if(method==='DELETE'){
+      if(!recordId)throw new BadRequestException('Leave request id is required.');
+      const leaveId=id.parse(recordId);let affectedMonths:string[]=[];let deleted:any=null;
+      await this.db.$transaction(async tx=>{
+        await tx.$queryRaw`SELECT id FROM leave_requests WHERE id = ${leaveId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+        const before=await tx.leaveRequest.findFirst({where:{id:leaveId,tenantId:tid}});if(!before)throw new NotFoundException('Leave request not found.');
+        await assertEmployee(tx,ctx,before.employeeId);
+        affectedMonths=monthsCovered(before.startDate,before.endDate);
+        const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});
+        if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before deleting this leave.`);
+        await tx.leaveRequest.delete({where:{id:before.id}});
+        await audit(tx,ctx,'LEAVE_DELETED','leave',before.id,before,{deleted:true});
+        deleted=before;
+      });
+      if(deleted?.status==='APPROVED')for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
+      const user=deleted?await this.db.user.findFirst({where:{tenantId:tid,employeeId:deleted.employeeId,active:true}}):null;
+      if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave removed',message:'HR removed a leave record from your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
+      return {ok:true,id:leaveId};
+    }
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
     const autoApprove=['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(ctx.user.role.code)&&input.employeeId!==ctx.user.employeeId;
     const after=await this.db.$transaction(async tx=>{
