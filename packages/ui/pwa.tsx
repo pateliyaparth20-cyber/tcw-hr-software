@@ -113,23 +113,30 @@ export function PwaClient(){
           .then(()=>clearLegacyTcwCaches())
           .catch(()=>{});
       }else{
-        navigator.serviceWorker.register('/sw.js').then(registration=>{
+        (async()=>{
+          let installed='';
+          try{installed=window.localStorage.getItem('tcw_loaded_deployment_version')??window.localStorage.getItem('tcw_last_deployment_version')??''}catch{}
+          if(!installed){
+            try{
+              const response=await fetch('/api/version',{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});
+              const version=response.ok?await response.json():null;
+              if(version?.version){
+                installed=String(version.version);
+                try{
+                  window.localStorage.setItem('tcw_loaded_deployment_version',installed);
+                  window.localStorage.setItem('tcw_last_deployment_version',installed);
+                  window.localStorage.setItem('tcw_loaded_release_version',String(version.release??''));
+                }catch{}
+              }
+            }catch{}
+          }
+          const script='/sw.js?tcw_build='+encodeURIComponent(installed||'baseline');
+          const registration=await navigator.serviceWorker.register(script,{updateViaCache:'none'});
           if(Notification.permission==='granted')syncPushSubscription().catch(()=>{});
-          // Production updates are intentionally manual. Do not call registration.update()
-          // here: Software update is the only place allowed to fetch/activate a new worker.
-          try{
-            const installed=window.localStorage.getItem('tcw_loaded_deployment_version');
-            if(!installed)fetch('/api/version',{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}}).then(r=>r.ok?r.json():null).then(version=>{
-              if(!version?.version)return;
-              try{
-                window.localStorage.setItem('tcw_loaded_deployment_version',String(version.version));
-                window.localStorage.setItem('tcw_last_deployment_version',String(version.version));
-                window.localStorage.setItem('tcw_loaded_release_version',String(version.release??''));
-              }catch{}
-            }).catch(()=>{});
-          }catch{}
+          // Do not call registration.update() here. A newer software build is fetched
+          // only from Software update -> Install update.
           fetch('/api/auth/me',{credentials:'include',cache:'no-store'}).then(r=>{if(r.ok)registration.active?.postMessage({type:'TCW_WARM_APP_CACHE'})}).catch(()=>{});
-        }).catch(()=>{});
+        })().catch(()=>{});
       }
     }
     const onPrompt=(event:any)=>{
