@@ -27,6 +27,9 @@ test('sales-ready UI and security contracts stay enabled',()=>{
   assert.match(config,/'platform-users'/);
   assert.match(config,/SUPPORT_AGENT/);
   assert.match(portal,/password-visibility/);
+  assert.doesNotMatch(portal,/body\.style\.overflow\s*=\s*['\"]hidden['\"]/);
+  assert.doesNotMatch(portal,/html\.style\.overflow\s*=\s*['\"]hidden['\"]/);
+  assert.doesNotMatch(portal,/body\.style\.touchAction\s*=\s*['\"]none['\"]/);
   assert.match(core,/passwordVisible/);
   assert.match(styles,/Sales-ready product polish/);
   assert.match(styles,/safe-area-inset-bottom/);
