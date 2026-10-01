@@ -95,9 +95,9 @@ export async function resetAndSeedFullQa(db:PrismaClient,options:FullQaResetOpti
   if(days.length<18)throw new Error('QA month does not contain enough working days.');
 
   const tenant=await db.tenant.create({data:{
-    name:'TCW QA Workspace',code:qaCode,status:'ACTIVE',plan:'GROWTH',employeeLimit:100,
+    name:'TCW HR Software',code:qaCode,status:'ACTIVE',plan:'GROWTH',employeeLimit:100,
     expiresAt:addDays(now,90),currency:'INR',timezone,
-    profile:{legalName:'TCW QA Workspace',industry:'Technology',website:'https://hr.techcyberwarrior.in',email:options.qaEmail.toLowerCase(),phone:'+91 9000000000',address:'QA workspace',city:'Ahmedabad',state:'Gujarat',country:'India',postalCode:'380001',companyType:'Private Limited',contactPerson:'QA Administrator',contactDesignation:'HR Manager',supportEmail:options.qaEmail.toLowerCase(),billingEmail:options.qaEmail.toLowerCase(),primaryColor:'#3474ef',footer:'© TCW HR Software · QA workspace',payoutProvider:'RAZORPAYX',payoutMode:'IMPS',payoutAccountLabel:'QA simulated salary account'}
+    profile:{legalName:'TCW HR Software',industry:'Technology',website:'https://hr.techcyberwarrior.in',email:options.qaEmail.toLowerCase(),phone:'+91 9000000000',address:'QA workspace',city:'Ahmedabad',state:'Gujarat',country:'India',postalCode:'380001',companyType:'Private Limited',contactPerson:'QA Administrator',contactDesignation:'HR Manager',supportEmail:options.qaEmail.toLowerCase(),billingEmail:options.qaEmail.toLowerCase(),primaryColor:'#3474ef',footer:'© TCW HR Software',payoutProvider:'RAZORPAYX',payoutMode:'IMPS',payoutAccountLabel:'QA simulated salary account'}
   }});
   const owner=await db.user.create({data:{tenantId:tenant.id,name:'QA Workspace Owner',email:options.qaEmail.toLowerCase(),loginId:'TCWQA01',passwordHash:await hashPassword(options.qaPassword),roleId:ownerRole.id,active:true,mustChangePassword:false}});
 
