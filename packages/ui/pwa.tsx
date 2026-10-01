@@ -128,6 +128,7 @@ export function PwaClient(){
               }catch{}
             }).catch(()=>{});
           }catch{}
+          fetch('/api/auth/me',{credentials:'include',cache:'no-store'}).then(r=>{if(r.ok)registration.active?.postMessage({type:'TCW_WARM_APP_CACHE'})}).catch(()=>{});
         }).catch(()=>{});
       }
     }
