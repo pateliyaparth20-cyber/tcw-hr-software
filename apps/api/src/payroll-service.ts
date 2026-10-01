@@ -37,7 +37,7 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
   if(!employeeIds.length)throw new BadRequestException('No attendance records are available for this payroll month.');
 
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+month}))`;
+    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+month}))) AS advisory_lock`;
     let run=await tx.payrollRun.findUnique({where:{tenantId_month:{tenantId,month}}});
     if(run?.status==='LOCKED'||run?.status==='APPROVED')throw new ConflictException('Reopen this payroll before recalculation.');
     if(run&&await tx.payrollPayout.count({where:{tenantId,runId:run.id}}))throw new ConflictException('Payroll with payout records cannot be recalculated.');
@@ -80,7 +80,7 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
 
 export async function reopenPayrollMonth(db:Database,tenantId:string,runId:string,actorId:string){
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+runId}))`;
+    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+runId}))) AS advisory_lock`;
     const run=await tx.payrollRun.findFirst({where:{id:runId,tenantId}});
     if(!run)throw new NotFoundException('Payroll run not found.');
     if(await tx.payrollPayout.count({where:{tenantId,runId}}))throw new ConflictException('Salary payout has already started. Use a later-month adjustment instead of reopening this payroll.');
@@ -107,7 +107,7 @@ export async function reopenPayrollMonth(db:Database,tenantId:string,runId:strin
 
 export async function finalizePayrollMonth(db:Database,tenantId:string,runId:string,actorId:string){
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+runId}))`;
+    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+runId}))) AS advisory_lock`;
     const run=await tx.payrollRun.findFirst({where:{id:runId,tenantId},include:{items:true}});
     if(!run)throw new NotFoundException('Payroll run not found.');
     if(run.status==='LOCKED')return run;
