@@ -264,8 +264,9 @@ export class Workflows {
         if(run.status!=='LOCKED')throw new ConflictException('Only a locked payroll can be unlocked.');
         const payoutCount=await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}});
         if(payoutCount)throw new ConflictException('This payroll has payout records and cannot be unlocked. Keep the finalized payroll for audit and use a later-month adjustment for corrections.');
-        const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'REVIEW',lockedAt:null,approvedBy:null}});
-        await audit(tx,ctx,'PAYROLL_UNLOCKED','payroll',recordId,run,{...after,reason:'Reopened before payout'});
+        await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
+        const after=await tx.payrollRun.update({where:{id:recordId},data:{status:'DRAFT',lockedAt:null,approvedBy:null,attendanceLockId:null}});
+        await audit(tx,ctx,'PAYROLL_UNLOCKED','payroll',recordId,run,{...after,reason:'Reopened to draft before payout so attendance can be corrected'});
         return after;
       }
       const target=action==='approve'?'APPROVED':action==='lock'?'LOCKED':action==='reopen'?'DRAFT':null;
