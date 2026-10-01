@@ -57,15 +57,16 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       const attendance:any=attendanceByEmployee.get(employee.id);
       if(!attendance)continue;
       const eligibleDays=Math.max(0,Number(attendance.scheduledDays||0));
-      const denominator=Math.max(100,eligibleDays*100);
-      const payableUnits=Math.min(Number(attendance.payableUnits||0),denominator);
-      const attendanceGross=eligibleDays?Math.round(employee.monthlySalary*payableUnits/denominator):0;
+      const fullMonthScheduledDays=Math.max(eligibleDays,Number(attendance.fullScheduledDays||eligibleDays||0));
+      const denominator=Math.max(100,fullMonthScheduledDays*100);
+      const payableUnits=Math.min(Number(attendance.payableUnits||0),Math.max(0,eligibleDays*100));
+      const attendanceGross=eligibleDays&&fullMonthScheduledDays?Math.round(employee.monthlySalary*payableUnits/denominator):0;
       const adjustment=adjustments.filter(a=>a.employeeId===employee.id).reduce((sum,a)=>sum+a.amount,0);
       const result=calculatePay(attendanceGross,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
         gross:result.gross,deductions:result.deductions,net:result.net,
-        components:[...result.components,{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:employee.monthlySalary}],
+        components:[...result.components,{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,fullMonthScheduledDays,monthlySalary:employee.monthlySalary,proration:'FULL_MONTH_WORKING_DAYS'}],
         scheduledDays:eligibleDays,payableUnits,presentDays:attendance.presentDays,halfDays:attendance.halfDays,
         paidLeaveUnits:attendance.paidLeaveUnits,unpaidLeaveUnits:attendance.unpaidLeaveUnits,absentDays:attendance.absentDays,
         lateMinutes:attendance.lateMinutes,overtimeMinutes:attendance.overtimeMinutes
