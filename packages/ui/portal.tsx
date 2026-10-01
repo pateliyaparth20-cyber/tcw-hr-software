@@ -94,7 +94,7 @@ function SubscriptionLock({manage=false}:{manage?:boolean}){
  },[purchase?.invoice?.id,purchase?.expiresAt,purchase?.mode,success]);
  const startPayment=async(planName:string)=>{
   setSelected(planName);setBusy(true);setPurchase(null);setSuccess(null);setStatusError('');
-  try{const r=await mutate('subscription','POST',{plan:planName,mode:'AUTO'});setPurchase(r);setRemaining(Number(r.qrLifetimeSeconds??50))}
+  try{const r=await mutate('subscription','POST',{plan:planName,mode:'AUTO'});if(r?.status==='PAID'){setSuccess(r);setRemaining(0);await q.refetch();notify('Payment successful. Subscription activated automatically.');return}setPurchase(r);setRemaining(Number(r.qrLifetimeSeconds??50))}
   catch(e:any){notify(e?.message??'Could not prepare automatic payment.',true)}
   finally{setBusy(false)}
  };
@@ -156,6 +156,7 @@ function Shell({page}:{page:string}){
 
  useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
  useEffect(()=>{if(page==='ai')router.replace('/dashboard')},[page,router]);
+ useEffect(()=>{const onSoftwareUpdate=(event:Event)=>{const detail=(event as CustomEvent<{release?:string}>).detail;notify(`Software update available${detail?.release?` · v${detail.release}`:''}. Open Software Update when you are ready.`)};window.addEventListener('tcw-software-update-available',onSoftwareUpdate);return()=>window.removeEventListener('tcw-software-update-available',onSoftwareUpdate)},[notify]);
  useEffect(()=>{if(session.user.role!=='EMPLOYEE')return;preloadFaceEngine();try{setFaceEnrollmentHint(window.localStorage.getItem(faceEnrollmentKey)==='1')}catch{}},[session.user.role,faceEnrollmentKey]);
  useEffect(()=>{
   if(session.user.role!=='EMPLOYEE')return;
