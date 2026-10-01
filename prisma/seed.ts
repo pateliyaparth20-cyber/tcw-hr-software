@@ -14,7 +14,9 @@ export async function resetQaUserPasswords(database:PrismaClient,options:{compan
   return database.$transaction(async tx=>{
     const users=await tx.user.updateMany({where:{tenantId:tenant.id},data:{passwordHash,mustChangePassword:false,active:true}});
     await tx.session.deleteMany({where:{tenantId:tenant.id}});
-    await tx.auditLog.create({data:{tenantId:tenant.id,action:'QA_PASSWORDS_RESET',entity:'users',entityId:tenant.id,after:{users:users.count}}});
+    const profile=tenant.profile&&typeof tenant.profile==='object'&&!Array.isArray(tenant.profile)?tenant.profile as Record<string,any>:{};
+    await tx.tenant.update({where:{id:tenant.id},data:{name:'TCW HR Software',profile:{...profile,legalName:'TCW HR Software',footer:'© TCW HR Software'}}});
+    await tx.auditLog.create({data:{tenantId:tenant.id,action:'QA_PASSWORDS_RESET',entity:'users',entityId:tenant.id,after:{users:users.count,workspaceName:'TCW HR Software'}}});
     return {companyCode:tenant.code,users:users.count};
   });
 }
