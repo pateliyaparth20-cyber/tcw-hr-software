@@ -67,48 +67,73 @@ function FirstPasswordChange(){
  return <div className="mandatory-overlay" style={{'--primary':brandColor} as React.CSSProperties}><div className="mandatory-card"><div className="auth-text-brand first-login-brand"><img src={brandLogo} alt={brandName+' logo'} onError={e=>{e.currentTarget.src=TCW_PRODUCT_LOGO}}/><span><strong>{brandName}</strong><small>SECURE ACCOUNT SETUP</small></span></div><span className="login-eyebrow">SECURE FIRST LOGIN</span><h2>Set your own password</h2><p>Your temporary password worked. Before using HR data, create a private password for this account.</p><form className="login-form" onSubmit={save}><label>Temporary password<input type="password" required value={currentPassword} onChange={e=>setCurrent(e.target.value)}/></label><label>New password<input type="password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)}/></label><label>Confirm new password<input type="password" required minLength={8} value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>{error&&<p className="form-error">{error}</p>}<button className="btn primary login-submit" disabled={busy}>{busy?'Saving…':session.user.role==='EMPLOYEE'?'Set password & Add Face':'Set password & continue'}<ArrowRight size={18}/></button><button type="button" className="btn secondary login-submit" disabled={busy} onClick={signOut}>Sign out & use another account</button></form></div></div>;
 }
 function SubscriptionLock({manage=false}:{manage?:boolean}){
- const q=useData('subscription');const{currency,mutate,notify}=useApp();const[selected,setSelected]=useState('STARTER'),[busy,setBusy]=useState(false),[purchase,setPurchase]=useState<Row|null>(null),[utr,setUtr]=useState(''),[proofBusy,setProofBusy]=useState(false),[proofSent,setProofSent]=useState(false);
+ const q=useData('subscription');const{currency,mutate,notify}=useApp();
+ const[selected,setSelected]=useState('STARTER'),[busy,setBusy]=useState(false),[purchase,setPurchase]=useState<Row|null>(null),[remaining,setRemaining]=useState(0),[success,setSuccess]=useState<Row|null>(null),[statusError,setStatusError]=useState('');
+ const checking=useRef(false);
  useEffect(()=>{if(q.data?.company?.plan)setSelected(q.data.company.plan)},[q.data?.company?.plan]);
+ const checkPayment=async()=>{
+  if(!purchase?.invoice?.id||checking.current||success)return;
+  checking.current=true;
+  try{
+   const state=await api(`subscription/payment-status/${purchase.invoice.id}`);
+   setStatusError('');
+   if(state.status==='PAID'){
+    setSuccess(state);setRemaining(0);await q.refetch();notify('Payment successful. Subscription activated automatically.');
+    window.setTimeout(()=>window.location.reload(),2400);
+   }else if(state.status==='EXPIRED')setRemaining(0);
+  }catch(e:any){setStatusError(e?.message??'Payment status could not be checked. Retrying automatically…')}
+  finally{checking.current=false}
+ };
+ useEffect(()=>{
+  if(purchase?.mode!=='AUTO'||success)return;
+  const expiresAt=new Date(purchase.expiresAt).getTime();
+  const tick=()=>setRemaining(Math.max(0,Math.ceil((expiresAt-Date.now())/1000)));
+  tick();const timer=window.setInterval(tick,250),poll=window.setInterval(()=>void checkPayment(),2000);
+  const focus=()=>void checkPayment();window.addEventListener('focus',focus);document.addEventListener('visibilitychange',focus);
+  return()=>{window.clearInterval(timer);window.clearInterval(poll);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',focus)}
+ },[purchase?.invoice?.id,purchase?.expiresAt,purchase?.mode,success]);
+ const startPayment=async(planName:string)=>{
+  setSelected(planName);setBusy(true);setPurchase(null);setSuccess(null);setStatusError('');
+  try{const r=await mutate('subscription','POST',{plan:planName,mode:'AUTO'});setPurchase(r);setRemaining(Number(r.qrLifetimeSeconds??50))}
+  catch(e:any){notify(e?.message??'Could not prepare automatic payment.',true)}
+  finally{setBusy(false)}
+ };
+ const openCheckout=()=>{if(purchase?.checkoutUrl)window.open(String(purchase.checkoutUrl),'_blank','noopener,noreferrer')};
  if(q.isLoading)return <Loading/>;if(q.error)return <Failure error={q.error}/>;
  const data=q.data??{},company=data.company??{},plans:Row[]=data.plans??[];
- const startPayment=async(planName:string)=>{setSelected(planName);setBusy(true);setProofSent(false);setPurchase(null);setUtr('');try{const r=await mutate('subscription','POST',{plan:planName,mode:'UPI'});setPurchase(r)}catch(e:any){notify(e?.message??'Could not prepare payment.',true)}finally{setBusy(false)}};
- const openUpiApp=(app:'gpay'|'phonepe'|'paytm'|'bhim')=>{
-  const source=String(purchase?.upiUrl??'');if(!source)return;
-  const query=source.includes('?')?source.slice(source.indexOf('?')+1):'';
-  const android=/Android/i.test(navigator.userAgent);
-  const packages:{[key:string]:string}={gpay:'com.google.android.apps.nbu.paisa.user',phonepe:'com.phonepe.app',paytm:'net.one97.paytm',bhim:'in.org.npci.upiapp'};
-  const iosSchemes:{[key:string]:string}={gpay:'gpay://upi/pay?',phonepe:'phonepe://pay?',paytm:'paytmmp://pay?',bhim:'bhim://upi/pay?'};
-  const target=android?`intent://pay?${query}#Intent;scheme=upi;package=${packages[app]};end`:`${iosSchemes[app]}${query}`;
-  window.location.href=target;
- };
- const submitProof=async()=>{if(!purchase?.invoice?.id||utr.trim().length<6)return;setProofBusy(true);try{const r=await mutate('subscription/manual-payment','POST',{invoiceId:purchase.invoice.id,utr:utr.trim()});setProofSent(true);notify(r.message??'Payment reference submitted for verification.');await q.refetch()}catch(e:any){notify(e?.message??'Could not submit payment reference.',true)}finally{setProofBusy(false)}};
- if(purchase?.mode==='UPI')return <div className="subscription-lock upgrade-lock payment-checkout-screen">
-  <div className="lock-hero payment-lock-hero"><BrandLogo/><span className="login-eyebrow">SECURE SUBSCRIPTION PAYMENT</span><h1>Complete your payment</h1><p>Choose a UPI payment app or scan the secure QR. Your subscription activates after the transaction reference is verified.</p></div>
-  <div className="checkout-layout checkout-layout-pro">
-   <section className="panel checkout-summary-card">
-    <div className="checkout-summary-top"><button className="checkout-back" type="button" onClick={()=>{setPurchase(null);setProofSent(false);setUtr('')}}>← Change plan</button><span className="secure-pill"><ShieldCheck size={14}/> Secure checkout</span></div>
-    <small>SELECTED PLAN</small><h2>{readable(String(purchase.plan?.name??selected).toLowerCase())}</h2>
-    <div className="checkout-price-lines"><div><span>Plan amount</span><strong>{currencyValue(purchase.breakdown?.subtotal??purchase.invoice?.amount??0,currency)}</strong></div><div><span>GST ({purchase.gstPercent??data.gstPercent??18}%)</span><strong>{currencyValue(purchase.breakdown?.tax??purchase.invoice?.tax??0,currency)}</strong></div><div className="checkout-total"><span>Total payable</span><strong>{currencyValue(purchase.breakdown?.total??purchase.invoice?.total??0,currency)}</strong></div></div>
-    <div className="checkout-invoice-row"><span>Invoice</span><strong>{purchase.invoice?.number}</strong></div>
-    <div className="checkout-trust"><ShieldCheck size={17}/><span><strong>Protected payment flow</strong><small>Receiver details stay hidden on this screen. Pay only the exact total shown above.</small></span></div>
-   </section>
-   <section className="panel upi-checkout-card direct-upi-card payment-choice-card">
-    <div className="upi-qr-wrap"><img src={purchase.qrUrl} alt="Secure UPI payment QR code"/><small>Scan using any UPI payment app</small></div>
-    <div className="upi-checkout-copy"><small>PAY SECURELY</small><h2>{currencyValue(purchase.breakdown?.total??purchase.invoice?.total??0,currency)}</h2><p className="payment-payee">Payee: <strong>{purchase.upi?.payeeName??'TCW HR Software'}</strong></p>
-     <div className="payment-app-chooser"><span>Choose payment app</span><div className="payment-app-grid">
-      <button type="button" className="payment-app-button gpay" onClick={()=>openUpiApp('gpay')}><b>G</b><span>Google Pay</span></button>
-      <button type="button" className="payment-app-button phonepe" onClick={()=>openUpiApp('phonepe')}><b>P</b><span>PhonePe</span></button>
-      <button type="button" className="payment-app-button paytm" onClick={()=>openUpiApp('paytm')}><b>₹</b><span>Paytm</span></button>
-      <button type="button" className="payment-app-button bhim" onClick={()=>openUpiApp('bhim')}><b>B</b><span>BHIM</span></button>
-     </div></div>
-     <p className="payment-safety-note">Payment complete thaya pachi bank/UPI app ma malelo UTR / transaction reference niche enter karo.</p>
-     <div className="payment-proof-card"><label><span>Transaction reference / UTR</span><input value={utr} onChange={e=>setUtr(e.target.value.replace(/\s/g,''))} placeholder="Example: 412345678901" maxLength={100}/></label><button className="btn primary" disabled={proofBusy||utr.trim().length<6||proofSent} onClick={submitProof}>{proofBusy?'Submitting…':proofSent?'Reference submitted':'Submit for verification'}</button></div>
-     {proofSent&&<div className="notice success-notice"><CheckCircle2 size={17}/><span><strong>Payment reference received.</strong><small>Verification complete thaya pachi software access automatically unlock thase.</small></span></div>}
-    </div>
-   </section>
-  </div>
+
+ if(success)return <div className="subscription-lock upgrade-lock payment-checkout-screen"><section className="panel payment-success-screen"><span className="payment-success-icon"><CheckCircle2 size={34}/></span><small>PAYMENT VERIFIED</small><h1>Congratulations!</h1><p>Your payment was verified automatically. The invoice is paid, your subscription is active, and the billing receipt is being sent by email.</p><div className="payment-success-facts"><div><span>Invoice</span><strong>{success.invoice?.number??purchase?.invoice?.number}</strong></div><div><span>Plan</span><strong>{readable(String(success.plan??purchase?.plan?.name??selected).toLowerCase())}</strong></div><div><span>Access</span><strong>Active</strong></div></div><button className="btn primary" type="button" onClick={()=>window.location.reload()}>Open HR Software <ArrowRight size={17}/></button><small className="payment-success-reload">Software will open automatically in a moment.</small></section></div>;
+
+ if(purchase?.mode==='AUTO'){
+  const expired=remaining<=0;
+  return <div className="subscription-lock upgrade-lock payment-checkout-screen">
+   <div className="lock-hero payment-lock-hero"><BrandLogo/><span className="login-eyebrow">AUTOMATIC SECURE PAYMENT</span><h1>{expired?'Payment QR expired':'Complete your payment'}</h1><p>{expired?'This 50-second payment session is closed. Generate a fresh QR to try again.':'Pay the exact amount below. TCW verifies the transaction automatically — no UTR or payment reference entry is required.'}</p></div>
+   <div className="checkout-layout checkout-layout-pro">
+    <section className="panel checkout-summary-card">
+     <div className="checkout-summary-top"><button className="checkout-back" type="button" onClick={()=>setPurchase(null)}>← Change plan</button><span className="secure-pill"><ShieldCheck size={14}/> Gateway verified</span></div>
+     <small>SELECTED PLAN</small><h2>{readable(String(purchase.plan?.name??selected).toLowerCase())}</h2>
+     <div className="checkout-price-lines"><div><span>Taxable value</span><strong>{currencyValue(purchase.breakdown?.subtotal??purchase.invoice?.amount??0,currency)}</strong></div><div><span>GST included ({purchase.gstPercent??data.gstPercent??18}%)</span><strong>{currencyValue(purchase.breakdown?.tax??purchase.invoice?.tax??0,currency)}</strong></div><div className="checkout-total"><span>Final amount</span><strong>{currencyValue(purchase.breakdown?.total??purchase.invoice?.total??0,currency)}</strong></div></div>
+     <div className="checkout-invoice-row"><span>Invoice</span><strong>{purchase.invoice?.number}</strong></div>
+     <div className="checkout-trust"><ShieldCheck size={17}/><span><strong>GST-inclusive final price</strong><small>The amount shown as Final amount is the amount requested from the customer. GST is included inside it, not added on top.</small></span></div>
+    </section>
+    <section className={'panel upi-checkout-card direct-upi-card payment-choice-card '+(expired?'payment-session-expired':'')}>
+     <div className="payment-countdown"><Clock3 size={17}/><span>{expired?'Expired':`Valid for ${remaining}s`}</span></div>
+     <div className="upi-qr-wrap"><img src={purchase.qrUrl} alt="Secure automatic payment QR code"/><small>{expired?'QR expired — generate a new one':'Scan with GPay, PhonePe, Paytm, BHIM or another supported payment method'}</small></div>
+     <div className="upi-checkout-copy"><small>{expired?'SESSION CLOSED':'PAY SECURELY'}</small><h2>{currencyValue(purchase.breakdown?.total??purchase.invoice?.total??0,currency)}</h2>
+      {!expired?<><button type="button" className="btn primary payment-open-gateway" onClick={openCheckout}><CreditCard size={17}/>Open secure payment</button><div className="payment-auto-status"><span className="auth-spinner"/><span><strong>Waiting for verified payment…</strong><small>TCW checks payment status automatically every few seconds.</small></span></div></>:<button type="button" className="btn primary payment-open-gateway" disabled={busy} onClick={()=>startPayment(selected)}><RefreshCw size={17}/>{busy?'Generating…':'Generate new 50-second QR'}</button>}
+      {statusError&&!expired&&<p className="form-help">{statusError}</p>}
+      <p className="payment-safety-note">Do not enter UTR, amount, invoice number or payment date manually. The gateway sends verified payment details directly to TCW HR Software.</p>
+     </div>
+    </section>
+   </div>
+  </div>;
+ }
+
+ return <div className={'subscription-lock upgrade-lock '+(manage?'subscription-manage':'')}><div className="lock-hero"><BrandLogo/><span className="login-eyebrow">{manage?'MONTHLY SUBSCRIPTION':'SELECT A PLAN'}</span><h1>{manage?'Manage your subscription':company.status==='EXPIRED'?'Your free trial has ended':'Subscription payment required'}</h1><p>{data.gatewayConfigured?'Choose a plan and complete the 50-second secure checkout. Payment verification, invoice settlement and activation happen automatically.':'Automatic online payment needs to be configured by the Super Admin before a subscription can be purchased.'}</p>{manage&&<div className="current-plan-chip"><span>Current plan</span><strong>{readable(String(company.plan??'starter').toLowerCase())}</strong><small>{readable(String(company.status??'active').toLowerCase())}</small></div>}</div>
+ <div className="upgrade-plan-grid">{plans.map((p:Row)=><button key={p.id} type="button" className={'upgrade-plan-card '+(selected===p.name?'selected':'')} disabled={busy||!data.gatewayConfigured} onClick={()=>startPayment(String(p.name))}><span className="upgrade-plan-check">{selected===p.name?'✓':''}</span><small>{readable(String(p.name).toLowerCase())}</small><strong>{currencyValue(p.monthlyPrice,currency)}<em>/month · GST included</em></strong><span>{p.employeeLimit} employees · {p.deviceLimit} device(s)</span><ul>{(p.features??[]).slice(0,6).map((f:string)=><li key={f}>{f}</li>)}</ul><span className="plan-pay-cta">{busy&&selected===p.name?'Generating secure checkout…':'Select & pay'}</span></button>)}</div>
+ {!data.gatewayConfigured&&<div className="panel payment-config-warning"><AlertTriangle size={18}/><div><strong>Automatic payment gateway is not configured yet.</strong><p>Super Admin → Settings → Automatic payment gateway ma Razorpay Key ID, Key Secret ane Webhook Secret save karo. Static UPI cannot automatically verify a bank payment.</p></div></div>}
+ {manage&&data.invoices?.length>0&&<section className="panel subscription-history"><div className="panel-heading"><div><small>BILLING HISTORY</small><h2>Recent invoices</h2></div></div><div className="subscription-history-list">{data.invoices.slice(0,6).map((r:Row)=><div key={r.id}><span><strong>{r.number}</strong><small>{new Date(r.createdAt).toLocaleDateString('en-IN')}</small></span><span><strong>{currencyValue(r.total,currency)}</strong><Badge value={r.status}/></span></div>)}</div></section>}
  </div>;
- return <div className={'subscription-lock upgrade-lock '+(manage?'subscription-manage':'')}><div className="lock-hero"><BrandLogo/><span className="login-eyebrow">{manage?'MONTHLY SUBSCRIPTION':'SELECT A PLAN'}</span><h1>{manage?'Manage your subscription':company.status==='EXPIRED'?'Your free trial has ended':'Subscription payment required'}</h1><p>{manage?'Choose your monthly plan. Selecting a plan opens the secure payment page before any plan change is completed.':'Plan select karta secure payment page open thase. GST ane final payable amount automatic calculate thase.'}</p>{manage&&<div className="current-plan-chip"><span>Current plan</span><strong>{readable(String(company.plan??'starter').toLowerCase())}</strong><small>{readable(String(company.status??'active').toLowerCase())}</small></div>}</div><div className="upgrade-plan-grid">{plans.map((p:Row)=><button key={p.id} type="button" className={'upgrade-plan-card '+(selected===p.name?'selected':'')} disabled={busy||!data.upiConfigured} onClick={()=>startPayment(String(p.name))}><span className="upgrade-plan-check">{selected===p.name?'✓':''}</span><small>{readable(String(p.name).toLowerCase())}</small><strong>{currencyValue(p.monthlyPrice,currency)}<em>/month + GST</em></strong><span>{p.employeeLimit} employees · {p.deviceLimit} device(s)</span><ul>{(p.features??[]).slice(0,6).map((f:string)=><li key={f}>{f}</li>)}</ul><span className="plan-pay-cta">{busy&&selected===p.name?'Preparing payment…':'Select & pay'}</span></button>)}</div>{!data.upiConfigured&&<div className="panel payment-config-warning"><strong>UPI payment is temporarily unavailable.</strong><p>Payment configuration is being updated. Please try again shortly.</p></div>}{manage&&data.invoices?.length>0&&<section className="panel subscription-history"><div className="panel-heading"><div><small>BILLING HISTORY</small><h2>Recent invoices</h2></div></div><div className="subscription-history-list">{data.invoices.slice(0,6).map((r:Row)=><div key={r.id}><span><strong>{r.number}</strong><small>{new Date(r.createdAt).toLocaleDateString('en-IN')}</small></span><span><strong>{currencyValue(r.total,currency)}</strong><Badge value={r.status}/></span></div>)}</div></section>}</div>
 }
 function Shell({page}:{page:string}){
  const{session,can,notify}=useApp();const router=useRouter();const queryClient=useQueryClient();

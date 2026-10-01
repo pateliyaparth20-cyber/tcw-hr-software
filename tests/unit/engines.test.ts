@@ -6,6 +6,8 @@ import {hashPassword,verifyPassword} from '../../packages/auth';
 import {toCsv} from '../../packages/reporting-engine';
 import {ZktecoAdapter} from '../../packages/device-connectors/zkteco';
 import {normalizeZkAttLog,parseZkAttLog,biomaxLocalTimestamp} from '../../packages/device-connectors/biomax';
+import {inclusiveTax,verifyRazorpayWebhook} from '../../apps/api/src/subscription-payments';
+import {createHmac} from 'node:crypto';
 const t=(s:string)=>new Date('2026-09-21T'+s+':00Z');
 const rule={shiftStart:t('09:00'),graceMinutes:10,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
 test('attendance subtracts recorded breaks and ignores arrival order',()=>{
@@ -20,6 +22,18 @@ test('early out, working weekdays, and payable attendance units are deterministi
  assert.equal(r.earlyOutMinutes,20);
  const days=workingDaySet('1,2,3,4,5,6');assert(days.has(6));assert(!days.has(0));
  assert.equal(attendancePayableUnits('PRESENT'),100);assert.equal(attendancePayableUnits('HALF_DAY'),50);assert.equal(attendancePayableUnits('ABSENT'),0);
+});
+
+test('subscription plan price is GST-inclusive and never adds tax on top',()=>{
+ assert.deepEqual(inclusiveTax(10000,18),{subtotal:8475,tax:1525,total:10000});
+ assert.deepEqual(inclusiveTax(11800,18),{subtotal:10000,tax:1800,total:11800});
+ assert.deepEqual(inclusiveTax(10000,0),{subtotal:10000,tax:0,total:10000});
+});
+test('payment webhook signature is verified against exact raw payload',()=>{
+ const raw=Buffer.from('{"event":"payment_link.paid"}'),secret='test-webhook-secret';
+ const signature=createHmac('sha256',secret).update(raw).digest('hex');
+ assert.equal(verifyRazorpayWebhook(raw,signature,secret),true);
+ assert.equal(verifyRazorpayWebhook(raw,'bad-signature',secret),false);
 });
 
 test('payroll uses integer minor units, configured caps, and adjustments',()=>{assert.deepEqual(calculatePay(100000,[{name:'Configured',percent:12,cap:10000}],5000),{gross:105000,deductions:10000,net:95000,components:[{name:'Configured',amount:10000},{name:'Adjustment',amount:5000}]});assert.throws(()=>calculatePay(100,[{name:'A',percent:80},{name:'B',percent:80}]))});

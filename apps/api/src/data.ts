@@ -9,6 +9,7 @@ import {configs,employeeSchema,id,tenantSchema,leadSchema,planSchema,date,passwo
 import {hasPermission,restrictedRoles} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,platform,requirePermission,tenant,Context} from './context';
 import {syncCompanyAccess} from './billing';
+import {completeSubscriptionPayment} from './subscription-payments';
 import {sendPush} from './push';
 export class DataService {
   constructor(public db:Database){}
@@ -415,21 +416,11 @@ export class DataService {
     }
     if(type==='payments'&&method==='POST'){
       const input=z.object({invoiceId:id,amount:z.number().int().min(1).max(1e9),reference:z.string().min(1).max(100),date}).strict().parse(body);
-      const after=await this.db.$transaction(async tx=>{
-        await tx.$queryRaw`SELECT id FROM invoices WHERE id = ${input.invoiceId}::uuid FOR UPDATE`;
-        const invoice=await tx.invoice.findUnique({where:{id:input.invoiceId}});if(!invoice)throw new NotFoundException();
-        if(input.amount>invoice.total-invoice.paidAmount)throw new BadRequestException('Payment exceeds the outstanding balance.');
-        const payment=await tx.payment.create({data:{...input,tenantId:invoice.tenantId}});
-        const paidAmount=invoice.paidAmount+input.amount;
-        const overdue=paidAmount<invoice.total&&invoice.dueDate<new Date(new Date().toISOString().slice(0,10)+'T00:00:00.000Z');
-        await tx.invoice.update({where:{id:invoice.id},data:{paidAmount,status:paidAmount===invoice.total?'PAID':overdue?'OVERDUE':'PART_PAID'}});
-        if(paidAmount===invoice.total){
-          const company=await tx.tenant.findUnique({where:{id:invoice.tenantId}});
-          if(company){const nextExpiry=new Date();nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile);delete profile.pendingPaymentProof;delete profile.suspensionReason;await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,profile}});}
-        }
-        await audit(tx,ctx,'PAYMENT_RECORDED','payments',payment.id,undefined,payment);return payment;
-      });
-      await syncCompanyAccess(this.db,after.tenantId);return after;
+      const invoice=await this.db.invoice.findUnique({where:{id:input.invoiceId}});if(!invoice)throw new NotFoundException('Invoice not found.');
+      if(input.amount!==invoice.total)throw new BadRequestException('Legacy payment verification must match the full invoice total.');
+      const result=await completeSubscriptionPayment(this.db,{invoiceId:invoice.id,reference:input.reference,amount:input.amount,provider:'LEGACY_MANUAL_VERIFICATION'});
+      await syncCompanyAccess(this.db,result.tenantId);
+      return result.payment??await this.db.payment.findUnique({where:{reference:input.reference}});
     }
     if(type==='support'&&recordId){const input=z.object({status:z.enum(['OPEN','IN_PROGRESS','RESOLVED']),response:z.string().max(5000),assignedTo:z.string().max(120).optional().nullable()}).strict().parse(body);return this.db.$transaction(async tx=>{const before=await tx.supportTicket.findUniqueOrThrow({where:{id:id.parse(recordId)}});const after=await tx.supportTicket.update({where:{id:recordId},data:{...input,closedAt:input.status==='RESOLVED'?new Date():null}});if(input.response.trim())await tx.supportTicketMessage.create({data:{tenantId:after.tenantId,ticketId:after.id,authorId:ctx.user.id,authorScope:'PLATFORM',authorName:input.assignedTo?.trim()||ctx.user.name,message:input.response.trim()}});await tx.notification.create({data:{tenantId:after.tenantId,title:`Support ticket ${after.ticketNumber} updated`,message:`Status: ${after.status}. ${after.response?after.response.slice(0,300):'TCW Support updated your request.'}`}});await audit(tx,ctx,'TICKET_UPDATED','support',recordId,before,after);return after;});}
     throw new BadRequestException('Unsupported operation.');
