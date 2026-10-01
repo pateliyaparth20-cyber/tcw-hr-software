@@ -88,7 +88,7 @@ export function PwaClient(){
     const clearLong=()=>{if(longPress){clearTimeout(longPress);longPress=null}};
     document.addEventListener('touchstart',onTouchStart,{passive:true});document.addEventListener('touchmove',onTouchMove,{passive:true});document.addEventListener('touchend',onTouchEnd,{passive:true});document.addEventListener('click',onPhotoClick);document.addEventListener('touchstart',onPhotoTouchStart,{passive:true});document.addEventListener('touchend',clearLong,{passive:true});document.addEventListener('touchmove',clearLong,{passive:true});
     let cancelled=false;
-    const versionTimer=0;
+    let versionTimer:ReturnType<typeof setInterval>|undefined;
     const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const standalone=window.matchMedia('(display-mode: standalone)').matches||(navigator as any).standalone===true;
     let iosGuide:HTMLButtonElement|null=null,iosGuideTimer:ReturnType<typeof setTimeout>|undefined;
@@ -104,6 +104,25 @@ export function PwaClient(){
     }
     const askOnFirstInteraction=()=>{if(!isiOS||standalone)enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
     if(!window.TCWNative&&'Notification' in window&&Notification.permission==='default')document.addEventListener('pointerdown',askOnFirstInteraction,true);
+    const checkForSoftwareUpdate=async()=>{
+      if(process.env.NODE_ENV!=='production')return;
+      let installed='';
+      try{installed=window.localStorage.getItem('tcw_loaded_deployment_version')??window.localStorage.getItem('tcw_last_deployment_version')??''}catch{}
+      if(!installed)return;
+      try{
+        const response=await fetch('/api/version?tcw_update_check='+Date.now(),{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}});
+        if(!response.ok)return;
+        const version=await response.json(),latest=String(version?.version??'');
+        if(!latest||latest===installed)return;
+        const noticeKey='tcw_update_notice_version';let seen='';
+        try{seen=window.localStorage.getItem(noticeKey)??''}catch{}
+        if(seen===latest)return;
+        try{window.localStorage.setItem(noticeKey,latest)}catch{}
+        const release=String(version?.release??'');
+        window.dispatchEvent(new CustomEvent('tcw-software-update-available',{detail:{version:latest,release}}));
+        await tcwSystemNotify('Software update available',release?`TCW HR Software v${release} is ready. Install it from Software Update when you are ready.`:'A newer TCW HR Software build is ready. Install it from Software Update when you are ready.','/software-update','tcw-software-update');
+      }catch{}
+    };
     // Never let a development service worker cache Next.js bundles. Old cached
     // chunks can produce React hydration mismatches after a UI update.
     if('serviceWorker' in navigator){
@@ -136,6 +155,9 @@ export function PwaClient(){
           // Do not call registration.update() here. A newer software build is fetched
           // only from Software update -> Install update.
           fetch('/api/auth/me',{credentials:'include',cache:'no-store'}).then(r=>{if(r.ok)registration.active?.postMessage({type:'TCW_WARM_APP_CACHE'})}).catch(()=>{});
+          if(cancelled)return;
+          window.setTimeout(()=>checkForSoftwareUpdate().catch(()=>{}),5000);
+          versionTimer=window.setInterval(()=>checkForSoftwareUpdate().catch(()=>{}),10*60*1000);
         })().catch(()=>{});
       }
     }
