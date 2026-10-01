@@ -17,10 +17,12 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
   assert.deepEqual(reset.counts,{employees:8,users:6,attendanceDays:240,punches:330,leaveRequests:3,payrollItems:8,payrollPayouts:8,invoices:1,payments:1});
   assert.equal(reset.attendanceTotals.missingPunchDays,0);
   assert(reset.attendanceTotals.absentDays>=1);
-  assert(reset.attendanceTotals.paidLeaveUnits>=150);
-  assert(reset.attendanceTotals.unpaidLeaveUnits>=100);
 
   const tenant=await db.tenant.findUniqueOrThrow({where:{code:'TCW-QA'}});
+  const paidLeave=await db.attendanceDaily.aggregate({where:{tenantId:tenant.id,dayType:'PAID_LEAVE'},_sum:{leaveUnits:true}});
+  const unpaidLeave=await db.attendanceDaily.aggregate({where:{tenantId:tenant.id,dayType:'UNPAID_LEAVE'},_sum:{leaveUnits:true}});
+  assert.equal(paidLeave._sum.leaveUnits,150);
+  assert.equal(unpaidLeave._sum.leaveUnits,100);
   assert.equal(await db.tenant.count(),1);
   assert.equal(await db.lead.count(),2);
   assert.equal((await db.invoice.findFirstOrThrow({where:{tenantId:tenant.id}})).total,10000);
