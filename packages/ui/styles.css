@@ -11318,3 +11318,58 @@ input[type="month"]{
  .platform-shell .platform-hero{padding:34px 38px}
  .platform-shell .stat{min-height:140px}
 }
+
+
+/* Profile workspace — professional responsive identity card and photo cropper */
+.single-profile-layout{max-width:980px;margin:0 auto}
+.my-profile-card{overflow:hidden;border-radius:22px}
+.my-profile-cover{height:150px;background:linear-gradient(120deg,var(--primary,#3474ef),#287fe9)}
+.my-profile-main{position:relative;display:flex;align-items:flex-end;gap:22px;padding:0 34px 22px;margin-top:-48px}
+.my-profile-photo{width:112px;height:112px;flex:0 0 112px;border-radius:50%;overflow:hidden;border:5px solid #fff;background:#e9f0f8;box-shadow:0 8px 24px rgba(28,55,86,.15)}
+.my-profile-photo img{width:100%;height:100%;object-fit:cover}
+.my-profile-identity{padding-top:55px}
+.my-profile-identity h2{font-size:1.45rem;letter-spacing:-.03em;margin:0}
+.my-profile-identity p{margin:3px 0 8px;color:#7b8998}
+.my-profile-identity>div{display:flex;align-items:center;gap:10px;color:#8492a1;font-size:.8rem}
+.my-profile-form{padding:0 34px 30px}
+.profile-photo-actions-only{padding:16px 0 20px;border-top:1px solid #edf1f5;border-bottom:1px solid #edf1f5;margin-bottom:24px}
+.profile-photo-actions-only .profile-photo-copy{width:100%}
+.profile-photo-actions-only .profile-photo-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.my-profile-form .platform-profile-fields{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.my-profile-form .platform-profile-fields label{display:grid;gap:7px;font-size:.78rem;font-weight:700;color:#526980}
+.my-profile-form .platform-profile-fields input{min-height:48px;border-radius:12px;padding:10px 13px;font-size:.9rem}
+.my-profile-form .platform-profile-fields input[readonly]{background:#f5f7fa;color:#7c8997}
+.profile-actions-end{padding-top:22px}
+.profile-crop-modal{padding:0 22px 22px}
+.profile-crop-stage{display:grid;place-items:center;min-height:330px;border-radius:18px;background:linear-gradient(145deg,#edf3fa,#dfe9f5);overflow:hidden}
+.profile-crop-circle{width:min(280px,70vw);aspect-ratio:1;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 12px 36px rgba(28,52,82,.18);background:#dce5ef}
+.profile-crop-circle img{width:100%;height:100%;object-fit:cover;transform-origin:center}
+.profile-crop-controls{display:grid;gap:13px;padding:20px 2px 8px}
+.profile-crop-controls label{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:12px;font-size:.78rem;font-weight:700;color:#526980}
+.profile-crop-controls input[type=range]{width:100%}
+.profile-crop-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:14px}
+@media(max-width:650px){
+ .single-profile-layout{max-width:none}
+ .my-profile-card{border-radius:18px}
+ .my-profile-cover{height:108px}
+ .my-profile-main{display:grid;justify-items:center;text-align:center;gap:8px;padding:0 18px 18px;margin-top:-54px}
+ .my-profile-photo{width:108px;height:108px;flex-basis:108px}
+ .my-profile-identity{padding-top:0}
+ .my-profile-identity h2{font-size:1.22rem}
+ .my-profile-identity p{font-size:.88rem}
+ .my-profile-identity>div{justify-content:center;flex-wrap:wrap}
+ .my-profile-form{padding:0 18px 24px}
+ .profile-photo-actions-only{padding:14px 0 17px;margin-bottom:18px}
+ .profile-photo-actions-only .profile-photo-buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+ .profile-photo-actions-only .btn{min-height:44px;width:100%;justify-content:center}
+ .my-profile-form .platform-profile-fields{grid-template-columns:1fr;gap:14px}
+ .my-profile-form .platform-profile-fields label{font-size:.75rem}
+ .my-profile-form .platform-profile-fields input{min-height:46px!important;padding:10px 12px!important;font-size:16px!important}
+ .profile-actions-end .btn{width:100%;min-height:46px}
+ .profile-crop-modal{padding:0 16px 18px}
+ .profile-crop-stage{min-height:270px}
+ .profile-crop-circle{width:min(238px,68vw)}
+ .profile-crop-controls label{grid-template-columns:76px 1fr;gap:8px;font-size:.74rem}
+ .profile-crop-actions{display:grid;grid-template-columns:1fr 1fr}
+ .profile-crop-actions .btn{width:100%;justify-content:center;min-height:44px}
+}
