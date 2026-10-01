@@ -33,7 +33,7 @@ export function ModulePage({name}:{name:string}){
  const canCreate=can(cfg.resource,'CREATE')&&!(restricted&&!['leave','expenses','travel'].includes(name))&&!(name==='support'&&session.user.scope==='PLATFORM');
  const canEdit=can(cfg.resource,'EDIT')&&!restricted&&!['leave','expenses','travel','exit','invoices','payments'].includes(name);
  const canDelete=can(cfg.resource,'DELETE')&&!restricted&&((name==='companies')||(name==='invoices')||!cfg.endpoint)&&!['leave','expenses','travel','exit'].includes(name);
- const hrAssignLeave=name==='leave'&&session.user.role!=='EMPLOYEE'&&can(cfg.resource,'APPROVE');
+ const hrAssignLeave=name==='leave'&&['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(session.user.role);
  const query=useData(name==='employees'?`${endpoint}?q=${encodeURIComponent(search)}&status=${filter}&page=${page}&pageSize=25`:`${endpoint}?pageSize=500`);
  const employees=useData('employees?pageSize=500',can('employees'));
  const departments=useData('departments?pageSize=500',can('organization'));

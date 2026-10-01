@@ -369,12 +369,12 @@ export class Api {
       const [failedEmail,failedSms,deviceIssues]=await Promise.all([
         employeeSelf?Promise.resolve(0):this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}),
         employeeSelf?Promise.resolve(0):smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}):Promise.resolve(0),
-        canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
+        canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,connectionMode:{not:'EMPLOYEE_APP'},OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
       ]);
       const issues:any[]=[];
       if(failedEmail>0)issues.push({code:'EMAIL_DELIVERY',severity:'warning',title:'Email delivery needs attention',message:failedEmail+' recent email job(s) have failed repeatedly. Check the recipient address and email delivery logs.'});
       if(failedSms>0)issues.push({code:'SMS_DELIVERY',severity:'warning',title:'SMS delivery needs attention',message:failedSms+' recent SMS job(s) have failed repeatedly. Check the SMS provider configuration and delivery logs.'});
-      if(deviceIssues.length)issues.push({code:'ATTENDANCE_DEVICE',severity:'warning',title:'Attendance device issue',message:deviceIssues.length+' device(s) are offline, degraded, or reporting an error.'});
+      if(deviceIssues.length){const first=deviceIssues[0];issues.push({code:'ATTENDANCE_DEVICE',severity:'warning',title:'Attendance device issue',message:deviceIssues.length===1?`${first.name} is ${String(first.status).toLowerCase()}${first.lastError?': '+first.lastError:''}`:`${deviceIssues.length} physical attendance devices need attention.`});}
       if(company?.status==='EXPIRED'||company?.status==='SUSPENDED')issues.push({code:'COMPANY_ACCESS',severity:'warning',title:'Company access needs attention',message:'Company status is '+company.status+'. Review subscription or platform access.'});
       const daysRemaining=company?.expiresAt?Math.max(0,Math.ceil((company.expiresAt.getTime()-now.getTime())/86400000)):null;
       if(company?.status==='TRIAL'&&daysRemaining!==null&&daysRemaining<=1)issues.push({code:'TRIAL_ENDING',severity:'info',title:'Trial ending soon',message:'Trial access ends in '+daysRemaining+' day(s).'});

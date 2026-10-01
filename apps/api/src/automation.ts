@@ -1,6 +1,7 @@
 import type {Database} from '../../../packages/database';
 import {calculatePay} from '../../../packages/payroll-engine';
-import {attendanceMonthSummary,lockAttendanceMonth,reconcileAttendanceMonth} from './attendance-automation';
+import {attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth} from './attendance-automation';
+import {localDate,zonedMinute} from '../../../packages/attendance-engine';
 
 const monthKey=(d:Date)=>`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
 export async function prepareScheduledPayroll(db:Database){
@@ -38,9 +39,58 @@ export async function prepareScheduledPayroll(db:Database){
 }
 
 
+const HR_ASSIGN_ROLES=new Set(['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE']);
+const coveredMonths=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
+
+export async function normalizeRecentHrAssignedLeave(db:Database,lookbackHours=48){
+ const cutoff=new Date(Date.now()-Math.max(1,lookbackHours)*3600_000);
+ const audits=await db.auditLog.findMany({where:{action:'LEAVE_REQUESTED',entity:'leave',entityId:{not:null},createdAt:{gte:cutoff}},orderBy:{createdAt:'desc'},take:500});
+ if(!audits.length)return {checked:0,approved:0};
+ const ids=[...new Set(audits.map(a=>a.entityId).filter((v):v is string=>!!v))];
+ const leaves=await db.leaveRequest.findMany({where:{id:{in:ids},status:'PENDING'}});
+ if(!leaves.length)return {checked:ids.length,approved:0};
+ const actorIds=[...new Set(audits.map(a=>a.actorId).filter((v):v is string=>!!v))];
+ const actors=await db.user.findMany({where:{id:{in:actorIds}},include:{role:true}});
+ const actorMap=new Map(actors.map(a=>[a.id,a]));
+ const auditByLeave=new Map<string,typeof audits[number]>();
+ for(const row of audits)if(row.entityId&&!auditByLeave.has(row.entityId))auditByLeave.set(row.entityId,row);
+ let approved=0;
+ for(const leave of leaves){
+  const source=auditByLeave.get(leave.id),actor=source?.actorId?actorMap.get(source.actorId):null;
+  if(!actor||actor.tenantId!==leave.tenantId||actor.employeeId===leave.employeeId||!HR_ASSIGN_ROLES.has(actor.role.code))continue;
+  const months=coveredMonths(leave.startDate,leave.endDate);
+  if(await db.attendancePeriodLock.count({where:{tenantId:leave.tenantId,month:{in:months},status:'LOCKED'}}))continue;
+  const updated=await db.leaveRequest.updateMany({where:{id:leave.id,tenantId:leave.tenantId,status:'PENDING'},data:{status:'APPROVED',reviewerId:actor.id,reviewNote:'Assigned by HR'}});
+  if(updated.count!==1)continue;
+  if(Number(leave.days)!==0.5){
+   try{
+    const shift=await employeeShift(db,leave.tenantId,leave.employeeId),now=new Date(),night=shift.endMinute<=shift.startMinute;
+    let workDay=localDate(now,shift.timezone);
+    if(night&&now<zonedMinute(workDay,shift.endMinute,shift.timezone))workDay=new Date(Date.parse(workDay)-86400000).toISOString().slice(0,10);
+    const first=leave.startDate.toISOString().slice(0,10),last=leave.endDate.toISOString().slice(0,10);
+    if(workDay>=first&&workDay<=last){
+      const start=zonedMinute(workDay,night?shift.startMinute-120:0,shift.timezone),end=zonedMinute(workDay,night?1440+shift.endMinute+120:1440,shift.timezone);
+      const latest=await db.attendancePunch.findFirst({where:{tenantId:leave.tenantId,employeeId:leave.employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'desc'}});
+      if(latest?.punchType==='IN'){
+        const sourceId=`leave-${leave.id}-auto-out`,existing=await db.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:leave.tenantId,sourceId}}});
+        if(!existing)await db.attendancePunch.create({data:{tenantId:leave.tenantId,employeeId:leave.employeeId,sourceId,punchTime:now,punchType:'OUT',verificationType:'HR_LEAVE',processedAt:now,rawPayload:{source:'LEAVE_ASSIGNMENT_BACKFILL',leaveId:leave.id,actorId:actor.id,administrative:true}}});
+      }
+    }
+   }catch{}
+  }
+  for(const month of months)await reconcileAttendanceMonth(db,leave.tenantId,month);
+  await db.auditLog.create({data:{tenantId:leave.tenantId,actorId:actor.id,action:'LEAVE_ASSIGNED_BACKFILL',entity:'leave',entityId:leave.id,after:{status:'APPROVED',source:'HR_ASSIGNMENT_NORMALIZATION'}}});
+  const employeeUser=await db.user.findFirst({where:{tenantId:leave.tenantId,employeeId:leave.employeeId,active:true}});
+  if(employeeUser)await db.notification.create({data:{tenantId:leave.tenantId,userId:employeeUser.id,title:'Leave assigned',message:'HR assigned approved leave to your schedule.'}});
+  approved++;
+ }
+ return {checked:ids.length,approved};
+}
+
 export async function monitorAttendanceDevices(db:Database,offlineAfterMinutes=15){
  const cutoff=new Date(Date.now()-Math.max(5,offlineAfterMinutes)*60_000);
- const devices=await db.attendanceDevice.findMany({where:{status:{in:['ONLINE','DEGRADED']},lastSeenAt:{lt:cutoff}}});
+ await db.attendanceDevice.updateMany({where:{connectionMode:'EMPLOYEE_APP',OR:[{status:{not:'ONLINE'}},{lastError:{not:null}}]},data:{status:'ONLINE',lastError:null}});
+ const devices=await db.attendanceDevice.findMany({where:{connectionMode:{not:'EMPLOYEE_APP'},status:{in:['ONLINE','DEGRADED']},lastSeenAt:{lt:cutoff}}});
  for(const device of devices){
   await db.$transaction(async tx=>{
    const current=await tx.attendanceDevice.findUnique({where:{id:device.id}});

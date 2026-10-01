@@ -155,7 +155,7 @@ export class Workflows {
     const scope=await employeeScope(this.db,ctx);
     if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500})};}
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
-    const autoApprove=ctx.user.role.code!=='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'leave','APPROVE');
+    const autoApprove=['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(ctx.user.role.code)&&input.employeeId!==ctx.user.employeeId;
     const after=await this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing)return existing;}

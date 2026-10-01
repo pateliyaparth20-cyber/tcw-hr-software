@@ -11116,3 +11116,54 @@ input[type="month"]{
   .employee-home-hero{min-height:118px!important}
   .employee-home-face-button{width:48px!important;height:48px!important;min-width:48px!important;border-radius:15px!important;background:rgba(255,255,255,.95)!important}
 }
+
+
+/* v1.14.1 Meghna compact desktop layout + logical mobile attendance source */
+.tcw-agent-panel.empty-chat .tcw-agent-welcome{
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:18px 16px 16px!important;
+}
+.tcw-agent-panel.empty-chat .tcw-agent-issues{
+  max-height:132px!important;
+}
+.tcw-agent-panel.empty-chat .meghna-mode-strip{
+  flex:0 0 auto!important;
+}
+.tcw-agent-issues>div{
+  border:1px solid #f0dfc3;
+  box-shadow:0 2px 10px rgba(117,83,37,.04);
+}
+@media(min-width:701px){
+  .tcw-agent{right:22px!important;bottom:22px!important}
+  .tcw-agent-panel{
+    width:min(420px,calc(100vw - 44px))!important;
+    height:min(620px,calc(100vh - 88px))!important;
+    border-radius:22px!important;
+  }
+  .tcw-agent-panel.empty-chat{
+    height:auto!important;
+    max-height:min(560px,calc(100vh - 88px))!important;
+  }
+  .tcw-agent-panel.empty-chat .tcw-agent-welcome{
+    min-height:0!important;
+  }
+  .tcw-agent-panel.empty-chat .tcw-agent-welcome>div{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px!important;
+  }
+  .tcw-agent-panel.empty-chat .tcw-agent-welcome button{
+    width:100%;
+    min-height:38px;
+    white-space:normal;
+  }
+}
+@media(max-width:700px){
+  .tcw-agent-panel.empty-chat .tcw-agent-welcome{
+    flex:1 1 auto!important;
+    display:flex!important;
+    flex-direction:column;
+    justify-content:center;
+  }
+}
