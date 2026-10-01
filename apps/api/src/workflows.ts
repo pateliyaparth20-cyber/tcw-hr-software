@@ -210,6 +210,22 @@ export class Workflows {
       return {items:await this.db.payrollRun.findMany({where:{tenantId:tid,...(recordId?{id:id.parse(recordId)}:{})},include:{items:true},orderBy:{month:'desc'},take:120})};
     }
     if(scope)throw new ForbiddenException('Payroll is managed by your payroll team.');
+    if(method==='DELETE'){
+      if(!recordId)throw new BadRequestException('Payroll run id is required.');
+      return this.db.$transaction(async tx=>{
+        await tx.$queryRaw`SELECT id FROM payroll_runs WHERE id = ${id.parse(recordId)}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+        const run=await tx.payrollRun.findFirst({where:{id:recordId,tenantId:tid}});
+        if(!run)throw new NotFoundException('Payroll run not found.');
+        if(run.status!=='DRAFT')throw new ConflictException('Only draft payroll runs can be deleted. Reopen review payroll to draft first; approved or locked payroll must be preserved.');
+        const payoutCount=await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}});
+        if(payoutCount)throw new ConflictException('Payroll with payout records cannot be deleted.');
+        await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
+        await tx.payrollItem.deleteMany({where:{tenantId:tid,runId:recordId}});
+        await audit(tx,ctx,'PAYROLL_DRAFT_DELETED','payroll',recordId,run,{deleted:true,month:run.month});
+        await tx.payrollRun.delete({where:{id:recordId}});
+        return {ok:true,id:recordId,month:run.month};
+      });
+    }
     if(!recordId){const input=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);const currentMonth=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'}).format(new Date());if(input.month>currentMonth)throw new BadRequestException('Future payroll months cannot be created. Choose the current month or an earlier month.');return this.db.$transaction(async tx=>{const row=await tx.payrollRun.create({data:{tenantId:tid,...input}});await audit(tx,ctx,'PAYROLL_CREATED','payroll',row.id,undefined,row);return row;});}
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM payroll_runs WHERE id = ${id.parse(recordId)}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
