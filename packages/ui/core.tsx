@@ -168,7 +168,10 @@ export async function api(path:string,method='GET',data?:any,csrf?:string){
   if(typeof window!=='undefined'){
     if((path==='auth/login'||path==='auth/signup')&&result?.localSessionToken){writeStorage('session',LOCAL_SESSION_KEY,result.localSessionToken);writeStorage('local',LOCAL_SESSION_BACKUP_KEY,result.localSessionToken);}
     if(['auth/login','auth/signup','auth/me'].includes(path)&&result?.user?.scope&&result?.csrf)saveLocalSessionSnapshot(result);
-    if((path==='auth/login'||path==='auth/signup')&&result?.user?.scope)writeStorage('local','tcw_portal_scope',String(result.user.scope));
+    if((path==='auth/login'||path==='auth/signup')&&result?.user?.scope){
+      writeStorage('local','tcw_portal_scope',String(result.user.scope));
+      try{navigator.serviceWorker?.controller?.postMessage({type:'TCW_WARM_APP_CACHE'})}catch{}
+    }
     if(path==='auth/logout')clearLocalSessionState();
   }
   return result;
