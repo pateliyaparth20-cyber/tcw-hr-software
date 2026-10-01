@@ -47,12 +47,13 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
   assert.equal(payroll.status,'LOCKED');assert.equal(payroll.items.length,8);
   assert.equal(await db.payrollPayout.count({where:{tenantId:tenant.id,runId:payroll.id,status:'PAID'}}),8);
 
+  const nativeFetch=globalThis.fetch.bind(globalThis);
   const {app,io}=await createApp(db);await app.listen(0,'127.0.0.1');
   const address=app.getHttpServer().address();const base=`http://127.0.0.1:${address.port}/api/`;
   type Auth={cookie:string;csrf:string;scope:'TENANT'|'PLATFORM'};
   async function call(path:string,method='GET',body?:any,auth?:Auth){
     const origin=auth?.scope==='PLATFORM'?'http://localhost:3001':'http://localhost:3000';
-    const response=await fetch(base+path,{method,headers:{Origin:origin,...(body!==undefined?{'Content-Type':'application/json'}:{}),...(auth?{Cookie:auth.cookie,'X-CSRF-Token':auth.csrf,'X-PeopleOS-Portal':auth.scope}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
+    const response=await nativeFetch(base+path,{method,headers:{Origin:origin,...(body!==undefined?{'Content-Type':'application/json'}:{}),...(auth?{Cookie:auth.cookie,'X-CSRF-Token':auth.csrf,'X-PeopleOS-Portal':auth.scope}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
     const raw=await response.text();let data:any;try{data=JSON.parse(raw)}catch{data=raw}
     return {status:response.status,data,response};
   }
@@ -93,6 +94,33 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
       assert.equal(saved.status,200,JSON.stringify(saved.data));assert.equal(saved.data.enabled,true);assert.equal(saved.data.keySecretConfigured,true);assert.equal(saved.data.sourceAccountConfigured,true);assert.equal(saved.data.sourceAccountHint,'••••2323');assert.equal(Object.prototype.hasOwnProperty.call(saved.data,'keySecret'),false);assert.equal(Object.prototype.hasOwnProperty.call(saved.data,'sourceAccount'),false);
       const stored=await db.platformSetting.findUniqueOrThrow({where:{key:`tenant-payout:${tenant.id}`}});const raw=JSON.stringify(stored.value);assert(!raw.includes('company-salary-secret-2026'));assert(!raw.includes('23232323232323'));
       const bankFile=await call('company/payout-settings','PUT',{provider:'BANK_FILE',razorpayKeyId:'rzp_test_company_salary',razorpayKeySecret:'',sourceAccount:'',mode:'IMPS',accountLabel:'Company salary account',liveEnabled:false},owner);assert.equal(bankFile.status,200);assert.equal(bankFile.data.provider,'BANK_FILE');assert.equal(bankFile.data.enabled,false);
+    });
+
+    await t.test('RazorpayX salary payout creates beneficiary, pays once and syncs UTR',async()=>{
+      const saved=await call('company/payout-settings','PUT',{provider:'RAZORPAYX',razorpayKeyId:'rzp_test_company_salary',razorpayKeySecret:'company-salary-secret-2026',sourceAccount:'23232323232323',mode:'IMPS',accountLabel:'Company salary account',liveEnabled:true},owner);assert.equal(saved.status,200,JSON.stringify(saved.data));assert.equal(saved.data.enabled,true);
+      const target=payroll.items.find((item:any)=>item.employeeCode==='QA002');assert(target);
+      await db.payrollPayout.deleteMany({where:{tenantId:tenant.id,runId:payroll.id,employeeId:target.employeeId}});
+      const requests:any[]=[];
+      globalThis.fetch=(async(input:any,init?:RequestInit)=>{
+        const url=String(input);if(!url.startsWith('https://api.razorpay.com/'))return nativeFetch(input,init);
+        const body=init?.body?JSON.parse(String(init.body)):null;requests.push({url,method:String(init?.method??'GET'),body,headers:init?.headers});
+        if(url.endsWith('/v1/contacts'))return new Response(JSON.stringify({id:'cont_salary_qa'}),{status:200,headers:{'content-type':'application/json'}});
+        if(url.endsWith('/v1/fund_accounts'))return new Response(JSON.stringify({id:'fa_salary_qa'}),{status:200,headers:{'content-type':'application/json'}});
+        if(url.endsWith('/v1/payouts')&&String(init?.method??'GET')==='POST')return new Response(JSON.stringify({id:'pout_salary_qa',status:'processing',mode:'IMPS'}),{status:200,headers:{'content-type':'application/json'}});
+        if(url.endsWith('/v1/payouts/pout_salary_qa'))return new Response(JSON.stringify({id:'pout_salary_qa',status:'processed',mode:'IMPS',utr:'QA-LIVE-UTR-001'}),{status:200,headers:{'content-type':'application/json'}});
+        return new Response(JSON.stringify({error:{description:'unexpected RazorpayX test request'}}),{status:400,headers:{'content-type':'application/json'}});
+      }) as typeof fetch;
+      try{
+        const paid=await call(`payroll/${payroll.id}/payout`,'POST',{confirm:true,mode:'IMPS'},owner);assert.equal(paid.status,200,JSON.stringify(paid.data));assert.equal(paid.data.failed,0);
+        const fundRequest=requests.find(row=>row.url.endsWith('/v1/fund_accounts'));assert.equal(fundRequest.body.contact_id,'cont_salary_qa');assert.equal(fundRequest.body.bank_account.ifsc,'HDFC0000001');
+        const payoutRequest=requests.find(row=>row.url.endsWith('/v1/payouts')&&row.method==='POST');assert.equal(payoutRequest.body.fund_account_id,'fa_salary_qa');assert.equal(payoutRequest.body.account_number,'23232323232323');assert.equal(payoutRequest.body.amount,target.net);assert.equal(payoutRequest.body.purpose,'salary');
+        const synced=await call(`payroll/${payroll.id}/payout-sync`,'POST',{},owner);assert.equal(synced.status,200,JSON.stringify(synced.data));
+        const row=await db.payrollPayout.findUniqueOrThrow({where:{tenantId_runId_employeeId:{tenantId:tenant.id,runId:payroll.id,employeeId:target.employeeId}}});assert.equal(row.status,'processed');assert.equal(row.utr,'QA-LIVE-UTR-001');
+        const beneficiary=await db.platformSetting.findUnique({where:{key:`payout-beneficiary:${tenant.id}:${target.employeeId}`}});assert(beneficiary,'provider beneficiary mapping must be stored outside employee personal data');
+      }finally{
+        globalThis.fetch=nativeFetch as typeof fetch;
+        await call('company/payout-settings','PUT',{provider:'BANK_FILE',razorpayKeyId:'rzp_test_company_salary',razorpayKeySecret:'',sourceAccount:'',mode:'IMPS',accountLabel:'Company salary account',liveEnabled:false},owner);
+      }
     });
 
     await t.test('HR owner can read every core real-HR workspace without broken endpoints',async()=>{
@@ -153,5 +181,5 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
       assert.equal(again.skipped,true);
       assert.deepEqual({tenants:await db.tenant.count(),employees:await db.employee.count(),payments:await db.payment.count()},before);
     });
-  }finally{io.close();await app.close();await fixture.close()}
+  }finally{globalThis.fetch=nativeFetch as typeof fetch;io.close();await app.close();await fixture.close()}
 });
