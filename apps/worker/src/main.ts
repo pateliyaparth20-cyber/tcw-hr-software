@@ -3,7 +3,7 @@ import {Queue,Worker} from 'bullmq';
 import nodemailer from 'nodemailer';
 import {db} from '../../../packages/database';
 import {syncCompanyAccess} from '../../api/src/billing';
-import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll} from '../../api/src/automation';
+import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll,repairPrematureCurrentMonthPayrollLocks} from '../../api/src/automation';
 
 const url=new URL(process.env.REDIS_URL??'redis://localhost:6379');
 const connection={host:url.hostname,port:Number(url.port)||6379,password:url.password||undefined,...(url.protocol==='rediss:'?{tls:{}}:{})};
@@ -112,6 +112,7 @@ async function scan(){if(scanning)return;scanning=true;try{
   for(const row of rows)await queue.add(row.kind,{id:row.id},{jobId:row.id,attempts:5,backoff:{type:'exponential',delay:5000},removeOnComplete:1000,removeOnFail:1000});
   await syncCompanyAccess(db);
   await normalizeRecentHrAssignedLeave(db);
+  await repairPrematureCurrentMonthPayrollLocks(db);
   await prepareScheduledPayroll(db);
   await monitorAttendanceDevices(db);
 }catch{console.error('Worker scan failed; retrying on next interval.')}finally{scanning=false}}

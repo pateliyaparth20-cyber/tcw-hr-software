@@ -115,6 +115,9 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
 }
 
 export async function lockAttendanceMonth(db:Database,tenantId:string,month:string,userId:string){
+  const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
+  const currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
+  if(month>=currentMonth)throw new BadRequestException('The current attendance month must stay open. Lock it only after the month has ended.');
   await reconcileAttendanceMonth(db,tenantId,month);
   const summary=await attendanceMonthSummary(db,tenantId,month);
   if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before locking attendance.`);
