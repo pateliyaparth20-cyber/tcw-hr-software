@@ -323,7 +323,59 @@ export class DataService {
       await audit(tx,ctx,'USER_UPDATED','users',after.id,before,after);const{passwordHash,...safe}=after;return {...safe,...(!before&&generatedPassword?{temporaryPassword:generatedPassword}:{})};
     });
   }
+  private async platformUsers(ctx:Context,method:string,recordId?:string,body?:unknown){
+    platform(ctx);requirePermission(ctx,'users',method==='GET'?'VIEW':method==='POST'?'CREATE':method==='DELETE'?'DELETE':'EDIT');
+    const safe=(user:any)=>({id:user.id,name:user.name,email:user.email,loginId:user.loginId,active:user.active,mustChangePassword:user.mustChangePassword,role:user.role?.code??'',roleCode:user.role?.code??'',roleName:user.role?.name??'',createdAt:user.createdAt,updatedAt:user.updatedAt});
+    if(method==='GET'){
+      const items=await this.db.user.findMany({where:{tenantId:null},include:{role:true},orderBy:[{active:'desc'},{createdAt:'asc'}]});
+      return {items:items.map(safe)};
+    }
+    if(method==='DELETE'){
+      if(!recordId)throw new BadRequestException('Choose a platform user.');
+      const before=await this.db.user.findFirst({where:{id:id.parse(recordId),tenantId:null},include:{role:true}});if(!before)throw new NotFoundException('Platform user not found.');
+      if(before.id===ctx.user.id)throw new BadRequestException('You cannot disable your own platform account.');
+      if(before.role.code==='SUPER_ADMIN')throw new ForbiddenException('Super Admin accounts cannot be disabled from Team & access.');
+      if(ctx.user.role.code!=='SUPER_ADMIN'&&before.role.code==='ADMIN')throw new ForbiddenException('Only Super Admin can manage Admin accounts.');
+      const after=await this.db.user.update({where:{id:before.id},data:{active:false}});
+      await this.db.session.deleteMany({where:{userId:before.id}});await audit(this.db,ctx,'PLATFORM_USER_DISABLED','users',after.id,before,after);return {ok:true,user:{...safe({...after,role:before.role}),active:false}};
+    }
+    if(!['POST','PATCH'].includes(method))throw new BadRequestException('Unsupported platform user operation.');
+    const input=z.object({
+      name:z.string().trim().min(1).max(160),
+      email:z.email().transform(v=>v.toLowerCase()),
+      loginId:z.string().trim().max(80).regex(/^[A-Za-z0-9._-]*$/).optional().transform(v=>v||undefined),
+      password:z.union([password,z.literal('')]).optional().transform(v=>v||undefined),
+      role:z.enum(['ADMIN','SALES_ADMIN','SALES_EXECUTIVE','SUPPORT_ADMIN','SUPPORT_AGENT','FINANCE_ADMIN']),
+      active:z.boolean().default(true)
+    }).strict().parse(body);
+    const role=await this.db.role.findUnique({where:{code:input.role}});if(!role||role.scope!=='PLATFORM')throw new BadRequestException('Choose a valid platform role.');
+    if(ctx.user.role.code!=='SUPER_ADMIN'&&input.role==='ADMIN')throw new ForbiddenException('Only Super Admin can assign the Admin role.');
+    return this.db.$transaction(async tx=>{
+      const before=recordId?await tx.user.findFirst({where:{id:id.parse(recordId),tenantId:null},include:{role:true}}):null;
+      if(recordId&&!before)throw new NotFoundException('Platform user not found.');
+      if(before?.role.code==='SUPER_ADMIN')throw new ForbiddenException('Super Admin accounts are managed separately.');
+      if(before&&ctx.user.role.code!=='SUPER_ADMIN'&&before.role.code==='ADMIN')throw new ForbiddenException('Only Super Admin can manage Admin accounts.');
+      if(before?.id===ctx.user.id&&!input.active)throw new BadRequestException('You cannot disable your own platform account.');
+      const duplicateEmail=await tx.user.findFirst({where:{tenantId:null,email:input.email,...(before?{id:{not:before.id}}:{})}});if(duplicateEmail)throw new ConflictException('Another platform user already uses this email.');
+      let loginId=(input.loginId??before?.loginId??'').toUpperCase();
+      if(!loginId){for(let attempt=0;attempt<20;attempt++){const candidate=`TCW-${input.role.replaceAll('_','-').slice(0,12)}-${randomBytes(2).toString('hex').toUpperCase()}`;if(!await tx.user.findFirst({where:{tenantId:null,loginId:candidate}})){loginId=candidate;break;}}}
+      if(!loginId)throw new ConflictException('Unable to generate a unique platform User ID.');
+      const duplicateLogin=await tx.user.findFirst({where:{tenantId:null,loginId,...(before?{id:{not:before.id}}:{})}});if(duplicateLogin)throw new ConflictException('Another platform user already uses this User ID.');
+      const generatedPassword=!before&&!input.password?temporaryPassword8():null,initialPassword=input.password??generatedPassword??undefined;
+      const data:any={name:input.name,email:input.email,loginId,roleId:role.id,active:input.active,...(initialPassword?{passwordHash:await hashPassword(initialPassword),mustChangePassword:true}:{})};
+      const after=before?await tx.user.update({where:{id:before.id},data}):await tx.user.create({data:{tenantId:null,...data,passwordHash:data.passwordHash!}});
+      if(before)await tx.session.deleteMany({where:{userId:before.id}});
+      if(!before&&initialPassword){
+        const loginUrl=new URL('/admin-login',process.env.ADMIN_WEB_URL??process.env.WEB_URL??'https://admin.techcyberwarrior.in').toString();
+        await tx.outbox.create({data:{tenantId:null,kind:'EMAIL',payload:{to:input.email,subject:'Your TCW HR Software Admin login',tempPassword:initialPassword,text:`Your TCW HR Software platform account is ready. User ID: ${loginId}. Temporary Password: ${initialPassword}. Role: ${role.name}. Login: ${loginUrl}. Change the temporary password after first sign in.`}}});
+      }
+      await audit(tx,ctx,before?'PLATFORM_USER_UPDATED':'PLATFORM_USER_CREATED','users',after.id,before,{...after,passwordHash:undefined,role:role.code});
+      return {...safe({...after,role}),...(generatedPassword?{temporaryPassword:generatedPassword}:{})};
+    });
+  }
+
   async platformResource(ctx:Context,type:string,method:string,recordId?:string,body?:unknown){
+    if(type==='users')return this.platformUsers(ctx,method,recordId,body);
     platform(ctx);const resource=type==='companies'||type==='trials'?'tenants':type==='leads'?'sales':type==='invoices'||type==='payments'?'billing':type;
     requirePermission(ctx,resource,method==='GET'?'VIEW':method==='POST'?'CREATE':method==='DELETE'?'DELETE':'EDIT');
     if(type==='trials'){
