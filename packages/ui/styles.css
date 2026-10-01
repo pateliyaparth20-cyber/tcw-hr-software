@@ -11410,3 +11410,27 @@ input[type="month"]{
  .my-profile-form .profile-photo-buttons .btn{font-size:.78rem!important;padding:9px 8px!important}
  .my-profile-form .platform-profile-fields input{font-weight:400!important}
 }
+
+
+/* Approved profile reference — exact field/icon/action treatment */
+.profile-photo-actions-only{border-top:0!important;border-bottom:0!important;padding-top:10px!important}
+.profile-field-control{display:flex;align-items:center;min-height:48px;border:1px solid #d8e1eb;border-radius:12px;background:#fff;overflow:hidden}
+.profile-field-control>svg{flex:0 0 auto;margin-left:14px;color:#71859b;stroke-width:1.8}
+.my-profile-form .platform-profile-fields .profile-field-control input{
+ flex:1;min-width:0;border:0!important;border-radius:0!important;background:transparent!important;
+ box-shadow:none!important;font-size:.9rem!important;font-weight:400!important;padding:10px 13px 10px 11px!important;
+}
+.profile-field-control:focus-within{border-color:#82b2ef;box-shadow:0 0 0 3px rgba(31,115,232,.09)}
+.profile-field-control.readonly{background:#f7f9fc}
+.profile-field-control.readonly input{color:#75879a!important;font-weight:500!important}
+@media(max-width:650px){
+ .my-profile-form{padding-left:20px;padding-right:20px}
+ .profile-photo-actions-only{padding:8px 0 16px!important;margin-bottom:10px!important}
+ .profile-photo-actions-only .profile-photo-buttons{grid-template-columns:1fr 1fr!important}
+ .my-profile-form .profile-photo-buttons .btn{min-height:46px!important;border-radius:12px!important;font-size:.76rem!important;font-weight:600!important}
+ .my-profile-form .platform-profile-fields{gap:13px!important}
+ .my-profile-form .platform-profile-fields label{gap:6px!important;font-size:.73rem!important;font-weight:600!important}
+ .profile-field-control{min-height:46px;border-radius:12px}
+ .profile-field-control>svg{margin-left:13px;width:18px;height:18px}
+ .my-profile-form .platform-profile-fields .profile-field-control input{min-height:44px!important;font-size:16px!important;padding:9px 11px!important}
+}
