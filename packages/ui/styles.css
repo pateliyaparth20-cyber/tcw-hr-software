@@ -11373,3 +11373,40 @@ input[type="month"]{
  .profile-crop-actions{display:grid;grid-template-columns:1fr 1fr}
  .profile-crop-actions .btn{width:100%;justify-content:center;min-height:44px}
 }
+
+
+/* Profile visual match — clean light card, clear photo actions, normal field weight */
+.my-profile-card{background:#fff;border:1px solid #e2e9f2;box-shadow:0 12px 34px rgba(31,61,96,.08)}
+.my-profile-cover{background:linear-gradient(120deg,#1f73e8,#58a9f5)}
+.my-profile-form .profile-photo-buttons .btn{
+ background:#fff!important;font-weight:600!important;box-shadow:none!important;
+}
+.my-profile-form .profile-photo-buttons .btn:first-child{
+ color:#1769d5!important;border:1.5px solid #8bb8f3!important;background:#f8fbff!important;
+}
+.my-profile-form .profile-photo-buttons .btn:last-child{
+ color:#d93b45!important;border:1.5px solid #f0a1a7!important;background:#fffafa!important;
+}
+.my-profile-form .platform-profile-fields label{font-weight:600!important;color:#5b7087}
+.my-profile-form .platform-profile-fields input{
+ font-weight:400!important;color:#29445f!important;background:#fff!important;
+ border:1px solid #d8e1eb!important;box-shadow:none!important;
+}
+.my-profile-form .platform-profile-fields input:focus{
+ border-color:#82b2ef!important;box-shadow:0 0 0 3px rgba(31,115,232,.09)!important;
+}
+.my-profile-form .platform-profile-fields input[readonly]{
+ font-weight:500!important;color:#75879a!important;background:#f7f9fc!important;
+}
+.profile-actions-end .btn.primary{
+ min-height:48px;border-radius:12px;font-weight:700;background:#1769d5;
+ box-shadow:0 8px 20px rgba(23,105,213,.16)
+}
+@media(max-width:650px){
+ .my-profile-card{border-radius:20px}
+ .my-profile-main{padding-bottom:20px}
+ .profile-photo-actions-only{border-top:1px solid #edf1f6;border-bottom:0;margin-bottom:16px}
+ .profile-photo-actions-only .profile-photo-buttons{gap:10px}
+ .my-profile-form .profile-photo-buttons .btn{font-size:.78rem!important;padding:9px 8px!important}
+ .my-profile-form .platform-profile-fields input{font-weight:400!important}
+}
