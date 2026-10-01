@@ -4,6 +4,7 @@ import {db} from '../packages/database';
 import {hashPassword} from '../packages/auth';
 import {roleDefinitions} from '../packages/permissions';
 import {zonedMinute,localDate} from '../packages/attendance-engine';
+import {resetAndSeedFullQa} from './qa-full-reset';
 export async function seed(database:PrismaClient,options:{adminEmail:string;adminPassword:string;ownerEmail?:string;ownerPassword?:string;demo?:boolean;companyCode?:string}){
   if(options.adminPassword.length<12||options.adminPassword.includes('GENERATE_'))throw new Error('Set a random ADMIN_PASSWORD of at least 12 characters.');
   for(const role of roleDefinitions)await database.role.upsert({where:{code:role.code},create:role,update:role});
@@ -52,11 +53,22 @@ export async function seed(database:PrismaClient,options:{adminEmail:string;admi
 }
 if(require.main===module){
   (async()=>{
-    await seed(db,{adminEmail:process.env.ADMIN_EMAIL??'',adminPassword:process.env.ADMIN_PASSWORD??'',ownerEmail:process.env.OWNER_EMAIL,ownerPassword:process.env.OWNER_PASSWORD,companyCode:process.env.DEMO_COMPANY_CODE,demo:process.env.SEED_DEMO==='true'});
-    if(process.env.QA_BOOTSTRAP==='true'){
+    const adminEmail=process.env.ADMIN_EMAIL??'',adminPassword=process.env.ADMIN_PASSWORD??'';
+    const qaBootstrap=process.env.QA_BOOTSTRAP==='true';
+    const fullReset=process.env.TCW_FULL_QA_RESET_ON_BOOT==='true';
+    await seed(db,{adminEmail,adminPassword});
+
+    if(fullReset){
+      const service=String(process.env.RAILWAY_SERVICE_NAME??'').trim();
+      if(service&&service!=='tcw-hr-software')throw new Error('TCW_FULL_QA_RESET_ON_BOOT may run only on the tcw-hr-software Railway service.');
+      const qaEmail=process.env.QA_OWNER_EMAIL?.trim(),qaPassword=process.env.QA_OWNER_PASSWORD?.trim(),qaCode=(process.env.QA_COMPANY_CODE??'TCW-QA').trim().toUpperCase();
+      if(!qaEmail||!qaPassword)throw new Error('Full QA reset requires QA_OWNER_EMAIL and QA_OWNER_PASSWORD.');
+      const result=await resetAndSeedFullQa(db,{qaEmail,qaPassword,qaCode,confirmation:process.env.TCW_FULL_QA_RESET_CONFIRM??'',runKey:String(process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??'')||undefined});
+      console.log('FULL QA RESET COMPLETE:',JSON.stringify(result));
+    }else if(qaBootstrap){
       const qaEmail=process.env.QA_OWNER_EMAIL?.trim(),qaPassword=process.env.QA_OWNER_PASSWORD?.trim(),qaCode=(process.env.QA_COMPANY_CODE??'TCW-QA').trim().toUpperCase();
       if(!qaEmail||!qaPassword)throw new Error('QA_BOOTSTRAP requires QA_OWNER_EMAIL and QA_OWNER_PASSWORD.');
-      await seed(db,{adminEmail:process.env.ADMIN_EMAIL??'',adminPassword:process.env.ADMIN_PASSWORD??'',ownerEmail:qaEmail,ownerPassword:qaPassword,companyCode:qaCode,demo:true});
+      await seed(db,{adminEmail,adminPassword,ownerEmail:qaEmail,ownerPassword:qaPassword,companyCode:qaCode,demo:true});
       const tenant=await db.tenant.findUniqueOrThrow({where:{code:qaCode}});
       const user=await db.user.findFirstOrThrow({where:{tenantId:tenant.id,email:qaEmail.toLowerCase()}});
       const preferredQaLoginId='TCWQA01';
@@ -64,7 +76,9 @@ if(require.main===module){
       const updatedQaUser=await db.user.update({where:{id:user.id},data:{...(loginIdConflict?{}:{loginId:preferredQaLoginId}),mustChangePassword:false},select:{loginId:true}});
       await db.tenant.update({where:{id:tenant.id},data:{name:'TCW QA Workspace',profile:{...((tenant.profile as any)??{}),legalName:'TCW QA Workspace',industry:'Technology',website:'https://hr.techcyberwarrior.in',email:qaEmail,phone:'+91 9000000000',address:'QA workspace',city:'Ahmedabad',state:'Gujarat',country:'India',postalCode:'380001',companyType:'Private Limited',contactPerson:'QA Administrator',contactDesignation:'HR Manager',supportEmail:qaEmail,billingEmail:qaEmail,primaryColor:'#3474ef',footer:'© TCW HR Software · QA workspace'}}});
       console.log('QA workspace ready:',qaCode,`loginId=${updatedQaUser.loginId}`);
+    }else if(process.env.OWNER_EMAIL&&process.env.OWNER_PASSWORD){
+      await seed(db,{adminEmail,adminPassword,ownerEmail:process.env.OWNER_EMAIL,ownerPassword:process.env.OWNER_PASSWORD,companyCode:process.env.DEMO_COMPANY_CODE,demo:process.env.SEED_DEMO==='true'});
     }
-    console.log('Bootstrap complete. Existing passwords were preserved.');
+    console.log('Bootstrap complete. Existing platform credentials were preserved.');
   })().catch(e=>{console.error(e.message);process.exitCode=1}).finally(()=>db.$disconnect());
 }
