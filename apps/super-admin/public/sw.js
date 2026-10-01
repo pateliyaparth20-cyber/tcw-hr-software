@@ -1,7 +1,7 @@
 const CACHE='tcw-shell-v1.12.3-notifications';
 const STATIC=['/offline.html','/tcw-logo.png','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(
-  caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting())
+  caches.open(CACHE).then(cache=>cache.addAll(STATIC))
 ));
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
@@ -55,6 +55,10 @@ self.addEventListener('notificationclick',event=>{
   }));
 });
 self.addEventListener('message',event=>{
+  if(event.data?.type==='TCW_ACTIVATE_UPDATE'){
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   if(event.data?.type!=='TCW_SHOW_NOTIFICATION')return;
   const data=event.data;
   event.waitUntil(self.registration.showNotification(String(data.title??'TCW HR Software'),{
