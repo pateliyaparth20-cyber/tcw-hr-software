@@ -130,14 +130,18 @@ function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const serverTodayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
  const todayRecord=livePunch?{...(serverTodayRecord??{}),...(livePunch.punchType==='IN'?{firstIn:livePunch.firstIn??livePunch.punchTime,lastOut:null,status:livePunch.status??serverTodayRecord?.status??'PRESENT'}:{firstIn:livePunch.firstIn??serverTodayRecord?.firstIn,lastOut:livePunch.lastOut??livePunch.punchTime,status:livePunch.status??serverTodayRecord?.status??'PRESENT',workMinutes:livePunch.workMinutes??serverTodayRecord?.workMinutes??0})}:serverTodayRecord;
- useEffect(()=>{if(!livePunch||!serverTodayRecord)return;const reflected=livePunch.punchType==='IN'?!!serverTodayRecord.firstIn&&!serverTodayRecord.lastOut:!!serverTodayRecord.lastOut;if(reflected)setLivePunch(null)},[livePunch,serverTodayRecord?.firstIn,serverTodayRecord?.lastOut]);
+ const latestPunch:Row|null=d.latestPunch??null;
+ const latestPunchDay=latestPunch?.punchTime?new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(latestPunch.punchTime)):'';
+ const persistedPunch=latestPunchDay===today?latestPunch:null,currentPunch=livePunch??persistedPunch;
+ useEffect(()=>{if(!livePunch||!latestPunch?.punchTime)return;const sameType=latestPunch.punchType===livePunch.punchType,sameTime=Math.abs(new Date(latestPunch.punchTime).getTime()-new Date(livePunch.punchTime).getTime())<5000;if(sameType&&sameTime)setLivePunch(null)},[livePunch,latestPunch?.punchType,latestPunch?.punchTime]);
  const pending=leave.filter(r=>r.status==='PENDING');
  const approvedUpcoming=leave.filter(r=>r.status==='APPROVED'&&String(r.endDate).slice(0,10)>=today).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
  const payslip:Row|null=d.payroll??null;
  const firstName=String(session.user.name??employee.firstName??'Employee').split(' ')[0];
  const greeting=useTimeGreeting(timezone);
- const working=!!todayRecord?.firstIn&&!todayRecord?.lastOut;
- const completed=!!todayRecord?.firstIn&&!!todayRecord?.lastOut;
+ const working=currentPunch?.punchType?currentPunch.punchType==='IN':!!todayRecord?.firstIn&&!todayRecord?.lastOut;
+ const completed=!working&&!!todayRecord?.firstIn&&(currentPunch?.punchType==='OUT'||!!todayRecord?.lastOut);
+ const workingSince=working?(currentPunch?.punchType==='IN'?currentPunch.punchTime:todayRecord?.firstIn):null;
  const attendanceLabel=working?'Working':completed?'Day completed':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
  const quick=[
   {href:'/leave',title:'Time off',sub:pending.length?pending.length+' pending':'Apply leave',icon:<CalendarDays size={21}/>},
@@ -152,15 +156,15 @@ function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:
   </section>
 
   <section className={'employee-work-status '+(working?'working':completed?'complete':'idle')}>
-   <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Scan your face to start work'}</em></div></div>
-   <div className="employee-work-clock">{working?<><small>WORKING TIME</small><strong><WorkingTimer since={todayRecord?.firstIn}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{((todayRecord?.workMinutes??0)/60).toFixed(2)}h</strong></>:<LiveClock timezone={timezone}/>}</div>
+   <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{workingSince?'Started '+new Date(workingSince).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'Scan your face to start work'}</em></div></div>
+   <div className="employee-work-clock">{working?<><small>WORKING TIME</small><strong><WorkingTimer since={workingSince}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{((todayRecord?.workMinutes??0)/60).toFixed(2)}h</strong></>:<LiveClock timezone={timezone}/>}</div>
    <button type="button" className="btn primary" onClick={()=>setFaceOpen(true)}><Camera size={18}/>{working?'Face Scan & check out':'Face Scan & check in'}</button>
   </section>
 
   <div className="employee-home-quick">{quick.map(item=><Link href={item.href} key={item.href}><span>{item.icon}</span><div><strong>{item.title}</strong><small>{item.sub}</small></div><ChevronRight size={17}/></Link>)}</div>
 
   <div className="employee-home-grid">
-   <section className="employee-home-card"><div className="employee-home-card-head"><div><small>ATTENDANCE</small><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=><div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'} → {r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'}</small></span><Badge value={r.firstIn&&!r.lastOut?'WORKING':r.status}/></div>)}</div>:<Empty title="No attendance yet" description="Your attendance will appear here after the first Face Scan."/>}</section>
+   <section className="employee-home-card"><div className="employee-home-card-head"><div><small>ATTENDANCE</small><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=>{const isToday=String(r.date).slice(0,10)===today;return <div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'—'} → {isToday&&working?'Working':r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'—'}</small></span><Badge value={isToday&&working?'WORKING':r.firstIn&&!r.lastOut?'WORKING':r.status}/></div>})}</div>:<Empty title="No attendance yet" description="Your attendance will appear here after the first Face Scan."/>}</section>
    <section className="employee-home-card"><div className="employee-home-card-head"><div><small>YOUR DAY</small><h2>What’s next</h2></div></div><div className="employee-home-next"><div><span><CalendarDays size={18}/></span><div><strong>{approvedUpcoming.length?'Approved time off':'No upcoming leave'}</strong><small>{approvedUpcoming.length?displayDate(approvedUpcoming[0].startDate):'You are scheduled to work normally.'}</small></div></div><div><span><Wallet size={18}/></span><div><strong>{payslip?currencyValue(payslip.net,currency):'Payslip not available'}</strong><small>{payslip?.run?.month?'Latest locked payslip · '+payslip.run.month:'Locked payslips will appear here.'}</small></div></div><div><span><CalendarDays size={18}/></span><div><strong>{events[0]?.title??'No company event'}</strong><small>{events[0]?.date?displayDate(events[0].date):'Nothing upcoming on the company calendar.'}</small></div></div></div></section>
   </div>
 

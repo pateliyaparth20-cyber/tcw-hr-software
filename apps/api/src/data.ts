@@ -58,7 +58,7 @@ export class DataService {
     const tid=tenant(ctx),scope=await employeeScope(this.db,ctx),employeeSelf=ctx.user.role.code==='EMPLOYEE';
     const employeeWhere={tenantId:tid,deletedAt:null,...(scope?{id:{in:scope}}:{})};
     const owned={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
-    const [company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications]=await Promise.all([
+    const [company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunch]=await Promise.all([
       this.db.tenant.findUnique({where:{id:tid}}),
       this.db.employee.findMany({where:employeeWhere,select:{id:true,firstName:true,lastName:true,photo:true,departmentId:true,designation:true,status:true,joiningDate:true,monthlySalary:hasPermission(ctx.user.role.permissions,'payroll','VIEW')}}),
       hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendanceDaily.findMany({where:{...owned,date:{gte:new Date(Date.now()-7*86400000)}},orderBy:{date:'asc'}}):[],
@@ -70,8 +70,9 @@ export class DataService {
       hasPermission(ctx.user.role.permissions,'payroll','VIEW')?(employeeSelf&&ctx.user.employeeId?this.db.payrollItem.findFirst({where:{tenantId:tid,employeeId:ctx.user.employeeId,run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true}}},orderBy:{createdAt:'desc'}}):this.db.payrollRun.findFirst({where:{tenantId:tid},orderBy:{month:'desc'}})):null,
       hasPermission(ctx.user.role.permissions,'devices','VIEW')?this.db.attendanceDevice.findMany({where:{tenantId:tid},select:{id:true,name:true,status:true,lastSeenAt:true}}):[],
       !employeeSelf&&hasPermission(ctx.user.role.permissions,'support','VIEW')?this.db.supportTicket.findMany({where:{tenantId:tid,status:{not:'RESOLVED'}},orderBy:{updatedAt:'desc'},take:8}):[],
-      this.db.notification.count({where:{tenantId:tid,readAt:null,OR:[{userId:ctx.user.id},{userId:null}]}})]);
-    return {company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications};
+      this.db.notification.count({where:{tenantId:tid,readAt:null,OR:[{userId:ctx.user.id},{userId:null}]}}),
+      employeeSelf&&ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendancePunch.findFirst({where:{tenantId:tid,employeeId:ctx.user.employeeId},orderBy:{punchTime:'desc'},select:{id:true,punchType:true,punchTime:true,verificationType:true}}):null]);
+    return {company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunch};
   }
   async company(ctx:Context,body?:unknown){
     const tid=tenant(ctx);requirePermission(ctx,'company',body?'EDIT':'VIEW');
