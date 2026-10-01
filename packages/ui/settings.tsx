@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye,Check,Bell,Trash2,Sparkles,KeyRound,RefreshCw,Search,Clock3,AlertTriangle,Building2,UserCircle} from 'lucide-react';
+import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye,Check,Bell,Trash2,Sparkles,KeyRound,RefreshCw,Search,Clock3,AlertTriangle,Building2,UserCircle,UserRound,Mail,IdCard} from 'lucide-react';
 import {useApp,useData,api,PageTitle,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,notificationTarget,displayDate,currencyValue} from './core';
 import {Row,Field,readable} from './config';
 export function SoftwareUpdatePage(){
@@ -110,12 +110,12 @@ export function MyProfilePage(){
     <form onSubmit={save} className="my-profile-form">
      <ProfilePhotoEditor value={form.avatar} name={form.name||user.name} onChange={avatar=>setForm(v=>({...v,avatar}))} notify={notify} showPreview={false}/>
      <div className="platform-profile-fields">
-      <label><span>Full name</span><input required value={form.name??''} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>
-      <label><span>Email address</span><input type="email" required value={form.email??''} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></label>
-      <label><span>User ID</span><input value={user.loginId??''} readOnly/></label>
-      <label><span>Role</span><input value={user.role==='COMPANY_OWNER'?'HR Admin':(user.roleName??'')} readOnly/></label>
+      <label><span>Full name</span><div className="profile-field-control"><UserRound size={19}/><input required value={form.name??''} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></div></label>
+      <label><span>Email address</span><div className="profile-field-control"><Mail size={19}/><input type="email" required value={form.email??''} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></div></label>
+      <label><span>User ID</span><div className="profile-field-control readonly"><IdCard size={19}/><input value={user.loginId??''} readOnly/></div></label>
+      <label><span>Role</span><div className="profile-field-control readonly"><ShieldCheck size={19}/><input value={user.role==='COMPANY_OWNER'?'HR Admin':(user.roleName??'')} readOnly/></div></label>
      </div>
-     <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile'}</button></div>
+     <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile changes'}</button></div>
     </form>
     {user.role==='EMPLOYEE'&&employee&&<section className="employee-profile-details">
      <div className="employee-profile-details-head"><div><small>EMPLOYEE INFORMATION</small><h3>Your work profile</h3><p>Employment details are maintained by your HR team.</p></div><Badge value={employee.status??'ACTIVE'}/></div>
