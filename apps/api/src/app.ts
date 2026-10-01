@@ -240,6 +240,7 @@ export class Api {
     }
     if(resource==='dashboard'&&method==='GET')return this.data.dashboard(ctx);
     if(resource==='support'&&key&&action==='messages')return this.data.supportMessages(ctx,key,method,body);
+    if(resource==='company'&&key==='payout-settings')return this.payouts.settings(ctx,method,body);
     if(resource==='company'&&key==='branding'&&method==='GET'){
       const tid=tenant(ctx);
       const company=await this.db.tenant.findUnique({where:{id:tid},select:{id:true,name:true,code:true,logo:true,status:true,expiresAt:true,timezone:true,profile:true}});
