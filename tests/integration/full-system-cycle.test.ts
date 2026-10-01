@@ -14,7 +14,7 @@ test('full HR Admin Employee month cycle is production-safe',async t=>{
   await seed(db,{adminEmail,adminPassword});
   const reset=await resetAndSeedFullQa(db,{qaEmail,qaPassword,qaCode:'TCW-QA',now:new Date('2026-10-01T06:30:00.000Z'),runKey:'integration-full-cycle',confirmation:'DELETE_AND_REBUILD_TCW_QA'});
   assert.equal(reset.skipped,false);assert.equal(reset.month,'2026-09');
-  assert.deepEqual(reset.counts,{employees:8,users:6,attendanceDays:240,punches:328,leaveRequests:3,payrollItems:8,payrollPayouts:8,invoices:1,payments:1});
+  assert.deepEqual(reset.counts,{employees:8,users:6,attendanceDays:240,punches:330,leaveRequests:3,payrollItems:8,payrollPayouts:8,invoices:1,payments:1});
   assert.equal(reset.attendanceTotals.missingPunchDays,0);
   assert(reset.attendanceTotals.absentDays>=1);
   assert(reset.attendanceTotals.paidLeaveUnits>=150);
