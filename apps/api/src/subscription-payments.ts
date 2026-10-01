@@ -171,7 +171,8 @@ export async function completeSubscriptionPayment(db:Database,args:{invoiceId:st
     if(args.amount!==invoice.total)throw new ConflictException('Verified payment amount does not match the invoice total.');
     const existing=await tx.payment.findUnique({where:{reference:args.reference}});
     if(invoice.status==='PAID'||invoice.paidAmount>=invoice.total){
-      return {alreadyPaid:true,invoice,tenantId:invoice.tenantId,payment:existing};
+      if(existing&&existing.invoiceId===invoice.id)return {alreadyPaid:true,invoice,tenantId:invoice.tenantId,payment:existing};
+      throw new ConflictException('Invoice is already paid.');
     }
     if(existing&&existing.invoiceId!==invoice.id)throw new ConflictException('Payment reference is already linked to another invoice.');
     const payment=existing??await tx.payment.create({data:{tenantId:invoice.tenantId,invoiceId:invoice.id,amount:invoice.total,reference:args.reference,date:new Date(now.toISOString().slice(0,10))}});
