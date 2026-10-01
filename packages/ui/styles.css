@@ -11338,3 +11338,270 @@ input[type="month"]{
  .stats,.stats.four,.support-stats{grid-template-columns:1fr!important}
  .mobile-unified-user>.digital-clock{display:none}
 }
+
+
+/* Sales-ready product polish — unified desktop + Android/mobile experience */
+.password-input-shell{
+  position:relative;
+  display:block;
+  width:100%;
+}
+.password-input-shell>input{
+  width:100%;
+  padding-right:48px!important;
+}
+.password-visibility{
+  position:absolute;
+  top:50%;
+  right:7px;
+  transform:translateY(-50%);
+  width:36px;
+  height:36px;
+  border:0;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  background:transparent;
+  color:#6d8298;
+  cursor:pointer;
+}
+.password-visibility:hover,.password-visibility:focus-visible{
+  background:#edf4fb;
+  color:var(--primary,#3474ef);
+  outline:none;
+}
+.hr-welcome-card,.platform-hero{
+  overflow:hidden;
+  border:1px solid rgba(210,221,234,.8)!important;
+  background:
+    radial-gradient(circle at 90% 10%,color-mix(in srgb,var(--primary,#3474ef) 15%,transparent),transparent 25rem),
+    linear-gradient(135deg,#ffffff 0%,#f8fbff 62%,#f2f7ff 100%)!important;
+  box-shadow:0 18px 46px rgba(29,62,94,.08)!important;
+}
+.hr-welcome-copy h1,.platform-hero h1{
+  letter-spacing:-.035em;
+}
+.hr-welcome-kicker,.hero-kicker{
+  letter-spacing:.12em!important;
+}
+.digital-clock{
+  min-width:142px;
+  padding:10px 13px;
+  border:1px solid rgba(200,214,229,.85);
+  border-radius:14px;
+  background:rgba(255,255,255,.82);
+  box-shadow:0 7px 20px rgba(32,60,88,.06);
+}
+.digital-clock>span{font-size:.67rem!important;color:#8192a4!important;text-transform:uppercase;letter-spacing:.06em}
+.digital-clock>strong{font-size:1.14rem!important;color:#27445f!important;letter-spacing:-.02em}
+.digital-kpi-card{
+  border:0!important;
+  border-radius:20px!important;
+  box-shadow:0 10px 28px rgba(24,53,81,.065)!important;
+}
+.digital-panel,.digital-lower-grid>.panel{
+  border:0!important;
+  border-radius:20px!important;
+  box-shadow:0 10px 30px rgba(24,53,81,.06)!important;
+}
+.mobile-unified-hero{
+  border-radius:0 0 28px 28px!important;
+  padding:18px 16px 22px!important;
+  box-shadow:0 16px 32px rgba(27,56,87,.12)!important;
+}
+.mobile-unified-user{
+  align-items:center!important;
+}
+.mobile-unified-user>.digital-clock{
+  margin-left:auto;
+  min-width:112px;
+  padding:7px 9px;
+  border-color:rgba(255,255,255,.2);
+  background:rgba(255,255,255,.13);
+  box-shadow:none;
+}
+.mobile-unified-user>.digital-clock>span,
+.mobile-unified-user>.digital-clock>strong{color:#fff!important}
+.mobile-unified-user>.digital-clock>span{font-size:.55rem!important;opacity:.78}
+.mobile-unified-user>.digital-clock>strong{font-size:.92rem!important}
+.mobile-app-welcome{
+  margin-top:12px!important;
+  border:0!important;
+  border-radius:18px!important;
+  background:linear-gradient(135deg,#fff,#f5f9ff)!important;
+  box-shadow:0 7px 20px rgba(28,58,86,.055)!important;
+}
+.mobile-app-welcome small{color:var(--primary,#3474ef)!important;letter-spacing:.1em!important}
+.mobile-app-stats>div,
+.mobile-quick-action,
+.mobile-app-section{
+  border:0!important;
+  box-shadow:0 7px 20px rgba(28,58,86,.05)!important;
+}
+.mobile-quick-action{
+  min-height:104px!important;
+  border-radius:18px!important;
+}
+.mobile-update-row{
+  min-height:62px;
+}
+.auth-pro-card{
+  border-radius:24px!important;
+  box-shadow:0 28px 80px rgba(20,42,68,.15)!important;
+}
+.auth-pro-form input,.auth-pro-form select{
+  min-height:50px!important;
+  border-radius:13px!important;
+}
+.auth-pro-submit{
+  min-height:50px!important;
+  border-radius:13px!important;
+}
+.record-form input,.record-form select,.record-form textarea,
+.toolbar input,.toolbar select,.support-toolbar input,.support-toolbar select{
+  min-width:0;
+}
+.table-scroll{
+  width:100%;
+  max-width:100%;
+  overscroll-behavior-inline:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.modal{
+  max-width:min(760px,calc(100vw - 24px))!important;
+}
+.modal.wide{
+  max-width:min(1040px,calc(100vw - 24px))!important;
+}
+.panel,.record-card,.stat,.support-ticket{
+  min-width:0;
+}
+.panel-heading,.row-between,.toolbar,.support-toolbar,.page-title{
+  min-width:0;
+}
+.panel-heading>*,.row-between>*,.toolbar>*,.support-toolbar>*,.page-title>*{
+  min-width:0;
+}
+.support-ticket h3,.support-ticket p,.card-fact strong,.profile-grid strong{
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:820px){
+  html,body{max-width:100%;overflow-x:hidden}
+  .workspace-main{
+    padding:14px 10px calc(84px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .page-stage{min-width:0!important}
+  .page-title{
+    align-items:flex-start!important;
+    gap:12px!important;
+  }
+  .page-title h1{font-size:1.35rem!important;line-height:1.16!important}
+  .page-title p{font-size:.78rem!important;line-height:1.5!important}
+  .title-actions{
+    width:100%;
+    flex-wrap:wrap;
+  }
+  .title-actions>.btn{flex:1 1 auto;min-height:44px}
+  .panel,.stat,.record-card,.support-ticket{
+    border-radius:18px!important;
+  }
+  .toolbar,.support-toolbar{
+    align-items:stretch!important;
+    flex-direction:column!important;
+    gap:10px!important;
+  }
+  .toolbar-actions{
+    width:100%;
+    display:grid!important;
+    grid-template-columns:1fr 1fr;
+    gap:8px!important;
+  }
+  .toolbar-actions>*{width:100%!important;min-width:0!important}
+  .search-field,.support-search{
+    width:100%!important;
+    min-width:0!important;
+  }
+  .record-form>.form-grid{
+    grid-template-columns:1fr!important;
+  }
+  .record-form .field.span-two,.payment-settings-grid .span-two{
+    grid-column:1!important;
+  }
+  .record-form .field input,
+  .record-form .field select,
+  .record-form .field textarea{
+    min-height:48px!important;
+    font-size:16px!important;
+  }
+  .modal,.modal.wide{
+    width:calc(100vw - 12px)!important;
+    max-width:none!important;
+    max-height:calc(100dvh - 12px)!important;
+    border-radius:20px!important;
+  }
+  .modal-head{
+    position:sticky;
+    top:0;
+    z-index:3;
+    background:#fff;
+  }
+  .form-actions-end,.form-footer{
+    position:sticky;
+    bottom:0;
+    z-index:3;
+    background:#fff!important;
+    padding-bottom:max(12px,env(safe-area-inset-bottom,0px))!important;
+  }
+  .btn,.icon-button,.text-button,
+  .employee-app-bottom-nav a,.employee-app-bottom-nav button,
+  .mobile-bottom-nav a,.mobile-bottom-nav button{
+    min-height:44px;
+  }
+  .employee-app-bottom-nav,.mobile-bottom-nav{
+    padding-bottom:max(6px,env(safe-area-inset-bottom,0px))!important;
+    box-shadow:0 -10px 28px rgba(23,48,73,.09)!important;
+  }
+  .employee-more-sheet{
+    padding-bottom:max(18px,env(safe-area-inset-bottom,0px))!important;
+  }
+  .hr-mobile-dashboard,.platform-mobile-dashboard{
+    margin:-14px -10px 0!important;
+  }
+  .mobile-app-section,.mobile-app-stats{
+    margin-left:10px!important;
+    margin-right:10px!important;
+  }
+  .mobile-app-stats{
+    gap:8px!important;
+  }
+  .mobile-app-stats>div{
+    min-width:0;
+    border-radius:17px!important;
+  }
+  .mobile-quick-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  .mobile-quick-action{
+    min-width:0!important;
+    padding:12px 8px!important;
+  }
+  .mobile-quick-action strong{font-size:.72rem!important}
+  .mobile-quick-action small{font-size:.62rem!important}
+  .payment-success-screen{width:100%!important}
+  .payroll-v2-actions{display:grid!important;grid-template-columns:1fr 1fr!important}
+  .payroll-v2-actions .btn{width:100%!important}
+}
+@media(max-width:520px){
+  .mobile-unified-user>.digital-clock{min-width:104px}
+  .mobile-app-stats{grid-template-columns:1fr 1fr!important}
+  .mobile-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .toolbar-actions{grid-template-columns:1fr!important}
+  .payroll-v2-actions{grid-template-columns:1fr!important}
+  .auth-pro-main{padding:14px!important}
+  .auth-pro-card{padding:18px 14px!important;border-radius:20px!important}
+  .auth-pro-head{gap:8px!important}
+  .auth-pro-head>*{min-width:0}
+  .password-visibility{width:40px;height:40px;right:4px}
+}
