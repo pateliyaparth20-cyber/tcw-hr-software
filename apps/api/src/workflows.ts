@@ -5,6 +5,7 @@ import type {Database} from '../../../packages/database';
 import {id,date,leaveSchema} from '../../../packages/validation';
 import {attendancePayableUnits,calculateAttendance,localDate,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
 import {calculatePay,assertPayrollTransition} from '../../../packages/payroll-engine';
+import {hasPermission} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,unlockAttendanceMonth} from './attendance-automation';
 import {sendPush} from './push';
@@ -13,6 +14,24 @@ import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-pr
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
 export class Workflows {
   constructor(public db:Database){}
+  private async closeOpenWorkForApprovedFullDayLeave(ctx:Context,row:any){
+    if(!row||Number(row.days)===0.5)return;
+    const tid=tenant(ctx),shift=await employeeShift(this.db,tid,row.employeeId),now=new Date(),night=shift.endMinute<=shift.startMinute;
+    let workDay=localDate(now,shift.timezone);
+    if(night&&now<zonedMinute(workDay,shift.endMinute,shift.timezone))workDay=new Date(Date.parse(workDay)-86400000).toISOString().slice(0,10);
+    const leaveStart=new Date(row.startDate).toISOString().slice(0,10),leaveEnd=new Date(row.endDate).toISOString().slice(0,10);
+    if(workDay<leaveStart||workDay>leaveEnd)return;
+    const start=zonedMinute(workDay,night?shift.startMinute-120:0,shift.timezone),end=zonedMinute(workDay,night?1440+shift.endMinute+120:1440,shift.timezone);
+    await this.db.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT id FROM employees WHERE id = ${row.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+      const last=await tx.attendancePunch.findFirst({where:{tenantId:tid,employeeId:row.employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'desc'}});
+      if(!last||last.punchType!=='IN')return;
+      const sourceId=`leave-${row.id}-auto-out`;
+      const existing=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});if(existing)return;
+      const out=await tx.attendancePunch.create({data:{tenantId:tid,employeeId:row.employeeId,sourceId,punchTime:now,punchType:'OUT',verificationType:'HR_LEAVE',processedAt:now,rawPayload:{source:'LEAVE_APPROVAL',leaveId:row.id,actorId:ctx.user.id,administrative:true}}});
+      await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT','attendance',out.id,last,{leaveId:row.id,employeeId:row.employeeId,punchTime:now});
+    });
+  }
   async attendance(ctx:Context,method:string,body:any,query:any={},recordId?:string,action?:string){
     const tid=tenant(ctx);const scope=await employeeScope(this.db,ctx);
     if(recordId==='face-profile'){
@@ -136,7 +155,8 @@ export class Workflows {
     const scope=await employeeScope(this.db,ctx);
     if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500})};}
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
-    return this.db.$transaction(async tx=>{
+    const autoApprove=ctx.user.role.code!=='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'leave','APPROVE');
+    const after=await this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing)return existing;}
       const leaveType=await tx.leaveType.findFirst({where:{id:input.leaveTypeId,tenantId:tid}});if(!leaveType)throw new BadRequestException('Leave type not found.');
@@ -154,9 +174,16 @@ export class Workflows {
       const used=await tx.leaveRequest.aggregate({where:{tenantId:tid,employeeId:input.employeeId,leaveTypeId:input.leaveTypeId,status:{in:['PENDING','APPROVED']},startDate:{gte:new Date(`${year}-01-01`),lt:new Date(`${year+1}-01-01`)}},_sum:{days:true}});
       if(Number(used._sum.days??0)+days>Number(leaveType.annualDays))throw new BadRequestException('The request exceeds the annual leave allowance.');
       const {halfDay,...values}=input;
-      const after=await tx.leaveRequest.create({data:{tenantId:tid,...values,days}});
-      await audit(tx,ctx,'LEAVE_REQUESTED','leave',after.id,undefined,after);return after;
+      const created=await tx.leaveRequest.create({data:{tenantId:tid,...values,days,...(autoApprove?{status:'APPROVED',reviewerId:ctx.user.id,reviewNote:'Assigned by HR'}:{})}});
+      await audit(tx,ctx,autoApprove?'LEAVE_ASSIGNED':'LEAVE_REQUESTED','leave',created.id,undefined,created);return created;
     });
+    if(autoApprove&&after.status==='APPROVED'){
+      await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
+      for(const month of monthsCovered(after.startDate,after.endDate))await reconcileAttendanceMonth(this.db,tid,month);
+      const user=await this.db.user.findFirst({where:{tenantId:tid,employeeId:after.employeeId}});
+      if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave assigned',message:'HR assigned approved leave to your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
+    }
+    return after;
   }
   async review(ctx:Context,type:string,recordId:string,body:any){
     const models:Record<string,string>={leave:'leaveRequest',expenses:'expenseClaim',travel:'travelRequest'};const model=models[type];if(!model)throw new NotFoundException();const tid=tenant(ctx);
@@ -169,7 +196,10 @@ export class Workflows {
       const result=await table.updateMany({where:{id:recordId,tenantId:tid,status:'PENDING'},data});if(result.count!==1)throw new ConflictException('This request has already been reviewed.');
       await audit(tx,ctx,`${type.toUpperCase()}_${input.decision}`,type,recordId,before,data);const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:before.employeeId}});if(user){const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:`${type} ${input.decision.toLowerCase()}`,message:'Your request has been reviewed.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:type==='leave'?'/leave':'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});}return table.findUnique({where:{id:recordId}});
     });
-    if(type==='leave'&&input.decision==='APPROVED')for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
+    if(type==='leave'&&input.decision==='APPROVED'){
+      await this.closeOpenWorkForApprovedFullDayLeave(ctx,reviewed);
+      for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
+    }
     return reviewed;
   }
   async payroll(ctx:Context,method:string,recordId?:string,action?:string,body:any={}){
