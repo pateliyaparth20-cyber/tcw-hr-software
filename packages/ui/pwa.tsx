@@ -115,8 +115,19 @@ export function PwaClient(){
       }else{
         navigator.serviceWorker.register('/sw.js').then(registration=>{
           if(Notification.permission==='granted')syncPushSubscription().catch(()=>{});
-          registration.update().catch(()=>{});
-
+          // Production updates are intentionally manual. Do not call registration.update()
+          // here: Software update is the only place allowed to fetch/activate a new worker.
+          try{
+            const installed=window.localStorage.getItem('tcw_loaded_deployment_version');
+            if(!installed)fetch('/api/version',{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache'}}).then(r=>r.ok?r.json():null).then(version=>{
+              if(!version?.version)return;
+              try{
+                window.localStorage.setItem('tcw_loaded_deployment_version',String(version.version));
+                window.localStorage.setItem('tcw_last_deployment_version',String(version.version));
+                window.localStorage.setItem('tcw_loaded_release_version',String(version.release??''));
+              }catch{}
+            }).catch(()=>{});
+          }catch{}
         }).catch(()=>{});
       }
     }
