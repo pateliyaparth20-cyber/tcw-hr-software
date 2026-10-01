@@ -76,13 +76,14 @@ async function razorpayXRequest(cfg:PayoutConfig,path:string,init:RequestInit={}
 async function ensureRazorpayFundAccount(db:Database,cfg:PayoutConfig,employee:any){
   const personal=object(employee.personal),accountNumber=String(personal.accountNumber??'').trim(),ifsc=String(personal.ifsc??'').trim().toUpperCase(),accountHolder=String(personal.accountHolder??`${employee.firstName} ${employee.lastName}`).trim();
   if(!accountNumber||!ifsc)throw new BadRequestException(`Bank account number and IFSC are required for ${employee.employeeCode}.`);
-  const fingerprint=createHash('sha256').update([accountNumber,ifsc,accountHolder].join('|')).digest('hex');
-  if(personal.razorpayFundAccountId&&personal.razorpayBankFingerprint===fingerprint)return String(personal.razorpayFundAccountId);
+  const fingerprint=createHash('sha256').update([accountNumber,ifsc,accountHolder].join('|')).digest('hex'),mappingKey=`payout-beneficiary:${employee.tenantId}:${employee.id}`;
+  const cached=object((await db.platformSetting.findUnique({where:{key:mappingKey}}))?.value);
+  if(cached.fundAccountId&&cached.bankFingerprint===fingerprint)return String(cached.fundAccountId);
   const contact=await razorpayXRequest(cfg,'/v1/contacts',{method:'POST',body:JSON.stringify({name:`${employee.firstName} ${employee.lastName}`.slice(0,50),email:employee.email||undefined,contact:employee.phone||undefined,type:'employee',reference_id:`EMP-${employee.id.slice(0,24)}`})});
   if(!contact?.id)throw new ServiceUnavailableException('RazorpayX did not return an employee contact ID.');
   const fund=await razorpayXRequest(cfg,'/v1/fund_accounts',{method:'POST',body:JSON.stringify({contact_id:contact.id,account_type:'bank_account',bank_account:{name:accountHolder,ifsc,account_number:accountNumber}})});
   if(!fund?.id)throw new ServiceUnavailableException('RazorpayX did not return an employee fund account ID.');
-  await db.employee.update({where:{id:employee.id},data:{personal:{...personal,razorpayContactId:String(contact.id),razorpayFundAccountId:String(fund.id),razorpayBankFingerprint:fingerprint}}});
+  await db.platformSetting.upsert({where:{key:mappingKey},create:{key:mappingKey,value:{contactId:String(contact.id),fundAccountId:String(fund.id),bankFingerprint:fingerprint}},update:{value:{contactId:String(contact.id),fundAccountId:String(fund.id),bankFingerprint:fingerprint}}});
   return String(fund.id);
 }
 async function razorpayPayout(db:Database,cfg:PayoutConfig,payoutId:string,employee:any,amount:number,month:string,mode:string){
