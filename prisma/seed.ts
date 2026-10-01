@@ -5,6 +5,19 @@ import {hashPassword} from '../packages/auth';
 import {roleDefinitions} from '../packages/permissions';
 import {zonedMinute,localDate} from '../packages/attendance-engine';
 import {resetAndSeedFullQa} from './qa-full-reset';
+export async function resetQaUserPasswords(database:PrismaClient,options:{companyCode:string;password:string}){
+  const companyCode=options.companyCode.trim().toUpperCase(),password=options.password;
+  if(password.length<12||password.includes('GENERATE_'))throw new Error('Set a QA password of at least 12 characters.');
+  const tenant=await database.tenant.findUnique({where:{code:companyCode}});
+  if(!tenant||tenant.status==='ARCHIVED')throw new Error('Active QA workspace not found.');
+  const passwordHash=await hashPassword(password);
+  return database.$transaction(async tx=>{
+    const users=await tx.user.updateMany({where:{tenantId:tenant.id},data:{passwordHash,mustChangePassword:false,active:true}});
+    await tx.session.deleteMany({where:{tenantId:tenant.id}});
+    await tx.auditLog.create({data:{tenantId:tenant.id,action:'QA_PASSWORDS_RESET',entity:'users',entityId:tenant.id,after:{users:users.count}}});
+    return {companyCode:tenant.code,users:users.count};
+  });
+}
 export async function seed(database:PrismaClient,options:{adminEmail:string;adminPassword:string;ownerEmail?:string;ownerPassword?:string;demo?:boolean;companyCode?:string}){
   if(options.adminPassword.length<12||options.adminPassword.includes('GENERATE_'))throw new Error('Set a random ADMIN_PASSWORD of at least 12 characters.');
   for(const role of roleDefinitions)await database.role.upsert({where:{code:role.code},create:role,update:role});
@@ -78,6 +91,14 @@ if(require.main===module){
       console.log('QA workspace ready:',qaCode,`loginId=${updatedQaUser.loginId}`);
     }else if(process.env.OWNER_EMAIL&&process.env.OWNER_PASSWORD){
       await seed(db,{adminEmail,adminPassword,ownerEmail:process.env.OWNER_EMAIL,ownerPassword:process.env.OWNER_PASSWORD,companyCode:process.env.DEMO_COMPANY_CODE,demo:process.env.SEED_DEMO==='true'});
+    }
+    if(process.env.TCW_QA_PASSWORD_RESET_ON_BOOT==='true'){
+      const service=String(process.env.RAILWAY_SERVICE_NAME??'').trim();
+      if(service&&service!=='tcw-hr-software')throw new Error('TCW_QA_PASSWORD_RESET_ON_BOOT may run only on the tcw-hr-software Railway service.');
+      const qaPassword=process.env.QA_OWNER_PASSWORD?.trim(),qaCode=(process.env.QA_COMPANY_CODE??'TCW-QA').trim().toUpperCase();
+      if(!qaPassword)throw new Error('QA password reset requires QA_OWNER_PASSWORD.');
+      const result=await resetQaUserPasswords(db,{companyCode:qaCode,password:qaPassword});
+      console.log('QA PASSWORD RESET COMPLETE:',JSON.stringify(result));
     }
     console.log('Bootstrap complete. Existing platform credentials were preserved.');
   })().catch(e=>{console.error(e.message);process.exitCode=1}).finally(()=>db.$disconnect());
