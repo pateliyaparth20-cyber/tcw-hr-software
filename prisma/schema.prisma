@@ -297,6 +297,8 @@ model Shift {
   earlyOutGraceMinutes Int      @default(10) @map("early_out_grace_minutes")
   workingDays          String   @default("1,2,3,4,5") @map("working_days")
   breakMinutes         Int      @default(60)
+  breakStartMinute     Int?     @map("break_start_minute")
+  breakEndMinute       Int?     @map("break_end_minute")
   fullDayMinutes       Int      @default(480)
   halfDayMinutes       Int      @default(240)
   overtimeAfterMinutes Int      @default(480)

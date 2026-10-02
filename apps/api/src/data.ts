@@ -58,7 +58,7 @@ export class DataService {
     const tid=tenant(ctx),scope=await employeeScope(this.db,ctx),employeeSelf=ctx.user.role.code==='EMPLOYEE';
     const employeeWhere={tenantId:tid,deletedAt:null,...(scope?{id:{in:scope}}:{})};
     const owned={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
-    const [company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunch]=await Promise.all([
+    const [company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunchRows]=await Promise.all([
       this.db.tenant.findUnique({where:{id:tid}}),
       this.db.employee.findMany({where:employeeWhere,select:{id:true,firstName:true,lastName:true,photo:true,departmentId:true,designation:true,status:true,joiningDate:true,monthlySalary:hasPermission(ctx.user.role.permissions,'payroll','VIEW')}}),
       hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendanceDaily.findMany({where:{...owned,date:{gte:new Date(Date.now()-7*86400000)}},orderBy:{date:'asc'}}):[],
@@ -71,7 +71,8 @@ export class DataService {
       hasPermission(ctx.user.role.permissions,'devices','VIEW')?this.db.attendanceDevice.findMany({where:{tenantId:tid},select:{id:true,name:true,status:true,lastSeenAt:true}}):[],
       !employeeSelf&&hasPermission(ctx.user.role.permissions,'support','VIEW')?this.db.supportTicket.findMany({where:{tenantId:tid,status:{not:'RESOLVED'}},orderBy:{updatedAt:'desc'},take:8}):[],
       this.db.notification.count({where:{tenantId:tid,readAt:null,OR:[{userId:ctx.user.id},{userId:null}]}}),
-      employeeSelf&&ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendancePunch.findFirst({where:{tenantId:tid,employeeId:ctx.user.employeeId},orderBy:{punchTime:'desc'},select:{id:true,punchType:true,punchTime:true,verificationType:true}}):null]);
+      employeeSelf&&ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendancePunch.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId},orderBy:{punchTime:'desc'},take:100,select:{id:true,punchType:true,punchTime:true,verificationType:true,rawPayload:true}}):[]]);
+    const explicitMobile=(latestPunchRows as any[]).find(p=>p.verificationType==='FACE_SCAN'&&['IN','OUT'].includes(String(p.rawPayload?.intent??''))),latestRaw=explicitMobile??(latestPunchRows as any[])[0]??null,latestPunch=latestRaw?{id:latestRaw.id,punchType:latestRaw.punchType,punchTime:latestRaw.punchTime,verificationType:latestRaw.verificationType}:null;
     return {company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunch};
   }
   async company(ctx:Context,body?:unknown){
