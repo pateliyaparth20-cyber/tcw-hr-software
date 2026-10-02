@@ -11959,3 +11959,9 @@ input[type="month"]{
 /* Attendance status filter */
 .attendance-status-filter{display:flex;flex-direction:column;gap:5px;min-width:150px;font-size:.62rem;font-weight:800;color:#718096}.attendance-status-filter select{height:38px;border:1px solid #dfe7f1;border-radius:10px;background:#fff;padding:0 34px 0 11px;color:#243b57;outline:none}.attendance-status-filter select:focus{border-color:#8fb3f5;box-shadow:0 0 0 3px rgba(52,116,239,.08)}
 @media(max-width:760px){.attendance-status-filter{min-width:0;width:100%}}
+
+/* Attendance plain employee search + light status */
+.attendance-name-search{display:flex;flex-direction:column;gap:5px;min-width:240px;color:#718096;font-size:.62rem;font-weight:800}.attendance-name-search .search-field{max-width:none;height:38px;border-radius:10px;background:#fff;border-color:#dfe7f1}.attendance-name-search .search-field input{font-size:.76rem;color:#243b57}.attendance-status-filter select{color-scheme:light!important;background:#fff!important;color:#243b57!important;border-color:#dfe7f1!important}.attendance-status-filter select option{background:#fff!important;color:#243b57!important}
+/* 12-hour clock field */
+.time12-field{position:relative;min-height:39px;width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid #dce3ee;border-radius:8px;background:#fff;color:#536783;cursor:pointer;user-select:none}.time12-field:hover{border-color:#b9c8da}.time12-field:focus{outline:3px solid #91b5fc;outline-offset:2px}.time12-field>svg{color:#7f94ad}.time12-field>span{font-variant-numeric:tabular-nums}.time12-field input[type=time]{position:absolute;inset:0;width:100%;height:100%;opacity:.001;cursor:pointer;color-scheme:light}
+@media(max-width:760px){.attendance-name-search{min-width:0;width:100%}.time12-field{min-height:46px}}
