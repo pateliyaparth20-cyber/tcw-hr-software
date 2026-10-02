@@ -112,7 +112,7 @@ export function CalendarPage(){
   if(eventKind==='APPRAISAL')return <Check size={size}/>;
   return <UserCheck size={size}/>;
  };
- const indianFestivals=(year:number):Row[]=>{const fixed=[['01-01','New Year'],['01-14','Makar Sankranti'],['01-26','Republic Day'],['08-15','Independence Day'],['10-02','Gandhi Jayanti'],['12-25','Christmas']];return fixed.map(([md,title])=>({id:'festival-'+year+'-'+md,title,date:`${year}-${md}`,endDate:`${year}-${md}`,kind:'HOLIDAY',description:'Indian public/festival holiday'}))};
+ const indianFestivals=(year:number):Row[]=>{const fixed=[['01-01','New Year'],['01-14','Makar Sankranti'],['01-26','Republic Day'],['03-08','International Women’s Day'],['04-14','Dr. Ambedkar Jayanti'],['05-01','Gujarat Foundation Day'],['08-15','Independence Day'],['10-02','Gandhi Jayanti'],['10-31','Sardar Patel Jayanti'],['12-25','Christmas']];return fixed.map(([md,title])=>({id:'festival-'+year+'-'+md,title,date:`${year}-${md}`,endDate:`${year}-${md}`,kind:'HOLIDAY',description:'Indian public/festival holiday'}))};
  const displayRows=[...rows,...indianFestivals(qdate.getFullYear()).filter(f=>!rows.some(r=>eventStart(r)===eventStart(f)&&String(r.title).toLowerCase()===String(f.title).toLowerCase()))];
  const today=key(new Date()),filtered=displayRows.filter(r=>!kind||kind===r.kind),upcoming=filtered.filter(r=>eventEnd(r)>=today).sort((a,b)=>eventStart(a).localeCompare(eventStart(b))).slice(0,8);
  const startDate=new Date(qdate.getFullYear(),qdate.getMonth(),view==='month'?1:qdate.getDate());if(!['day','agenda'].includes(view))startDate.setDate(startDate.getDate()-(startDate.getDay()+6)%7);
