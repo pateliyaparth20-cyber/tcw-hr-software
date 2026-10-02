@@ -11744,3 +11744,16 @@ input[type="month"]{
  .hr-mobile-dashboard .mobile-app-stats>div{min-height:94px!important}
  .hr-mobile-dashboard .mobile-unified-logo{box-shadow:none!important}
 }
+
+
+/* Approved desktop login v2 — balanced premium composition */
+@media(min-width:951px){
+ .auth-pro-shell.auth-pro-tenant{grid-template-columns:minmax(540px,52%) minmax(500px,48%)!important;background:#f6faff!important}
+ .auth-pro-tenant .auth-pro-side{padding:42px 64px 34px!important;background:linear-gradient(145deg,#075fcb 0%,#087fe9 54%,#0751b9 100%)!important}
+ .auth-pro-tenant .auth-pro-brand{gap:13px!important}.auth-pro-tenant .auth-pro-logo{width:52px!important;height:52px!important;border-radius:14px!important;background:#fff!important;padding:5px!important;box-shadow:0 8px 22px rgba(0,40,110,.18)!important;overflow:hidden}.auth-pro-tenant .auth-pro-logo img{width:100%!important;height:100%!important;object-fit:contain!important}
+ .auth-pro-tenant .auth-pro-copy{margin-top:54px!important;max-width:600px!important}.auth-pro-tenant .auth-pro-copy h1{font-size:3.25rem!important;max-width:560px!important}.auth-pro-tenant .auth-pro-copy>p{font-size:1.02rem!important;max-width:570px!important}
+ .auth-pro-tenant .auth-pro-points{grid-template-columns:1fr 1fr!important;gap:12px!important}.auth-pro-tenant .auth-pro-points>span{min-height:72px!important;padding:12px 14px!important;border-radius:15px!important;background:rgba(255,255,255,.08)!important}
+ .auth-pro-tenant .auth-pro-dashboard-art{left:auto!important;right:-42px!important;bottom:-100px!important;width:520px!important;transform:rotate(-5deg)!important}
+ .auth-pro-tenant .auth-pro-main{padding:36px 7vw!important;background:radial-gradient(circle at 55% 42%,#fff 0,#f8fbff 48%,#edf5fc 100%)!important}
+ .auth-pro-tenant .auth-pro-card{width:min(100%,530px)!important;padding:34px 38px 28px!important;border-radius:24px!important;box-shadow:0 22px 60px rgba(38,75,112,.12)!important}
+}
