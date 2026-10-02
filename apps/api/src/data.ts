@@ -181,7 +181,7 @@ export class DataService {
     if(restrictedRoles.has(ctx.user.role.code)&&method!=='GET'&&!['expenses','travel'].includes(type))throw new ForbiddenException('This action requires an administrator.');
     const scope=cfg.employeeScoped?await employeeScope(this.db,ctx):null;
     const where:any={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
-    if(query.q){const q=String(query.q).trim().slice(0,100);if(q){const searchable=['name','title','code','location','email','subject','company','description','serialNumber','model'];const fields=searchable.filter(field=>field in cfg.schema.shape);if(fields.length)where.OR=fields.map(field=>({[field]:{contains:q,mode:'insensitive'}}));}}
+    if(query.q){const q=String(query.q).trim().slice(0,100);if(q){const searchable=['name','title','code','location','email','subject','company','description','serialNumber','model'];const schemaShape=(cfg.schema as any).shape??{};const fields=searchable.filter(field=>field in schemaShape);if(fields.length)where.OR=fields.map(field=>({[field]:{contains:q,mode:'insensitive'}}));}}
     if(type==='support'&&restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Contact your HR administrator for company support tickets.');
     if(recordId)where.id=id.parse(recordId);
     const model=(this.db as any)[cfg.model];
