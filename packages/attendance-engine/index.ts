@@ -19,7 +19,7 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   }
   const lateMinutes = firstIn ? Math.max(0,Math.floor((firstIn.getTime()-rule.shiftStart.getTime())/60000)-rule.graceMinutes) : 0;
   const earlyOutMinutes = lastOut && rule.shiftEnd ? Math.max(0,Math.floor((rule.shiftEnd.getTime()-lastOut.getTime())/60000)-(rule.earlyOutGraceMinutes??0)) : 0;
-  const status = open || anomaly ? 'MISSING_PUNCH' : workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'HALF_DAY' : 'ABSENT';
+  const status = open || anomaly ? 'MISSING_PUNCH' : firstIn && lastOut ? (workMinutes >= rule.halfDayMinutes ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : 'HALF_DAY') : 'PRESENT') : 'ABSENT';
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes: Math.max(0,workMinutes-rule.overtimeAfterMinutes),status};
 }
 /** UTC bounds for one local calendar day, including DST. */
