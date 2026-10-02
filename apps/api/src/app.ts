@@ -470,7 +470,7 @@ class RootController {
       if(e instanceof ZodError){status=400;message=e.issues.map(i=>`${i.path.join('.')||'Input'}: ${i.message}`).join('; ');}
       else if(e instanceof HttpException){status=e.getStatus();message=e.message;}
       else if(e.code==='P2002'){status=409;message='A record with these details already exists.';}
-      else if(e.code==='P2003'){status=409;message='This record is referenced by another record.';}
+      else if(e.code==='P2003'){status=409;message='Cannot delete this record because it is already being used by other data. Remove or reassign the linked records first; nothing has been deleted.';}
       else if(e.code==='P2025'){status=404;message='Record not found.';}
       else if(e.code==='P2034'){status=409;message='This record changed during your request. Refresh and retry.';}
       else if(e.code==='LIMIT_FILE_SIZE'){status=400;message='Maximum file size is 10 MB.';}
