@@ -6,8 +6,10 @@ import {hashPassword,verifyPassword} from '../../packages/auth';
 import {toCsv,toXlsx} from '../../packages/reporting-engine';
 import {ZktecoAdapter} from '../../packages/device-connectors/zkteco';
 import {normalizeZkAttLog,parseZkAttLog,biomaxLocalTimestamp} from '../../packages/device-connectors/biomax';
+import {shiftSchema} from '../../packages/validation';
 const t=(s:string)=>new Date('2026-09-21T'+s+':00Z');
 const rule={shiftStart:t('09:00'),graceMinutes:10,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
+test('shift validation accepts minute-level half full and overtime durations',()=>{const parsed=shiftSchema.parse({name:'Short Shift',startMinute:0,endMinute:90,graceMinutes:0,earlyOutGraceMinutes:0,workingDays:'1,2,3,4,5',breakMinutes:5,breakStartMinute:75,breakEndMinute:80,fullDayMinutes:25,halfDayMinutes:15,overtimeAfterMinutes:25,timezone:'Asia/Kolkata'});assert.equal(parsed.fullDayMinutes,25);assert.equal(parsed.halfDayMinutes,15);assert.equal(parsed.overtimeAfterMinutes,25)});
 test('attendance subtracts recorded breaks and ignores arrival order',()=>{
  const result=calculateAttendance([{time:t('18:00'),type:'OUT'},{time:t('09:00'),type:'IN'},{time:t('12:00'),type:'OUT'},{time:t('13:00'),type:'IN'}],rule);
  assert.equal(result.workMinutes,480);assert.equal(result.status,'PRESENT');assert.equal(result.overtimeMinutes,0);
