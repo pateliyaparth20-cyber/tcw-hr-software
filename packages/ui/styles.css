@@ -11730,3 +11730,30 @@ input[type="month"]{
  .hr-mobile-dashboard .mobile-unified-user .avatar{width:52px!important;height:52px!important}
  .hr-mobile-dashboard .mobile-unified-user>div:nth-child(2)>strong{font-size:1.18rem!important}
 }
+
+
+/* Approved dashboard v2 — visual match and artifact cleanup */
+.hr-desktop-dashboard{max-width:1500px;margin:0 auto;padding:0 2px 28px}
+.approved-hero{min-height:130px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;align-items:center!important;gap:28px!important;padding:24px 28px!important;border:0!important;border-radius:22px!important;background:linear-gradient(118deg,#0a83f4 0%,#0870e8 45%,#0756c8 100%)!important;color:#fff!important;overflow:hidden!important;position:relative!important;box-shadow:0 12px 30px rgba(7,86,190,.18)!important}
+.approved-hero:after{content:"";position:absolute;width:340px;height:340px;border-radius:50%;right:26%;top:-260px;background:rgba(255,255,255,.08);pointer-events:none}
+.approved-hero-person{display:flex;align-items:center;gap:18px;min-width:0;z-index:1}.approved-hero-person .avatar{width:86px!important;height:86px!important;border:5px solid #fff!important;box-shadow:0 5px 18px rgba(0,31,91,.2)!important}.approved-hero-person>div{display:grid}.approved-hero .hr-welcome-kicker{color:#fff!important;font-size:.72rem!important;letter-spacing:.12em!important;font-weight:800!important}.approved-hero h1{margin:3px 0 2px!important;color:#fff!important;font-size:2rem!important;line-height:1!important}.approved-hero p{margin:0!important;color:rgba(255,255,255,.92)!important;font-size:.85rem!important}.approved-hero-message{z-index:1;padding:0 18px;font-size:1rem;line-height:1.25}.approved-hero-clock{z-index:1;min-width:165px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.13);text-align:right;display:grid}.approved-hero-clock .digital-clock{display:grid!important}.approved-hero-clock .digital-clock span{color:rgba(255,255,255,.86)!important;font-size:.72rem!important}.approved-hero-clock .digital-clock strong{color:#fff!important;font-size:1.25rem!important}.approved-hero-clock>small{color:rgba(255,255,255,.82)!important;font-size:.67rem!important;font-weight:700!important}
+.hr-desktop-dashboard .digital-kpi-grid{margin-top:10px!important;gap:10px!important}.hr-desktop-dashboard .digital-kpi-card{min-height:94px!important;border-radius:16px!important;background:#fff!important}.hr-desktop-dashboard .panel{border-radius:17px!important;background:#fff!important}
+@media(max-width:760px){
+ .hr-mobile-dashboard .mobile-app-welcome{min-height:76px!important;padding:14px 16px!important;background:linear-gradient(110deg,#0879ed,#0861d4)!important;border:0!important;color:#fff!important;box-shadow:0 7px 20px rgba(8,92,205,.16)!important}
+ .hr-mobile-dashboard .mobile-app-welcome small{color:rgba(255,255,255,.75)!important}.hr-mobile-dashboard .mobile-app-welcome strong{color:#fff!important}.hr-mobile-dashboard .mobile-app-welcome>span{background:rgba(255,255,255,.13)!important;color:#fff!important}
+ .hr-mobile-dashboard .mobile-app-stats>div{min-height:94px!important}
+ .hr-mobile-dashboard .mobile-unified-logo{box-shadow:none!important}
+}
+
+
+/* Approved desktop login v2 — balanced premium composition */
+@media(min-width:951px){
+ .auth-pro-shell.auth-pro-tenant{grid-template-columns:minmax(540px,52%) minmax(500px,48%)!important;background:#f6faff!important}
+ .auth-pro-tenant .auth-pro-side{padding:42px 64px 34px!important;background:linear-gradient(145deg,#075fcb 0%,#087fe9 54%,#0751b9 100%)!important}
+ .auth-pro-tenant .auth-pro-brand{gap:13px!important}.auth-pro-tenant .auth-pro-logo{width:52px!important;height:52px!important;border-radius:14px!important;background:#fff!important;padding:5px!important;box-shadow:0 8px 22px rgba(0,40,110,.18)!important;overflow:hidden}.auth-pro-tenant .auth-pro-logo img{width:100%!important;height:100%!important;object-fit:contain!important}
+ .auth-pro-tenant .auth-pro-copy{margin-top:54px!important;max-width:600px!important}.auth-pro-tenant .auth-pro-copy h1{font-size:3.25rem!important;max-width:560px!important}.auth-pro-tenant .auth-pro-copy>p{font-size:1.02rem!important;max-width:570px!important}
+ .auth-pro-tenant .auth-pro-points{grid-template-columns:1fr 1fr!important;gap:12px!important}.auth-pro-tenant .auth-pro-points>span{min-height:72px!important;padding:12px 14px!important;border-radius:15px!important;background:rgba(255,255,255,.08)!important}
+ .auth-pro-tenant .auth-pro-dashboard-art{left:auto!important;right:-42px!important;bottom:-100px!important;width:520px!important;transform:rotate(-5deg)!important}
+ .auth-pro-tenant .auth-pro-main{padding:36px 7vw!important;background:radial-gradient(circle at 55% 42%,#fff 0,#f8fbff 48%,#edf5fc 100%)!important}
+ .auth-pro-tenant .auth-pro-card{width:min(100%,530px)!important;padding:34px 38px 28px!important;border-radius:24px!important;box-shadow:0 22px 60px rgba(38,75,112,.12)!important}
+}
