@@ -174,6 +174,15 @@ export class DataService {
       return clean(after);
     });
   }
+  private async assertMasterNotInUse(tx:any,tid:string,type:string,recordId:string,before:any){
+    let count=0,label='record';
+    if(type==='branches'){label='Branch';count=(await Promise.all([tx.employee.count({where:{tenantId:tid,deletedAt:null,branchId:recordId}}),tx.attendanceDevice.count({where:{tenantId:tid,branchId:recordId}})])).reduce((a,b)=>a+b,0);}
+    else if(type==='departments'){label='Department';count=(await Promise.all([tx.employee.count({where:{tenantId:tid,deletedAt:null,departmentId:recordId}}),tx.job.count({where:{tenantId:tid,departmentId:recordId}})])).reduce((a,b)=>a+b,0);}
+    else if(type==='designations'){label='Designation';count=await tx.employee.count({where:{tenantId:tid,deletedAt:null,designation:{in:[recordId,String(before?.name??'')]}}});}
+    else if(type==='shifts'){label='Shift';count=(await Promise.all([tx.employee.count({where:{tenantId:tid,deletedAt:null,shiftId:recordId}}),tx.attendanceDaily.count({where:{tenantId:tid,shiftId:recordId}})])).reduce((a,b)=>a+b,0);}
+    else if(type==='leave-types'){label='Leave type';count=await tx.leaveRequest.count({where:{tenantId:tid,leaveTypeId:recordId}});}
+    if(count>0)throw new ConflictException(`${label} is already in use and cannot be deleted. Remove or change its assignments first.`);
+  }
   async resource(ctx:Context,type:string,method:string,recordId?:string,body?:unknown,query:any={}){
     const cfg=configs[type];if(!cfg)throw new NotFoundException();const tid=tenant(ctx);
     requirePermission(ctx,cfg.resource,method==='GET'?'VIEW':method==='POST'?'CREATE':method==='DELETE'?'DELETE':'EDIT');
@@ -194,7 +203,7 @@ export class DataService {
     return this.db.$transaction(async tx=>{
       const table=(tx as any)[cfg.model];const before=recordId?await table.findFirst({where}):null;
       if(recordId&&!before)throw new NotFoundException('Record not found.');
-      if(method==='DELETE'){await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
+      if(method==='DELETE'){await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
       const input=cfg.schema.parse(body) as any;
       await this.references(tx,ctx,input,{...(cfg.employeeScoped?{employeeId:'employee'}:{}),...cfg.references});
       if(ctx.user.role.code==='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId)throw new ForbiddenException();
