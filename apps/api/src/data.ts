@@ -397,7 +397,59 @@ export class DataService {
       });
     }
     if(type==='companies'&&recordId&&method==='DELETE'){
-      return this.db.$transaction(async tx=>{const before=await tx.tenant.findUnique({where:{id:id.parse(recordId)}});if(!before)throw new NotFoundException();const profile=before.profile&&typeof before.profile==='object'&&!Array.isArray(before.profile)?{...(before.profile as any)}:{};const after=await tx.tenant.update({where:{id:recordId},data:{status:'ARCHIVED',profile:{...profile,suspensionReason:'ARCHIVED',archivedAt:new Date().toISOString()}}});await tx.session.deleteMany({where:{tenantId:recordId}});await audit(tx,ctx,'COMPANY_ARCHIVED','tenants',recordId,before,after);return {ok:true,company:after};});
+      const companyId=id.parse(recordId);
+      return this.db.$transaction(async tx=>{
+        const before=await tx.tenant.findUnique({where:{id:companyId}});if(!before)throw new NotFoundException('Company not found.');
+        // Permanent tenant purge: children first, then employee/company masters. Every tenant-scoped row is removed.
+        await tx.supportTicketMessage.deleteMany({where:{tenantId:companyId}});
+        await tx.payrollPayout.deleteMany({where:{tenantId:companyId}});
+        await tx.payrollItem.deleteMany({where:{tenantId:companyId}});
+        await tx.payrollAdjustment.deleteMany({where:{tenantId:companyId}});
+        await tx.payrollRun.deleteMany({where:{tenantId:companyId}});
+        await tx.deviceEmployeeMap.deleteMany({where:{tenantId:companyId}});
+        await tx.deviceSyncLog.deleteMany({where:{tenantId:companyId}});
+        await tx.attendancePunch.deleteMany({where:{tenantId:companyId}});
+        await tx.attendanceDaily.deleteMany({where:{tenantId:companyId}});
+        await tx.attendancePeriodLock.deleteMany({where:{tenantId:companyId}});
+        await tx.employeeFaceProfile.deleteMany({where:{tenantId:companyId}});
+        await tx.leaveRequest.deleteMany({where:{tenantId:companyId}});
+        await tx.employeeExit.deleteMany({where:{tenantId:companyId}});
+        await tx.expenseClaim.deleteMany({where:{tenantId:companyId}});
+        await tx.travelRequest.deleteMany({where:{tenantId:companyId}});
+        await tx.activityEvent.deleteMany({where:{tenantId:companyId}});
+        await tx.goal.deleteMany({where:{tenantId:companyId}});
+        await tx.asset.deleteMany({where:{tenantId:companyId}});
+        await tx.candidate.deleteMany({where:{tenantId:companyId}});
+        await tx.document.deleteMany({where:{tenantId:companyId}});
+        await tx.payment.deleteMany({where:{tenantId:companyId}});
+        await tx.invoice.deleteMany({where:{tenantId:companyId}});
+        await tx.supportTicket.deleteMany({where:{tenantId:companyId}});
+        await tx.meghnaConversation.deleteMany({where:{tenantId:companyId}});
+        await tx.notification.deleteMany({where:{tenantId:companyId}});
+        await tx.outbox.deleteMany({where:{tenantId:companyId}});
+        await tx.passwordReset.deleteMany({where:{tenantId:companyId}});
+        await tx.pushSubscription.deleteMany({where:{tenantId:companyId}});
+        await tx.session.deleteMany({where:{tenantId:companyId}});
+        await tx.auditLog.deleteMany({where:{tenantId:companyId}});
+        await tx.user.deleteMany({where:{tenantId:companyId}});
+        await tx.employee.deleteMany({where:{tenantId:companyId}});
+        await tx.attendanceDevice.deleteMany({where:{tenantId:companyId}});
+        await tx.leaveType.deleteMany({where:{tenantId:companyId}});
+        await tx.calendarEvent.deleteMany({where:{tenantId:companyId}});
+        await tx.salaryRule.deleteMany({where:{tenantId:companyId}});
+        await tx.productivityRule.deleteMany({where:{tenantId:companyId}});
+        await tx.course.deleteMany({where:{tenantId:companyId}});
+        await tx.job.deleteMany({where:{tenantId:companyId}});
+        await tx.team.deleteMany({where:{tenantId:companyId}});
+        await tx.designation.deleteMany({where:{tenantId:companyId}});
+        await tx.department.deleteMany({where:{tenantId:companyId}});
+        await tx.costCenter.deleteMany({where:{tenantId:companyId}});
+        await tx.location.deleteMany({where:{tenantId:companyId}});
+        await tx.branch.deleteMany({where:{tenantId:companyId}});
+        await tx.tenant.delete({where:{id:companyId}});
+        await audit(tx,ctx,'COMPANY_PERMANENTLY_DELETED','tenants',companyId,{id:before.id,name:before.name,code:before.code},undefined);
+        return {ok:true,deleted:true,id:companyId};
+      });
     }
     if(type==='companies'&&recordId){
       const input=z.object({status:z.enum(['TRIAL','ACTIVE','SUSPENDED','EXPIRED']),plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),employeeLimit:z.number().int().min(1).max(100000),expiresAt:date.nullable()}).strict().parse(body);
