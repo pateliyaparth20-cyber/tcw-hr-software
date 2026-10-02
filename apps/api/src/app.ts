@@ -95,15 +95,17 @@ export class Api {
       return deletePushSubscription(this.db,ctx.user.id,input.endpoint);
     }
     if(resource==='subscription'&&method==='GET'){
-      const tid=tenant(ctx);requirePermission(ctx,'company','VIEW');const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans]=await Promise.all([
+      const tid=tenant(ctx);requirePermission(ctx,'company','VIEW');const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans,employeesUsed,devicesUsed]=await Promise.all([
         this.db.invoice.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:24}),
-        this.db.plan.findMany({orderBy:{monthlyPrice:'asc'}})
+        this.db.plan.findMany({orderBy:{monthlyPrice:'asc'}}),
+        this.db.employee.count({where:{tenantId:tid,deletedAt:null}}),
+        this.db.attendanceDevice.count({where:{tenantId:tid,connectionMode:{not:'EMPLOYEE_APP'}}})
       ]);
       const payRow=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
       const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18));
-      return {company,plans,gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent};
+      return {company,plans,invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
