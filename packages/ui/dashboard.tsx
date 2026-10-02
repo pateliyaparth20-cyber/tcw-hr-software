@@ -208,6 +208,7 @@ export function Dashboard(){
  const attendanceRate=people.length?Math.min(100,Math.round((present/people.length)*100)):0;
  const deviceOnline=Math.max(0,devices.length-deviceOffline),deviceRate=devices.length?Math.round((deviceOnline/devices.length)*100):100;
  const timezone=d.company?.timezone??'Asia/Kolkata';
+ const greeting=useTimeGreeting(timezone);
  return <>
   <MobileTenantDashboard session={session} can={can} currency={currency} d={d} people={people} present={present} onLeave={onLeave} pending={pending} payroll={payroll} attendanceRate={attendanceRate}/>
   <div className="hr-desktop-dashboard">
