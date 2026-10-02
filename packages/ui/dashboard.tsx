@@ -127,7 +127,7 @@ function WorkingTimer({since}:{since?:string|null}){
 }
 
 function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{session:any;currency:string;d:Row;calendarEvents?:Row[];onRefresh:()=>void}){
- const[faceOpen,setFaceOpen]=useState(false),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarEvents??d.events??[]);
+ const[faceOpen,setFaceOpen]=useState(false),[faceIntent,setFaceIntent]=useState<'IN'|'OUT'>('IN'),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarEvents??d.events??[]);
  const timezone=d.company?.timezone??'Asia/Kolkata';
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const serverTodayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
@@ -157,13 +157,13 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  return <div className="employee-home-dashboard">
   <section className="employee-home-hero">
    <div className="employee-home-person"><Avatar name={session.user.name} src={session.user.avatar||employee.photo}/><div><span>{greeting}</span><h1>{firstName}</h1><p>{employee.designation||'Employee'}{employee.departmentName?' · '+employee.departmentName:''}</p></div></div>
-   <button className="employee-home-face-button" type="button" disabled={fullDayLeaveToday} onClick={()=>setFaceOpen(true)}><UserCheck size={22}/><span><strong>{fullDayLeaveToday?'On leave':working?'Check out':'Face Scan'}</strong><small>{fullDayLeaveToday?'Approved leave today':working?'End work session':'Check in / check out'}</small></span><ChevronRight size={18}/></button>
+   <button className="employee-home-face-button" type="button" disabled={fullDayLeaveToday} onClick={()=>{setFaceIntent(working?'OUT':'IN');setFaceOpen(true)}}><UserCheck size={22}/><span><strong>{fullDayLeaveToday?'On leave':working?'Check OUT':'Check IN'}</strong><small>{fullDayLeaveToday?'Approved leave today':working?'Record exact OUT time':'Start work timer now'}</small></span><ChevronRight size={18}/></button>
   </section>
 
   <section className={'employee-work-status '+(fullDayLeaveToday?'leave':working?'working':completed?'complete':'idle')}>
    <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{fullDayLeaveToday?'HR-approved leave is active today.':workingSince?'Started '+new Date(workingSince).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'Scan your face to start work'}</em></div></div>
-   <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:working?<><small>WORKING TIME</small><strong><WorkingTimer since={workingSince}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{((todayRecord?.workMinutes??0)/60).toFixed(2)}h</strong></>:<LiveClock timezone={timezone}/>}</div>
-   <button type="button" className="btn primary" disabled={fullDayLeaveToday} onClick={()=>setFaceOpen(true)}><Camera size={18}/>{fullDayLeaveToday?'Leave active':working?'Face Scan & check out':'Face Scan & check in'}</button>
+   <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:working?<><small>CURRENT SESSION</small><strong><WorkingTimer since={workingSince}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{Math.floor(Number(todayRecord?.workMinutes??0)/60)}h {Number(todayRecord?.workMinutes??0)%60}m</strong></>:<LiveClock timezone={timezone}/>}</div>
+   <button type="button" className="btn primary" disabled={fullDayLeaveToday||working} onClick={()=>{setFaceIntent('IN');setFaceOpen(true)}}><Camera size={18}/>{fullDayLeaveToday?'Leave active':'Check IN'}</button><button type="button" className="btn secondary" disabled={fullDayLeaveToday||!working} onClick={()=>{setFaceIntent('OUT');setFaceOpen(true)}}><Camera size={18}/>Check OUT</button>
   </section>
 
   <div className="employee-home-quick">{quick.map(item=><Link href={item.href} key={item.href}><span>{item.icon}</span><div><strong>{item.title}</strong><small>{item.sub}</small></div><ChevronRight size={17}/></Link>)}</div>
@@ -174,7 +174,7 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
   </div>
 
   {events.length>1&&<section className="employee-home-card employee-home-events"><div className="employee-home-card-head"><div><small>COMPANY CALENDAR</small><h2>Upcoming</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div><div>{events.slice(0,4).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}</small></span><ChevronRight size={16}/></Link>)}</div></section>}
-  {faceOpen&&!fullDayLeaveToday&&<FaceScanAttendanceModal onClose={()=>setFaceOpen(false)} onComplete={async result=>{if(result)setLivePunch(result);await onRefresh()}}/>}
+  {faceOpen&&!fullDayLeaveToday&&<FaceScanAttendanceModal intent={faceIntent} onClose={()=>setFaceOpen(false)} onComplete={async result=>{if(result)setLivePunch(result);await onRefresh()}}/>}
  </div>;
 }
 
