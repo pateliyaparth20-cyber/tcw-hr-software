@@ -10,16 +10,22 @@ export interface AttendanceRule {
 }
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
-  let open: Date | null = null, workMinutes = 0, anomaly = false;
-  let firstIn: Date | null = null, lastOut: Date | null = null;
+  let open: Date | null = null, workMinutes = 0, completedPairs = 0;
+  let firstIn: Date | null = null, lastOut: Date | null = null, unmatched = false;
   for(const punch of sorted) {
-    if(punch.type==='IN') { if(open) anomaly = true; else open = punch.time; firstIn ??= punch.time; }
-    else if(open) {workMinutes += Math.max(0, Math.floor((punch.time.getTime()-open.getTime())/60000)); lastOut = punch.time; open = null;}
-    else anomaly = true;
+    if(punch.type==='IN') {
+      if(open) continue;
+      open=punch.time;firstIn??=punch.time;
+    } else if(open) {
+      workMinutes += Math.max(0, Math.floor((punch.time.getTime()-open.getTime())/60000));
+      lastOut = punch.time;open = null;completedPairs++;
+    } else {
+      unmatched = true;
+    }
   }
   const lateMinutes = firstIn ? Math.max(0,Math.floor((firstIn.getTime()-rule.shiftStart.getTime())/60000)-rule.graceMinutes) : 0;
   const earlyOutMinutes = lastOut && rule.shiftEnd ? Math.max(0,Math.floor((rule.shiftEnd.getTime()-lastOut.getTime())/60000)-(rule.earlyOutGraceMinutes??0)) : 0;
-  const status = open || anomaly ? 'MISSING_PUNCH' : firstIn && lastOut ? (workMinutes >= rule.halfDayMinutes ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : 'HALF_DAY') : 'PRESENT') : 'ABSENT';
+  const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (workMinutes >= rule.halfDayMinutes ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : 'HALF_DAY') : 'PRESENT') : 'ABSENT';
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes: Math.max(0,workMinutes-rule.overtimeAfterMinutes),status};
 }
 /** UTC bounds for one local calendar day, including DST. */
