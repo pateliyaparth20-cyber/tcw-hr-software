@@ -11794,3 +11794,15 @@ input[type="month"]{
 .calendar-v2-hero>div{position:relative;z-index:1}.calendar-v2-hero>div:first-child>span{display:block;font-size:11px;font-weight:800;letter-spacing:.14em;opacity:.78;margin-bottom:6px}.calendar-v2-hero h1{margin:0 0 8px;color:#fff;font-size:30px;line-height:1.05}.calendar-v2-hero p{margin:0;max-width:620px;color:rgba(255,255,255,.84);font-size:14px}
 .calendar-v2-hero-actions{display:flex;align-items:center;gap:12px}.calendar-v2-hero-actions>div{min-width:105px;padding:10px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);text-align:center}.calendar-v2-hero-actions small{display:block;font-size:9px;font-weight:800;letter-spacing:.1em;opacity:.72}.calendar-v2-hero-actions strong{display:inline-block;font-size:24px;margin:1px 5px 0 0}.calendar-v2-hero-actions span{font-size:11px;opacity:.78}.calendar-v2-create{background:#fff!important;color:#1f5fd4!important;border-color:#fff!important;box-shadow:0 8px 22px rgba(18,62,148,.18)}
 @media(max-width:760px){.calendar-v2-hero{display:block;padding:20px;border-radius:20px}.calendar-v2-hero h1{font-size:25px}.calendar-v2-hero p{font-size:13px}.calendar-v2-hero-actions{margin-top:18px;justify-content:space-between}.calendar-v2-hero-actions>div{min-width:92px}.calendar-v2-create{flex:1}}
+
+/* Calendar month polish: event colors + Sunday distinction */
+.calendar-grid.month .weekday:nth-child(7){background:#fff5f5;color:#c85b66;font-weight:700}
+.calendar-grid.month .calendar-day:nth-child(7n){background:#fffafa}
+.calendar-grid.month .calendar-day:nth-child(7n) .day-number{color:#c85b66;font-weight:700}
+.calendar-grid.month .calendar-day.today:nth-child(7n) .day-number{color:#fff}
+.calendar-grid.month .calendar-event.holiday{background:#eef9f5!important;color:#238660!important;border-color:#d8eee5!important}
+.calendar-grid.month .calendar-event.hr_event{background:#eff5ff!important;color:#3e75cf!important;border-color:#dce9fb!important}
+.calendar-grid.month .calendar-event.training{background:#f4f0fb!important;color:#7a5bb7!important;border-color:#e6dcf6!important}
+.calendar-grid.month .calendar-event.interview{background:#fff7e9!important;color:#b2761e!important;border-color:#f3e4c3!important}
+.calendar-grid.month .calendar-event.payroll{background:#edf9fb!important;color:#178ca4!important;border-color:#d7edf1!important}
+.calendar-grid.month .calendar-event.appraisal{background:#fff0f4!important;color:#b95070!important;border-color:#f5dbe4!important}
