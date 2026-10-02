@@ -72,7 +72,7 @@ export class DataService {
       !employeeSelf&&hasPermission(ctx.user.role.permissions,'support','VIEW')?this.db.supportTicket.findMany({where:{tenantId:tid,status:{not:'RESOLVED'}},orderBy:{updatedAt:'desc'},take:8}):[],
       this.db.notification.count({where:{tenantId:tid,readAt:null,OR:[{userId:ctx.user.id},{userId:null}]}}),
       employeeSelf&&ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendancePunch.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId},orderBy:{punchTime:'desc'},take:100,select:{id:true,punchType:true,punchTime:true,verificationType:true,rawPayload:true}}):[]]);
-    const explicitMobile=(latestPunchRows as any[]).find(p=>p.verificationType==='FACE_SCAN'&&['IN','OUT'].includes(String(p.rawPayload?.intent??''))),latestRaw=explicitMobile??(latestPunchRows as any[])[0]??null,latestPunch=latestRaw?{id:latestRaw.id,punchType:latestRaw.punchType,punchTime:latestRaw.punchTime,verificationType:latestRaw.verificationType}:null;
+    const validPunchRows=(latestPunchRows as any[]).filter(p=>p.verificationType!=='FACE_SCAN'||['IN','OUT'].includes(String(p.rawPayload?.intent??''))),latestRaw=validPunchRows[0]??(latestPunchRows as any[])[0]??null,latestPunch=latestRaw?{id:latestRaw.id,punchType:latestRaw.punchType,punchTime:latestRaw.punchTime,verificationType:latestRaw.verificationType}:null;
     return {company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunch};
   }
   async company(ctx:Context,body?:unknown){
