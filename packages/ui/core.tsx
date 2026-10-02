@@ -208,7 +208,7 @@ export function Modal({title,children,onClose,wide=false}:{title:string;children
 function Choice({field,value,onChange}:{field:Field;value:any;onChange:(v:any)=>void}){
  const data=useData(field.source??'',!!field.source);const rows=data.data?.items??[];
  return <select id={'field-'+field.key} required={field.required} value={value??''} onChange={e=>onChange(e.target.value)} disabled={!!field.source&&data.isLoading}>
-  <option value="">{data.isLoading?'Loading…':data.isError?'Unable to load options':'Select '+field.label.toLowerCase()}</option>
+  <option value="">{data.isLoading?'Loading…':data.isError?'Unable to load options':field.emptyLabel??('Select '+field.label.toLowerCase())}</option>
   {field.source?rows.map((r:Row)=>{const optionValue=field.sourceValue==='name'?String(r.name??r.title??r.number??''):r.id;return <option key={r.id} value={optionValue}>{r.firstName?`${r.firstName} ${r.lastName} · ${r.employeeCode}`:r.name??r.title??r.number}</option>}):field.options?.map(v=><option key={v} value={v}>{readable(v.toLowerCase())}</option>)}
  </select>;
 }
