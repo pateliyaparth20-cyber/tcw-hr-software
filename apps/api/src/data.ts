@@ -281,7 +281,7 @@ export class DataService {
       }
       if(input.operation==='CREATE'){
         const role=await tx.role.findUnique({where:{code:'EMPLOYEE'}});if(!role||role.scope!=='TENANT')throw new BadRequestException('Employee role is not configured.');
-        const duplicateEmail=await tx.user.findFirst({where:{tenantId:tid,email:employee.email.toLowerCase()}});if(duplicateEmail)throw new ConflictException('This employee email is already used by another login account.');
+        const duplicateEmail=await tx.user.findFirst({where:{tenantId:tid,email:employee.email.toLowerCase()}});if(duplicateEmail?.employeeId===employee.id)throw new ConflictException('Employee App access already exists for this employee.');if(duplicateEmail)throw new ConflictException('This email already belongs to another login inside this company. Use a different employee email.');
         const loginId=await allocateShortLoginId(tx as unknown as Database,tid);
         user=await tx.user.create({data:{tenantId:tid,name:`${employee.firstName} ${employee.lastName}`.trim(),email:employee.email.toLowerCase(),loginId,roleId:role.id,employeeId:employee.id,active:true,passwordHash:await hashPassword(newPassword!),mustChangePassword:true},include:{role:true}});
         await audit(tx,ctx,'EMPLOYEE_APP_ACCESS_CREATED','users',user.id,undefined,{employeeId:employee.id,employeeCode:employee.employeeCode,email:user.email});
