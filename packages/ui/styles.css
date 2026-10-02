@@ -11857,3 +11857,6 @@ input[type="month"]{
 
 /* Payroll data export */
 .payroll-v4-export{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 19px;margin-top:16px}.payroll-v4-export small{font-size:9px;font-weight:800;letter-spacing:.1em;color:#2877f4}.payroll-v4-export h3{margin:3px 0;font-size:15px}.payroll-v4-export p{margin:0;font-size:10px;color:var(--muted)}@media(max-width:600px){.payroll-v4-export{align-items:flex-start;flex-direction:column}.payroll-v4-export .export-format-group{width:100%}}
+
+/* Payroll data export */
+.payroll-v4-export{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 19px;margin-top:16px}.payroll-v4-export small{font-size:9px;font-weight:800;letter-spacing:.1em;color:#2877f4}.payroll-v4-export h3{margin:3px 0;font-size:15px}.payroll-v4-export p{margin:0;font-size:10px;color:var(--muted)}@media(max-width:600px){.payroll-v4-export{align-items:flex-start;flex-direction:column}.payroll-v4-export .export-format-group{width:100%}}
