@@ -11895,3 +11895,8 @@ input[type="month"]{
 .compact-search{border-bottom:1px solid var(--line)!important;box-shadow:none!important}
 .compact-search input{border:0!important;border-bottom:0!important;box-shadow:none!important}
 @media(max-width:950px){.tenant-shell .panel:has(>.toolbar)>.table-scroll,.platform-shell .panel:has(>.toolbar)>.table-scroll{min-height:0!important;max-height:calc(100dvh - 245px)!important}.tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:140px!important}}
+
+/* Search control: exactly one visible border */
+.search-field.compact-search{border:1px solid #dfe6ee!important;border-bottom:1px solid #dfe6ee!important;box-shadow:none!important;background:#fff!important;overflow:hidden!important}
+.search-field.compact-search>input,.search-field.compact-search>input:hover,.search-field.compact-search>input:focus,.search-field.compact-search>input:focus-visible{border:0!important;border-width:0!important;border-bottom:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;-webkit-appearance:none!important;appearance:none!important}
+.search-field.compact-search:focus-within{border:1px solid #9bb8e8!important;box-shadow:0 0 0 3px rgba(52,116,239,.08)!important}
