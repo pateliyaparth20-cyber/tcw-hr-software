@@ -57,7 +57,7 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
  const latestEmployee=people[0];
  return <section className="hr-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-tenant">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo">{d.company?.logo?<img src={d.company.logo} alt={d.company?.name??'Company'}/>:<BrandLogo alt="TCW HR Software"/>}</span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><div className="mobile-hero-actions"><Link href="/ai" className="mobile-unified-action mobile-ai-orb" aria-label="AI assistant"><Sparkles size={19}/></Link><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo">{d.company?.logo?<img src={d.company.logo} alt={d.company?.name??'Company'}/>:<BrandLogo alt="TCW HR Software"/>}</span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><div className="mobile-hero-actions"><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link><Avatar name={session.user.name} src={session.user.avatar}/></div></div>
    <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div><div className="mobile-hero-date"><LiveClock timezone={d.company?.timezone}/><small>{d.company?.city??d.company?.location??'Your workspace'}</small></div></div>
   </div>
 
