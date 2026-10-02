@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {attendancePayableUnits,calculateAttendance,workingDaySet,zonedMinute,localDate} from '../../packages/attendance-engine';
 import {calculatePay,assertPayrollTransition} from '../../packages/payroll-engine';
 import {hashPassword,verifyPassword} from '../../packages/auth';
-import {toCsv} from '../../packages/reporting-engine';
+import {toCsv,toXlsx} from '../../packages/reporting-engine';
 import {ZktecoAdapter} from '../../packages/device-connectors/zkteco';
 import {normalizeZkAttLog,parseZkAttLog,biomaxLocalTimestamp} from '../../packages/device-connectors/biomax';
 const t=(s:string)=>new Date('2026-09-21T'+s+':00Z');
@@ -34,5 +34,12 @@ test('BioMax ZK PUSH parser normalizes ATTLOG punches and keeps stable event ids
  assert.equal(events[0].userId,'101');assert.equal(events[0].type,'IN');assert.equal(events[0].verification,'FACE');
  assert.equal(events[0].timestamp,'2026-09-26T03:35:00.000Z');assert.equal(events[1].type,'OUT');
  assert.equal(normalizeZkAttLog('SN-DEMO',body,'Asia/Kolkata')[0].eventId,events[0].eventId);
+});
+
+test('XLSX export is a real Office Open XML zip workbook',()=>{
+ const file=toXlsx([{employee:'A01',name:'Test Employee'}]);
+ assert.equal(file.subarray(0,2).toString(),'PK');
+ assert.ok(file.includes(Buffer.from('[Content_Types].xml')));
+ assert.ok(file.includes(Buffer.from('xl/worksheets/sheet1.xml')));
 });
 test('BioMax wall clock conversion respects configured timezone',()=>{assert.equal(biomaxLocalTimestamp('2026-07-01 09:00:00','America/New_York').toISOString(),'2026-07-01T13:00:00.000Z')});

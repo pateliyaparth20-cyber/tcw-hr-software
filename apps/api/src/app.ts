@@ -10,7 +10,7 @@ import {Server} from 'socket.io';
 import {z,ZodError} from 'zod';
 import type {Database} from '../../../packages/database';
 import {id,password} from '../../../packages/validation';
-import {toCsv} from '../../../packages/reporting-engine';
+import {toCsv,toXlsx} from '../../../packages/reporting-engine';
 import {hasPermission} from '../../../packages/permissions';
 import {CompatibleProvider} from '../../../packages/ai';
 import {effectiveAIConfig,publicAIConfig,saveAIConfig,testAIConnection} from './ai-config';
@@ -449,16 +449,15 @@ export class Api {
     else throw new NotFoundException('Report not found.');
     const clean=rows.map(({personal,passwordHash,items,...r})=>r),format=String(req.query.format??'csv').toLowerCase();
     if(format==='xlsx'){
-      const header=Object.keys(clean[0]??{}),xmlRows=[header,...clean.map(r=>header.map(k=>r[k]??''))].map(row=>'<Row>'+row.map(v=>'<Cell><Data ss:Type="String">'+String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</Data></Cell>').join('')+'</Row>').join('');
-      const xml='<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="TCW HR"><Table>'+xmlRows+'</Table></Worksheet></Workbook>';
-      res.setHeader('Content-Type','application/vnd.ms-excel; charset=utf-8');res.setHeader('Content-Disposition',`attachment; filename="tcw-hr-${type}.xls"`);res.send(xml);return undefined;
+      const workbook=toXlsx(clean,'TCW HR '+type);
+      res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename="tcw-hr-${type}.xlsx"`);res.setHeader('Content-Length',String(workbook.length));res.end(workbook);return undefined;
     }
     if(format==='pdf'){
       const header=Object.keys(clean[0]??{}),escape=(v:any)=>String(v??'').replace(/[()\\]/g,m=>'\\'+m).replace(/[^\x20-\x7E]/g,'?'),lines=[`TCW HR - ${type.toUpperCase()} REPORT`,'',header.join(' | '),...clean.map(r=>header.map(k=>String(r[k]??'')).join(' | '))].slice(0,120);
-      const content=['BT','/F1 8 Tf','36 806 Td',...lines.flatMap((line,i)=>[i?'0 -11 Td':'',`(${escape(line).slice(0,160)}) Tj`]).filter(Boolean),'ET'].join('\n'),objects=['1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj','2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj','3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj','4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',`5 0 obj << /Length ${Buffer.byteLength(content)} >> stream\n${content}\nendstream endobj`];let pdf='%PDF-1.4\n',offsets=[0];for(const o of objects){offsets.push(Buffer.byteLength(pdf));pdf+=o+'\n'}const xref=Buffer.byteLength(pdf);pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',`attachment; filename="tcw-hr-${type}.pdf"`);res.send(Buffer.from(pdf));return undefined;
+      const content=['BT','/F1 8 Tf','36 806 Td',...lines.flatMap((line,i)=>[i?'0 -11 Td':'',`(${escape(line).slice(0,160)}) Tj`]).filter(Boolean),'ET'].join('\n'),objects=['1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj','2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj','3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj','4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',`5 0 obj << /Length ${Buffer.byteLength(content)} >> stream\n${content}\nendstream endobj`];let pdf='%PDF-1.4\n',offsets=[0];for(const o of objects){offsets.push(Buffer.byteLength(pdf));pdf+=o+'\n'}const xref=Buffer.byteLength(pdf);pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;const pdfBuffer=Buffer.from(pdf);res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',`attachment; filename="tcw-hr-${type}.pdf"`);res.setHeader('Content-Length',String(pdfBuffer.length));res.end(pdfBuffer);return undefined;
     }
     const csv=toCsv(clean);
-    res.setHeader('Content-Type','text/csv; charset=utf-8');res.setHeader('Content-Disposition',`attachment; filename="tcw-hr-${type}.csv"`);res.send(csv);return undefined;
+    res.setHeader('Content-Type','text/csv; charset=utf-8');res.setHeader('Content-Disposition',`attachment; filename="tcw-hr-${type}.csv"`);res.setHeader('Content-Length',String(Buffer.byteLength(csv)));res.end(csv);return undefined;
   }
 }
 @Controller('api')
