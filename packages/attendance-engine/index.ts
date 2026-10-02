@@ -46,6 +46,12 @@ export function zonedMinute(date: string, minute: number, timezone: string) {
   }
   return new Date(guess);
 }
+export function attendanceWorkdayDate(instant:Date,shiftStartMinute:number,shiftEndMinute:number,timezone:string,earlyWindowMinutes=240){
+  const day=localDate(instant,timezone);
+  if(shiftEndMinute>shiftStartMinute)return day;
+  const boundary=zonedMinute(day,shiftStartMinute-earlyWindowMinutes,timezone);
+  return instant<boundary?new Date(Date.parse(day)-86400000).toISOString().slice(0,10):day;
+}
 export function workingDaySet(value:string|undefined|null){
   const days=new Set((value||'1,2,3,4,5').split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=0&&v<=6));
   return days.size?days:new Set([1,2,3,4,5]);
