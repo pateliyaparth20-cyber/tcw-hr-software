@@ -53,7 +53,8 @@ export function ModulePage({name}:{name:string}){
  function cell(row:Row,key:string):React.ReactNode{
   if(key==='employee')return <button className="person-cell" onClick={()=>setDetail(row)}><Avatar name={`${row.firstName} ${row.lastName}`} src={row.photo}/><span><strong>{row.firstName} {row.lastName}</strong><small>{row.email}</small></span></button>;
   if(key==='status'||key==='stage')return <Badge value={row[key]}/>;
-  if(key==='managerId'&&!row[key])return 'HR (Company HR)';\n  if(key==='employeeId'||key==='managerId'){const person=lookups[key]?.find(r=>r.id===row[key]);return person?<span className="person-inline"><Avatar name={person.firstName+' '+person.lastName} src={person.photo}/><span>{person.firstName} {person.lastName}</span></span>:label(key,row[key]);}
+  if(key==='managerId'&&!row[key])return 'HR (Company HR)';
+  if(key==='employeeId'||key==='managerId'){const person=lookups[key]?.find(r=>r.id===row[key]);return person?<span className="person-inline"><Avatar name={person.firstName+' '+person.lastName} src={person.photo}/><span>{person.firstName} {person.lastName}</span></span>:label(key,row[key]);}
   if(key==='departmentId')return row.departmentName||label(key,row[key]);
   if(key==='branchId')return row.branchName||label(key,row[key]);
   if(key.endsWith('Id'))return label(key,row[key]);
