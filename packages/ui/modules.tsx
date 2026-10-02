@@ -1,7 +1,7 @@
 'use client';
 import React,{useState,useEffect} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {Plus,Search,Download,SlidersHorizontal,Pencil,Trash2,ChevronLeft,ChevronRight,ArrowUpRight,Check,X,Monitor,Briefcase,GraduationCap,Target,Users,Building2,Smartphone,ScanFace,FileText,Sheet,FileDown,Network,MapPin,Tags,Clock3} from 'lucide-react';
+import {Plus,Search,Download,SlidersHorizontal,Pencil,Trash2,ChevronLeft,ChevronRight,ArrowUpRight,Check,X,Monitor,Briefcase,GraduationCap,Target,Users,Building2,Smartphone,ScanFace,FileText,Sheet,FileDown,Network,MapPin,Tags,Clock3,CalendarDays} from 'lucide-react';
 import {modules,Row,Field,readable} from './config';
 import {useApp,useData,PageTitle,Stat,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,currencyValue,displayDate} from './core';
 const attendanceMachineCatalog=[
