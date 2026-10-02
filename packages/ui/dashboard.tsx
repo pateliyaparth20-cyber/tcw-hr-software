@@ -211,9 +211,10 @@ export function Dashboard(){
  return <>
   <MobileTenantDashboard session={session} can={can} currency={currency} d={d} people={people} present={present} onLeave={onLeave} pending={pending} payroll={payroll} attendanceRate={attendanceRate}/>
   <div className="hr-desktop-dashboard">
-  <section className="hr-welcome-card">
-   <div className="hr-welcome-copy"><span className="hr-welcome-kicker">TCW HR WORKSPACE</span><h1>Welcome back, {session.user.name.split(' ')[0]}!</h1><p>Here’s what’s happening with your team today.</p><div className="hr-welcome-company"><span>{d.company?.name??'Company workspace'}</span><small>{deviceOffline?`${deviceOffline} attendance device(s) need attention`:'Workforce systems are operating normally'}</small></div></div>
-   <div className="hr-welcome-tools"><LiveClock timezone={timezone}/><div className="hr-welcome-actions">{can('employees')&&<Link className="btn primary" href="/employees"><Users size={16}/>Employees</Link>}{can('attendance')&&<Link className="btn secondary" href="/attendance"><Clock3 size={16}/>Attendance</Link>}</div></div>
+  <section className="hr-welcome-card approved-hero">
+   <div className="approved-hero-person"><Avatar name={session.user.name} src={session.user.avatar}/><div><span className="hr-welcome-kicker">{useTimeGreeting(timezone)} 👋</span><h1>{session.user.name.split(' ')[0]}!</h1><p>{session.user.roleName} <b>·</b> TCW HR Software</p></div></div>
+   <div className="approved-hero-message"><strong>Let’s make<br/>today productive.</strong></div>
+   <div className="approved-hero-clock"><LiveClock timezone={timezone}/><small>{d.company?.name??'Your workspace'}</small></div>
   </section>
 
   <div className="digital-kpi-grid">
