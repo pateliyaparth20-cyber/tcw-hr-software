@@ -126,8 +126,8 @@ function WorkingTimer({since}:{since?:string|null}){
  return <>{String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</>;
 }
 
-function EmployeeDashboard({session,currency,d,onRefresh}:{session:any;currency:string;d:Row;onRefresh:()=>void}){
- const[faceOpen,setFaceOpen]=useState(false),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarQ.data?.items??d.events??[]);
+function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{session:any;currency:string;d:Row;calendarEvents?:Row[];onRefresh:()=>void}){
+ const[faceOpen,setFaceOpen]=useState(false),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarEvents??d.events??[]);
  const timezone=d.company?.timezone??'Asia/Kolkata';
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const serverTodayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
@@ -200,7 +200,7 @@ export function Dashboard(){
    </div>
   </>;
  }
- if(session.user.role==='EMPLOYEE')return <EmployeeDashboard session={session} currency={currency} d={d} onRefresh={()=>q.refetch()}/>;
+ if(session.user.role==='EMPLOYEE')return <EmployeeDashboard session={session} currency={currency} d={d} calendarEvents={calendarQ.data?.items} onRefresh={()=>q.refetch()}/>;
   const people:Row[]=d.employees??[],attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],devices:Row[]=d.devices??[],support:Row[]=d.support??[];
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:d.company?.timezone??'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const records=attendance.filter(r=>r.date.slice(0,10)===today),present=records.filter(r=>r.status==='PRESENT').length;
