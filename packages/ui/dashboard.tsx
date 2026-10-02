@@ -118,11 +118,10 @@ function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,out
 }
 
 
-function WorkingTimer({since}:{since?:string|null}){
+function WorkingTimer({since,baseMinutes=0}:{since?:string|null;baseMinutes?:number}){
  const[now,setNow]=useState(()=>Date.now());
  useEffect(()=>{if(!since)return;const timer=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(timer)},[since]);
- if(!since)return <>00:00:00</>;
- const total=Math.max(0,Math.floor((now-new Date(since).getTime())/1000)),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;
+ const sessionSeconds=since?Math.max(0,Math.floor((now-new Date(since).getTime())/1000)):0,total=Math.max(0,Math.floor(baseMinutes*60+sessionSeconds)),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;
  return <>{String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</>;
 }
 
@@ -147,7 +146,7 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  const working=!fullDayLeaveToday&&(currentPunch?.punchType?currentPunch.punchType==='IN':!!todayRecord?.firstIn&&!todayRecord?.lastOut);
  const completed=!fullDayLeaveToday&&!working&&!!todayRecord?.firstIn&&(currentPunch?.punchType==='OUT'||!!todayRecord?.lastOut);
  const workingSince=working?(currentPunch?.punchType==='IN'?currentPunch.punchTime:todayRecord?.firstIn):null;
- const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):working?'Working':completed?'Day completed':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
+ const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):working?'Working':completed?'Checked out / Break':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
  const quick=[
   {href:'/leave',title:'Time off',sub:fullDayLeaveToday?'On leave today':pending.length?pending.length+' pending':'Apply leave',icon:<CalendarDays size={21}/>},
   {href:'/payroll',title:'Payslips',sub:payslip?.run?.month??'Salary records',icon:<Wallet size={21}/>},
@@ -162,7 +161,7 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
 
   <section className={'employee-work-status '+(fullDayLeaveToday?'leave':working?'working':completed?'complete':'idle')}>
    <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{fullDayLeaveToday?'HR-approved leave is active today.':workingSince?'Started '+new Date(workingSince).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'Scan your face to start work'}</em></div></div>
-   <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:working?<><small>CURRENT SESSION</small><strong><WorkingTimer since={workingSince}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{Math.floor(Number(todayRecord?.workMinutes??0)/60)}h {Number(todayRecord?.workMinutes??0)%60}m</strong></>:<LiveClock timezone={timezone}/>}</div>
+   <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:working?<><small>WORKED TODAY · LIVE</small><strong><WorkingTimer since={workingSince} baseMinutes={Number(todayRecord?.workMinutes??0)}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{Math.floor(Number(todayRecord?.workMinutes??0)/60)}h {Number(todayRecord?.workMinutes??0)%60}m</strong></>:<LiveClock timezone={timezone}/>}</div>
    <button type="button" className="btn primary" disabled={fullDayLeaveToday||working} onClick={()=>{setFaceIntent('IN');setFaceOpen(true)}}><Camera size={18}/>{fullDayLeaveToday?'Leave active':'Check IN'}</button><button type="button" className="btn secondary" disabled={fullDayLeaveToday||!working} onClick={()=>{setFaceIntent('OUT');setFaceOpen(true)}}><Camera size={18}/>Check OUT</button>
   </section>
 
