@@ -135,7 +135,7 @@ export class Workflows {
     const input=z.object({employeeId:id,punchTime:z.iso.datetime().transform(v=>new Date(v)),punchType:z.enum(['IN','OUT']),sourceId:z.string().min(1).max(100),shiftId:id.optional()}).strict().parse(body);
     await assertEmployee(this.db,ctx,input.employeeId);await assertAttendanceUnlocked(this.db,tid,input.punchTime);
     if(input.punchTime.getTime()>Date.now()+300000||input.punchTime.getTime()<Date.now()-366*86400000)throw new BadRequestException('Punch time must be within the last year and not in the future.');
-    const shift=await employeeShift(this.db,tid,input.employeeId,input.shiftId);let day=localDate(input.punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;
+    const shift=await employeeShift(this.db,tid,input.employeeId);let day=localDate(input.punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;
     if(night&&input.punchTime<zonedMinute(day,shift.endMinute,shift.timezone))day=new Date(Date.parse(day)-86400000).toISOString().slice(0,10);
     const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone);const end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
     return this.db.$transaction(async tx=>{
