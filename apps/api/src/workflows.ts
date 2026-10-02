@@ -74,7 +74,7 @@ export class Workflows {
       const punchTime=new Date();await assertAttendanceUnlocked(this.db,tid,punchTime);
       const shift=await employeeShift(this.db,tid,employeeId);let day=localDate(punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;
       if(night&&punchTime<zonedMinute(day,shift.endMinute,shift.timezone))day=new Date(Date.parse(day)-86400000).toISOString().slice(0,10);
-      const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone),end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
+      const start=zonedMinute(day,shift.startMinute-240,shift.timezone),end=zonedMinute(day,(night?1440+shift.endMinute:shift.endMinute)+240,shift.timezone);
       const faceHash=createHash('sha256').update(bytes).digest('hex'),sourceId=`face-${ctx.user.id.slice(0,18)}-${input.clientNonce.slice(0,36)}`;
       return this.db.$transaction(async tx=>{
         await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
@@ -141,7 +141,7 @@ export class Workflows {
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       const existing=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId:input.sourceId}}});
       if(existing){if(existing.employeeId!==input.employeeId||existing.punchType!==input.punchType||+existing.punchTime!==+input.punchTime)throw new ConflictException('Source ID already belongs to another punch.');return {ok:true,duplicate:true};}
-      const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId:input.employeeId,sourceId:input.sourceId,punchTime:input.punchTime,punchType:input.punchType,rawPayload:{...body,source:'MANUAL',actorId:ctx.user.id}}});
+      const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId:input.employeeId,sourceId:input.sourceId,punchTime:input.punchTime,punchType:input.punchType,verificationType:'MANUAL',rawPayload:{...body,source:'MANUAL',actorId:ctx.user.id}}});
       const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:input.employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
       const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
       const calculated=calculateAttendance(punches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
