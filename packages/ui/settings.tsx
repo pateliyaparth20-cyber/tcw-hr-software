@@ -51,6 +51,7 @@ function ProfilePhotoEditor({value,name,onChange,notify,showPreview=true}:{value
  const[open,setOpen]=useState(false),[source,setSource]=useState(''),[zoom,setZoom]=useState(1),[x,setX]=useState(0),[y,setY]=useState(0);
  function choose(file?:File){
   if(!file)return;
+  if(!['image/png','image/jpeg'].includes(file.type)){notify('Only PNG, JPG or JPEG profile photos are allowed.',true);return;}
   if(file.size>5*1024*1024){notify('Choose a profile photo up to 5 MB.',true);return;}
   const reader=new FileReader();
   reader.onload=()=>{
@@ -80,7 +81,7 @@ function ProfilePhotoEditor({value,name,onChange,notify,showPreview=true}:{value
  return <>
   <div className={'profile-photo-editor '+(!showPreview?'profile-photo-actions-only':'')}>
    {showPreview&&<div className="profile-photo-preview">{value?<img src={value} alt={name+' profile photo'}/>:<span>{initials}</span>}</div>}
-   <div className="profile-photo-copy">{showPreview&&<><strong>Profile photo</strong><p>Choose and adjust your photo inside the round frame.</p></>}<div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>{value?'Change photo':'Upload photo'}<input className="sr-only" type="file" accept="image/*" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
+   <div className="profile-photo-copy">{showPreview&&<><strong>Profile photo</strong><p>Choose and adjust your photo inside the round frame.</p></>}<div className="profile-photo-buttons"><label className="btn secondary small"><Upload size={15}/>{value?'Change photo':'Upload photo'}<input className="sr-only" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onChange={e=>{choose(e.target.files?.[0]);e.currentTarget.value=''}}/></label>{value&&<button type="button" className="btn secondary small" onClick={()=>onChange(null)}><Trash2 size={15}/>Remove photo</button>}</div></div>
   </div>
   {open&&<Modal title="Adjust profile photo" onClose={()=>setOpen(false)}>
    <div className="profile-crop-modal">
@@ -94,7 +95,7 @@ function ProfilePhotoEditor({value,name,onChange,notify,showPreview=true}:{value
 
 export function MyProfilePage(){
  const profile=useData('auth/profile');const{session,notify}=useApp();
- const[form,setForm]=useState<Row>({name:'',email:'',avatar:null}),[saving,setSaving]=useState(false);
+ const[form,setForm]=useState<Row>({name:'',email:'',avatar:null}),[saving,setSaving]=useState(false),[photoPreview,setPhotoPreview]=useState(false);
  useEffect(()=>{if(profile.data?.user)setForm({name:profile.data.user.name??'',email:profile.data.user.email??'',avatar:profile.data.user.avatar??null})},[profile.data]);
  async function save(e:React.FormEvent){e.preventDefault();setSaving(true);try{await api('auth/profile','PATCH',{name:form.name,email:form.email,avatar:form.avatar??null},session.csrf);await profile.refetch();notify('Profile saved.');setTimeout(()=>window.location.reload(),300)}catch(e:any){notify(e.message,true)}finally{setSaving(false)}}
  if(profile.isLoading)return <Loading/>;if(profile.error)return <Failure error={profile.error}/>;
@@ -104,7 +105,7 @@ export function MyProfilePage(){
    <section className="panel my-profile-card">
     <div className="my-profile-cover"/>
     <div className="my-profile-main">
-     <div className="my-profile-photo">{form.avatar?<img src={form.avatar} alt={form.name+' profile photo'}/>:<span>{String(form.name||'U').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</span>}</div>
+     <div className={'my-profile-photo '+(form.avatar?'clickable':'')} role={form.avatar?'button':undefined} tabIndex={form.avatar?0:undefined} aria-label={form.avatar?'Open profile photo':undefined} onClick={()=>form.avatar&&setPhotoPreview(true)} onKeyDown={e=>{if(form.avatar&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setPhotoPreview(true)}}}>{form.avatar?<img src={form.avatar} alt={form.name+' profile photo'}/>:<span>{String(form.name||'U').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</span>}</div>
      <div className="my-profile-identity"><h2>{form.name||user.name}</h2><p>{user.role==='COMPANY_OWNER'?'HR Admin':user.roleName}</p><div><Badge value={employee?.status??'ACTIVE'}/><span>{user.loginId??user.email}</span></div></div>
     </div>
     <form onSubmit={save} className="my-profile-form">
@@ -117,6 +118,7 @@ export function MyProfilePage(){
      </div>
      <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile changes'}</button></div>
     </form>
+    {photoPreview&&form.avatar&&<Modal title="Profile photo" onClose={()=>setPhotoPreview(false)}><div className="profile-photo-full-preview"><img src={form.avatar} alt={form.name+' profile photo'}/></div></Modal>}
     {user.role==='EMPLOYEE'&&employee&&<section className="employee-profile-details">
      <div className="employee-profile-details-head"><div><small>EMPLOYEE INFORMATION</small><h3>Your work profile</h3><p>Employment details are maintained by your HR team.</p></div><Badge value={employee.status??'ACTIVE'}/></div>
      <div className="employee-profile-detail-grid">
