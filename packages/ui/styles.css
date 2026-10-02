@@ -11887,3 +11887,11 @@ input[type="month"]{
 .tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:clamp(260px,46vh,520px);justify-content:center}
 .table-footer{min-height:62px!important;display:flex!important;flex-shrink:0;background:#fff!important}
 @media(max-width:950px){.tenant-shell .panel:has(>.toolbar)>.table-scroll,.platform-shell .panel:has(>.toolbar)>.table-scroll,.tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:320px}.table-footer{min-height:66px!important}}
+
+/* Adaptive result height: table grows only with returned rows */
+.tenant-shell .panel:has(>.toolbar)>.table-scroll,.platform-shell .panel:has(>.toolbar)>.table-scroll{min-height:0!important;height:auto!important;max-height:calc(100dvh - 300px)!important}
+.tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:150px!important}
+.table-footer{min-height:54px!important}
+.compact-search{border-bottom:1px solid var(--line)!important;box-shadow:none!important}
+.compact-search input{border:0!important;border-bottom:0!important;box-shadow:none!important}
+@media(max-width:950px){.tenant-shell .panel:has(>.toolbar)>.table-scroll,.platform-shell .panel:has(>.toolbar)>.table-scroll{min-height:0!important;max-height:calc(100dvh - 245px)!important}.tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:140px!important}}
