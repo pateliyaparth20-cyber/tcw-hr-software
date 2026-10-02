@@ -52,13 +52,13 @@ function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pe
   ['leave','Leave','Requests',<CalendarDays size={23}/>,'violet'],
   ['payroll','Payroll','Salary',<Wallet size={23}/>,'amber'],
   ['reports','Reports','Insights',<ActivityIcon size={23}/>,'blue'],
-  ['ai','AI Insights','Assistant',<Sparkles size={23}/>,'violet']
+  ['ai','AI Insights','Assistant',<span className="quick-ai-orb"><Sparkles size={20}/></span>,'violet']
  ] as const;
  const latestEmployee=people[0];
  return <section className="hr-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-tenant">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo">{d.company?.logo?<img src={d.company.logo} alt={d.company?.name??'Company'}/>:<BrandLogo alt="TCW HR Software"/>}</span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div>
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting}</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo">{d.company?.logo?<img src={d.company.logo} alt={d.company?.name??'Company'}/>:<BrandLogo alt="TCW HR Software"/>}</span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>{d.company?.name??'HR Management'}</small></div><div className="mobile-hero-actions"><Link href="/ai" className="mobile-unified-action mobile-ai-orb" aria-label="AI assistant"><Sparkles size={19}/></Link><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={20}/></Link></div></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div><div className="mobile-hero-date"><LiveClock timezone={d.company?.timezone}/><small>{d.company?.city??d.company?.location??'Your workspace'}</small></div></div>
   </div>
 
   <div className="mobile-app-welcome"><div><small>WELCOME BACK</small><strong>Let’s make today productive.</strong></div><span><ActivityIcon size={21}/></span></div>
