@@ -322,9 +322,13 @@ export class Workflows {
     const tid=tenant(ctx);requirePermission(ctx,'workforce',method==='GET'?'VIEW':'CREATE');
     if(method==='GET'){
       const scope=await employeeScope(this.db,ctx);
-      const employees=await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,...(scope?{id:{in:scope}}:{})},select:{id:true,firstName:true,lastName:true,departmentId:true}});
-      const events=await this.db.activityEvent.findMany({where:{tenantId:tid,eventTime:{gte:new Date(Date.now()-24*3600000)},...(scope?{employeeId:{in:scope}}:{})},orderBy:{eventTime:'desc'},take:5000});
-      return {items:employees.map(e=>{const latest=events.find(v=>v.employeeId===e.id);return {...e,event:latest,status:latest&&Date.now()-+latest.eventTime<120000?latest.status:'OFFLINE'};}),events};
+      const employees=await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,...(scope?{id:{in:scope}}:{})},select:{id:true,firstName:true,lastName:true,employeeCode:true,photo:true,departmentId:true,branchId:true}});
+      const employeeIds=employees.map(e=>e.id),since=new Date(Date.now()-36*3600000);
+      const [events,punches]=await Promise.all([
+        this.db.activityEvent.findMany({where:{tenantId:tid,eventTime:{gte:new Date(Date.now()-24*3600000)},...(scope?{employeeId:{in:scope}}:{})},orderBy:{eventTime:'desc'},take:5000}),
+        employeeIds.length?this.db.attendancePunch.findMany({where:{tenantId:tid,employeeId:{in:employeeIds},punchTime:{gte:since}},orderBy:{punchTime:'asc'},select:{employeeId:true,punchTime:true,punchType:true,verificationType:true}}):[]
+      ]);
+      return {items:employees.map(e=>{const employeePunches=punches.filter(p=>p.employeeId===e.id);let open:any=null;for(const p of employeePunches){if(p.punchType==='IN'){if(!open)open=p}else if(open)open=null}const latest=events.find(v=>v.employeeId===e.id);if(open)return {...e,event:{eventTime:open.punchTime,source:open.verificationType==='FACE_SCAN'?'Mobile Face':'Attendance',status:'WORKING'},status:'WORKING'};return {...e,event:latest,status:latest&&Date.now()-+latest.eventTime<120000?latest.status:'OFFLINE'};}),events};
     }
     if(!ctx.user.employeeId)throw new BadRequestException('Link your user account to an employee before setting activity.');
     const input=z.object({status:z.enum(['WORKING','MEETING','BREAK','IDLE','OFFLINE']),sourceId:z.string().min(1).max(100)}).strict().parse(body);
