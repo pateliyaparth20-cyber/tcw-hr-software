@@ -10,14 +10,14 @@ export interface AttendanceRule {
 }
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
-  let open: Date | null = null, workMinutes = 0, completedPairs = 0;
+  let open: Date | null = null, workMinutes = 0, completedPairs = 0, overtimeByShiftMinutes = 0;
   let firstIn: Date | null = null, lastOut: Date | null = null, unmatched = false;
   for(const punch of sorted) {
     if(punch.type==='IN') {
       if(open) continue;
       open=punch.time;firstIn??=punch.time;
     } else if(open) {
-      workMinutes += Math.max(0, Math.floor((punch.time.getTime()-open.getTime())/60000));
+      const pairMinutes=Math.max(0,Math.floor((punch.time.getTime()-open.getTime())/60000));workMinutes+=pairMinutes;if(rule.shiftEnd&&punch.time>rule.shiftEnd){const overtimeStart=new Date(Math.max(open.getTime(),rule.shiftEnd.getTime()));overtimeByShiftMinutes+=Math.max(0,Math.floor((punch.time.getTime()-overtimeStart.getTime())/60000));}
       lastOut = punch.time;open = null;completedPairs++;
     } else {
       unmatched = true;
@@ -26,7 +26,8 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const lateMinutes = firstIn ? Math.max(0,Math.floor((firstIn.getTime()-rule.shiftStart.getTime())/60000)-rule.graceMinutes) : 0;
   const earlyOutMinutes = lastOut && rule.shiftEnd ? Math.max(0,Math.floor((rule.shiftEnd.getTime()-lastOut.getTime())/60000)-(rule.earlyOutGraceMinutes??0)) : 0;
   const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'HALF_DAY' : 'ABSENT') : 'ABSENT';
-  return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes: Math.max(0,workMinutes-rule.overtimeAfterMinutes),status};
+  const overtimeMinutes=Math.max(overtimeByShiftMinutes,Math.max(0,workMinutes-rule.overtimeAfterMinutes));
+  return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes,status};
 }
 /** UTC bounds for one local calendar day, including DST. */
 export function localDate(instant: Date, timezone: string) {
