@@ -9,7 +9,19 @@ export interface AttendanceRule {
   overtimeAfterMinutes: number;
 }
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
-  const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
+  const raw = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
+  // Collapse repeated same-direction punches. Attendance is driven by state transitions:
+  // IN opens work, OUT closes work, and only a later IN starts a new paid session.
+  // This prevents duplicate device/mobile events from creating false missing punches or breaks.
+  const sorted: Punch[] = [];
+  for(const punch of raw){
+    const previous=sorted[sorted.length-1];
+    if(previous?.type===punch.type){
+      if(punch.type==='OUT')sorted[sorted.length-1]=punch;
+      continue;
+    }
+    sorted.push(punch);
+  }
   let open: Date | null = null, workMinutes = 0, anomaly = false;
   let firstIn: Date | null = null, lastOut: Date | null = null;
   for(const punch of sorted) {
