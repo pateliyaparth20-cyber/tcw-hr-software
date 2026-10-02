@@ -11881,3 +11881,9 @@ input[type="month"]{
 .tenant-shell .table-scroll thead th,.platform-shell .table-scroll thead th,.panel .table-scroll thead th{position:sticky!important;top:0!important;z-index:21!important;background:#f8fafc!important;box-shadow:inset 0 -1px 0 #dfe6ee!important}
 .table-footer{position:relative!important;bottom:auto!important}
 @media(max-width:950px){.tenant-shell .table-scroll,.platform-shell .table-scroll{max-height:calc(100dvh - 245px)!important;overflow:auto!important}.tenant-shell .table-scroll thead th,.platform-shell .table-scroll thead th{position:sticky!important;top:0!important}}
+
+/* Consistent module table geometry, including single-row and filtered states */
+.tenant-shell .panel:has(>.toolbar)>.table-scroll,.platform-shell .panel:has(>.toolbar)>.table-scroll{min-height:clamp(260px,46vh,520px)}
+.tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:clamp(260px,46vh,520px);justify-content:center}
+.table-footer{min-height:62px!important;display:flex!important;flex-shrink:0;background:#fff!important}
+@media(max-width:950px){.tenant-shell .panel:has(>.toolbar)>.table-scroll,.platform-shell .panel:has(>.toolbar)>.table-scroll,.tenant-shell .panel:has(>.toolbar)>.empty,.platform-shell .panel:has(>.toolbar)>.empty{min-height:320px}.table-footer{min-height:66px!important}}
