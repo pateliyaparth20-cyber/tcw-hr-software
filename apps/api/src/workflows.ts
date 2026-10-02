@@ -12,6 +12,8 @@ import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-pr
 import {finalizePayrollMonth,preparePayrollMonth,reopenPayrollMonth} from './payroll-service';
 
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
+const shiftBreakWindow=(day:string,shift:any)=>{if(shift?.breakStartMinute==null||shift?.breakEndMinute==null)return null;const night=shift.endMinute<=shift.startMinute;let startMinute=Number(shift.breakStartMinute),endMinute=Number(shift.breakEndMinute);if(night&&startMinute<shift.startMinute)startMinute+=1440;if(night&&endMinute<shift.startMinute)endMinute+=1440;if(endMinute<=startMinute)endMinute+=1440;const shiftStart=zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),start=new Date(Math.max(+shiftStart,+zonedMinute(day,startMinute,shift.timezone))),end=new Date(Math.min(+shiftEnd,+zonedMinute(day,endMinute,shift.timezone)));return end>start?{start,end}:null;};
+const overlapSeconds=(aStart:Date,aEnd:Date,bStart:Date,bEnd:Date)=>Math.max(0,Math.floor((Math.min(+aEnd,+bEnd)-Math.max(+aStart,+bStart))/1000));
 export class Workflows {
   constructor(public db:Database){}
   private async closeOpenWorkForApprovedFullDayLeave(ctx:Context,row:any){
