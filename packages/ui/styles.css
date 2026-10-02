@@ -11757,3 +11757,10 @@ input[type="month"]{
  .auth-pro-tenant .auth-pro-main{padding:36px 7vw!important;background:radial-gradient(circle at 55% 42%,#fff 0,#f8fbff 48%,#edf5fc 100%)!important}
  .auth-pro-tenant .auth-pro-card{width:min(100%,530px)!important;padding:34px 38px 28px!important;border-radius:24px!important;box-shadow:0 22px 60px rgba(38,75,112,.12)!important}
 }
+
+
+/* Mobile dashboard: compact profile hero without duplicate TCW brand header */
+@media(max-width:760px){
+ .hr-mobile-dashboard .mobile-hero-profile-only{padding-top:14px!important;min-height:auto!important}
+ .hr-mobile-dashboard .mobile-hero-profile-only .mobile-unified-user{margin-top:0!important}
+}
