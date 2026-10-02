@@ -6,7 +6,7 @@ import type {Context} from './context';
 import {audit,tenant} from './context';
 
 const descriptorSchema=z.array(z.number().min(-5).max(5)).length(128);
-export const FACE_MATCH_THRESHOLD=0.60;
+export const FACE_MATCH_THRESHOLD=0.48;
 const TEMPLATE_VERSION='face-api-1.7.15-v2';
 
 function masterKey(){
@@ -66,7 +66,7 @@ export async function enrollEmployeeFace(db:Database,ctx:Context,body:unknown){
   const samples=input.samples.map(normalize);
   let maxDistance=0;
   for(let i=0;i<samples.length;i++)for(let j=i+1;j<samples.length;j++)maxDistance=Math.max(maxDistance,distance(samples[i],samples[j]));
-  if(maxDistance>0.70)throw new BadRequestException('The three face captures do not match closely enough. Use the same person, normal front light, and try again.');
+  if(maxDistance>0.58)throw new BadRequestException('The three face captures do not match closely enough. Use the same person, normal front light, and try again.');
   const centroid=average(samples);
   const row=await db.employeeFaceProfile.create({data:{tenantId:tid,employeeId,templateCiphertext:encryptTemplate({centroid,samples}),templateVersion:TEMPLATE_VERSION,sampleCount:samples.length}});
   await audit(db,ctx,'EMPLOYEE_FACE_ENROLLED','employees',employeeId,undefined,{templateVersion:row.templateVersion,sampleCount:row.sampleCount,enrolledAt:row.enrolledAt,maxEnrollmentDistance:Number(maxDistance.toFixed(4)),rawImageStored:false});

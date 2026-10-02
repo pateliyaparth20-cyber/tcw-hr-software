@@ -244,13 +244,13 @@ export class BiometricService{
     const existing=await this.db.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});if(existing)return {duplicate:true};
     const shift=await employeeShift(this.db,tid,employeeId);let day=localDate(event.timestamp,shift.timezone);const night=shift.endMinute<=shift.startMinute;
     if(night&&event.timestamp<zonedMinute(day,shift.endMinute,shift.timezone))day=new Date(Date.parse(day)-86400000).toISOString().slice(0,10);
-    const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone),end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
+    const start=zonedMinute(day,shift.startMinute-240,shift.timezone),end=zonedMinute(day,(night?1440+shift.endMinute:shift.endMinute)+240,shift.timezone);
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       const recent=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
       const inferred=event.type==='AUTO'?(recent.length%2===0?'IN':'OUT'):event.type;
       const month=day.slice(0,7),period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:tid,month}}});
-      const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:device.id,sourceId,punchTime:event.timestamp,punchType:inferred,verificationType:event.verification,processedAt:period?.status==='LOCKED'?new Date():null,rawPayload:{source,eventId:event.eventId,deviceUserId:event.userId,attendanceLocked:period?.status==='LOCKED',raw:event.raw??null}}});
+      const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:device.id,sourceId,punchTime:event.timestamp,punchType:inferred,verificationType:event.verification==='FACE'?'FACE_DEVICE':event.verification==='FINGERPRINT'?'FINGERPRINT_DEVICE':event.verification==='CARD'?'CARD_DEVICE':event.verification==='PIN'?'PIN_DEVICE':'BIOMETRIC_DEVICE',processedAt:period?.status==='LOCKED'?new Date():null,rawPayload:{source,eventId:event.eventId,deviceUserId:event.userId,attendanceLocked:period?.status==='LOCKED',raw:event.raw??null}}});
       if(period?.status==='LOCKED'){
         await tx.deviceSyncLog.create({data:{tenantId:tid,deviceId:device.id,level:'WARN',action:'LOCKED_PERIOD_PUNCH',message:`Punch retained but ${month} attendance is locked. Unlock and reconcile to apply it.`,details:{employeeId,eventId:event.eventId,timestamp:event.timestamp.toISOString()}}});
         return {duplicate:false,locked:true};
