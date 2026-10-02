@@ -196,7 +196,8 @@ export class Workflows {
       const created=await tx.leaveRequest.create({data:{tenantId:tid,...values,days,...(autoApprove?{status:'APPROVED',reviewerId:ctx.user.id,reviewNote:'Assigned by HR'}:{})}});
       await audit(tx,ctx,autoApprove?'LEAVE_ASSIGNED':'LEAVE_REQUESTED','leave',created.id,undefined,created);return created;
     });
-    await this.notifyLeaveReporting(ctx,after,autoApprove);\n    if(autoApprove&&after.status==='APPROVED'){
+    await this.notifyLeaveReporting(ctx,after,autoApprove);
+    if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
       for(const month of monthsCovered(after.startDate,after.endDate))await reconcileAttendanceMonth(this.db,tid,month);
       const user=await this.db.user.findFirst({where:{tenantId:tid,employeeId:after.employeeId}});
