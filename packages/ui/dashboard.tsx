@@ -212,7 +212,7 @@ export function Dashboard(){
   <MobileTenantDashboard session={session} can={can} currency={currency} d={d} people={people} present={present} onLeave={onLeave} pending={pending} payroll={payroll} attendanceRate={attendanceRate}/>
   <div className="hr-desktop-dashboard">
   <section className="hr-welcome-card approved-hero">
-   <div className="approved-hero-person"><Avatar name={session.user.name} src={session.user.avatar}/><div><span className="hr-welcome-kicker">{useTimeGreeting(timezone)} 👋</span><h1>{session.user.name.split(' ')[0]}!</h1><p>{session.user.roleName} <b>·</b> TCW HR Software</p></div></div>
+   <div className="approved-hero-person"><Avatar name={session.user.name} src={session.user.avatar}/><div><span className="hr-welcome-kicker">{greeting} 👋</span><h1>{session.user.name.split(' ')[0]}!</h1><p>{session.user.roleName} <b>·</b> TCW HR Software</p></div></div>
    <div className="approved-hero-message"><strong>Let’s make<br/>today productive.</strong></div>
    <div className="approved-hero-clock"><LiveClock timezone={timezone}/><small>{d.company?.name??'Your workspace'}</small></div>
   </section>
