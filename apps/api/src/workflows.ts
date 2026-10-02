@@ -150,6 +150,25 @@ export class Workflows {
       await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});await audit(tx,ctx,'PUNCH_RECORDED','attendance',row.id,undefined,{employeeId:input.employeeId,punchTime:input.punchTime,punchType:input.punchType});return calculated;
     });
   }
+  private async notifyLeaveReporting(ctx:Context,row:any,assignedByHr:boolean){
+    const tid=tenant(ctx);
+    const employee=await this.db.employee.findFirst({where:{tenantId:tid,id:row.employeeId,deletedAt:null},select:{id:true,firstName:true,lastName:true,email:true,managerId:true}});
+    if(!employee)return;
+    const employeeName=(employee.firstName+' '+employee.lastName).trim();
+    const manager=employee.managerId?await this.db.user.findFirst({where:{tenantId:tid,employeeId:employee.managerId,active:true},select:{id:true,email:true,name:true}}):null;
+    const hrUsers=await this.db.user.findMany({where:{tenantId:tid,active:true,role:{code:{in:['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE']}}},select:{id:true,email:true,name:true}});
+    const recipients=new Map<string,{id:string,email:string,name:string}>();
+    if(manager)recipients.set(manager.id,manager);
+    for(const hr of hrUsers)recipients.set(hr.id,hr);
+    const start=new Date(row.startDate).toISOString().slice(0,10),end=new Date(row.endDate).toISOString().slice(0,10);
+    const title=assignedByHr?'Leave assigned by HR':'New leave request';
+    const message=assignedByHr?`${employeeName} has approved leave assigned by HR for ${start} to ${end}.`:`${employeeName} requested leave for ${start} to ${end}. Please review the request.`;
+    for(const recipient of recipients.values()){
+      const notice=await this.db.notification.create({data:{tenantId:tid,userId:recipient.id,title,message}});
+      sendPush(this.db,{tenantId:tid,userId:recipient.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});
+      if(recipient.email)await this.db.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{type:'LEAVE_REPORTING',to:recipient.email,subject:title+' - '+employeeName,text:message}}});
+    }
+  }
   async leave(ctx:Context,method:string,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'leave',method==='GET'?'VIEW':'CREATE');
     const scope=await employeeScope(this.db,ctx);
@@ -177,6 +196,7 @@ export class Workflows {
       const created=await tx.leaveRequest.create({data:{tenantId:tid,...values,days,...(autoApprove?{status:'APPROVED',reviewerId:ctx.user.id,reviewNote:'Assigned by HR'}:{})}});
       await audit(tx,ctx,autoApprove?'LEAVE_ASSIGNED':'LEAVE_REQUESTED','leave',created.id,undefined,created);return created;
     });
+    await this.notifyLeaveReporting(ctx,after,autoApprove);
     if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
       for(const month of monthsCovered(after.startDate,after.endDate))await reconcileAttendanceMonth(this.db,tid,month);
