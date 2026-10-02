@@ -1,6 +1,6 @@
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Database} from '../../../packages/database';
-import {attendancePayableUnits,calculateAttendance,localDate,monthBounds,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,localDate,monthBounds,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
 
 const key=(d:Date)=>d.toISOString().slice(0,10);
 const atDate=(s:string)=>new Date(`${s}T00:00:00.000Z`);
@@ -53,7 +53,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
     const start=employee.joiningDate>first?employee.joiningDate:first;
     const employeeLeaves=leaves.filter(l=>l.employeeId===employee.id);
     const punchesByDay=new Map<string,typeof punches>();
-    for(const punch of punches.filter(p=>p.employeeId===employee.id)){let punchDay=localDate(punch.punchTime,shift.timezone);const night=shift.endMinute<=shift.startMinute;if(night&&punch.punchTime<zonedMinute(punchDay,shift.endMinute,shift.timezone))punchDay=new Date(Date.parse(punchDay)-86400000).toISOString().slice(0,10);if(punchDay.slice(0,7)!==month)continue;const list=punchesByDay.get(punchDay)??[];list.push(punch);punchesByDay.set(punchDay,list);}
+    for(const punch of punches.filter(p=>p.employeeId===employee.id)){let punchDay=attendanceWorkdayDate(punch.punchTime,shift.startMinute,shift.endMinute,shift.timezone);if(punchDay.slice(0,7)!==month)continue;const list=punchesByDay.get(punchDay)??[];list.push(punch);punchesByDay.set(punchDay,list);}
     for(const day of eachDay(start,processNext)){
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`),dayPunches=punchesByDay.get(dateKey)??[];
       let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){const night=shift.endMinute<=shift.startMinute;punchCalc=calculateAttendance(dayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd:zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}

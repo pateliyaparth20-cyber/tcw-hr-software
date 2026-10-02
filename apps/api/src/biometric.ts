@@ -3,7 +3,7 @@ import {createHash,randomBytes,timingSafeEqual} from 'node:crypto';
 import {createConnection} from 'node:net';
 import {z} from 'zod';
 import type {Database} from '../../../packages/database';
-import {attendancePayableUnits,calculateAttendance,localDate,zonedMinute} from '../../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,zonedMinute} from '../../../packages/attendance-engine';
 import {normalizeZkAttLog,zkPushOptions} from '../../../packages/device-connectors/biomax';
 import {audit,requirePermission,tenant,Context} from './context';
 import {employeeShift} from './attendance-automation';
@@ -242,12 +242,11 @@ export class BiometricService{
     if(event.timestamp.getTime()>Date.now()+300000||event.timestamp.getTime()<Date.now()-366*86400000)throw new BadRequestException('Punch timestamp is outside the accepted range.');
     const tid=device.tenantId;const sourceId=`BIOMAX:${device.serialNumber}:${event.eventId}`;
     const existing=await this.db.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});if(existing)return {duplicate:true};
-    const shift=await employeeShift(this.db,tid,employeeId);let day=localDate(event.timestamp,shift.timezone);const night=shift.endMinute<=shift.startMinute;
-    if(night&&event.timestamp<zonedMinute(day,shift.endMinute,shift.timezone))day=new Date(Date.parse(day)-86400000).toISOString().slice(0,10);
-    let start=zonedMinute(day,shift.startMinute-240,shift.timezone),end=zonedMinute(day,(night?1440+shift.endMinute:shift.endMinute)+240,shift.timezone);
+    const shift=await employeeShift(this.db,tid,employeeId);let day=attendanceWorkdayDate(event.timestamp,shift.startMinute,shift.endMinute,shift.timezone);const night=shift.endMinute<=shift.startMinute;
+    let start=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone),end=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
-      const statePunches=(await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{lte:event.timestamp}},orderBy:{punchTime:'desc'},take:200})).reverse(),validState=statePunches.filter(p=>p.verificationType!=='FACE_SCAN'||['IN','OUT'].includes(String((p.rawPayload as any)?.intent??'')));let open:any=null;for(const p of validState){if(p.punchType==='IN'){if(!open)open=p}else if(open)open=null}const inferred=event.type==='AUTO'?(open?'OUT':'IN'):event.type;if(inferred==='OUT'&&open){day=localDate(open.punchTime,shift.timezone);if(night&&open.punchTime<zonedMinute(day,shift.endMinute,shift.timezone))day=new Date(Date.parse(day)-86400000).toISOString().slice(0,10);const scheduledStart=zonedMinute(day,shift.startMinute-240,shift.timezone);start=new Date(Math.min(+scheduledStart,+open.punchTime-60000));const scheduledEnd=zonedMinute(day,(night?1440+shift.endMinute:shift.endMinute)+240,shift.timezone);end=new Date(Math.max(+scheduledEnd,event.timestamp.getTime()+300000));}
+      const statePunches=(await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{lte:event.timestamp}},orderBy:{punchTime:'desc'},take:200})).reverse(),validState=statePunches.filter(p=>p.verificationType!=='FACE_SCAN'||['IN','OUT'].includes(String((p.rawPayload as any)?.intent??'')));let open:any=null;for(const p of validState){if(p.punchType==='IN'){if(!open)open=p}else if(open)open=null}const inferred=event.type==='AUTO'?(open?'OUT':'IN'):event.type;if(inferred==='OUT'&&open){day=attendanceWorkdayDate(open.punchTime,shift.startMinute,shift.endMinute,shift.timezone);const scheduledStart=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone);start=new Date(Math.min(+scheduledStart,+open.punchTime-60000));const scheduledEnd=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);end=new Date(Math.max(+scheduledEnd,event.timestamp.getTime()+300000));}
       const recent=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
       const month=day.slice(0,7),period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:tid,month}}});
       const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:device.id,sourceId,punchTime:event.timestamp,punchType:inferred,verificationType:event.verification==='FACE'?'FACE_DEVICE':event.verification==='FINGERPRINT'?'FINGERPRINT_DEVICE':event.verification==='CARD'?'CARD_DEVICE':event.verification==='PIN'?'PIN_DEVICE':'BIOMETRIC_DEVICE',processedAt:period?.status==='LOCKED'?new Date():null,rawPayload:{source,eventId:event.eventId,deviceUserId:event.userId,attendanceLocked:period?.status==='LOCKED',raw:event.raw??null}}});

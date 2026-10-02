@@ -146,7 +146,7 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  const working=!fullDayLeaveToday&&(currentPunch?.punchType?currentPunch.punchType==='IN':!!todayRecord?.firstIn&&!todayRecord?.lastOut);
  const completed=!fullDayLeaveToday&&!working&&!!todayRecord?.firstIn&&(currentPunch?.punchType==='OUT'||!!todayRecord?.lastOut);
  const workingSince=working?(currentPunch?.punchType==='IN'?currentPunch.punchTime:todayRecord?.firstIn):null;
- const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):working?'Working':completed?'Checked out / Break':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
+ const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):working?'Working':completed?'Checked out':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
  const quick=[
   {href:'/leave',title:'Time off',sub:fullDayLeaveToday?'On leave today':pending.length?pending.length+' pending':'Apply leave',icon:<CalendarDays size={21}/>},
   {href:'/payroll',title:'Payslips',sub:payslip?.run?.month??'Salary records',icon:<Wallet size={21}/>},
