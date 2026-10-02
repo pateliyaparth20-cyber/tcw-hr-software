@@ -59,7 +59,7 @@ export function ModulePage({name}:{name:string}){
   if(key==='branchId')return row.branchName||label(key,row[key]);
   if(key.endsWith('Id'))return label(key,row[key]);
   if(['amount','value','budget','total','paidAmount','outstandingBalance','monthlyPrice','cap','monthlySalary'].includes(key))return row[key]===null?'No cap':currencyValue(row[key],currency);
-  if(['startMinute','endMinute'].includes(key))return `${String(Math.floor(row[key]/60)).padStart(2,'0')}:${String(row[key]%60).padStart(2,'0')}`;
+  if(['startMinute','endMinute','breakStartMinute','breakEndMinute'].includes(key)){if(row[key]===null||row[key]===undefined)return '—';const h=Math.floor(Number(row[key])/60),m=Number(row[key])%60,period=h>=12?'PM':'AM',hour=((h+11)%12)+1;return `${String(hour).padStart(2,'0')}:${String(m).padStart(2,'0')} ${period}`;}if(['fullDayMinutes','halfDayMinutes','overtimeAfterMinutes'].includes(key))return `${(Number(row[key]??0)/60).toFixed(Number(row[key]??0)%60?1:0)} h`;
   if(/Date$|At$/.test(key)||key==='date')return displayDate(row[key]);
   if(typeof row[key]==='boolean')return row[key]?'Yes':'No';
   if(key==='employmentType')return readable((row[key]??'').toLowerCase());
