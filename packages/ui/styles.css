@@ -11684,3 +11684,49 @@ input[type="month"]{
  .mobile-unified-user>div:nth-child(2)>strong{font-size:1.2rem!important}
  .platform-mobile-dashboard .mobile-quick-action{min-height:98px!important}
 }
+
+
+/* Premium responsive HR dashboard — desktop, iOS and Android */
+.mobile-ai-orb,.quick-ai-orb{border-radius:999px!important;background:linear-gradient(145deg,#ffffff 0%,#e8f5ff 48%,#d8eaff 100%)!important;color:#116fe8!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 5px 16px rgba(7,73,166,.18)!important}
+.quick-ai-orb{width:34px;height:34px;display:grid;place-items:center}
+.hr-mobile-dashboard .mobile-hero-actions{margin-left:auto;display:flex;gap:8px}
+.hr-mobile-dashboard .mobile-hero-date{min-width:118px;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.13);color:#fff;text-align:right;display:grid;gap:1px}
+.hr-mobile-dashboard .mobile-hero-date .digital-clock{display:grid!important;gap:0!important;color:#fff!important}
+.hr-mobile-dashboard .mobile-hero-date .digital-clock span{font-size:.59rem!important;color:rgba(255,255,255,.82)!important;white-space:nowrap}
+.hr-mobile-dashboard .mobile-hero-date .digital-clock strong{font-size:.8rem!important;color:#fff!important;white-space:nowrap}
+.hr-mobile-dashboard .mobile-hero-date>small{font-size:.57rem!important;color:rgba(255,255,255,.78)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:761px){
+ .tenant-dashboard,.dashboard-page{max-width:1480px;margin:0 auto}
+ .dashboard-hero,.dashboard-welcome,.hero-card{border-radius:22px!important;box-shadow:0 12px 34px rgba(29,72,118,.09)!important}
+ .dashboard-grid,.dashboard-main-grid{gap:18px!important}
+ .digital-kpi-card,.panel{border-color:#e4edf7!important;box-shadow:0 7px 22px rgba(38,72,108,.055)!important}
+ .dashboard-ai{border-radius:20px!important;background:linear-gradient(120deg,#fff,#f6fbff)!important}
+ .ai-orb{border-radius:999px!important;background:linear-gradient(145deg,#1a83f7,#0758d3)!important;color:#fff!important;box-shadow:0 7px 18px rgba(17,103,221,.24)!important}
+}
+@media(max-width:760px){
+ .hr-mobile-dashboard{padding:0 12px calc(108px + env(safe-area-inset-bottom))!important;background:linear-gradient(180deg,#edf7ff 0,#f8fbff 42%,#f4f7fb 100%)!important}
+ .hr-mobile-dashboard .mobile-unified-hero{margin:0 -12px 12px!important;padding:max(14px,env(safe-area-inset-top)) 14px 16px!important;border-radius:0 0 26px 26px!important;background:linear-gradient(145deg,#087cf0 0%,#075bd4 54%,#073b9e 100%)!important;box-shadow:0 12px 28px rgba(8,86,190,.2)!important}
+ .hr-mobile-dashboard .mobile-unified-brand{display:flex!important;align-items:center!important}
+ .hr-mobile-dashboard .mobile-unified-logo{width:46px!important;height:46px!important;border-radius:13px!important;background:#fff!important;padding:5px!important;overflow:hidden}
+ .hr-mobile-dashboard .mobile-unified-logo img{width:100%!important;height:100%!important;object-fit:contain!important}
+ .hr-mobile-dashboard .mobile-unified-brand-copy strong{font-size:1rem!important;color:#fff!important}
+ .hr-mobile-dashboard .mobile-unified-brand-copy small{font-size:.68rem!important;color:rgba(255,255,255,.84)!important}
+ .hr-mobile-dashboard .mobile-unified-action{width:42px!important;height:42px!important;border-radius:12px!important;background:rgba(255,255,255,.12)!important;color:#fff!important;display:grid!important;place-items:center!important}
+ .hr-mobile-dashboard .mobile-ai-orb{border-radius:999px!important;background:#fff!important;color:#1676e8!important}
+ .hr-mobile-dashboard .mobile-unified-user{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;align-items:center!important;gap:11px!important;margin-top:18px!important}
+ .hr-mobile-dashboard .mobile-unified-user .avatar{width:58px!important;height:58px!important;border:3px solid #fff!important;box-shadow:0 4px 14px rgba(0,0,0,.14)!important}
+ .hr-mobile-dashboard .mobile-unified-user>div:nth-child(2){display:grid!important;min-width:0}
+ .hr-mobile-dashboard .mobile-unified-user>div:nth-child(2)>small{font-size:.68rem!important;color:#fff!important}
+ .hr-mobile-dashboard .mobile-unified-user>div:nth-child(2)>strong{font-size:1.34rem!important;color:#fff!important;line-height:1.06!important}
+ .hr-mobile-dashboard .mobile-unified-user>div:nth-child(2)>span{font-size:.68rem!important;color:rgba(255,255,255,.86)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .hr-mobile-dashboard .mobile-app-welcome,.hr-mobile-dashboard .mobile-app-section{border:1px solid #e0eaf4!important;border-radius:18px!important;background:#fff!important;box-shadow:0 6px 18px rgba(40,72,105,.07)!important}
+ .hr-mobile-dashboard .mobile-app-stats{gap:9px!important}
+ .hr-mobile-dashboard .mobile-app-stats>div{border:1px solid #e2ebf4!important;border-radius:16px!important;background:#fff!important;box-shadow:0 5px 15px rgba(40,72,105,.06)!important}
+ .hr-mobile-dashboard .mobile-quick-action{border:1px solid #e5edf6!important;border-radius:15px!important;background:linear-gradient(180deg,#fff,#f8fbff)!important}
+ .hr-mobile-dashboard .mobile-update-row{border-radius:13px!important}
+}
+@media(max-width:390px){
+ .hr-mobile-dashboard .mobile-hero-date{min-width:101px;padding:7px 8px}
+ .hr-mobile-dashboard .mobile-unified-user .avatar{width:52px!important;height:52px!important}
+ .hr-mobile-dashboard .mobile-unified-user>div:nth-child(2)>strong{font-size:1.18rem!important}
+}
