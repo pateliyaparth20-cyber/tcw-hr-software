@@ -82,7 +82,7 @@ export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()
 }
 
 export async function reconcileAttendanceMonth(db:Database,tenantId:string,month:string){
-  const {first,next}=monthBounds(month),now=new Date();
+  const now=new Date();
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
   if(month>currentMonth)throw new BadRequestException('Future attendance months cannot be reconciled.');
@@ -204,7 +204,9 @@ export async function lockAttendanceMonth(db:Database,tenantId:string,month:stri
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
   if(month>=currentMonth)throw new BadRequestException('The current attendance month must stay open. Lock it only after the month has ended.');
-  await reconcileAttendanceMonth(db,tenantId,month);
+  const {first,next}=monthBounds(month);
+  const syncedCount=await db.attendanceDaily.count({where:{tenantId,date:{gte:first,lt:next},syncedAt:{not:null}}});
+  if(!syncedCount)throw new BadRequestException('Sync this attendance month before locking it for payroll.');
   const summary=await attendanceMonthSummary(db,tenantId,month);
   if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before locking attendance.`);
   const {first,next}=monthBounds(month),now=new Date();
