@@ -101,7 +101,7 @@ const worker=new Worker('peopleos-outbox',async job=>{
   }
 },{connection,concurrency:4});
 worker.on('failed',(job,error)=>console.error('Outbox delivery failed for job',job?.id,String(error?.message??error??'unknown').slice(0,240)));
-let scanning=false,lastAttendanceStatusRefresh=0;
+let scanning=false;
 async function scan(){if(scanning)return;scanning=true;try{
   const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
   if(!smsConfigured){
