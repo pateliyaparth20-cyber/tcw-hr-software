@@ -23,14 +23,18 @@ test('full day requires full working threshold and short work is not promoted',(
 test('work after configured shift end is overtime even below duration threshold when there is no late debt',()=>{const shiftRule={shiftStart:t('09:00'),shiftEnd:t('17:00'),graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:600};const r=calculateAttendance([{time:t('09:00'),type:'IN'},{time:t('18:00'),type:'OUT'}],shiftRule);assert.equal(r.workMinutes,540);assert.equal(r.overtimeMinutes,60)});
 test('night shift stays open across midnight until an actual OUT punch',()=>{const nightRule={shiftStart:new Date('2026-09-21T22:00:00Z'),shiftEnd:new Date('2026-09-22T06:00:00Z'),graceMinutes:10,earlyOutGraceMinutes:10,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};const open=calculateAttendance([{time:new Date('2026-09-21T22:00:00Z'),type:'IN'}],nightRule);assert.equal(open.status,'MISSING_PUNCH');assert.equal(open.lastOut,null);const closed=calculateAttendance([{time:new Date('2026-09-21T22:00:00Z'),type:'IN'},{time:new Date('2026-09-22T06:30:00Z'),type:'OUT'}],nightRule);assert.equal(closed.workMinutes,510);assert.equal(closed.status,'PRESENT');assert.equal(closed.overtimeMinutes,30)});
 test('night shift overtime stays on the original shift-cycle day',()=>{assert.equal(attendanceWorkdayDate(new Date('2026-09-22T01:30:00Z'),1320,360,'UTC'),'2026-09-21');assert.equal(attendanceWorkdayDate(new Date('2026-09-22T07:00:00Z'),1320,360,'UTC'),'2026-09-21');assert.equal(attendanceWorkdayDate(new Date('2026-09-22T20:00:00Z'),1320,360,'UTC'),'2026-09-22')});
-test('one-second short attendance does not drop to a lower day status',()=>{
- const fullRule={shiftStart:t('09:00'),shiftEnd:t('17:00'),graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
+test('seconds are display-only while attendance business rules round to whole minutes',()=>{
+ const fullRule={shiftStart:t('09:00'),shiftEnd:t('17:00'),graceMinutes:10,earlyOutGraceMinutes:10,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
  const full=calculateAttendance([{time:new Date('2026-09-21T09:00:00.000Z'),type:'IN'},{time:new Date('2026-09-21T16:59:59.000Z'),type:'OUT'}],fullRule);
- assert.equal(full.workMinutes,479);assert.equal(full.status,'PRESENT');
- const half=calculateAttendance([{time:new Date('2026-09-21T09:00:00.000Z'),type:'IN'},{time:new Date('2026-09-21T12:59:59.000Z'),type:'OUT'}],fullRule);
- assert.equal(half.workMinutes,239);assert.equal(half.status,'HALF_DAY');
- const twoSecondsShort=calculateAttendance([{time:new Date('2026-09-21T09:00:00.000Z'),type:'IN'},{time:new Date('2026-09-21T16:59:58.000Z'),type:'OUT'}],fullRule);
- assert.equal(twoSecondsShort.status,'HALF_DAY');
+ assert.equal(full.workMinutes,480);assert.equal(full.status,'PRESENT');
+ const belowHalfMinute=calculateAttendance([{time:new Date('2026-09-21T09:00:00.000Z'),type:'IN'},{time:new Date('2026-09-21T16:59:29.000Z'),type:'OUT'}],fullRule);
+ assert.equal(belowHalfMinute.workMinutes,479);assert.equal(belowHalfMinute.status,'HALF_DAY');
+ const lateWithinRoundedGrace=calculateAttendance([{time:new Date('2026-09-21T09:10:29.000Z'),type:'IN'},{time:t('17:00'),type:'OUT'}],fullRule);
+ assert.equal(lateWithinRoundedGrace.lateMinutes,0);
+ const lateNextMinute=calculateAttendance([{time:new Date('2026-09-21T09:10:31.000Z'),type:'IN'},{time:t('17:00'),type:'OUT'}],fullRule);
+ assert.equal(lateNextMinute.lateMinutes,1);
+ const oneSecondEarly=calculateAttendance([{time:t('09:00'),type:'IN'},{time:new Date('2026-09-21T16:59:59.000Z'),type:'OUT'}],fullRule);
+ assert.equal(oneSecondEarly.earlyOutMinutes,0);
 });
 test('timezone conversion handles Kolkata and daylight saving',()=>{assert.equal(zonedMinute('2026-09-21',540,'Asia/Kolkata').toISOString(),'2026-09-21T03:30:00.000Z');assert.equal(zonedMinute('2026-07-01',540,'America/New_York').toISOString(),'2026-07-01T13:00:00.000Z');assert.equal(localDate(new Date('2026-09-21T21:00:00Z'),'Asia/Kolkata'),'2026-09-22')});
 test('early out, working weekdays, and payable attendance units are deterministic',()=>{
