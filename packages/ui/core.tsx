@@ -3,6 +3,7 @@ import React,{createContext,useContext,useEffect,useRef,useState} from 'react';
 import {useQuery,QueryClient,QueryClientProvider,useQueryClient} from '@tanstack/react-query';
 import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight,Clock3} from 'lucide-react';
 import {Field,Row,readable} from './config';
+import {avatarInitials,avatarPhotoSrc} from './avatar';
 export type Session={user:Row;csrf:string;company?:Row};
 export function notificationTarget(row:Row){
   const explicit=String(row.target??row.url??'').trim();
@@ -199,7 +200,7 @@ export function Empty({title='Nothing here yet',description='New records will ap
 export function Badge({value}:{value:any}){const str=String(value??'—');return <span className={'badge '+(['ACTIVE','PRESENT','APPROVED','PAID','COMPLETED','HIRED','WON','AVAILABLE','WORKING','CONNECTED','ONLINE','LOCKED','RESOLVED','INFO','CLEAR','OPEN','PAID_LEAVE','CONTACTED','INTERESTED','CONVERTED','HOLIDAY','WEEK_OFF','LOW'].includes(str)?'green':['PENDING','TRIAL','REVIEW','PROBATION','MEETING','PART_PAID','IN_PROGRESS','AWAITING_CONNECTION','DEGRADED','WARN','NORMAL','HIGH','FOLLOW_UP','NO_ANSWER'].includes(str)?'amber':['REJECTED','ABSENT','SUSPENDED','EXPIRED','ARCHIVED','OVERDUE','MISSING_PUNCH','LOST','OFFLINE','ERROR','URGENT','CALL_DUE','NOT_INTERESTED'].includes(str)?'red':'blue')}>{readable(str.toLowerCase())}</span>}
 export const displayDate=(v:any)=>v?new Date(v).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
 export const currencyValue=(v:number,currency='INR')=>new Intl.NumberFormat('en-IN',{style:'currency',currency,maximumFractionDigits:2}).format((v??0)/100);
-export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:string|null}){const tones=['#e4edff','#dff4ee','#f4e9ff','#fff0da'],parts=String(name??'').trim().split(/\s+/).filter(Boolean),initials=parts.length>1?(parts[0][0]+parts[parts.length-1][0]).toUpperCase():(parts[0]?.[0]??'').toUpperCase();return <span className={'avatar '+(large?'large':'')+(src?' has-photo':'')} style={{background:tones[(name?.charCodeAt(0)??0)%4]}}>{src?<img src={src} alt={name+' profile photo'}/>:initials}</span>}
+export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:string|null}){const tones=['#e4edff','#dff4ee','#f4e9ff','#fff0da'],photo=avatarPhotoSrc(src),initials=avatarInitials(name);return <span className={'avatar '+(large?'large':'')+(photo?' has-photo':'')} style={{background:tones[(String(name??'').charCodeAt(0)||0)%4]}}><span className="avatar-initials" aria-hidden={!!photo}>{initials}</span>{photo&&<img src={photo} alt={name+' profile photo'} onError={e=>{e.currentTarget.style.display='none'}}/>}</span>}
 export function Modal({title,children,onClose,wide=false}:{title:string;children:React.ReactNode;onClose:()=>void;wide?:boolean}){
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{const d=ref.current;d?.showModal();return()=>d?.close()},[]);
