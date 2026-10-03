@@ -14201,3 +14201,13 @@ body{overflow-y:auto!important}
 .attendance-view-duration strong{
   font-variant-numeric:tabular-nums;
 }
+
+
+/* Attendance grace / early-out breakdown */
+.attendance-time-stack{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.attendance-time-stack>small{display:block;color:#8795a7;font-size:.61rem;line-height:1.25;white-space:nowrap;font-variant-numeric:tabular-nums}
+.attendance-time-stack>small.chargeable{color:#9b5a32;font-weight:650}
+.attendance-view-top-summary>div>small{display:block;margin-top:4px;color:#8795a7;font-size:.61rem;line-height:1.35;font-weight:450;font-variant-numeric:tabular-nums}
+.attendance-view-metrics>div>small{display:block;margin-top:4px;color:#8795a7;font-size:.61rem;line-height:1.35;font-weight:450}
+.attendance-main-table col.c-late,.attendance-main-table col.c-early{width:185px!important}
+.attendance-main-table{width:1640px!important;min-width:1640px!important;max-width:1640px!important}
