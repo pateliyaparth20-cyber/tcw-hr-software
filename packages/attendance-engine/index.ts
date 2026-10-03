@@ -27,6 +27,10 @@ export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,g
   if(now.getTime()<shiftEnd.getTime())return 'HALF_DAY' as const;
   return 'ABSENT' as const;
 }
+export function punchedAttendanceStatusAtMoment(calculatedStatus:string,now:Date,shiftEnd:Date,hasPunch:boolean){
+  if(hasPunch&&now.getTime()<shiftEnd.getTime())return 'PRESENT' as const;
+  return calculatedStatus;
+}
 export function attendanceBusinessMinutes(milliseconds:number){return Math.max(0,Math.round((Number(milliseconds)||0)/60000));}
 export function attendanceBusinessMinutesFromSeconds(seconds:number){return attendanceBusinessMinutes((Number(seconds)||0)*1000);}
 function workedMillisecondsBetween(start:Date,end:Date,rule:AttendanceRule){
