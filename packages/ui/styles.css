@@ -12531,7 +12531,20 @@ input[type="month"]{
 }
 .modal:has(.attendance-view-modal){
   width:min(760px,calc(100vw - 24px))!important;
+  max-height:min(88vh,820px)!important;
+  overflow:hidden!important;
 }
+.modal:has(.attendance-view-modal)>.modal-body{
+  max-height:calc(min(88vh,820px) - 62px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#b9c6d6 #f3f6f9;
+}
+.modal:has(.attendance-view-modal)>.modal-body::-webkit-scrollbar{width:8px}
+.modal:has(.attendance-view-modal)>.modal-body::-webkit-scrollbar-track{background:#f3f6f9;border-radius:999px}
+.modal:has(.attendance-view-modal)>.modal-body::-webkit-scrollbar-thumb{background:#b9c6d6;border-radius:999px}
 .attendance-view-modal{
   display:flex;
   flex-direction:column;
@@ -12673,3 +12686,5 @@ input[type="month"]{
   .attendance-view-session>svg{display:none}
   .attendance-view-duration{grid-column:2/-1;text-align:left;border-top:1px dashed #e5ecf4;padding-top:7px}
 }
+
+@media(max-width:760px){.modal:has(.attendance-view-modal){max-height:calc(100dvh - 16px)!important}.modal:has(.attendance-view-modal)>.modal-body{max-height:calc(100dvh - 80px)!important;-webkit-overflow-scrolling:touch}}
