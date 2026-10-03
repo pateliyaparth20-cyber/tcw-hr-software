@@ -300,6 +300,7 @@ model Shift {
   alternateSaturdayMode   String   @default("SECOND_FOURTH_OFF") @map("alternate_saturday_mode")
   monthlyFlexibleOffDays  Int      @default(0) @map("monthly_flexible_off_days")
   breakMinutes            Int      @default(60)
+  punchDrivenBreaks       Boolean  @default(false) @map("punch_driven_breaks")
   breakStartMinute        Int?     @map("break_start_minute")
   breakEndMinute          Int?     @map("break_end_minute")
   fullDayMinutes          Int      @default(480)
