@@ -203,8 +203,16 @@ export const currencyValue=(v:number,currency='INR')=>new Intl.NumberFormat('en-
 export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:string|null}){const tones=['#e4edff','#dff4ee','#f4e9ff','#fff0da'],photo=avatarPhotoSrc(src),initials=avatarInitials(name);return <span className={'avatar '+(large?'large':'')+(photo?' has-photo':'')} style={{background:tones[(String(name??'').charCodeAt(0)||0)%4]}}><span className="avatar-initials" aria-hidden={!!photo}>{initials}</span>{photo&&<img src={photo} alt={name+' profile photo'} onError={e=>{e.currentTarget.style.display='none'}}/>}</span>}
 export function Modal({title,children,onClose,wide=false}:{title:string;children:React.ReactNode;onClose:()=>void;wide?:boolean}){
   const ref=useRef<HTMLDialogElement>(null);
-  useEffect(()=>{const d=ref.current;d?.showModal();return()=>d?.close()},[]);
-  return <dialog ref={ref} className={'modal '+(wide?'wide':'')} onCancel={e=>{e.preventDefault();onClose()}} onClick={e=>{if(e.target===ref.current)onClose()}}><div className="modal-head"><h2>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
+  useEffect(()=>{const d=ref.current;d?.showModal();return()=>{if(d?.open)d.close()}},[]);
+  return <dialog ref={ref} className={'modal '+(wide?'wide':'')} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target===ref.current)onClose()}}><div className="modal-head"><h2>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
+}
+export function PhotoViewer({src,name,onClose}:{src:string;name:string;onClose:()=>void}){
+  const ref=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const d=ref.current;d?.showModal();return()=>{if(d?.open)d.close()}},[]);
+  return <dialog ref={ref} className="tcw-photo-viewer-dialog" aria-label={name+' photo'} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target===ref.current)onClose()}}>
+    <button type="button" className="tcw-photo-viewer-close" aria-label="Close photo" onClick={onClose}><X size={24}/></button>
+    <img src={src} alt={name+' profile photo'}/>
+  </dialog>;
 }
 function Choice({field,value,onChange}:{field:Field;value:any;onChange:(v:any)=>void}){
  const data=useData(field.source??'',!!field.source);const rows=data.data?.items??[];
