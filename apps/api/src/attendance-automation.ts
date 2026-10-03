@@ -1,6 +1,6 @@
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Database} from '../../../packages/database';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,localDate,monthBounds,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,localDate,monthBounds,noPunchAttendanceStatus,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
 
 const key=(d:Date)=>d.toISOString().slice(0,10);
 const atDate=(s:string)=>new Date(`${s}T00:00:00.000Z`);
@@ -20,6 +20,57 @@ export async function employeeShift(db:Database,tenantId:string,employeeId:strin
   const shift=wanted?await db.shift.findFirst({where:{tenantId,id:wanted}}):await db.shift.findFirst({where:{tenantId},orderBy:{createdAt:'asc'}});
   if(!shift)throw new BadRequestException('Create at least one shift before processing attendance.');
   return shift;
+}
+
+const noPunchRefreshAt=new Map<string,number>();
+export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId:string,now=new Date(),minIntervalMs=30000){
+  const last=noPunchRefreshAt.get(tenantId)??0;
+  if(minIntervalMs>0&&now.getTime()-last<minIntervalMs)return {tenantId,skipped:true,updated:0};
+  const company=await db.tenant.findUnique({where:{id:tenantId},select:{id:true,status:true,timezone:true}});
+  if(!company||company.status!=='ACTIVE')return {tenantId,skipped:true,updated:0};
+  const timezone=company.timezone||'Asia/Kolkata',today=localDate(now,timezone),previous=new Date(Date.parse(today)-86400000).toISOString().slice(0,10);
+  const windowStart=atDate(previous),windowEnd=new Date(+atDate(today)+2*86400000);
+  const months=[...new Set([previous.slice(0,7),today.slice(0,7)])];
+  const [locks,employees,shifts,holidays,leaves,existing,punches]=await Promise.all([
+    db.attendancePeriodLock.findMany({where:{tenantId,month:{in:months},status:'LOCKED'},select:{month:true}}),
+    db.employee.findMany({where:{tenantId,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:windowEnd}},select:{id:true,shiftId:true,joiningDate:true}}),
+    db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
+    db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:windowEnd},OR:[{endDate:null},{endDate:{gte:windowStart}}]},select:{date:true,endDate:true}}),
+    db.leaveRequest.findMany({where:{tenantId,status:'APPROVED',startDate:{lt:windowEnd},endDate:{gte:windowStart}},select:{employeeId:true,startDate:true,endDate:true}}),
+    db.attendanceDaily.findMany({where:{tenantId,date:{gte:windowStart,lt:windowEnd}},select:{id:true,employeeId:true,date:true,firstIn:true,lastOut:true,correctionNote:true,status:true}}),
+    db.attendancePunch.findMany({where:{tenantId,punchTime:{gte:new Date(+windowStart-12*3600000),lt:new Date(+windowEnd+12*3600000)}},select:{employeeId:true,punchTime:true}})
+  ]);
+  if(!shifts.length){noPunchRefreshAt.set(tenantId,now.getTime());return {tenantId,skipped:true,updated:0};}
+  const lockedMonths=new Set(locks.map(r=>r.month)),shiftMap=new Map(shifts.map(s=>[s.id,s])),existingMap=new Map(existing.map(r=>[`${r.employeeId}:${key(r.date)}`,r])),punchesByEmployee=new Map<string,typeof punches>();
+  for(const punch of punches){const list=punchesByEmployee.get(punch.employeeId)??[];list.push(punch);punchesByEmployee.set(punch.employeeId,list);}
+  let updated=0;
+  for(const employee of employees){
+    const shift=(employee.shiftId&&shiftMap.get(employee.shiftId))||shifts[0];
+    const workDay=attendanceWorkdayDate(now,shift.startMinute,shift.endMinute,shift.timezone);
+    if(lockedMonths.has(workDay.slice(0,7))||workDay<key(employee.joiningDate))continue;
+    const day=atDate(workDay),workDays=workingDaySet(shift.workingDays);
+    if(!workDays.has(day.getUTCDay()))continue;
+    if(holidays.some(h=>overlap(h.date,h.endDate??h.date,day)))continue;
+    if(leaves.some(l=>l.employeeId===employee.id&&overlap(l.startDate,l.endDate,day)))continue;
+    const hasPunch=(punchesByEmployee.get(employee.id)??[]).some(p=>attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===workDay);
+    if(hasPunch)continue;
+    const record=existingMap.get(`${employee.id}:${workDay}`);
+    if(record?.correctionNote||record?.firstIn||record?.lastOut)continue;
+    const shiftStart=zonedMinute(workDay,shift.startMinute,shift.timezone),phase=noPunchAttendanceStatus(now,shiftStart,shift.graceMinutes,shift.halfDayMinutes);
+    if(phase==='PENDING')continue;
+    const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
+    if(record)await db.attendanceDaily.update({where:{id:record.id},data:values});
+    else await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});
+    updated++;
+  }
+  noPunchRefreshAt.set(tenantId,now.getTime());
+  return {tenantId,skipped:false,updated};
+}
+export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()){
+  const companies=await db.tenant.findMany({where:{status:'ACTIVE'},select:{id:true}});
+  let updated=0;
+  for(const company of companies)updated+=(await refreshTenantCurrentNoPunchAttendance(db,company.id,now,0)).updated;
+  return {companies:companies.length,updated};
 }
 
 export async function reconcileAttendanceMonth(db:Database,tenantId:string,month:string){
@@ -64,17 +115,18 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const leaveUnits=leave?(halfLeave?50:100):0;
       const dayType=leave?(leaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):holiday?'HOLIDAY':weeklyOff?'WEEK_OFF':'WORKING';
       const scheduled=dayType==='WORKING'||dayType==='PAID_LEAVE'||dayType==='UNPAID_LEAVE',fullDayLeave=!!leave&&!halfLeave;
-      const night=shift.endMinute<=shift.startMinute,shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
-      const activeNoPunchDay=dateKey===today&&scheduled&&!leave&&!holiday&&!weeklyOff&&!dayPunches.length&&!record?.correctionNote&&now<shiftEnd;
-      let status=record?.correctionNote?record.status:activeNoPunchDay?'VOID':fullDayLeave?(leaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchCalc?.status??(holiday?'HOLIDAY':weeklyOff?'WEEK_OFF':leave?'HALF_DAY_LEAVE':'ABSENT');
+      const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
+      const currentNoPunchDay=dateKey===today&&scheduled&&!leave&&!holiday&&!weeklyOff&&!dayPunches.length&&!record?.correctionNote;
+      const noPunchPhase=currentNoPunchDay?noPunchAttendanceStatus(now,shiftStart,shift.graceMinutes,shift.halfDayMinutes):null;
+      let status=record?.correctionNote?record.status:currentNoPunchDay?(noPunchPhase==='PENDING'?'VOID':noPunchPhase):fullDayLeave?(leaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchCalc?.status??(holiday?'HOLIDAY':weeklyOff?'WEEK_OFF':leave?'HALF_DAY_LEAVE':'ABSENT');
       let payable=record?.correctionNote?record.payableUnits:attendancePayableUnits(status);
       if(!record?.correctionNote&&leave){const worked=punchCalc?attendancePayableUnits(punchCalc.status):0;if(leaveType?.paid)payable=Math.min(100,worked+leaveUnits);else payable=worked;if(!punchCalc&&!record&&halfLeave)payable=leaveType?.paid?50:0;}
       else if(!record?.correctionNote&&!scheduled){payable=0;if((punchCalc?.workMinutes??0)>0)status=punchCalc!.status;}
       const exceptionCode=status==='MISSING_PUNCH'?'MISSING_PUNCH':'';if(exceptionCode)exceptions++;
       const rawAttendanceValues=punchCalc?{firstIn:punchCalc.firstIn,lastOut:punchCalc.lastOut,workMinutes:punchCalc.workMinutes,lateMinutes:punchCalc.lateMinutes,earlyOutMinutes:punchCalc.earlyOutMinutes,overtimeMinutes:punchCalc.overtimeMinutes}:record?{firstIn:record.firstIn,lastOut:record.lastOut,workMinutes:record.workMinutes,lateMinutes:record.lateMinutes,earlyOutMinutes:record.earlyOutMinutes,overtimeMinutes:record.overtimeMinutes}:{firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
       const attendanceValues=fullDayLeave?{...rawAttendanceValues,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0}:rawAttendanceValues;
-      if(activeNoPunchDay)payable=0;
-      const values={shiftId:shift.id,scheduledMinutes:activeNoPunchDay?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:activeNoPunchDay?0:leaveUnits,dayType,status,exceptionCode:activeNoPunchDay?'':exceptionCode,...attendanceValues};
+      if(currentNoPunchDay&&noPunchPhase==='PENDING')payable=0;
+      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:leaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,...attendanceValues};
       if(record){await db.attendanceDaily.update({where:{id:record.id},data:record.correctionNote?{shiftId:shift.id,scheduledMinutes:values.scheduledMinutes,leaveUnits,dayType}:{...values}});}else{await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});generated++;}
     }
   }
@@ -106,10 +158,8 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
   for(const row of rows){
     const e=employeeMap.get(row.employeeId);if(!e)continue;
     const g=groups.get(row.employeeId)??{id:row.employeeId,employeeId:row.employeeId,employeeCode:e.employeeCode,employee:`${e.firstName} ${e.lastName}`,scheduledDays:0,payableUnits:0,presentDays:0,halfDays:0,paidLeaveUnits:0,unpaidLeaveUnits:0,absentDays:0,missingPunchDays:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
-    const shift=(e.shiftId&&shiftMap.get(e.shiftId))||shifts[0],rowKey=key(row.date),night=!!shift&&shift.endMinute<=shift.startMinute,shiftEnd=shift?zonedMinute(rowKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone):null;
-    const activeNoPunchDay=rowKey===today&&row.status==='ABSENT'&&!row.firstIn&&!row.lastOut&&!!shiftEnd&&now<shiftEnd;
+    const shift=(e.shiftId&&shiftMap.get(e.shiftId))||shifts[0],rowKey=key(row.date);
     if(row.scheduledMinutes>0)g.scheduledDays++;
-    if(activeNoPunchDay){groups.set(row.employeeId,g);continue;}
     g.payableUnits+=row.payableUnits;
     if(row.status==='PRESENT')g.presentDays++;
     if(['HALF_DAY','HALF_DAY_LEAVE'].includes(row.status))g.halfDays++;
