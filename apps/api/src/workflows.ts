@@ -6,7 +6,7 @@ import {id,date,leaveSchema} from '../../../packages/validation';
 import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledBreakOut,isScheduledWorkDay,localDate,monthBounds,zonedMinute} from '../../../packages/attendance-engine';
 import {hasPermission} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
-import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,unlockAttendanceMonth} from './attendance-automation';
+import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,refreshTenantCurrentNoPunchAttendance,unlockAttendanceMonth} from './attendance-automation';
 import {sendPush} from './push';
 import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-profile';
 import {finalizePayrollMonth,preparePayrollMonth,reopenPayrollMonth} from './payroll-service';
@@ -132,6 +132,7 @@ export class Workflows {
     }
     requirePermission(ctx,'attendance',method==='GET'?'VIEW':'CREATE');
     if(method==='GET'){
+      await refreshTenantCurrentNoPunchAttendance(this.db,tid,new Date(),0);
       const start=query.from?date.parse(query.from):new Date(Date.now()-31*86400000);const end=query.to?date.parse(query.to):new Date();
       let visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);if(query.employeeId){const selected=id.parse(String(query.employeeId));if(!visibleEmployeeIds.includes(selected))throw new ForbiddenException('Employee is outside your attendance scope.');visibleEmployeeIds=[selected];}const employeeSearch=String(query.employeeSearch??'').trim();if(employeeSearch){const employeeSearchTerms=employeeSearch.split(/\s+/).filter(Boolean).slice(0,4),matched=await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,id:{in:visibleEmployeeIds},AND:employeeSearchTerms.map(term=>({OR:[{firstName:{startsWith:term,mode:'insensitive' as const}},{lastName:{startsWith:term,mode:'insensitive' as const}},{employeeCode:{startsWith:term,mode:'insensitive' as const}}]}))},select:{id:true}});visibleEmployeeIds=matched.map(e=>e.id);}
       const previousDate=new Date(+start-86400000);
