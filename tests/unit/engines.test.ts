@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,workingDaySet,zonedMinute,localDate,punchedAttendanceStatusAtMoment} from '../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,workingDaySet,zonedMinute,localDate,noPunchAttendanceStatus,punchedAttendanceStatusAtMoment} from '../../packages/attendance-engine';
 import {calculatePay,assertPayrollTransition} from '../../packages/payroll-engine';
 import {hashPassword,verifyPassword} from '../../packages/auth';
 import {toCsv,toXlsx} from '../../packages/reporting-engine';
@@ -74,4 +74,12 @@ test('punched attendance stays present until shift end and finalizes afterwards'
  assert.equal(punchedAttendanceStatusAtMoment('HALF_DAY',end,end,true),'HALF_DAY');
  assert.equal(punchedAttendanceStatusAtMoment('ABSENT',t('18:00'),end,true),'ABSENT');
  assert.equal(punchedAttendanceStatusAtMoment('HALF_DAY',t('12:00'),end,false),'HALF_DAY');
+});
+
+
+test('no punch becomes absent only at shift end',()=>{
+ const start=t('09:00'),end=t('17:00');
+ assert.equal(noPunchAttendanceStatus(t('09:05'),start,end,10),'PENDING');
+ assert.equal(noPunchAttendanceStatus(t('12:00'),start,end,10),'HALF_DAY');
+ assert.equal(noPunchAttendanceStatus(end,start,end,10),'ABSENT');
 });
