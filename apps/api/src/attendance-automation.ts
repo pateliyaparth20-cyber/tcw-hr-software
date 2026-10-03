@@ -40,7 +40,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
     db.calendarEvent.findMany({where:{tenantId,kind:{in:['HOLIDAY','ROSTER_OFF']},date:{lt:windowEnd},OR:[{endDate:null},{endDate:{gte:windowStart}}]},select:{date:true,endDate:true,kind:true,shiftId:true}}),
     db.leaveRequest.findMany({where:{tenantId,status:'APPROVED',startDate:{lt:windowEnd},endDate:{gte:windowStart}},select:{employeeId:true,startDate:true,endDate:true}}),
-    db.attendanceDaily.findMany({where:{tenantId,date:{gte:windowStart,lt:windowEnd}},select:{id:true,employeeId:true,date:true,shiftId:true,firstIn:true,lastOut:true,correctionNote:true,status:true}}),
+    db.attendanceDaily.findMany({where:{tenantId,date:{gte:windowStart,lt:windowEnd}},select:{id:true,employeeId:true,date:true,shiftId:true,firstIn:true,lastOut:true,correctionNote:true,status:true,syncedAt:true}}),
     db.attendancePunch.findMany({where:{tenantId,punchTime:{gte:new Date(+windowStart-12*3600000),lt:new Date(+windowEnd+12*3600000)}},select:{employeeId:true,punchTime:true}})
   ]);
   if(!shifts.length){noPunchRefreshAt.set(tenantId,now.getTime());return {tenantId,skipped:true,updated:0};}
@@ -60,7 +60,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
       if(leaves.some(l=>l.employeeId===employee.id&&overlap(l.startDate,l.endDate,day)))continue;
       const hasPunch=(punchesByEmployee.get(employee.id)??[]).some(p=>attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===workDay);
       if(hasPunch)continue;
-      if(record?.correctionNote||record?.firstIn||record?.lastOut)continue;
+      if(record?.syncedAt||record?.correctionNote||record?.firstIn||record?.lastOut)continue;
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(workDay,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(workDay,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
       if(now<shiftStart)continue;
       const phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes);
