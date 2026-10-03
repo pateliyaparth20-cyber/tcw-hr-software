@@ -3,9 +3,14 @@ DECLARE
   v_tenant uuid;
   v_count integer;
 BEGIN
-  SELECT count(*), min(id) INTO v_count, v_tenant
+  SELECT count(*) INTO v_count
   FROM tenants
   WHERE lower(regexp_replace(name, '[^a-z0-9]+', '', 'g')) = 'mdshah';
+
+  SELECT id INTO v_tenant
+  FROM tenants
+  WHERE lower(regexp_replace(name, '[^a-z0-9]+', '', 'g')) = 'mdshah'
+  LIMIT 1;
 
   IF v_count <> 1 THEN
     RAISE EXCEPTION 'MD Shah tenant reset aborted: expected exactly 1 tenant, found %', v_count;
