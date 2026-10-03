@@ -12688,3 +12688,195 @@ input[type="month"]{
 }
 
 @media(max-width:760px){.modal:has(.attendance-view-modal){max-height:calc(100dvh - 16px)!important}.modal:has(.attendance-view-modal)>.modal-body{max-height:calc(100dvh - 80px)!important;-webkit-overflow-scrolling:touch}}
+
+
+/* Attendance v2 final alignment */
+.attendance-v3-table>.toolbar{
+  min-height:58px!important;
+  padding:10px 14px!important;
+  align-items:center!important;
+}
+.attendance-v3-table .attendance-search-filters{
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  flex-wrap:wrap!important;
+  min-height:0!important;
+}
+.attendance-v3-table .attendance-employee-search{
+  flex:0 0 200px!important;
+  width:200px!important;
+  min-width:200px!important;
+  max-width:200px!important;
+  height:38px!important;
+  min-height:38px!important;
+  margin:0!important;
+}
+.attendance-v3-table .attendance-status-select{
+  flex:0 0 118px!important;
+  width:118px!important;
+  min-width:118px!important;
+  max-width:118px!important;
+  height:38px!important;
+  min-height:38px!important;
+  margin:0!important;
+  background:#fff!important;
+  color:#40536a!important;
+  color-scheme:light!important;
+  font-weight:400!important;
+}
+.attendance-v3-table .attendance-compact-dates{
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  width:auto!important;
+  margin:0!important;
+}
+.attendance-v3-table .attendance-compact-dates label{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:4px!important;
+  width:auto!important;
+  margin:0!important;
+  color:#7f8ea1!important;
+  font-size:.61rem!important;
+  font-weight:400!important;
+  white-space:nowrap!important;
+}
+.attendance-v3-table .attendance-compact-dates input{
+  width:112px!important;
+  min-width:112px!important;
+  max-width:112px!important;
+  height:38px!important;
+  min-height:38px!important;
+  margin:0!important;
+  padding:0 6px!important;
+  font-size:.68rem!important;
+  font-weight:400!important;
+  background:#fff!important;
+  color:#40536a!important;
+  color-scheme:light!important;
+}
+.attendance-v3-table .export-format-group{
+  margin-left:auto!important;
+  align-self:center!important;
+}
+.attendance-records-table{
+  min-height:0!important;
+  height:auto!important;
+}
+.attendance-records-table .table-scroll{
+  min-height:0!important;
+  height:auto!important;
+  max-height:min(58vh,640px)!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+}
+.attendance-records-table .attendance-exact-table{
+  width:1240px!important;
+  min-width:1240px!important;
+  max-width:1240px!important;
+  table-layout:fixed!important;
+}
+.attendance-exact-table col.c-employee{width:180px!important}
+.attendance-exact-table col.c-date{width:100px!important}
+.attendance-exact-table col.c-shift{width:95px!important}
+.attendance-exact-table col.c-in{width:90px!important}
+.attendance-exact-table col.c-out{width:90px!important}
+.attendance-exact-table col.c-work{width:105px!important}
+.attendance-exact-table col.c-overtime{width:95px!important}
+.attendance-exact-table col.c-break{width:115px!important}
+.attendance-exact-table col.c-overbreak{width:105px!important}
+.attendance-exact-table col.c-source{width:110px!important}
+.attendance-exact-table col.c-status{width:90px!important}
+.attendance-exact-table col.c-actions{width:65px!important}
+.attendance-exact-table thead th,
+.attendance-exact-table tbody td{
+  box-sizing:border-box!important;
+  text-align:left!important;
+}
+.attendance-exact-table thead th{
+  padding:0 10px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.attendance-exact-table tbody td{
+  padding:8px 10px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.attendance-exact-table th.attendance-actions-head,
+.attendance-exact-table td.row-actions{
+  text-align:center!important;
+}
+.attendance-v3-table>.empty{
+  min-height:0!important;
+  padding:18px 12px!important;
+}
+
+/* Attendance details scroll */
+.modal:has(.attendance-view-scroll){
+  width:min(760px,calc(100vw - 24px))!important;
+  max-height:min(88vh,820px)!important;
+  overflow:hidden!important;
+}
+.attendance-view-scroll{
+  max-height:calc(min(88vh,820px) - 68px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding-right:4px;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#b9c6d6 #f3f6f9;
+}
+.attendance-view-scroll::-webkit-scrollbar{width:8px}
+.attendance-view-scroll::-webkit-scrollbar-track{background:#f3f6f9;border-radius:999px}
+.attendance-view-scroll::-webkit-scrollbar-thumb{background:#b9c6d6;border-radius:999px}
+
+@media(max-width:760px){
+  .attendance-v3-table>.toolbar{padding:9px 10px!important}
+  .attendance-v3-table .attendance-search-filters{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 112px!important;
+    width:100%!important;
+    gap:7px!important;
+  }
+  .attendance-v3-table .attendance-employee-search{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+  .attendance-v3-table .attendance-status-select{
+    width:112px!important;
+    min-width:112px!important;
+    max-width:112px!important;
+  }
+  .attendance-v3-table .attendance-compact-dates{
+    grid-column:1/-1!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:7px!important;
+  }
+  .attendance-v3-table .attendance-compact-dates label{
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr)!important;
+  }
+  .attendance-v3-table .attendance-compact-dates input{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+  .attendance-v3-table .export-format-group{
+    width:100%!important;
+    margin-left:0!important;
+    justify-content:flex-end!important;
+  }
+  .attendance-records-table .table-scroll{
+    max-height:54vh!important;
+  }
+  .attendance-view-scroll{
+    max-height:calc(100dvh - 84px)!important;
+    -webkit-overflow-scrolling:touch;
+  }
+}
