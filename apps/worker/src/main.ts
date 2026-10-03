@@ -3,7 +3,8 @@ import {Queue,Worker} from 'bullmq';
 import nodemailer from 'nodemailer';
 import {db} from '../../../packages/database';
 import {syncCompanyAccess} from '../../api/src/billing';
-import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll,repairPrematureCurrentMonthPayrollLocks,refreshCurrentNoPunchAttendance} from '../../api/src/automation';
+import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll,repairPrematureCurrentMonthPayrollLocks} from '../../api/src/automation';
+import {refreshCurrentNoPunchAttendance} from '../../api/src/attendance-automation';
 
 const url=new URL(process.env.REDIS_URL??'redis://localhost:6379');
 const connection={host:url.hostname,port:Number(url.port)||6379,password:url.password||undefined,...(url.protocol==='rediss:'?{tls:{}}:{})};
