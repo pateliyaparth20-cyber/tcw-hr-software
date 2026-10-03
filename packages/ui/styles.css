@@ -14175,3 +14175,29 @@ body{overflow-y:auto!important}
   .tcw-photo-viewer-dialog>img{max-width:94vw!important;max-height:82dvh!important;border-radius:14px!important}
   .tcw-photo-viewer-close{width:42px;height:42px}
 }
+
+
+/* Attendance second precision + 12-hour clock readability */
+.attendance-main-table{
+  width:1550px!important;
+  min-width:1550px!important;
+  max-width:1550px!important;
+}
+.attendance-main-table col.c-in,
+.attendance-main-table col.c-out{width:125px!important}
+.attendance-main-table col.c-late,
+.attendance-main-table col.c-early{width:140px!important}
+.attendance-main-table col.c-work,
+.attendance-main-table col.c-overtime{width:130px!important}
+.attendance-main-table col.c-break{width:210px!important}
+.attendance-main-table col.c-overbreak{width:130px!important}
+.attendance-split-table .attendance-main-table tbody td{
+  font-variant-numeric:tabular-nums;
+}
+.attendance-view-top-summary strong,
+.attendance-view-metrics strong,
+.attendance-view-meta strong,
+.attendance-view-punch strong,
+.attendance-view-duration strong{
+  font-variant-numeric:tabular-nums;
+}
