@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {attendanceClock12,attendanceDurationSeconds,attendanceMinuteClock12} from '../../packages/ui/attendance-format';
 
 test('attendance durations keep seconds',()=>{
-  assert.equal(attendanceDurationSeconds(580),'0h 09m 40s');
-  assert.equal(attendanceDurationSeconds(62),'0h 01m 02s');
+  assert.equal(attendanceDurationSeconds(580),'00:09:40');
+  assert.equal(attendanceDurationSeconds(62),'00:01:02');
 });
 
 test('attendance clocks stay 12-hour and include seconds',()=>{
