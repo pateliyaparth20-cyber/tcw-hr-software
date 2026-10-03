@@ -15,3 +15,7 @@ export function attendanceMinuteClock12(value:any){
   const minute=((Math.floor(raw)%1440)+1440)%1440,h24=Math.floor(minute/60),minutes=minute%60,hour=((h24+11)%12)+1,period=h24>=12?'PM':'AM';
   return String(hour).padStart(2,'0')+':'+String(minutes).padStart(2,'0')+':00 '+period;
 }
+
+export function attendanceBusinessMinutesFromSeconds(value:any){
+  return Math.max(0,Math.round(Number(value??0)/60));
+}
