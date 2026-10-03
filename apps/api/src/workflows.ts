@@ -53,7 +53,7 @@ export class Workflows {
     }
     if(recordId==='reset-month'&&method==='DELETE'){
       requirePermission(ctx,'attendance','MANAGE');
-      const {month}=z.object({month:z.string().regex(/^\\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);
+      const {month}=z.object({month:z.string().refine(value=>value.length===7&&value.charAt(4)==='-'&&Number(value.slice(0,4))>=2000&&Number(value.slice(5,7))>=1&&Number(value.slice(5,7))<=12,{message:'Month must use YYYY-MM format'})}).strict().parse(body);
       const [year,monthNumber]=month.split('-').map(Number),first=new Date(Date.UTC(year,monthNumber-1,1)),next=new Date(Date.UTC(year,monthNumber,1));
       const payroll=await this.db.payrollRun.findUnique({where:{tenantId_month:{tenantId:tid,month}}});
       if(payroll&&payroll.status!=='DRAFT')throw new ConflictException('Finalized payroll exists for this month. Reopen or remove payroll before deleting synced attendance.');
