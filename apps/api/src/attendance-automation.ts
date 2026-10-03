@@ -23,12 +23,14 @@ export async function employeeShift(db:Database,tenantId:string,employeeId:strin
   return shift;
 }
 
+export function attendanceAutomationTenantStatus(status:string){return ['ACTIVE','TRIAL'].includes(String(status));}
+
 const noPunchRefreshAt=new Map<string,number>();
 export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId:string,now=new Date(),minIntervalMs=30000){
   const last=noPunchRefreshAt.get(tenantId)??0;
   if(minIntervalMs>0&&now.getTime()-last<minIntervalMs)return {tenantId,skipped:true,updated:0};
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{id:true,status:true,timezone:true}});
-  if(!company||company.status!=='ACTIVE')return {tenantId,skipped:true,updated:0};
+  if(!company||!attendanceAutomationTenantStatus(company.status))return {tenantId,skipped:true,updated:0};
   const timezone=company.timezone||'Asia/Kolkata',today=localDate(now,timezone),previous=new Date(Date.parse(today)-86400000).toISOString().slice(0,10);
   const windowStart=atDate(previous),windowEnd=new Date(+atDate(today)+2*86400000);
   const months=[...new Set([previous.slice(0,7),today.slice(0,7)])];
@@ -68,7 +70,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
   return {tenantId,skipped:false,updated};
 }
 export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()){
-  const companies=await db.tenant.findMany({where:{status:'ACTIVE'},select:{id:true}});
+  const companies=await db.tenant.findMany({where:{status:{in:['ACTIVE','TRIAL']}},select:{id:true}});
   let updated=0;
   for(const company of companies)updated+=(await refreshTenantCurrentNoPunchAttendance(db,company.id,now,0)).updated;
   return {companies:companies.length,updated};
