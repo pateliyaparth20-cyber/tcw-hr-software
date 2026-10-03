@@ -52,7 +52,6 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
     const candidateDays=[previous,today];
     for(const workDay of candidateDays){
       const record=existingMap.get(`${employee.id}:${workDay}`);
-      if(record?.correctionNote?.startsWith('DELETED_BY_HR:'))continue;
       const shift=(record?.shiftId&&shiftMap.get(record.shiftId))||currentShift;
       if(lockedMonths.has(workDay.slice(0,7))||workDay<key(employee.joiningDate))continue;
       const day=atDate(workDay);
@@ -114,7 +113,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
     const employeePunches=punches.filter(p=>p.employeeId===employee.id);
     for(const day of eachDay(start,processNext)){
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`);
-      if(record?.correctionNote?.startsWith('DELETED_BY_HR:'))continue;
+      if(record?.syncedAt)continue;
       const shift=(record?.shiftId&&shiftMap.get(record.shiftId))||currentShift;
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(dateKey,shift);
       const recordStart=record?.firstIn?new Date(record.firstIn.getTime()-60000):null;
@@ -141,7 +140,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const rawAttendanceValues=punchCalc?{firstIn:punchCalc.firstIn,lastOut:punchCalc.lastOut,workMinutes:punchCalc.workMinutes,lateMinutes:punchCalc.lateMinutes,earlyOutMinutes:punchCalc.earlyOutMinutes,overtimeMinutes:punchCalc.overtimeMinutes}:record?{firstIn:record.firstIn,lastOut:record.lastOut,workMinutes:record.workMinutes,lateMinutes:record.lateMinutes,earlyOutMinutes:record.earlyOutMinutes,overtimeMinutes:record.overtimeMinutes}:{firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
       const attendanceValues=fullDayLeave?{...rawAttendanceValues,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0}:rawAttendanceValues;
       if(currentNoPunchDay&&noPunchPhase==='PENDING')payable=0;
-      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:effectiveLeaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,...attendanceValues};
+      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:effectiveLeaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,syncedAt:now,...attendanceValues};
       if(record){await db.attendanceDaily.update({where:{id:record.id},data:record.correctionNote?{shiftId:shift.id,scheduledMinutes:values.scheduledMinutes,leaveUnits:effectiveLeaveUnits,dayType}:{...values}});}else{await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});generated++;}
     }
   }
@@ -155,7 +154,7 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
   const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
   const reportNext=month<currentMonth?next:month===currentMonth?new Date(+atDate(today)+86400000):first;
   const [rows,employees,lock,shifts,holidays]=await Promise.all([
-    db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:reportNext},status:{not:'VOID'},...(employeeIds?{employeeId:{in:employeeIds}}:{})},orderBy:[{employeeId:'asc'},{date:'asc'}]}),
+    db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:reportNext},status:{not:'VOID'},syncedAt:{not:null},...(employeeIds?{employeeId:{in:employeeIds}}:{})},orderBy:[{employeeId:'asc'},{date:'asc'}]}),
     db.employee.findMany({where:{tenantId,deletedAt:null,...(employeeIds?{id:{in:employeeIds}}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,shiftId:true,joiningDate:true}}),
     db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
@@ -205,10 +204,12 @@ export async function lockAttendanceMonth(db:Database,tenantId:string,month:stri
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
   if(month>=currentMonth)throw new BadRequestException('The current attendance month must stay open. Lock it only after the month has ended.');
-  await reconcileAttendanceMonth(db,tenantId,month);
+  const {first,next}=monthBounds(month);
+  const syncedCount=await db.attendanceDaily.count({where:{tenantId,date:{gte:first,lt:next},syncedAt:{not:null}}});
+  if(!syncedCount)throw new BadRequestException('Sync this attendance month before locking it for payroll.');
   const summary=await attendanceMonthSummary(db,tenantId,month);
   if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before locking attendance.`);
-  const {first,next}=monthBounds(month),now=new Date();
+  const now=new Date();
   const activeOpen=await db.attendanceDaily.findFirst({where:{tenantId,date:{gte:first,lt:next},status:'MISSING_PUNCH',firstIn:{not:null},lastOut:null}});
   if(activeOpen)throw new BadRequestException('An employee is still working with an open IN punch. Check out or close the work session before locking attendance.');
   const row=await db.$transaction(async tx=>{

@@ -415,6 +415,7 @@ model AttendanceDaily {
   exceptionCode   String    @default("") @map("exception_code")
   correctionNote  String    @default("") @map("correction_note")
   lockedAt        DateTime? @map("locked_at")
+  syncedAt        DateTime? @map("synced_at")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
