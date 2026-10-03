@@ -1,6 +1,6 @@
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Database} from '../../../packages/database';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledWorkDay,localDate,monthBounds,noPunchAttendanceStatus,zonedMinute} from '../../../packages/attendance-engine';
+import {attendanceCalculationPunches,attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledWorkDay,localDate,monthBounds,noPunchAttendanceStatus,zonedMinute} from '../../../packages/attendance-engine';
 
 const key=(d:Date)=>d.toISOString().slice(0,10);
 const atDate=(s:string)=>new Date(`${s}T00:00:00.000Z`);
@@ -119,7 +119,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const recordStart=record?.firstIn?new Date(record.firstIn.getTime()-60000):null;
       const recordEnd=record?.firstIn&&record.status!=='MISSING_PUNCH'&&record.lastOut?new Date(record.lastOut.getTime()+60000):null;
       const dayPunches=employeePunches.filter(p=>recordStart?(p.punchTime>=recordStart&&(!recordEnd||p.punchTime<=recordEnd)):attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===dateKey);
-      let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){punchCalc=calculateAttendance(dayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
+      let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){const effectiveDayPunches=attendanceCalculationPunches(dayPunches);punchCalc=calculateAttendance(effectiveDayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
       const holiday=holidaySet.has(dateKey),rosterOff=rosterOffSet.has(`${shift.id}:${dateKey}`),weeklyOff=!isScheduledWorkDay(day,shift);
       const leave=employeeLeaves.find(l=>overlap(l.startDate,l.endDate,day));
       const leaveType=leave?leaveTypeMap.get(leave.leaveTypeId):undefined;
