@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {createHash} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {id,date,leaveSchema} from '../../../packages/validation';
-import {allocateBreakUsageSeconds,attendanceBusinessMinutesFromSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledBreakOut,isScheduledWorkDay,localDate,monthBounds,punchDrivenBreakUsageSeconds,zonedMinute} from '../../../packages/attendance-engine';
+import {allocateBreakUsageSeconds,attendanceBusinessMinutesFromSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,punchedAttendanceStatusAtMoment,isScheduledBreakOut,isScheduledWorkDay,localDate,monthBounds,punchDrivenBreakUsageSeconds,zonedMinute} from '../../../packages/attendance-engine';
 import {hasPermission} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,refreshTenantCurrentNoPunchAttendance,unlockAttendanceMonth} from './attendance-automation';
@@ -114,12 +114,12 @@ export class Workflows {
         const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
         const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
         const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
-        const reportDate=new Date(day),payableUnits=attendancePayableUnits(calculated.status);
-        await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:reportDate}},create:{tenantId:tid,employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...calculated},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...calculated}});
+        const status=punchedAttendanceStatusAtMoment(calculated.status,new Date(),shiftEnd,effectivePunches.length>0),attendanceValues={...calculated,status},reportDate=new Date(day),payableUnits=attendancePayableUnits(status);
+        await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:reportDate}},create:{tenantId:tid,employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...attendanceValues},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...attendanceValues}});
         await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});
         await tx.deviceSyncLog.create({data:{tenantId:tid,deviceId:mobileDevice.id,action:'FACE_SCAN_PUNCH',message:`Employee Face Scan ${punchType} recorded.`,details:{employeeId,punchType,punchTime,verificationType:'FACE_SCAN'}}});
         await audit(tx,ctx,'FACE_PUNCH_RECORDED','attendance',row.id,undefined,{employeeId,punchTime,punchType,verificationType:'FACE_SCAN',faceCaptureHash:faceHash,rawImageStored:false,faceMatched:true,faceDistance:match.distance});
-        return {ok:true,punchType,punchTime,status:calculated.status,workMinutes:calculated.workMinutes,firstIn:calculated.firstIn,lastOut:calculated.lastOut};
+        return {ok:true,punchType,punchTime,status,workMinutes:calculated.workMinutes,firstIn:calculated.firstIn,lastOut:calculated.lastOut};
       });
     }
     if(recordId&&method==='DELETE'&&!action){
@@ -172,9 +172,9 @@ export class Workflows {
       const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:input.employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
       const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
       const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
-      const reportDate=new Date(day),payableUnits=attendancePayableUnits(calculated.status);
-      await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId:input.employeeId,date:reportDate}},create:{tenantId:tid,employeeId:input.employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...calculated},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...calculated}});
-      await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});await audit(tx,ctx,'PUNCH_RECORDED','attendance',row.id,undefined,{employeeId:input.employeeId,punchTime:input.punchTime,punchType:input.punchType});return calculated;
+      const status=punchedAttendanceStatusAtMoment(calculated.status,new Date(),shiftEnd,effectivePunches.length>0),attendanceValues={...calculated,status},reportDate=new Date(day),payableUnits=attendancePayableUnits(status);
+      await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId:input.employeeId,date:reportDate}},create:{tenantId:tid,employeeId:input.employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...attendanceValues},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...attendanceValues}});
+      await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});await audit(tx,ctx,'PUNCH_RECORDED','attendance',row.id,undefined,{employeeId:input.employeeId,punchTime:input.punchTime,punchType:input.punchType});return attendanceValues;
     });
   }
   private async notifyLeaveReporting(ctx:Context,row:any,assignedByHr:boolean){
