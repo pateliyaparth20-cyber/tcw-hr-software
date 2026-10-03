@@ -66,11 +66,15 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'APPROVED'},alpha)).status,200);
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'REJECTED'},alpha)).status,409);
   });
-  await t.test('attendance preserves source evidence and deduplicates punches',async()=>{
+  await t.test('attendance preserves source evidence and monthly reset uses a scoped delete override',async()=>{
    const sourceId=randomUUID();const shift=await db.shift.findFirstOrThrow({where:{tenantId:alphaTenant}});const body={employeeId:a.data.id,punchTime:new Date(Date.now()-3600000).toISOString(),punchType:'IN',sourceId,shiftId:shift.id};
    const r=await call('attendance','POST',body,alpha);assert.equal(r.status,200,JSON.stringify(r.data));assert.equal((await call('attendance','POST',body,alpha)).data.duplicate,true);
    assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),1);
-   const punch=await db.attendancePunch.findFirstOrThrow({where:{sourceId}});await assert.rejects(()=>db.attendancePunch.update({where:{id:punch.id},data:{punchType:'OUT'}}));
+   const punch=await db.attendancePunch.findFirstOrThrow({where:{sourceId}});await assert.rejects(()=>db.attendancePunch.update({where:{id:punch.id},data:{punchType:'OUT'}}));await assert.rejects(()=>db.attendancePunch.delete({where:{id:punch.id}}));
+   const month=body.punchTime.slice(0,7),reconciled=await call('attendance/reconcile','POST',{month},alpha);assert.equal(reconciled.status,200,JSON.stringify(reconciled.data));
+   await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId:alphaTenant,month}},create:{tenantId:alphaTenant,month,status:'UNLOCKED'},update:{status:'UNLOCKED'}});
+   const reset=await call('attendance/reset-month','DELETE',{month},alpha);assert.equal(reset.status,200,JSON.stringify(reset.data));assert.equal(reset.data.permanent,true);assert(reset.data.deletedPunches>=1);
+   assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),0);assert.equal(await db.attendancePeriodLock.count({where:{tenantId:alphaTenant,month}}),0);
   });
   await t.test('invoice payments cannot overpay and references are unique',async()=>{
    const invoice=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-001',amount:100000,tax:18000,dueDate:'2026-10-01'},root);assert.equal(invoice.status,200,JSON.stringify(invoice.data));

@@ -60,6 +60,7 @@ export class Workflows {
       const result=await this.db.$transaction(async tx=>{
         const rows=await tx.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:first,lt:next}},select:{id:true,employeeId:true,date:true,shiftId:true}});
         const employeeIds=[...new Set(rows.map(r=>r.employeeId))];
+        if(employeeIds.length)await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${tid}, true), set_config('app.allow_raw_punch_delete', 'on', true)`;
         const deletedPunches=employeeIds.length?await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId:{in:employeeIds},punchTime:{gte:new Date(+first-2*86400000),lt:new Date(+next+2*86400000)}}}):{count:0};
         const deletedDays=await tx.attendanceDaily.deleteMany({where:{tenantId:tid,date:{gte:first,lt:next}}});
         const deletedLocks=await tx.attendancePeriodLock.deleteMany({where:{tenantId:tid,month}});
