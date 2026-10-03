@@ -39,13 +39,12 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
       unmatched = true;
     }
   }
-  const workMinutes=Math.floor(workMilliseconds/60000);
-  const lateRawMilliseconds=firstIn?Math.max(0,firstIn.getTime()-rule.shiftStart.getTime()):0,lateGraceMilliseconds=Math.max(0,Number(rule.graceMinutes)||0)*60000,lateChargeableMilliseconds=Math.max(0,lateRawMilliseconds-lateGraceMilliseconds);
-  const earlyOutRawMilliseconds=!open&&lastOut&&rule.shiftEnd?Math.max(0,rule.shiftEnd.getTime()-lastOut.getTime()):0,earlyOutGraceMilliseconds=Math.max(0,Number(rule.earlyOutGraceMinutes??0)||0)*60000,earlyOutChargeableMilliseconds=Math.max(0,earlyOutRawMilliseconds-earlyOutGraceMilliseconds);
-  const lateMinutes=Math.floor(lateChargeableMilliseconds/60000),earlyOutMinutes=Math.floor(earlyOutChargeableMilliseconds/60000),thresholdToleranceMilliseconds=1000;
-  const meetsThreshold=(minutes:number)=>workMilliseconds+thresholdToleranceMilliseconds>=Math.max(0,Number(minutes)||0)*60000;
-  const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (meetsThreshold(rule.fullDayMinutes) ? 'PRESENT' : meetsThreshold(rule.halfDayMinutes) ? 'HALF_DAY' : 'ABSENT') : 'ABSENT';
-  const compensatedShiftOvertimeMilliseconds=Math.max(0,overtimeByShiftMilliseconds-lateChargeableMilliseconds),thresholdOvertimeMilliseconds=Math.max(0,workMilliseconds-Math.max(0,Number(rule.overtimeAfterMinutes)||0)*60000),overtimeMinutes=Math.floor(Math.max(compensatedShiftOvertimeMilliseconds,thresholdOvertimeMilliseconds)/60000);
+  const businessMinutes=(milliseconds:number)=>Math.max(0,Math.round(milliseconds/60000));
+  const workMinutes=businessMinutes(workMilliseconds);
+  const lateRawMilliseconds=firstIn?Math.max(0,firstIn.getTime()-rule.shiftStart.getTime()):0,lateRawMinutes=businessMinutes(lateRawMilliseconds),lateMinutes=Math.max(0,lateRawMinutes-Math.max(0,Number(rule.graceMinutes)||0));
+  const earlyOutRawMilliseconds=!open&&lastOut&&rule.shiftEnd?Math.max(0,rule.shiftEnd.getTime()-lastOut.getTime()):0,earlyOutRawMinutes=businessMinutes(earlyOutRawMilliseconds),earlyOutMinutes=Math.max(0,earlyOutRawMinutes-Math.max(0,Number(rule.earlyOutGraceMinutes??0)||0));
+  const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'HALF_DAY' : 'ABSENT') : 'ABSENT';
+  const overtimeByShiftMinutes=businessMinutes(overtimeByShiftMilliseconds),compensatedShiftOvertimeMinutes=Math.max(0,overtimeByShiftMinutes-lateMinutes),thresholdOvertimeMinutes=Math.max(0,workMinutes-Math.max(0,Number(rule.overtimeAfterMinutes)||0)),overtimeMinutes=Math.max(compensatedShiftOvertimeMinutes,thresholdOvertimeMinutes);
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes,status};
 }
 /** UTC bounds for one local calendar day, including DST. */
