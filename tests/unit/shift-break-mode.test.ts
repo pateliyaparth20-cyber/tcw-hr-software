@@ -13,3 +13,10 @@ test('shift punch-driven break mode can be enabled per shift',()=>{
   const parsed=shiftSchema.parse({...base,punchDrivenBreaks:true});
   assert.equal(parsed.punchDrivenBreaks,true);
 });
+
+test('flexible break-anytime mode defaults OFF and can be enabled per shift',()=>{
+  const defaulted=shiftSchema.parse({...base,punchDrivenBreaks:true});
+  assert.equal(defaulted.flexibleBreakAnytime,false);
+  const enabled=shiftSchema.parse({...base,punchDrivenBreaks:true,flexibleBreakAnytime:true});
+  assert.equal(enabled.flexibleBreakAnytime,true);
+});

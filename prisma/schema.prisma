@@ -301,6 +301,7 @@ model Shift {
   monthlyFlexibleOffDays  Int      @default(0) @map("monthly_flexible_off_days")
   breakMinutes            Int      @default(60)
   punchDrivenBreaks       Boolean  @default(false) @map("punch_driven_breaks")
+  flexibleBreakAnytime    Boolean  @default(false) @map("flexible_break_anytime")
   breakStartMinute        Int?     @map("break_start_minute")
   breakEndMinute          Int?     @map("break_end_minute")
   fullDayMinutes          Int      @default(480)
