@@ -83,8 +83,8 @@ export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()
 
 export async function reconcileAttendanceMonth(db:Database,tenantId:string,month:string){
   const {first,next}=monthBounds(month),now=new Date();
-  const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true,profile:true}});
-  const punchDrivenBreaks=!!(company?.profile as any)?.punchDrivenBreaks,tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
+  const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
+  const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
   if(month>currentMonth)throw new BadRequestException('Future attendance months cannot be reconciled.');
   const processNext=month===currentMonth?new Date(+atDate(today)+86400000):next;
   const lock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
@@ -119,7 +119,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const recordStart=record?.firstIn?new Date(record.firstIn.getTime()-60000):null;
       const recordEnd=record?.firstIn&&record.status!=='MISSING_PUNCH'&&record.lastOut?new Date(record.lastOut.getTime()+60000):null;
       const dayPunches=employeePunches.filter(p=>recordStart?(p.punchTime>=recordStart&&(!recordEnd||p.punchTime<=recordEnd)):attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===dateKey);
-      let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){punchCalc=calculateAttendance(dayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
+      let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){punchCalc=calculateAttendance(dayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
       const holiday=holidaySet.has(dateKey),rosterOff=rosterOffSet.has(`${shift.id}:${dateKey}`),weeklyOff=!isScheduledWorkDay(day,shift);
       const leave=employeeLeaves.find(l=>overlap(l.startDate,l.endDate,day));
       const leaveType=leave?leaveTypeMap.get(leave.leaveTypeId):undefined;
