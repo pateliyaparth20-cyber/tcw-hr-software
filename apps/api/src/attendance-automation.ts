@@ -209,7 +209,7 @@ export async function lockAttendanceMonth(db:Database,tenantId:string,month:stri
   if(!syncedCount)throw new BadRequestException('Sync this attendance month before locking it for payroll.');
   const summary=await attendanceMonthSummary(db,tenantId,month);
   if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before locking attendance.`);
-  const {first,next}=monthBounds(month),now=new Date();
+  const now=new Date();
   const activeOpen=await db.attendanceDaily.findFirst({where:{tenantId,date:{gte:first,lt:next},status:'MISSING_PUNCH',firstIn:{not:null},lastOut:null}});
   if(activeOpen)throw new BadRequestException('An employee is still working with an open IN punch. Check out or close the work session before locking attendance.');
   const row=await db.$transaction(async tx=>{
