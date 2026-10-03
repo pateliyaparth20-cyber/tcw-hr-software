@@ -7,13 +7,22 @@ export interface AttendanceRule {
   fullDayMinutes: number;
   halfDayMinutes: number;
   overtimeAfterMinutes: number;
+  breakStart?: Date;
+  breakEnd?: Date;
 }
-export function noPunchAttendanceStatus(now:Date,shiftStart:Date,graceMinutes:number,halfDayMinutes:number){
+export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,graceMinutes:number){
   const lateCutoff=shiftStart.getTime()+Math.max(0,Number(graceMinutes)||0)*60000;
-  const absentCutoff=shiftStart.getTime()+Math.max(Math.max(0,Number(graceMinutes)||0),Math.max(0,Number(halfDayMinutes)||0))*60000;
   if(now.getTime()<lateCutoff)return 'PENDING' as const;
-  if(now.getTime()<absentCutoff)return 'HALF_DAY' as const;
+  if(now.getTime()<shiftEnd.getTime())return 'HALF_DAY' as const;
   return 'ABSENT' as const;
+}
+function workedMinutesBetween(start:Date,end:Date,rule:AttendanceRule){
+  let milliseconds=Math.max(0,end.getTime()-start.getTime());
+  if(rule.breakStart&&rule.breakEnd){
+    const overlap=Math.max(0,Math.min(end.getTime(),rule.breakEnd.getTime())-Math.max(start.getTime(),rule.breakStart.getTime()));
+    milliseconds=Math.max(0,milliseconds-overlap);
+  }
+  return Math.floor(milliseconds/60000);
 }
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
@@ -24,7 +33,7 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
       if(open) continue;
       open=punch.time;firstIn??=punch.time;
     } else if(open) {
-      const pairMinutes=Math.max(0,Math.floor((punch.time.getTime()-open.getTime())/60000));workMinutes+=pairMinutes;if(rule.shiftEnd&&punch.time>rule.shiftEnd){const overtimeStart=new Date(Math.max(open.getTime(),rule.shiftEnd.getTime()));overtimeByShiftMinutes+=Math.max(0,Math.floor((punch.time.getTime()-overtimeStart.getTime())/60000));}
+      const pairStart=open;workMinutes+=workedMinutesBetween(pairStart,punch.time,rule);if(rule.shiftEnd&&punch.time>rule.shiftEnd){const overtimeStart=new Date(Math.max(pairStart.getTime(),rule.shiftEnd.getTime()));overtimeByShiftMinutes+=workedMinutesBetween(overtimeStart,punch.time,rule);}
       lastOut = punch.time;open = null;completedPairs++;
     } else {
       unmatched = true;
