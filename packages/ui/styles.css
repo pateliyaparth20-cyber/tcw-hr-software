@@ -13997,3 +13997,60 @@ body{overflow-y:auto!important}
   .attendance-v4-actions{display:grid;grid-template-columns:1fr 1fr}
   .attendance-v4-actions .btn{width:100%}
 }
+
+
+/* 2026-10-03 desktop dashboard + People workspace readability polish */
+@media(min-width:901px){
+  .hr-desktop-dashboard{max-width:1540px;margin:0 auto}
+  .hr-desktop-dashboard .approved-hero{min-height:148px;padding:24px 28px;border-radius:22px;box-shadow:0 16px 38px rgba(28,74,126,.08)}
+  .hr-desktop-dashboard .approved-hero-person>.avatar{width:52px;height:52px}
+  .hr-desktop-dashboard .approved-hero-person h1{font-size:1.75rem;letter-spacing:-.035em}
+  .hr-desktop-dashboard .approved-hero-message strong{font-size:1.45rem;line-height:1.18}
+  .hr-desktop-dashboard .digital-kpi-grid{gap:16px;margin-bottom:18px}
+  .hr-desktop-dashboard .digital-kpi-card{min-height:132px;padding:19px 20px;border-radius:17px}
+  .hr-desktop-dashboard .digital-kpi-card>strong{font-size:1.65rem}
+  .hr-desktop-dashboard .digital-dashboard-grid{gap:18px}
+  .hr-desktop-dashboard .digital-panel{border-radius:17px}
+  .hr-desktop-dashboard .panel-heading{padding:20px 20px 15px}
+  .hr-desktop-dashboard .digital-signal-strip>div{padding:13px 12px}
+  .hr-desktop-dashboard .digital-lower-grid{gap:18px}
+
+  .employee-directory-hero{min-height:142px;padding:24px 28px;margin:0 0 16px;border-radius:22px;box-shadow:0 16px 38px rgba(19,91,196,.15)}
+  .employee-directory-hero h1{font-size:1.9rem;letter-spacing:-.025em}
+  .employee-directory-hero p{max-width:760px;font-size:.86rem;line-height:1.55}
+  .employee-directory-hero-count{min-width:150px;padding:14px 17px;border:1px solid rgba(255,255,255,.17)}
+  .employee-directory-hero-count strong{font-size:1.6rem}
+  .employee-directory-hero ~ .stats.four{gap:14px;margin-bottom:18px}
+  .employee-directory-hero ~ .stats.four .stat{min-height:118px;padding:18px 20px;border-radius:16px;border-color:#e2eaf4;box-shadow:0 8px 24px rgba(34,68,107,.045)}
+  .employee-directory-hero ~ .stats.four .stat>strong{font-size:1.72rem;color:#24405f}
+  .employee-directory-hero ~ .stats.four .stat>small{color:#7f8fa2}
+
+  .people-directory-panel{border-radius:18px;border-color:#e1e9f3;box-shadow:0 10px 30px rgba(34,68,107,.05)}
+  .people-directory-panel .toolbar{padding:14px 16px;background:linear-gradient(180deg,#fff,#fbfdff);border-bottom-color:#e7edf5}
+  .people-directory-panel .search-field{max-width:430px;min-height:42px;border-radius:11px;border-color:#dce6f1}
+  .people-directory-panel .search-field input{font-size:.83rem}
+  .people-directory-panel .filter{min-height:42px;border-radius:11px;border-color:#dce6f1;background:#fff}
+  .people-directory-panel .filter select{font-size:.76rem}
+  .people-directory-panel th{padding:13px 14px;background:#f7faff;color:#667a92;font-size:.71rem;font-weight:700;letter-spacing:.015em}
+  .people-directory-panel td{padding:13px 14px;color:#60738a;font-size:.78rem;border-bottom-color:#edf2f7}
+  .people-directory-panel tbody tr:nth-child(even){background:#fcfdff}
+  .people-directory-panel tbody tr:hover{background:#f5f9ff}
+  .people-directory-panel .person-cell>.avatar{width:38px;height:38px}
+  .people-directory-panel .people-person-cell strong{font-size:.85rem;color:#2e4967;font-weight:650}
+  .people-directory-panel .people-person-cell small{font-size:.7rem;color:#7b8ca1}
+  .people-directory-panel .employee-shift-pill{padding:5px 9px;background:#f2f7fd;border-color:#dce7f3;color:#52708f}
+  .people-directory-panel .badge{font-weight:650}
+  .people-directory-panel .table-footer{padding:13px 16px;background:#fbfdff}
+}
+@media(min-width:901px) and (max-width:1260px){
+  .hr-desktop-dashboard .digital-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hr-desktop-dashboard .digital-dashboard-grid{grid-template-columns:1fr}
+  .hr-desktop-dashboard .dashboard-grid.three.digital-lower-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hr-desktop-dashboard .digital-lower-grid>section:last-child{grid-column:1/-1}
+}
+@media(max-width:900px){
+  .employee-directory-hero{box-shadow:0 10px 26px rgba(19,91,196,.12)}
+  .people-directory-panel{border-radius:15px}
+  .people-directory-panel .toolbar{align-items:stretch}
+  .people-directory-panel .compact-search{max-width:none}
+}
