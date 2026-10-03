@@ -82,7 +82,7 @@ export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()
 }
 
 export async function reconcileAttendanceMonth(db:Database,tenantId:string,month:string){
-  const now=new Date();
+  const {first,next}=monthBounds(month),now=new Date();
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
   if(month>currentMonth)throw new BadRequestException('Future attendance months cannot be reconciled.');
