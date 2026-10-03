@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,workingDaySet,zonedMinute,localDate} from '../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,workingDaySet,zonedMinute,localDate,punchedAttendanceStatusAtMoment} from '../../packages/attendance-engine';
 import {calculatePay,assertPayrollTransition} from '../../packages/payroll-engine';
 import {hashPassword,verifyPassword} from '../../packages/auth';
 import {toCsv,toXlsx} from '../../packages/reporting-engine';
