@@ -84,15 +84,26 @@ test('multiple scheduled breaks share one cumulative allowance',()=>{
   assert.deepEqual(second,{breakSeconds:360,overBreakSeconds:60});
 });
 
-test('late punch-driven break start reduces remaining scheduled break',()=>{
+test('scheduled punch-driven break clock starts from elapsed break-window time',()=>{
   const windowStart=new Date('2026-10-03T07:30:00.000Z'),windowEnd=new Date('2026-10-03T07:40:00.000Z');
-  const lateStart=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:35:00.000Z'),new Date('2026-10-03T07:40:00.000Z'),windowStart,windowEnd,10*60);
-  assert.equal(lateStart.remainingAtStartSeconds,5*60);assert.equal(lateStart.breakSeconds,5*60);assert.equal(lateStart.overBreakSeconds,0);
-  const over=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:35:00.000Z'),new Date('2026-10-03T07:42:00.000Z'),windowStart,windowEnd,10*60);
-  assert.equal(over.breakSeconds,5*60);assert.equal(over.overBreakSeconds,2*60);
+  const startThreeLate=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:33:00.000Z'),windowStart,windowEnd,10*60);
+  assert.equal(startThreeLate.startOffsetSeconds,3*60);assert.equal(startThreeLate.breakSeconds,3*60);assert.equal(startThreeLate.remainingAtStartSeconds,7*60);
+  const oneMinuteLater=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:34:00.000Z'),windowStart,windowEnd,10*60);
+  assert.equal(oneMinuteLater.breakSeconds,4*60);assert.equal(oneMinuteLater.overBreakSeconds,0);
+  const over=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:42:00.000Z'),windowStart,windowEnd,10*60);
+  assert.equal(over.breakSeconds,10*60);assert.equal(over.overBreakSeconds,2*60);
 });
 test('punch-driven break does not auto-deduct working time when employee stays checked in',()=>{
   const rule={shiftStart:new Date('2026-10-03T03:30:00.000Z'),shiftEnd:new Date('2026-10-03T11:30:00.000Z'),graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
   const r=calculateAttendance([{time:rule.shiftStart,type:'IN'},{time:rule.shiftEnd,type:'OUT'}],rule);
   assert.equal(r.workMinutes,480);assert.equal(r.status,'PRESENT');
+});
+
+test('split flexible breaks consume one cumulative allowance across the shift',()=>{
+  const first=allocateBreakUsageSeconds(3*60,0,10*60);
+  const second=allocateBreakUsageSeconds(4*60,first.breakSeconds,10*60);
+  const third=allocateBreakUsageSeconds(5*60,first.breakSeconds+second.breakSeconds,10*60);
+  assert.deepEqual(first,{breakSeconds:180,overBreakSeconds:0});
+  assert.deepEqual(second,{breakSeconds:240,overBreakSeconds:0});
+  assert.deepEqual(third,{breakSeconds:180,overBreakSeconds:120});
 });
