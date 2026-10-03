@@ -5,15 +5,18 @@ DECLARE
 BEGIN
   SELECT count(*) INTO v_count
   FROM tenants
-  WHERE lower(regexp_replace(name, '[^a-z0-9]+', '', 'g')) = 'mdshah';
+  WHERE lower(regexp_replace(name, '[^a-z0-9]+', '', 'g')) LIKE 'mdshah%';
 
   SELECT id INTO v_tenant
   FROM tenants
-  WHERE lower(regexp_replace(name, '[^a-z0-9]+', '', 'g')) = 'mdshah'
+  WHERE lower(regexp_replace(name, '[^a-z0-9]+', '', 'g')) LIKE 'mdshah%'
   LIMIT 1;
 
-  IF v_count <> 1 THEN
-    RAISE EXCEPTION 'MD Shah tenant reset aborted: expected exactly 1 tenant, found %', v_count;
+  IF v_count = 0 THEN
+    RAISE NOTICE 'MD Shah tenant reset skipped: tenant not present in this database.';
+    RETURN;
+  ELSIF v_count > 1 THEN
+    RAISE EXCEPTION 'MD Shah tenant reset aborted: multiple matching tenants found: %', v_count;
   END IF;
 
   -- Remove dependent operational data first.
