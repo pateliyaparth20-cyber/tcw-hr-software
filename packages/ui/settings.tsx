@@ -2,8 +2,9 @@
 import React,{useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye,Check,Bell,Trash2,Sparkles,KeyRound,RefreshCw,Search,Clock3,AlertTriangle,Building2,UserCircle,UserRound,Mail,IdCard} from 'lucide-react';
-import {useApp,useData,api,PageTitle,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,notificationTarget,displayDate,currencyValue} from './core';
+import {useApp,useData,api,PageTitle,Table,Modal,PhotoViewer,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,notificationTarget,displayDate,currencyValue} from './core';
 import {Row,Field,readable} from './config';
+import {avatarInitials} from './avatar';
 export function SoftwareUpdatePage(){
  const{notify}=useApp();const[current,setCurrent]=useState<Row|null>(null),[loaded,setLoaded]=useState(''),[checking,setChecking]=useState(false),[installing,setInstalling]=useState(false),[lastChecked,setLastChecked]=useState<Date|null>(null);
  const readLoaded=()=>{try{return localStorage.getItem('tcw_loaded_deployment_version')??localStorage.getItem('tcw_last_deployment_version')??''}catch{return ''}};
@@ -77,7 +78,7 @@ function ProfilePhotoEditor({value,name,onChange,notify,showPreview=true}:{value
   };
   image.src=source;
  }
- const initials=String(name||'U').split(/\s+/).filter(Boolean).slice(0,2).map(v=>v[0]?.toUpperCase()).join('');
+ const initials=avatarInitials(name);
  return <>
   <div className={'profile-photo-editor '+(!showPreview?'profile-photo-actions-only':'')}>
    {showPreview&&<div className="profile-photo-preview">{value?<img src={value} alt={name+' profile photo'}/>:<span>{initials}</span>}</div>}
@@ -105,7 +106,7 @@ export function MyProfilePage(){
    <section className="panel my-profile-card">
     <div className="my-profile-cover"/>
     <div className="my-profile-main">
-     <div className={'my-profile-photo '+(form.avatar?'clickable':'')} role={form.avatar?'button':undefined} tabIndex={form.avatar?0:undefined} aria-label={form.avatar?'Open profile photo':undefined} onClick={()=>form.avatar&&setPhotoPreview(true)} onKeyDown={e=>{if(form.avatar&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setPhotoPreview(true)}}}>{form.avatar?<img src={form.avatar} alt={form.name+' profile photo'}/>:<span>{String(form.name||'U').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</span>}</div>
+     <div className={'my-profile-photo '+(form.avatar?'clickable':'')} role={form.avatar?'button':undefined} tabIndex={form.avatar?0:undefined} aria-label={form.avatar?'Open profile photo':undefined} onClick={()=>form.avatar&&setPhotoPreview(true)} onKeyDown={e=>{if(form.avatar&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setPhotoPreview(true)}}}>{form.avatar?<img src={form.avatar} alt={form.name+' profile photo'}/>:<span>{avatarInitials(form.name||user.name)}</span>}</div>
      <div className="my-profile-identity"><h2>{form.name||user.name}</h2><p>{user.role==='COMPANY_OWNER'?'HR Admin':user.roleName}</p><div><Badge value={employee?.status??'ACTIVE'}/><span>{user.loginId??user.email}</span></div></div>
     </div>
     <form onSubmit={save} className="my-profile-form">
@@ -118,7 +119,7 @@ export function MyProfilePage(){
      </div>
      <div className="form-actions-end profile-actions-end"><button className="btn primary" disabled={saving}>{saving?'Saving…':'Save profile changes'}</button></div>
     </form>
-    {photoPreview&&form.avatar&&<Modal title="Profile photo" onClose={()=>setPhotoPreview(false)}><div className="profile-photo-full-preview"><img src={form.avatar} alt={form.name+' profile photo'}/></div></Modal>}
+    {photoPreview&&form.avatar&&<PhotoViewer src={form.avatar} name={form.name||user.name} onClose={()=>setPhotoPreview(false)}/>} 
     {user.role==='EMPLOYEE'&&employee&&<section className="employee-profile-details">
      <div className="employee-profile-details-head"><div><small>EMPLOYEE INFORMATION</small><h3>Your work profile</h3><p>Employment details are maintained by your HR team.</p></div><Badge value={employee.status??'ACTIVE'}/></div>
      <div className="employee-profile-detail-grid">
@@ -139,7 +140,7 @@ export function MyProfilePage(){
 
 export function PlatformProfilePage(){
  const company=useData('system/platform-profile'),account=useData('auth/profile');const{session,notify}=useApp();
- const[companyForm,setCompanyForm]=useState<Row>({}),[accountForm,setAccountForm]=useState<Row>({}),[logo,setLogo]=useState<string|null|undefined>(undefined),[savingCompany,setSavingCompany]=useState(false),[savingAccount,setSavingAccount]=useState(false);
+ const[companyForm,setCompanyForm]=useState<Row>({}),[accountForm,setAccountForm]=useState<Row>({}),[logo,setLogo]=useState<string|null|undefined>(undefined),[savingCompany,setSavingCompany]=useState(false),[savingAccount,setSavingAccount]=useState(false),[adminPhotoPreview,setAdminPhotoPreview]=useState(false);
  useEffect(()=>{if(company.data)setCompanyForm({companyName:company.data.companyName??'Tech Cyber Warrior',legalName:company.data.legalName??'',companyType:company.data.companyType??'',registrationNumber:company.data.registrationNumber??'',foundedYear:company.data.foundedYear??'',contactPerson:company.data.contactPerson??'',contactDesignation:company.data.contactDesignation??'',billingEmail:company.data.billingEmail??'',email:company.data.email??'',phone:company.data.phone??'',website:company.data.website??'',address:company.data.address??'',city:company.data.city??'',state:company.data.state??'',country:company.data.country??'',postalCode:company.data.postalCode??'',taxId:company.data.taxId??'',pan:company.data.pan??'',supportEmail:company.data.supportEmail??''})},[company.data]);
  useEffect(()=>{if(account.data?.user)setAccountForm({name:account.data.user.name??'',email:account.data.user.email??'',avatar:account.data.user.avatar??null})},[account.data]);
  const currentLogo=logo===undefined?(company.data?.logo??'/tcw-logo.png'):logo;
@@ -176,9 +177,11 @@ export function PlatformProfilePage(){
    </form>}
   </section>
   <section className="panel platform-admin-profile"><div className="panel-heading"><div><h2>Super Admin profile</h2><p>Your own platform administrator identity.</p></div><UserCircle size={21}/></div>
-   {account.isLoading?<Loading/>:account.error?<Failure error={account.error}/>:<form onSubmit={saveAccount}><div className="platform-admin-card"><div className="platform-admin-avatar">{accountForm.avatar?<img src={accountForm.avatar} alt="Super Admin profile"/>:String(accountForm.name??'SA').split(/\s+/).filter(Boolean).slice(0,2).map((v:string)=>v[0]?.toUpperCase()).join('')}</div><div><strong>{accountForm.name||'Super Admin'}</strong><small>{session.user.loginId??session.user.email} · {session.user.roleName}</small></div></div><ProfilePhotoEditor value={accountForm.avatar} name={accountForm.name||'Super Admin'} onChange={avatar=>setAccountForm(v=>({...v,avatar}))} notify={notify} showPreview={false}/><div className="platform-profile-fields single"><label><span>Full name</span><input required value={accountForm.name??''} onChange={e=>setAccountForm(v=>({...v,name:e.target.value}))}/></label><label><span>Email address</span><input type="email" required value={accountForm.email??''} onChange={e=>setAccountForm(v=>({...v,email:e.target.value}))}/></label></div><div className="form-footer"><a className="btn secondary" href="/security">Password & sessions</a><button className="btn primary" disabled={savingAccount}>{savingAccount?'Saving…':'Save admin profile'}</button></div></form>}
+   {account.isLoading?<Loading/>:account.error?<Failure error={account.error}/>:<form onSubmit={saveAccount}><div className="platform-admin-card"><div className={'platform-admin-avatar '+(accountForm.avatar?'clickable':'')} role={accountForm.avatar?'button':undefined} tabIndex={accountForm.avatar?0:undefined} aria-label={accountForm.avatar?'Open Super Admin photo':undefined} onClick={()=>accountForm.avatar&&setAdminPhotoPreview(true)} onKeyDown={e=>{if(accountForm.avatar&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setAdminPhotoPreview(true)}}}>{accountForm.avatar?<img src={accountForm.avatar} alt="Super Admin profile"/>:<span>{avatarInitials(accountForm.name||'Super Admin')}</span>}</div><div><strong>{accountForm.name||'Super Admin'}</strong><small>{session.user.loginId??session.user.email} · {session.user.roleName}</small></div></div><ProfilePhotoEditor value={accountForm.avatar} name={accountForm.name||'Super Admin'} onChange={avatar=>setAccountForm(v=>({...v,avatar}))} notify={notify} showPreview={false}/><div className="platform-profile-fields single"><label><span>Full name</span><input required value={accountForm.name??''} onChange={e=>setAccountForm(v=>({...v,name:e.target.value}))}/></label><label><span>Email address</span><input type="email" required value={accountForm.email??''} onChange={e=>setAccountForm(v=>({...v,email:e.target.value}))}/></label></div><div className="form-footer"><a className="btn secondary" href="/security">Password & sessions</a><button className="btn primary" disabled={savingAccount}>{savingAccount?'Saving…':'Save admin profile'}</button></div></form>}
   </section>
- </div></>;
+ </div>
+ {adminPhotoPreview&&accountForm.avatar&&<PhotoViewer src={accountForm.avatar} name={accountForm.name||'Super Admin'} onClose={()=>setAdminPhotoPreview(false)}/>}
+ </>;
 }
 export function SecurityPage(){
  const{mutate,session}=useApp();const q=useData('auth/sessions');const[revoke,setRevoke]=useState<Row|null>(null),[formKey,setFormKey]=useState(0);
