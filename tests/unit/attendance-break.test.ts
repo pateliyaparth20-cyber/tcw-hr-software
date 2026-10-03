@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculateAttendance,isScheduledBreakOut} from '../../packages/attendance-engine';
+import {allocateBreakUsageSeconds,calculateAttendance,isScheduledBreakOut} from '../../packages/attendance-engine';
 
 test('only an OUT that starts inside the configured window is a scheduled break',()=>{
   const start=new Date('2026-10-03T07:30:00.000Z');
@@ -65,4 +65,21 @@ test('half-day threshold also uses work time after scheduled break is excluded',
   });
   assert.equal(result.workMinutes,240);
   assert.equal(result.status,'HALF_DAY');
+});
+
+
+test('break allowance is consumed before over-break begins',()=>{
+  const first=allocateBreakUsageSeconds(9*60+29,0,10*60);
+  assert.deepEqual(first,{breakSeconds:569,overBreakSeconds:0});
+  const exact=allocateBreakUsageSeconds(10*60,0,10*60);
+  assert.deepEqual(exact,{breakSeconds:600,overBreakSeconds:0});
+  const over=allocateBreakUsageSeconds(10*60+13,0,10*60);
+  assert.deepEqual(over,{breakSeconds:600,overBreakSeconds:13});
+});
+
+test('multiple scheduled breaks share one cumulative allowance',()=>{
+  const first=allocateBreakUsageSeconds(4*60,0,10*60);
+  const second=allocateBreakUsageSeconds(7*60,first.breakSeconds,10*60);
+  assert.deepEqual(first,{breakSeconds:240,overBreakSeconds:0});
+  assert.deepEqual(second,{breakSeconds:360,overBreakSeconds:60});
 });
