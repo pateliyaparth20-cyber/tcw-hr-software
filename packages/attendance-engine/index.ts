@@ -31,7 +31,7 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
     }
   }
   const lateMinutes = firstIn ? Math.max(0,Math.floor((firstIn.getTime()-rule.shiftStart.getTime())/60000)-rule.graceMinutes) : 0;
-  const earlyOutMinutes = lastOut && rule.shiftEnd ? Math.max(0,Math.floor((rule.shiftEnd.getTime()-lastOut.getTime())/60000)-(rule.earlyOutGraceMinutes??0)) : 0;
+  const earlyOutMinutes = !open && lastOut && rule.shiftEnd ? Math.max(0,Math.floor((rule.shiftEnd.getTime()-lastOut.getTime())/60000)-(rule.earlyOutGraceMinutes??0)) : 0;
   const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'HALF_DAY' : 'ABSENT') : 'ABSENT';
   const overtimeMinutes=Math.max(overtimeByShiftMinutes,Math.max(0,workMinutes-rule.overtimeAfterMinutes));
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes,status};
@@ -58,6 +58,9 @@ export function attendanceWorkdayDate(instant:Date,shiftStartMinute:number,shift
   if(shiftEndMinute>shiftStartMinute)return day;
   const boundary=zonedMinute(day,shiftStartMinute-earlyWindowMinutes,timezone);
   return instant<boundary?new Date(Date.parse(day)-86400000).toISOString().slice(0,10):day;
+}
+export function isScheduledBreakOut(out:Date,breakStart:Date,breakEnd:Date){
+  return out.getTime()>=breakStart.getTime()&&out.getTime()<breakEnd.getTime();
 }
 export function workingDaySet(value:string|undefined|null){
   const days=new Set((value||'1,2,3,4,5').split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=0&&v<=6));
