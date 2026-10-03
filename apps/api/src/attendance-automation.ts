@@ -62,16 +62,20 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(workDay,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(workDay,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(workDay,shift);
       if(now<shiftStart)continue;
       if(workDayPunches.length){
-        if(record?.syncedAt||record?.correctionNote)continue;
-        const effectivePunches=attendanceCalculationPunches(workDayPunches),calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes}),status=punchedAttendanceStatusAtMoment(calculated.status,now,shiftEnd,true),values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(status),leaveUnits:0,dayType:'WORKING',status,exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',firstIn:calculated.firstIn,lastOut:calculated.lastOut,workMinutes:calculated.workMinutes,lateMinutes:calculated.lateMinutes,earlyOutMinutes:calculated.earlyOutMinutes,overtimeMinutes:calculated.overtimeMinutes};
-        const sameDate=(a:Date|null|undefined,b:Date|null|undefined)=>a&&b?a.getTime()===b.getTime():!a&&!b,unchanged=!!record&&record.shiftId===shift.id&&record.status===status&&Number(record.scheduledMinutes)===shift.fullDayMinutes&&Number(record.payableUnits)===attendancePayableUnits(status)&&record.dayType==='WORKING'&&record.exceptionCode===values.exceptionCode&&sameDate(record.firstIn,calculated.firstIn)&&sameDate(record.lastOut,calculated.lastOut)&&Number(record.workMinutes)===calculated.workMinutes&&Number(record.lateMinutes)===calculated.lateMinutes&&Number(record.earlyOutMinutes)===calculated.earlyOutMinutes&&Number(record.overtimeMinutes)===calculated.overtimeMinutes;
+        if(record?.correctionNote)continue;
+        if(record?.syncedAt&&record.syncedAt.getTime()>=shiftEnd.getTime())continue;
+        const needsSyncedFinalization=!!record?.syncedAt&&now.getTime()>=shiftEnd.getTime();
+        const effectivePunches=attendanceCalculationPunches(workDayPunches),calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes}),status=punchedAttendanceStatusAtMoment(calculated.status,now,shiftEnd,true),values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(status),leaveUnits:0,dayType:'WORKING',status,exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',firstIn:calculated.firstIn,lastOut:calculated.lastOut,workMinutes:calculated.workMinutes,lateMinutes:calculated.lateMinutes,earlyOutMinutes:calculated.earlyOutMinutes,overtimeMinutes:calculated.overtimeMinutes,...(needsSyncedFinalization?{syncedAt:now}:{})};
+        const sameDate=(a:Date|null|undefined,b:Date|null|undefined)=>a&&b?a.getTime()===b.getTime():!a&&!b,unchanged=!!record&&record.shiftId===shift.id&&record.status===status&&Number(record.scheduledMinutes)===shift.fullDayMinutes&&Number(record.payableUnits)===attendancePayableUnits(status)&&record.dayType==='WORKING'&&record.exceptionCode===values.exceptionCode&&sameDate(record.firstIn,calculated.firstIn)&&sameDate(record.lastOut,calculated.lastOut)&&Number(record.workMinutes)===calculated.workMinutes&&Number(record.lateMinutes)===calculated.lateMinutes&&Number(record.earlyOutMinutes)===calculated.earlyOutMinutes&&Number(record.overtimeMinutes)===calculated.overtimeMinutes&&!needsSyncedFinalization;
         if(!unchanged){if(record)await db.attendanceDaily.update({where:{id:record.id},data:values});else await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});updated++;}
         continue;
       }
-      if(record?.syncedAt||record?.correctionNote||record?.firstIn||record?.lastOut)continue;
+      const syncedAfterShiftEnd=!!record?.syncedAt&&record.syncedAt.getTime()>=shiftEnd.getTime();
+      if(record?.correctionNote||record?.firstIn||record?.lastOut||syncedAfterShiftEnd)continue;
       const phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes);
       if(phase==='PENDING')continue;
-      const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
+      const needsNoPunchSyncedFinalization=!!record?.syncedAt&&now.getTime()>=shiftEnd.getTime();
+      const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0,...(needsNoPunchSyncedFinalization?{syncedAt:now}:{})};
       if(record)await db.attendanceDaily.update({where:{id:record.id},data:values});
       else await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});
       updated++;
@@ -119,13 +123,14 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
     const employeePunches=punches.filter(p=>p.employeeId===employee.id);
     for(const day of eachDay(start,processNext)){
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`);
-      if(record?.syncedAt)continue;
       const shift=(record?.shiftId&&shiftMap.get(record.shiftId))||currentShift;
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(dateKey,shift);
+      if(record?.syncedAt&&record.syncedAt.getTime()>=shiftEnd.getTime())continue;
       const recordStart=record?.firstIn?new Date(record.firstIn.getTime()-60000):null;
       const recordEnd=record?.firstIn&&record.status!=='MISSING_PUNCH'&&record.lastOut?new Date(record.lastOut.getTime()+60000):null;
       const dayPunches=employeePunches.filter(p=>recordStart?(p.punchTime>=recordStart&&(!recordEnd||p.punchTime<=recordEnd)):attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===dateKey);
       let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){const effectiveDayPunches=attendanceCalculationPunches(dayPunches);punchCalc=calculateAttendance(effectiveDayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
+      const punchStatus=punchCalc?punchedAttendanceStatusAtMoment(punchCalc.status,now,shiftEnd,dayPunches.length>0):null;
       const holiday=holidaySet.has(dateKey),rosterOff=rosterOffSet.has(`${shift.id}:${dateKey}`),weeklyOff=!isScheduledWorkDay(day,shift);
       const leave=employeeLeaves.find(l=>overlap(l.startDate,l.endDate,day));
       const leaveType=leave?leaveTypeMap.get(leave.leaveTypeId):undefined;
@@ -138,15 +143,16 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const scheduled=dayType==='WORKING'||dayType==='PAID_LEAVE'||dayType==='UNPAID_LEAVE',fullDayLeave=!!effectiveLeave&&!effectiveHalfLeave;
       const currentNoPunchDay=dateKey===today&&scheduled&&!effectiveLeave&&!holiday&&!weeklyOff&&!rosterOff&&!dayPunches.length&&!record?.correctionNote;
       const noPunchPhase=currentNoPunchDay?noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes):null;
-      let status=record?.correctionNote?record.status:currentNoPunchDay?(noPunchPhase==='PENDING'?'VOID':noPunchPhase):fullDayLeave?(effectiveLeaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchCalc?.status??(holiday?'HOLIDAY':weeklyOff||rosterOff?'WEEK_OFF':effectiveLeave?'HALF_DAY_LEAVE':'ABSENT');
+      let status=record?.correctionNote?record.status:currentNoPunchDay?(noPunchPhase==='PENDING'?'VOID':noPunchPhase):fullDayLeave?(effectiveLeaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchStatus??(holiday?'HOLIDAY':weeklyOff||rosterOff?'WEEK_OFF':effectiveLeave?'HALF_DAY_LEAVE':'ABSENT');
       let payable=record?.correctionNote?record.payableUnits:attendancePayableUnits(status);
-      if(!record?.correctionNote&&effectiveLeave){const worked=punchCalc?attendancePayableUnits(punchCalc.status):0;if(effectiveLeaveType?.paid)payable=Math.min(100,worked+effectiveLeaveUnits);else payable=worked;if(!punchCalc&&!record&&effectiveHalfLeave)payable=effectiveLeaveType?.paid?50:0;}
-      else if(!record?.correctionNote&&!scheduled){payable=0;if((punchCalc?.workMinutes??0)>0)status=punchCalc!.status;}
+      if(!record?.correctionNote&&effectiveLeave){const worked=punchCalc?attendancePayableUnits(punchStatus??punchCalc.status):0;if(effectiveLeaveType?.paid)payable=Math.min(100,worked+effectiveLeaveUnits);else payable=worked;if(!punchCalc&&!record&&effectiveHalfLeave)payable=effectiveLeaveType?.paid?50:0;}
+      else if(!record?.correctionNote&&!scheduled){payable=0;if((punchCalc?.workMinutes??0)>0)status=punchStatus??punchCalc!.status;}
       const exceptionCode=status==='MISSING_PUNCH'?'MISSING_PUNCH':'';if(exceptionCode)exceptions++;
       const rawAttendanceValues=punchCalc?{firstIn:punchCalc.firstIn,lastOut:punchCalc.lastOut,workMinutes:punchCalc.workMinutes,lateMinutes:punchCalc.lateMinutes,earlyOutMinutes:punchCalc.earlyOutMinutes,overtimeMinutes:punchCalc.overtimeMinutes}:record?{firstIn:record.firstIn,lastOut:record.lastOut,workMinutes:record.workMinutes,lateMinutes:record.lateMinutes,earlyOutMinutes:record.earlyOutMinutes,overtimeMinutes:record.overtimeMinutes}:{firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
       const attendanceValues=fullDayLeave?{...rawAttendanceValues,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0}:rawAttendanceValues;
       if(currentNoPunchDay&&noPunchPhase==='PENDING')payable=0;
-      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:effectiveLeaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,syncedAt:now,...attendanceValues};
+      const inProgressWorkDay=dayType==='WORKING'&&now.getTime()>=shiftStart.getTime()&&now.getTime()<shiftEnd.getTime();
+      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:effectiveLeaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,syncedAt:inProgressWorkDay?null:now,...attendanceValues};
       if(record){await db.attendanceDaily.update({where:{id:record.id},data:record.correctionNote?{shiftId:shift.id,scheduledMinutes:values.scheduledMinutes,leaveUnits:effectiveLeaveUnits,dayType}:{...values}});}else{await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});generated++;}
     }
   }
