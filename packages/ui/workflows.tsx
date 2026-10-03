@@ -6,20 +6,20 @@ import {Row,Field,readable} from './config';
 import {ModulePage} from './modules';
 export {FaceScanAttendanceModal} from './face';
 import {FaceScanAttendanceModal} from './face';
-import {attendanceClock12,attendanceDurationSeconds,attendanceMinuteClock12} from './attendance-format';
+import {attendanceBusinessMinutesFromSeconds,attendanceClock12,attendanceDurationSeconds,attendanceMinuteClock12} from './attendance-format';
 
 function AttendanceRunningTimer({since,baseSeconds=0}:{since:any;baseSeconds?:number}){
  const[now,setNow]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[]);const start=since?new Date(since).getTime():now,total=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0)));return <>{attendanceDurationSeconds(total)}</>;
 }
 function AttendanceBreakLive({since,baseSeconds=0,allowedMinutes=0,over=false,emptyWhenZero=false}:{since:any;baseSeconds?:number;allowedMinutes?:number;over?:boolean;emptyWhenZero?:boolean}){
  const[now,setNow]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[]);
- const start=since?new Date(since).getTime():now,raw=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0))),limit=Math.max(0,allowedMinutes*60),total=over?Math.max(0,raw-limit):Math.min(raw,limit);
+ const start=since?new Date(since).getTime():now,raw=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0))),limit=Math.max(0,allowedMinutes*60),businessOverMinutes=Math.max(0,attendanceBusinessMinutesFromSeconds(raw)-Math.max(0,allowedMinutes)),total=over?businessOverMinutes*60:Math.min(raw,limit);
  return <>{emptyWhenZero&&total<=0?'—':attendanceDurationSeconds(total)}</>;
 }
 function AttendanceLiveStatus({row,isWorking}:{row:Row;isWorking:boolean}){
  const[now,setNow]=useState(Date.now());useEffect(()=>{if(!row.currentBreakSince)return;const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[row.currentBreakSince]);
  let value=String(row.liveState??(isWorking?'WORKING':row.status));
- if(row.currentBreakSince&&!isWorking){const start=new Date(row.currentBreakSince).getTime(),base=Number(row.breakSeconds??Number(row.breakMinutes??0)*60),limit=Math.max(0,Number(row.allowedBreakSeconds??Number(row.allowedBreakMinutes??0)*60)),raw=Math.max(0,Math.floor(base+(now-start)/1000));value=raw>limit?'OVER_BREAK':'BREAK';}
+ if(row.currentBreakSince&&!isWorking){const start=new Date(row.currentBreakSince).getTime(),base=Number(row.breakSeconds??Number(row.breakMinutes??0)*60),allowedMinutes=Math.max(0,Number(row.allowedBreakMinutes??0)),raw=Math.max(0,Math.floor(base+(now-start)/1000));value=attendanceBusinessMinutesFromSeconds(raw)>allowedMinutes?'OVER_BREAK':'BREAK';}
  return <Badge value={value}/>;
 }
 function AttendanceTotalLive({rows,kind}:{rows:Row[];kind:'work'|'break'|'overtime'}){
