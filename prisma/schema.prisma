@@ -288,23 +288,26 @@ model EmployeeFaceProfile {
 }
 
 model Shift {
-  id                   String   @id @default(uuid()) @db.Uuid
-  tenantId             String   @map("tenant_id") @db.Uuid
-  name                 String
-  startMinute          Int
-  endMinute            Int
-  graceMinutes         Int      @default(10)
-  earlyOutGraceMinutes Int      @default(10) @map("early_out_grace_minutes")
-  workingDays          String   @default("1,2,3,4,5") @map("working_days")
-  breakMinutes         Int      @default(60)
-  breakStartMinute     Int?     @map("break_start_minute")
-  breakEndMinute       Int?     @map("break_end_minute")
-  fullDayMinutes       Int      @default(480)
-  halfDayMinutes       Int      @default(240)
-  overtimeAfterMinutes Int      @default(480)
-  timezone             String   @default("Asia/Kolkata")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                      String   @id @default(uuid()) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  name                    String
+  startMinute             Int
+  endMinute               Int
+  graceMinutes            Int      @default(10)
+  earlyOutGraceMinutes    Int      @default(10) @map("early_out_grace_minutes")
+  workingDays             String   @default("1,2,3,4,5") @map("working_days")
+  workWeekMode            String   @default("CUSTOM_WEEKLY") @map("work_week_mode")
+  alternateSaturdayMode   String   @default("SECOND_FOURTH_OFF") @map("alternate_saturday_mode")
+  monthlyFlexibleOffDays  Int      @default(0) @map("monthly_flexible_off_days")
+  breakMinutes            Int      @default(60)
+  breakStartMinute        Int?     @map("break_start_minute")
+  breakEndMinute          Int?     @map("break_end_minute")
+  fullDayMinutes          Int      @default(480)
+  halfDayMinutes          Int      @default(240)
+  overtimeAfterMinutes    Int      @default(480)
+  timezone                String   @default("Asia/Kolkata")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   @@unique([tenantId, id])
   @@index([tenantId])
@@ -481,6 +484,7 @@ model LeaveRequest {
 model CalendarEvent {
   id          String    @id @default(uuid()) @db.Uuid
   tenantId    String    @map("tenant_id") @db.Uuid
+  shiftId     String?   @map("shift_id") @db.Uuid
   title       String
   date        DateTime  @db.Date
   endDate     DateTime? @db.Date
@@ -492,6 +496,7 @@ model CalendarEvent {
   @@unique([tenantId, id])
   @@index([tenantId])
   @@index([tenantId, date])
+  @@index([tenantId, shiftId, date])
   @@map("calendar_events")
 }
 
