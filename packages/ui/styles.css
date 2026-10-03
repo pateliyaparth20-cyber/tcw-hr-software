@@ -14054,3 +14054,124 @@ body{overflow-y:auto!important}
   .people-directory-panel .toolbar{align-items:stretch}
   .people-directory-panel .compact-search{max-width:none}
 }
+
+
+/* Profile photo interaction: true circles, photo-only preview, deterministic top layer */
+.my-profile-photo,
+.platform-admin-avatar{
+  border-radius:50%!important;
+  overflow:hidden!important;
+}
+.my-profile-photo>img,
+.platform-admin-avatar>img{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  border-radius:50%!important;
+}
+.my-profile-photo.clickable,
+.platform-admin-avatar.clickable{cursor:zoom-in}
+.people-avatar-button,
+.profile-avatar-button{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  line-height:0;
+  cursor:zoom-in;
+  overflow:hidden;
+}
+.people-avatar-button>.avatar,
+.profile-avatar-button>.avatar{
+  margin:0;
+  pointer-events:none;
+}
+.people-person-copy{
+  display:block;
+  min-width:0;
+  max-width:170px;
+  padding:0;
+  text-align:left;
+  background:transparent;
+  color:inherit;
+  overflow:hidden;
+}
+.people-person-copy strong,
+.people-person-copy small{
+  display:block;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.profile-avatar-button:focus-visible,
+.people-avatar-button:focus-visible,
+.people-person-copy:focus-visible,
+.my-profile-photo.clickable:focus-visible,
+.platform-admin-avatar.clickable:focus-visible{
+  outline:3px solid rgba(52,116,239,.28);
+  outline-offset:3px;
+}
+.tcw-photo-viewer-dialog{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100dvh!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:clamp(18px,3vw,36px)!important;
+  border:0!important;
+  border-radius:0!important;
+  background:rgba(7,18,31,.9)!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  cursor:zoom-out;
+}
+.tcw-photo-viewer-dialog[open]{
+  display:grid!important;
+  place-items:center!important;
+}
+.tcw-photo-viewer-dialog::backdrop{
+  background:transparent!important;
+}
+.tcw-photo-viewer-dialog>img{
+  display:block!important;
+  width:auto!important;
+  height:auto!important;
+  max-width:min(92vw,980px)!important;
+  max-height:88dvh!important;
+  object-fit:contain!important;
+  border-radius:18px!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.42)!important;
+  cursor:default;
+}
+.tcw-photo-viewer-close{
+  position:fixed;
+  top:max(16px,env(safe-area-inset-top));
+  right:max(16px,env(safe-area-inset-right));
+  z-index:2;
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid rgba(255,255,255,.26);
+  border-radius:50%;
+  background:rgba(255,255,255,.96);
+  color:#17324d;
+  box-shadow:0 8px 28px rgba(0,0,0,.25);
+  cursor:pointer;
+}
+@media(max-width:760px){
+  .people-person-copy{max-width:137px}
+  .tcw-photo-viewer-dialog{padding:16px!important}
+  .tcw-photo-viewer-dialog>img{max-width:94vw!important;max-height:82dvh!important;border-radius:14px!important}
+  .tcw-photo-viewer-close{width:42px;height:42px}
+}
