@@ -13417,3 +13417,200 @@ input[type="month"]{
   .attendance-view-metrics.five,
   .attendance-view-meta.attendance-view-meta-five{grid-template-columns:1fr!important}
 }
+
+
+/* Attendance split frozen columns: Employee + Status never enter horizontal scroll */
+.attendance-records-table.attendance-split-table{
+  display:grid!important;
+  grid-template-columns:315px minmax(0,1fr)!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:auto!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+.attendance-frozen-pane,
+.attendance-main-pane{
+  min-width:0!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+.attendance-frozen-scroll,
+.attendance-main-scroll{
+  width:100%!important;
+  min-height:0!important;
+  height:auto!important;
+  max-height:min(58vh,620px)!important;
+  overscroll-behavior:contain!important;
+}
+.attendance-frozen-scroll{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  padding-bottom:10px!important;
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+.attendance-frozen-scroll::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}
+.attendance-main-scroll{
+  overflow-x:scroll!important;
+  overflow-y:auto!important;
+  scrollbar-width:thin!important;
+  scrollbar-color:#b6c3d2 #edf2f7!important;
+  scrollbar-gutter:stable!important;
+}
+.attendance-main-scroll::-webkit-scrollbar{height:10px!important;width:9px!important}
+.attendance-main-scroll::-webkit-scrollbar-track{background:#edf2f7!important}
+.attendance-main-scroll::-webkit-scrollbar-thumb{background:#b6c3d2!important;border-radius:999px!important;border:2px solid #edf2f7!important}
+.attendance-main-scroll::-webkit-scrollbar-corner{background:#edf2f7!important}
+
+.attendance-split-table .attendance-frozen-table{
+  width:315px!important;
+  min-width:315px!important;
+  max-width:315px!important;
+  table-layout:fixed!important;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+  white-space:nowrap!important;
+  margin:0!important;
+}
+.attendance-split-table .attendance-main-table{
+  width:1270px!important;
+  min-width:1270px!important;
+  max-width:1270px!important;
+  table-layout:fixed!important;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+  white-space:nowrap!important;
+  margin:0!important;
+}
+.attendance-frozen-table col.c-employee{width:215px!important}
+.attendance-frozen-table col.c-status{width:100px!important}
+.attendance-main-table col.c-date{width:105px!important}
+.attendance-main-table col.c-shift{width:110px!important}
+.attendance-main-table col.c-in{width:100px!important}
+.attendance-main-table col.c-out{width:100px!important}
+.attendance-main-table col.c-late{width:100px!important}
+.attendance-main-table col.c-early{width:100px!important}
+.attendance-main-table col.c-work{width:115px!important}
+.attendance-main-table col.c-overtime{width:105px!important}
+.attendance-main-table col.c-break{width:120px!important}
+.attendance-main-table col.c-overbreak{width:110px!important}
+.attendance-main-table col.c-source{width:115px!important}
+.attendance-main-table col.c-actions{width:90px!important}
+
+.attendance-split-table .attendance-frozen-table th,
+.attendance-split-table .attendance-frozen-table td,
+.attendance-split-table .attendance-main-table th,
+.attendance-split-table .attendance-main-table td{
+  box-sizing:border-box!important;
+  max-width:none!important;
+  border-left:0!important;
+  border-right:0!important;
+}
+.attendance-split-table .attendance-frozen-table thead th,
+.attendance-split-table .attendance-main-table thead th{
+  position:sticky!important;
+  top:0!important;
+  z-index:5!important;
+  height:42px!important;
+  padding:0 12px!important;
+  line-height:42px!important;
+  background:#f7f9fc!important;
+  border-top:0!important;
+  border-bottom:1px solid #e3eaf2!important;
+  color:#607289!important;
+  font-size:.64rem!important;
+  font-weight:550!important;
+  text-align:center!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.attendance-split-table .attendance-frozen-table thead th:first-child{text-align:left!important}
+.attendance-split-table .attendance-frozen-table tbody td,
+.attendance-split-table .attendance-main-table tbody td{
+  height:56px!important;
+  padding:8px 12px!important;
+  background:#fff!important;
+  border-bottom:1px solid #edf1f6!important;
+  color:#50647b!important;
+  font-size:.72rem!important;
+  font-weight:400!important;
+  text-align:center!important;
+  vertical-align:middle!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.attendance-split-table .attendance-frozen-table tbody td:first-child{text-align:left!important}
+.attendance-split-table .attendance-frozen-table tbody tr:hover td,
+.attendance-split-table .attendance-main-table tbody tr:hover td{background:#fbfdff!important}
+.attendance-split-table .attendance-frozen-table .person-cell{
+  width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-align:left!important;
+}
+.attendance-split-table .attendance-frozen-table .person-cell>span{
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.attendance-split-table .attendance-frozen-table .person-cell strong,
+.attendance-split-table .attendance-frozen-table .person-cell small{
+  display:block!important;
+  max-width:150px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.attendance-split-table .attendance-frozen-table .badge{
+  max-width:86px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  border-radius:999px!important;
+  border:1px solid transparent!important;
+  box-shadow:none!important;
+  font-weight:600!important;
+}
+.attendance-split-table .attendance-frozen-table .badge.green{background:#edf8f3!important;color:#2e7d62!important;border-color:#d8eee4!important}
+.attendance-split-table .attendance-frozen-table .badge.amber{background:#fff7e9!important;color:#986b24!important;border-color:#f3e4c7!important}
+.attendance-split-table .attendance-frozen-table .badge.red{background:#fff1f2!important;color:#a95861!important;border-color:#f1d9dc!important}
+.attendance-split-table .attendance-frozen-table .badge.blue{background:#eef4ff!important;color:#4b70a7!important;border-color:#dce7fa!important}
+.attendance-split-table .attendance-main-table .row-actions{
+  position:static!important;
+  right:auto!important;
+  z-index:auto!important;
+  box-shadow:none!important;
+}
+.attendance-split-table .attendance-main-table tbody tr:last-child td,
+.attendance-split-table .attendance-frozen-table tbody tr:last-child td{border-bottom:0!important}
+
+@media(max-width:760px){
+  .attendance-records-table.attendance-split-table{
+    grid-template-columns:240px minmax(0,1fr)!important;
+  }
+  .attendance-split-table .attendance-frozen-table{
+    width:240px!important;
+    min-width:240px!important;
+    max-width:240px!important;
+  }
+  .attendance-frozen-table col.c-employee{width:150px!important}
+  .attendance-frozen-table col.c-status{width:90px!important}
+  .attendance-split-table .attendance-frozen-table .person-cell strong,
+  .attendance-split-table .attendance-frozen-table .person-cell small{max-width:86px!important}
+  .attendance-split-table .attendance-frozen-table .badge{max-width:76px!important;padding-left:6px!important;padding-right:6px!important;font-size:.61rem!important}
+}
+@media(max-width:390px){
+  .attendance-records-table.attendance-split-table{
+    grid-template-columns:224px minmax(0,1fr)!important;
+  }
+  .attendance-split-table .attendance-frozen-table{
+    width:224px!important;
+    min-width:224px!important;
+    max-width:224px!important;
+  }
+  .attendance-frozen-table col.c-employee{width:140px!important}
+  .attendance-frozen-table col.c-status{width:84px!important}
+  .attendance-split-table .attendance-frozen-table .person-cell strong,
+  .attendance-split-table .attendance-frozen-table .person-cell small{max-width:76px!important}
+  .attendance-split-table .attendance-frozen-table .badge{max-width:70px!important}
+}
