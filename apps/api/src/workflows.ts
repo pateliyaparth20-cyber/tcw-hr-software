@@ -207,7 +207,6 @@ export class Workflows {
     await this.notifyLeaveReporting(ctx,after,autoApprove);
     if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
-      for(const month of monthsCovered(after.startDate,after.endDate))await reconcileAttendanceMonth(this.db,tid,month);
       const user=await this.db.user.findFirst({where:{tenantId:tid,employeeId:after.employeeId}});
       if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave assigned',message:'HR assigned approved leave to your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
     }
@@ -226,7 +225,6 @@ export class Workflows {
     });
     if(type==='leave'&&input.decision==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,reviewed);
-      for(const month of affectedMonths)await reconcileAttendanceMonth(this.db,tid,month);
     }
     return reviewed;
   }
