@@ -107,9 +107,9 @@ export class DataService {
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
-      const [items,total,departments,branches,designations]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
-      const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name])),designationNames=new Map(designations.map(r=>[r.id,r.name]));
-      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null,designation:designationNames.get(row.designation)??row.designation})),total,page,pageSize:take};
+      const [items,total,departments,branches,designations,shifts]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
+      const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name])),designationNames=new Map(designations.map(r=>[r.id,r.name])),shiftNames=new Map(shifts.map(r=>[r.id,r.name]));
+      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null,shiftName:row.shiftId?shiftNames.get(row.shiftId)??'':null,designation:designationNames.get(row.designation)??row.designation})),total,page,pageSize:take};
     }
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Employee records are managed by HR.');
     return this.db.$transaction(async tx=>{
@@ -207,6 +207,17 @@ export class DataService {
       if(method==='DELETE'){await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
       const input=cfg.schema.parse(body) as any;
       await this.references(tx,ctx,input,{...(cfg.employeeScoped?{employeeId:'employee'}:{}),...cfg.references});
+      if(type==='calendar'&&input.kind==='ROSTER_OFF'){
+        const shift=await tx.shift.findFirst({where:{tenantId:tid,id:input.shiftId}});
+        if(!shift)throw new BadRequestException('Select a valid shift for roster off.');
+        const quota=Math.max(0,Number(shift.monthlyFlexibleOffDays??0));
+        if(!quota)throw new BadRequestException('This shift does not allow flexible monthly roster-off days.');
+        const month=input.date.toISOString().slice(0,7),first=new Date(month+'-01T00:00:00.000Z'),next=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,1));
+        const duplicate=await tx.calendarEvent.findFirst({where:{tenantId:tid,kind:'ROSTER_OFF',shiftId:shift.id,date:input.date,...(recordId?{id:{not:recordId}}:{})}});
+        if(duplicate)throw new ConflictException('This shift already has a roster off on that date.');
+        const used=await tx.calendarEvent.count({where:{tenantId:tid,kind:'ROSTER_OFF',shiftId:shift.id,date:{gte:first,lt:next},...(recordId?{id:{not:recordId}}:{})}});
+        if(used>=quota)throw new BadRequestException(`This shift allows ${quota} flexible roster-off day(s) per month. Remove another roster off or increase the shift allowance.`);
+      }
       if(ctx.user.role.code==='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId)throw new ForbiddenException();
       if(type==='goals'&&input.progress>input.target)throw new BadRequestException('Progress cannot exceed the target.');
       if(type==='devices'&&!before){

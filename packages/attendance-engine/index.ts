@@ -63,6 +63,26 @@ export function workingDaySet(value:string|undefined|null){
   const days=new Set((value||'1,2,3,4,5').split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=0&&v<=6));
   return days.size?days:new Set([1,2,3,4,5]);
 }
+export interface WorkScheduleRule {
+  workingDays?: string|null;
+  workWeekMode?: string|null;
+  alternateSaturdayMode?: string|null;
+}
+export function isScheduledWorkDay(day:Date,rule:WorkScheduleRule){
+  const weekday=day.getUTCDay(),mode=String(rule.workWeekMode??'CUSTOM_WEEKLY');
+  if(mode==='ALL_DAYS')return true;
+  if(mode==='MON_FRI')return weekday>=1&&weekday<=5;
+  if(mode==='MON_SAT')return weekday>=1&&weekday<=6;
+  if(mode==='ALTERNATE_SATURDAY'){
+    if(weekday===0)return false;
+    if(weekday!==6)return true;
+    const occurrence=Math.ceil(day.getUTCDate()/7),saturdayMode=String(rule.alternateSaturdayMode??'SECOND_FOURTH_OFF');
+    if(saturdayMode==='ODD_OFF')return occurrence%2===0;
+    if(saturdayMode==='EVEN_OFF')return occurrence%2===1;
+    return ![2,4].includes(occurrence);
+  }
+  return workingDaySet(rule.workingDays).has(weekday);
+}
 export function monthBounds(month:string){
   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('Invalid month.');
   const first=new Date(`${month}-01T00:00:00.000Z`);

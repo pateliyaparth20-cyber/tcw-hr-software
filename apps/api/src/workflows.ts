@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {createHash} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {id,date,leaveSchema} from '../../../packages/validation';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,localDate,monthBounds,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledWorkDay,localDate,monthBounds,zonedMinute} from '../../../packages/attendance-engine';
 import {hasPermission} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,refreshTenantCurrentNoPunchAttendance,unlockAttendanceMonth} from './attendance-automation';
@@ -186,10 +186,10 @@ export class Workflows {
       const overlap=await tx.leaveRequest.count({where:{tenantId:tid,employeeId:input.employeeId,status:{in:['PENDING','APPROVED']},startDate:{lte:input.endDate},endDate:{gte:input.startDate}}});
       if(overlap)throw new ConflictException('This employee already has leave requested for these dates.');
       const employee=await tx.employee.findFirst({where:{tenantId:tid,id:input.employeeId},select:{shiftId:true}}),shift=employee?.shiftId?await tx.shift.findFirst({where:{tenantId:tid,id:employee.shiftId}}):await tx.shift.findFirst({where:{tenantId:tid},orderBy:{createdAt:'asc'}});
-      if(!shift)throw new BadRequestException('Create a shift before requesting leave.');const workDays=workingDaySet(shift.workingDays);
-      const holidays=await tx.calendarEvent.findMany({where:{tenantId:tid,kind:'HOLIDAY',date:{lte:input.endDate},OR:[{endDate:null},{endDate:{gte:input.startDate}}]}});const excluded=new Set<string>();
-      for(const h of holidays){const end=h.endDate??h.date;for(let t=Math.max(+input.startDate,+h.date);t<=Math.min(+input.endDate,+end);t+=86400000)excluded.add(new Date(t).toISOString().slice(0,10));}let days=0;
-      for(let t=+input.startDate;t<=+input.endDate;t+=86400000){const day=new Date(t);if(workDays.has(day.getUTCDay())&&!excluded.has(day.toISOString().slice(0,10)))days++;}
+      if(!shift)throw new BadRequestException('Create a shift before requesting leave.');
+      const calendarOffs=await tx.calendarEvent.findMany({where:{tenantId:tid,kind:{in:['HOLIDAY','ROSTER_OFF']},date:{lte:input.endDate},OR:[{endDate:null},{endDate:{gte:input.startDate}}]}});const excluded=new Set<string>();
+      for(const h of calendarOffs){if(h.kind==='ROSTER_OFF'){if(h.shiftId===shift.id)excluded.add(h.date.toISOString().slice(0,10));continue;}const end=h.endDate??h.date;for(let t=Math.max(+input.startDate,+h.date);t<=Math.min(+input.endDate,+end);t+=86400000)excluded.add(new Date(t).toISOString().slice(0,10));}let days=0;
+      for(let t=+input.startDate;t<=+input.endDate;t+=86400000){const day=new Date(t);if(isScheduledWorkDay(day,shift)&&!excluded.has(day.toISOString().slice(0,10)))days++;}
       if(input.halfDay)days=days?0.5:0;
       if(!days)throw new BadRequestException('There are no working days in the requested period.');
       const year=input.startDate.getUTCFullYear();
