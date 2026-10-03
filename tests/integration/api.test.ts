@@ -68,24 +68,25 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'APPROVED'},alpha)).status,200);
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'REJECTED'},alpha)).status,409);
   });
-  await t.test('attendance stays present during an active shift across punches and reconcile, then finalizes after shift end',async()=>{
-   const sourceId=randomUUID(),outSourceId=randomUUID(),shift=await db.shift.findFirstOrThrow({where:{tenantId:alphaTenant}}),now=new Date(),nowMinute=now.getUTCHours()*60+now.getUTCMinutes(),startMinute=(nowMinute+1320)%1440,endMinute=(nowMinute+120)%1440;
-   await db.shift.update({where:{id:shift.id},data:{timezone:'UTC',startMinute,endMinute,workingDays:'0,1,2,3,4,5,6',graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:180,halfDayMinutes:90,overtimeAfterMinutes:180}});
-   const punchIn=new Date(now.getTime()-40*60000),punchOut=new Date(now.getTime()-10*60000),body={employeeId:a.data.id,punchTime:punchIn.toISOString(),punchType:'IN',sourceId,shiftId:shift.id};
-   const r=await call('attendance','POST',body,alpha);assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.status,'PRESENT');assert.equal((await call('attendance','POST',body,alpha)).data.duplicate,true);
-   const out=await call('attendance','POST',{...body,punchTime:punchOut.toISOString(),punchType:'OUT',sourceId:outSourceId},alpha);assert.equal(out.status,200,JSON.stringify(out.data));assert.equal(out.data.status,'PRESENT');
-   assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),1);
-   const punch=await db.attendancePunch.findFirstOrThrow({where:{sourceId}});await assert.rejects(()=>db.attendancePunch.update({where:{id:punch.id},data:{punchType:'OUT'}}));await assert.rejects(()=>db.attendancePunch.delete({where:{id:punch.id}}));
-   const workDay=attendanceWorkdayDate(punchIn,startMinute,endMinute,'UTC'),month=workDay.slice(0,7),reportDate=new Date(`${workDay}T00:00:00.000Z`),reconciled=await call('attendance/reconcile','POST',{month},alpha);assert.equal(reconciled.status,200,JSON.stringify(reconciled.data));
-   let daily=await db.attendanceDaily.findUniqueOrThrow({where:{tenantId_employeeId_date:{tenantId:alphaTenant,employeeId:a.data.id,date:reportDate}}});assert.equal(daily.status,'PRESENT');assert.equal(daily.syncedAt,null);
-   await db.attendanceDaily.update({where:{id:daily.id},data:{status:'HALF_DAY',syncedAt:now}});
-   await refreshTenantCurrentNoPunchAttendance(db,alphaTenant,new Date(now.getTime()+1000),0);daily=await db.attendanceDaily.findUniqueOrThrow({where:{id:daily.id}});assert.equal(daily.status,'PRESENT');
-   const night=endMinute<=startMinute,shiftEnd=zonedMinute(workDay,night?1440+endMinute:endMinute,'UTC'),afterEnd=new Date(shiftEnd.getTime()+60000);await refreshTenantCurrentNoPunchAttendance(db,alphaTenant,afterEnd,0);
-   daily=await db.attendanceDaily.findUniqueOrThrow({where:{id:daily.id}});assert.equal(daily.status,'ABSENT');assert(daily.syncedAt&&daily.syncedAt.getTime()>=shiftEnd.getTime());
-   await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId:alphaTenant,month}},create:{tenantId:alphaTenant,month,status:'UNLOCKED'},update:{status:'UNLOCKED'}});
-   const reset=await call('attendance/reset-month','DELETE',{month},alpha);assert.equal(reset.status,200,JSON.stringify(reset.data));assert.equal(reset.data.permanent,true);assert(reset.data.deletedPunches>=2);
-   assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),0);assert.equal(await db.attendancePeriodLock.count({where:{tenantId:alphaTenant,month}}),0);
-  });
+   await t.test('attendance shows live Working Out Break states across repeated sessions and finalizes after shift end',async()=>{
+    const shift=await db.shift.findFirstOrThrow({where:{tenantId:alphaTenant}}),now=new Date(),minute=now.getUTCHours()*60+now.getUTCMinutes(),startMinute=(minute+1350)%1440,endMinute=(minute+90)%1440;
+    await db.shift.update({where:{id:shift.id},data:{timezone:'UTC',startMinute,endMinute,workingDays:'0,1,2,3,4,5,6',graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:80,halfDayMinutes:40,overtimeAfterMinutes:80,breakMinutes:30,breakStartMinute:null,breakEndMinute:null,punchDrivenBreaks:true,flexibleBreakAnytime:false}});
+    const p1=new Date(now.getTime()-50*60000),p2=new Date(now.getTime()-30*60000),p3=new Date(now.getTime()-20*60000),p4=new Date(now.getTime()-10*60000),workDay=attendanceWorkdayDate(p1,startMinute,endMinute,'UTC'),month=workDay.slice(0,7),reportDate=new Date(`${workDay}T00:00:00.000Z`);
+    const punch=async(punchTime:Date,punchType:'IN'|'OUT',sourceId=randomUUID())=>call('attendance','POST',{employeeId:a.data.id,punchTime:punchTime.toISOString(),punchType,sourceId,shiftId:shift.id},alpha);
+    const live=async()=>{const response=await call(`attendance?from=${workDay}&to=${workDay}`,'GET',undefined,alpha);assert.equal(response.status,200,JSON.stringify(response.data));return response.data.items.find((item:any)=>item.employeeId===a.data.id)};
+    let r=await punch(p1,'IN');assert.equal(r.status,200,JSON.stringify(r.data));let row=await live();assert.equal(row.liveState,'WORKING');
+    r=await punch(p2,'OUT');assert.equal(r.status,200,JSON.stringify(r.data));row=await live();assert.equal(row.liveState,'OUT');
+    r=await punch(p3,'IN');assert.equal(r.status,200,JSON.stringify(r.data));row=await live();assert.equal(row.liveState,'WORKING');
+    const breakStart=(minute+1425)%1440,breakEnd=(minute+25)%1440;await db.shift.update({where:{id:shift.id},data:{breakStartMinute:breakStart,breakEndMinute:breakEnd}});
+    r=await punch(p4,'OUT');assert.equal(r.status,200,JSON.stringify(r.data));row=await live();assert.equal(row.liveState,'BREAK');assert.equal(row.inCount,2);assert.equal(row.outCount,2);
+    const sourceId=randomUUID();r=await punch(new Date(now.getTime()-5*60000),'IN',sourceId);assert.equal(r.status,200,JSON.stringify(r.data));row=await live();assert.equal(row.liveState,'WORKING');
+    const sourcePunch=await db.attendancePunch.findFirstOrThrow({where:{sourceId}});await assert.rejects(()=>db.attendancePunch.update({where:{id:sourcePunch.id},data:{punchType:'OUT'}}));await assert.rejects(()=>db.attendancePunch.delete({where:{id:sourcePunch.id}}));
+    r=await punch(now,'OUT');assert.equal(r.status,200,JSON.stringify(r.data));
+    const reconciled=await call('attendance/reconcile','POST',{month},alpha);assert.equal(reconciled.status,200,JSON.stringify(reconciled.data));let daily=await db.attendanceDaily.findUniqueOrThrow({where:{tenantId_employeeId_date:{tenantId:alphaTenant,employeeId:a.data.id,date:reportDate}}});assert.equal(daily.status,'PRESENT');assert.equal(daily.syncedAt,null);
+    await db.attendanceDaily.update({where:{id:daily.id},data:{status:'HALF_DAY',syncedAt:now}});await refreshTenantCurrentNoPunchAttendance(db,alphaTenant,new Date(now.getTime()+1000),0);daily=await db.attendanceDaily.findUniqueOrThrow({where:{id:daily.id}});assert.equal(daily.status,'PRESENT');
+    const night=endMinute<=startMinute,shiftEnd=zonedMinute(workDay,night?1440+endMinute:endMinute,'UTC');await refreshTenantCurrentNoPunchAttendance(db,alphaTenant,new Date(shiftEnd.getTime()+60000),0);daily=await db.attendanceDaily.findUniqueOrThrow({where:{id:daily.id}});assert.equal(daily.status,'HALF_DAY');assert(daily.syncedAt&&daily.syncedAt.getTime()>=shiftEnd.getTime());
+    await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId:alphaTenant,month}},create:{tenantId:alphaTenant,month,status:'UNLOCKED'},update:{status:'UNLOCKED'}});const reset=await call('attendance/reset-month','DELETE',{month},alpha);assert.equal(reset.status,200,JSON.stringify(reset.data));assert.equal(reset.data.permanent,true);assert(reset.data.deletedPunches>=6);assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),0);
+   });
   await t.test('invoice payments cannot overpay and references are unique',async()=>{
    const invoice=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-001',amount:100000,tax:18000,dueDate:'2026-10-01'},root);assert.equal(invoice.status,200,JSON.stringify(invoice.data));
    const payment={invoiceId:invoice.data.id,amount:118000,reference:'BANK-001',date:'2026-09-25'};
