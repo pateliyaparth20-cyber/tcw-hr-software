@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,workingDaySet,zonedMinute,localDate} from '../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,workingDaySet,zonedMinute,localDate,punchedAttendanceStatusAtMoment} from '../../packages/attendance-engine';
 import {calculatePay,assertPayrollTransition} from '../../packages/payroll-engine';
 import {hashPassword,verifyPassword} from '../../packages/auth';
 import {toCsv,toXlsx} from '../../packages/reporting-engine';
@@ -65,3 +65,13 @@ test('XLSX export is a real Office Open XML zip workbook',()=>{
  assert.ok(file.includes(Buffer.from('xl/worksheets/sheet1.xml')));
 });
 test('BioMax wall clock conversion respects configured timezone',()=>{assert.equal(biomaxLocalTimestamp('2026-07-01 09:00:00','America/New_York').toISOString(),'2026-07-01T13:00:00.000Z')});
+
+test('punched attendance stays present until shift end and finalizes afterwards',()=>{
+ const end=t('17:00');
+ assert.equal(punchedAttendanceStatusAtMoment('ABSENT',t('10:00'),end,true),'PRESENT');
+ assert.equal(punchedAttendanceStatusAtMoment('HALF_DAY',t('16:59'),end,true),'PRESENT');
+ assert.equal(punchedAttendanceStatusAtMoment('MISSING_PUNCH',t('12:00'),end,true),'PRESENT');
+ assert.equal(punchedAttendanceStatusAtMoment('HALF_DAY',end,end,true),'HALF_DAY');
+ assert.equal(punchedAttendanceStatusAtMoment('ABSENT',t('18:00'),end,true),'ABSENT');
+ assert.equal(punchedAttendanceStatusAtMoment('HALF_DAY',t('12:00'),end,false),'HALF_DAY');
+});
