@@ -73,6 +73,10 @@ export function attendanceWorkdayDate(instant:Date,shiftStartMinute:number,shift
 export function isScheduledBreakOut(out:Date,breakStart:Date,breakEnd:Date){
   return out.getTime()>=breakStart.getTime()&&out.getTime()<breakEnd.getTime();
 }
+export function allocateBreakUsageSeconds(elapsedSeconds:number,usedBreakSeconds:number,allowedBreakSeconds:number){
+  const elapsed=Math.max(0,Math.floor(Number(elapsedSeconds)||0)),used=Math.max(0,Math.floor(Number(usedBreakSeconds)||0)),allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),remaining=Math.max(0,allowed-used),breakSeconds=Math.min(elapsed,remaining);
+  return {breakSeconds,overBreakSeconds:Math.max(0,elapsed-breakSeconds)};
+}
 export function workingDaySet(value:string|undefined|null){
   const days=new Set((value||'1,2,3,4,5').split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=0&&v<=6));
   return days.size?days:new Set([1,2,3,4,5]);
