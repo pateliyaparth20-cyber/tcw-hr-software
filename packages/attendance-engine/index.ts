@@ -78,6 +78,12 @@ export function allocateBreakUsageSeconds(elapsedSeconds:number,usedBreakSeconds
   const elapsed=Math.max(0,Math.floor(Number(elapsedSeconds)||0)),used=Math.max(0,Math.floor(Number(usedBreakSeconds)||0)),allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),remaining=Math.max(0,allowed-used),breakSeconds=Math.min(elapsed,remaining);
   return {breakSeconds,overBreakSeconds:Math.max(0,elapsed-breakSeconds)};
 }
+export function punchDrivenBreakUsageSeconds(gapStart:Date,gapEnd:Date,windowStart:Date,windowEnd:Date,allowedBreakSeconds:number){
+  const allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),entitlementEndMs=Math.min(windowEnd.getTime(),windowStart.getTime()+allowed*1000),startMs=gapStart.getTime(),endMs=Math.max(startMs,gapEnd.getTime());
+  if(allowed<=0||startMs<windowStart.getTime()||startMs>=entitlementEndMs)return {breakSeconds:0,overBreakSeconds:0,remainingAtStartSeconds:0,entitlementEnd:new Date(entitlementEndMs)};
+  const breakEndMs=Math.min(endMs,entitlementEndMs),breakSeconds=Math.max(0,Math.floor((breakEndMs-startMs)/1000)),overBreakSeconds=Math.max(0,Math.floor((endMs-entitlementEndMs)/1000)),remainingAtStartSeconds=Math.max(0,Math.floor((entitlementEndMs-startMs)/1000));
+  return {breakSeconds,overBreakSeconds,remainingAtStartSeconds,entitlementEnd:new Date(entitlementEndMs)};
+}
 export function workingDaySet(value:string|undefined|null){
   const days=new Set((value||'1,2,3,4,5').split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=0&&v<=6));
   return days.size?days:new Set([1,2,3,4,5]);
