@@ -108,6 +108,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
     const employeePunches=punches.filter(p=>p.employeeId===employee.id);
     for(const day of eachDay(start,processNext)){
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`);
+      if(record?.correctionNote?.startsWith('DELETED_BY_HR:'))continue;
       const shift=(record?.shiftId&&shiftMap.get(record.shiftId))||currentShift;
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(dateKey,shift);
       const recordStart=record?.firstIn?new Date(record.firstIn.getTime()-60000):null;
