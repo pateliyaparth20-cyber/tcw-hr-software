@@ -3,7 +3,7 @@ import {Queue,Worker} from 'bullmq';
 import nodemailer from 'nodemailer';
 import {db} from '../../../packages/database';
 import {syncCompanyAccess} from '../../api/src/billing';
-import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll,repairPrematureCurrentMonthPayrollLocks} from '../../api/src/automation';
+import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll,repairPrematureCurrentMonthPayrollLocks,refreshCurrentNoPunchAttendance} from '../../api/src/automation';
 
 const url=new URL(process.env.REDIS_URL??'redis://localhost:6379');
 const connection={host:url.hostname,port:Number(url.port)||6379,password:url.password||undefined,...(url.protocol==='rediss:'?{tls:{}}:{})};
@@ -101,7 +101,7 @@ const worker=new Worker('peopleos-outbox',async job=>{
   }
 },{connection,concurrency:4});
 worker.on('failed',(job,error)=>console.error('Outbox delivery failed for job',job?.id,String(error?.message??error??'unknown').slice(0,240)));
-let scanning=false;
+let scanning=false,lastAttendanceStatusRefresh=0;
 async function scan(){if(scanning)return;scanning=true;try{
   const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
   if(!smsConfigured){
@@ -115,6 +115,7 @@ async function scan(){if(scanning)return;scanning=true;try{
   await repairPrematureCurrentMonthPayrollLocks(db);
   await prepareScheduledPayroll(db);
   await monitorAttendanceDevices(db);
+  if(Date.now()-lastAttendanceStatusRefresh>=60000){await refreshCurrentNoPunchAttendance(db);lastAttendanceStatusRefresh=Date.now();}
 }catch{console.error('Worker scan failed; retrying on next interval.')}finally{scanning=false}}
 const interval=setInterval(scan,10000);scan();
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
