@@ -112,13 +112,14 @@ export class Workflows {
       await assertEmployee(this.db,ctx,before.employeeId);
       const shift=await employeeShift(this.db,tid,before.employeeId,before.shiftId??undefined);
       const day=before.date.toISOString().slice(0,10),night=shift.endMinute<=shift.startMinute;
-      const start=zonedMinute(day,night?shift.startMinute-120:0,shift.timezone);
-      const end=zonedMinute(day,night?1440+shift.endMinute+120:1440,shift.timezone);
+      const scheduledStart=zonedMinute(day,shift.startMinute,shift.timezone),scheduledEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
+      const start=before.firstIn?new Date(before.firstIn.getTime()-60000):new Date(scheduledStart.getTime()-120*60000);
+      const end=before.firstIn?(before.lastOut?new Date(before.lastOut.getTime()+60000):new Date(Date.now()+60000)):new Date(scheduledEnd.getTime()+120*60000);
       return this.db.$transaction(async tx=>{
-        const rawPunchesRetained=await tx.attendancePunch.count({where:{tenantId:tid,employeeId:before.employeeId,punchTime:{gte:start,lt:end}}});
-        const after=await tx.attendanceDaily.update({where:{id:before.id},data:{status:'VOID',dayType:'VOID',scheduledMinutes:0,payableUnits:0,leaveUnits:0,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0,exceptionCode:'',correctionNote:`VOIDED_BY_HR:${ctx.user.id}`}});
-        await audit(tx,ctx,'ATTENDANCE_VOIDED','attendance',before.id,before,{rawPunchesRetained});
-        return {ok:true,deleted:true,voided:true,rawPunchesRetained,record:after};
+        const removed=await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId:before.employeeId,punchTime:{gte:start,lt:end}}});
+        const after=await tx.attendanceDaily.update({where:{id:before.id},data:{status:'VOID',dayType:'VOID',shiftId:before.shiftId,firstIn:null,lastOut:null,scheduledMinutes:0,payableUnits:0,leaveUnits:0,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0,exceptionCode:'',correctionNote:`DELETED_BY_HR:${ctx.user.id}`}});
+        await audit(tx,ctx,'ATTENDANCE_DAY_DELETED','attendance',before.id,before,{deletedPunches:removed.count,date:day,shiftId:before.shiftId});
+        return {ok:true,deleted:true,voided:true,deletedPunches:removed.count,record:after};
       });
     }
     if(recordId&&action==='correct'&&method==='POST'){
