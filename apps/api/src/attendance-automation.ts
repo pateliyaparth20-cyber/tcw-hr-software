@@ -48,23 +48,29 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
   for(const punch of punches){const list=punchesByEmployee.get(punch.employeeId)??[];list.push(punch);punchesByEmployee.set(punch.employeeId,list);}
   let updated=0;
   for(const employee of employees){
-    const shift=(employee.shiftId&&shiftMap.get(employee.shiftId))||shifts[0];
-    const workDay=attendanceWorkdayDate(now,shift.startMinute,shift.endMinute,shift.timezone);
-    if(lockedMonths.has(workDay.slice(0,7))||workDay<key(employee.joiningDate))continue;
-    const day=atDate(workDay);
-    if(!isScheduledWorkDay(day,shift))continue;
-    if(holidays.some(h=>h.kind==='HOLIDAY'?overlap(h.date,h.endDate??h.date,day):h.kind==='ROSTER_OFF'&&h.shiftId===shift.id&&+h.date===+day))continue;
-    if(leaves.some(l=>l.employeeId===employee.id&&overlap(l.startDate,l.endDate,day)))continue;
-    const hasPunch=(punchesByEmployee.get(employee.id)??[]).some(p=>attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===workDay);
-    if(hasPunch)continue;
-    const record=existingMap.get(`${employee.id}:${workDay}`);
-    if(record?.correctionNote||record?.firstIn||record?.lastOut)continue;
-    const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(workDay,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(workDay,night?1440+shift.endMinute:shift.endMinute,shift.timezone),phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes);
-    if(phase==='PENDING')continue;
-    const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
-    if(record)await db.attendanceDaily.update({where:{id:record.id},data:values});
-    else await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});
-    updated++;
+    const currentShift=(employee.shiftId&&shiftMap.get(employee.shiftId))||shifts[0];
+    const candidateDays=[previous,today];
+    for(const workDay of candidateDays){
+      const record=existingMap.get(`${employee.id}:${workDay}`);
+      if(record?.correctionNote?.startsWith('DELETED_BY_HR:'))continue;
+      const shift=(record?.shiftId&&shiftMap.get(record.shiftId))||currentShift;
+      if(lockedMonths.has(workDay.slice(0,7))||workDay<key(employee.joiningDate))continue;
+      const day=atDate(workDay);
+      if(!isScheduledWorkDay(day,shift))continue;
+      if(holidays.some(h=>h.kind==='HOLIDAY'?overlap(h.date,h.endDate??h.date,day):h.kind==='ROSTER_OFF'&&h.shiftId===shift.id&&+h.date===+day))continue;
+      if(leaves.some(l=>l.employeeId===employee.id&&overlap(l.startDate,l.endDate,day)))continue;
+      const hasPunch=(punchesByEmployee.get(employee.id)??[]).some(p=>attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===workDay);
+      if(hasPunch)continue;
+      if(record?.correctionNote||record?.firstIn||record?.lastOut)continue;
+      const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(workDay,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(workDay,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
+      if(now<shiftStart)continue;
+      const phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes);
+      if(phase==='PENDING')continue;
+      const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
+      if(record)await db.attendanceDaily.update({where:{id:record.id},data:values});
+      else await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});
+      updated++;
+    }
   }
   noPunchRefreshAt.set(tenantId,now.getTime());
   return {tenantId,skipped:false,updated};
