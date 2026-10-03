@@ -51,6 +51,23 @@ export class Workflows {
       requirePermission(ctx,'attendance','MANAGE');const {month}=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);
       const result=await reconcileAttendanceMonth(this.db,tid,month);await audit(this.db,ctx,'ATTENDANCE_RECONCILED','attendance',month,undefined,result);return result;
     }
+    if(recordId==='reset-month'&&method==='DELETE'){
+      requirePermission(ctx,'attendance','MANAGE');
+      const {month}=z.object({month:z.string().regex(/^\\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);
+      const [year,monthNumber]=month.split('-').map(Number),first=new Date(Date.UTC(year,monthNumber-1,1)),next=new Date(Date.UTC(year,monthNumber,1));
+      const payroll=await this.db.payrollRun.findUnique({where:{tenantId_month:{tenantId:tid,month}}});
+      if(payroll&&payroll.status!=='DRAFT')throw new ConflictException('Finalized payroll exists for this month. Reopen or remove payroll before deleting synced attendance.');
+      const result=await this.db.$transaction(async tx=>{
+        const rows=await tx.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:first,lt:next}},select:{id:true,employeeId:true,date:true,shiftId:true}});
+        const employeeIds=[...new Set(rows.map(r=>r.employeeId))];
+        const deletedPunches=employeeIds.length?await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId:{in:employeeIds},punchTime:{gte:new Date(+first-2*86400000),lt:new Date(+next+2*86400000)}}}):{count:0};
+        const deletedDays=await tx.attendanceDaily.deleteMany({where:{tenantId:tid,date:{gte:first,lt:next}}});
+        const deletedLocks=await tx.attendancePeriodLock.deleteMany({where:{tenantId:tid,month}});
+        await audit(tx,ctx,'ATTENDANCE_MONTH_DELETED','attendance-month',month,undefined,{month,deletedDays:deletedDays.count,deletedPunches:deletedPunches.count,deletedLocks:deletedLocks.count,permanent:true});
+        return {month,deletedDays:deletedDays.count,deletedPunches:deletedPunches.count,deletedLocks:deletedLocks.count,permanent:true};
+      });
+      return result;
+    }
     if(recordId==='lock'&&method==='POST'){
       requirePermission(ctx,'attendance','MANAGE');const {month}=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().parse(body);
       const result=await lockAttendanceMonth(this.db,tid,month,ctx.user.id);await audit(this.db,ctx,'ATTENDANCE_LOCKED','attendance',month,undefined,result.summary.totals);return result;
