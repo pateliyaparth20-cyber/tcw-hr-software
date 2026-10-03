@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/attendance-reconcile-active-status-20261004
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
