@@ -39,11 +39,12 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
       unmatched = true;
     }
   }
-  const workMinutes=Math.floor(workMilliseconds/60000),overtimeByShiftMinutes=Math.floor(overtimeByShiftMilliseconds/60000);
-  const lateMinutes = firstIn ? Math.max(0,Math.floor((firstIn.getTime()-rule.shiftStart.getTime())/60000)-rule.graceMinutes) : 0;
-  const earlyOutMinutes = !open && lastOut && rule.shiftEnd ? Math.max(0,Math.floor((rule.shiftEnd.getTime()-lastOut.getTime())/60000)-(rule.earlyOutGraceMinutes??0)) : 0;
+  const workMinutes=Math.floor(workMilliseconds/60000);
+  const lateRawMilliseconds=firstIn?Math.max(0,firstIn.getTime()-rule.shiftStart.getTime()):0,lateGraceMilliseconds=Math.max(0,Number(rule.graceMinutes)||0)*60000,lateChargeableMilliseconds=Math.max(0,lateRawMilliseconds-lateGraceMilliseconds);
+  const earlyOutRawMilliseconds=!open&&lastOut&&rule.shiftEnd?Math.max(0,rule.shiftEnd.getTime()-lastOut.getTime()):0,earlyOutGraceMilliseconds=Math.max(0,Number(rule.earlyOutGraceMinutes??0)||0)*60000,earlyOutChargeableMilliseconds=Math.max(0,earlyOutRawMilliseconds-earlyOutGraceMilliseconds);
+  const lateMinutes=Math.floor(lateChargeableMilliseconds/60000),earlyOutMinutes=Math.floor(earlyOutChargeableMilliseconds/60000);
   const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'HALF_DAY' : 'ABSENT') : 'ABSENT';
-  const overtimeMinutes=Math.max(overtimeByShiftMinutes,Math.max(0,workMinutes-rule.overtimeAfterMinutes));
+  const compensatedShiftOvertimeMilliseconds=Math.max(0,overtimeByShiftMilliseconds-lateChargeableMilliseconds),thresholdOvertimeMilliseconds=Math.max(0,workMilliseconds-Math.max(0,Number(rule.overtimeAfterMinutes)||0)*60000),overtimeMinutes=Math.floor(Math.max(compensatedShiftOvertimeMilliseconds,thresholdOvertimeMilliseconds)/60000);
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes,status};
 }
 /** UTC bounds for one local calendar day, including DST. */
