@@ -1,6 +1,6 @@
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Database} from '../../../packages/database';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,localDate,monthBounds,noPunchAttendanceStatus,workingDaySet,zonedMinute} from '../../../packages/attendance-engine';
+import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledWorkDay,localDate,monthBounds,noPunchAttendanceStatus,zonedMinute} from '../../../packages/attendance-engine';
 
 const key=(d:Date)=>d.toISOString().slice(0,10);
 const atDate=(s:string)=>new Date(`${s}T00:00:00.000Z`);
@@ -35,7 +35,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
     db.attendancePeriodLock.findMany({where:{tenantId,month:{in:months},status:'LOCKED'},select:{month:true}}),
     db.employee.findMany({where:{tenantId,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:windowEnd}},select:{id:true,shiftId:true,joiningDate:true}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
-    db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:windowEnd},OR:[{endDate:null},{endDate:{gte:windowStart}}]},select:{date:true,endDate:true}}),
+    db.calendarEvent.findMany({where:{tenantId,kind:{in:['HOLIDAY','ROSTER_OFF']},date:{lt:windowEnd},OR:[{endDate:null},{endDate:{gte:windowStart}}]},select:{date:true,endDate:true,kind:true,shiftId:true}}),
     db.leaveRequest.findMany({where:{tenantId,status:'APPROVED',startDate:{lt:windowEnd},endDate:{gte:windowStart}},select:{employeeId:true,startDate:true,endDate:true}}),
     db.attendanceDaily.findMany({where:{tenantId,date:{gte:windowStart,lt:windowEnd}},select:{id:true,employeeId:true,date:true,firstIn:true,lastOut:true,correctionNote:true,status:true}}),
     db.attendancePunch.findMany({where:{tenantId,punchTime:{gte:new Date(+windowStart-12*3600000),lt:new Date(+windowEnd+12*3600000)}},select:{employeeId:true,punchTime:true}})
@@ -48,9 +48,9 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
     const shift=(employee.shiftId&&shiftMap.get(employee.shiftId))||shifts[0];
     const workDay=attendanceWorkdayDate(now,shift.startMinute,shift.endMinute,shift.timezone);
     if(lockedMonths.has(workDay.slice(0,7))||workDay<key(employee.joiningDate))continue;
-    const day=atDate(workDay),workDays=workingDaySet(shift.workingDays);
-    if(!workDays.has(day.getUTCDay()))continue;
-    if(holidays.some(h=>overlap(h.date,h.endDate??h.date,day)))continue;
+    const day=atDate(workDay);
+    if(!isScheduledWorkDay(day,shift))continue;
+    if(holidays.some(h=>h.kind==='HOLIDAY'?overlap(h.date,h.endDate??h.date,day):h.kind==='ROSTER_OFF'&&h.shiftId===shift.id&&+h.date===+day))continue;
     if(leaves.some(l=>l.employeeId===employee.id&&overlap(l.startDate,l.endDate,day)))continue;
     const hasPunch=(punchesByEmployee.get(employee.id)??[]).some(p=>attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===workDay);
     if(hasPunch)continue;
@@ -85,7 +85,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
   const [employees,shifts,holidays,leaves,leaveTypes,existing,punches]=await Promise.all([
     db.employee.findMany({where:{tenantId,deletedAt:null,status:{in:['ACTIVE','PROBATION','NOTICE']},joiningDate:{lt:next}},orderBy:{employeeCode:'asc'}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
-    db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:next},OR:[{endDate:null},{endDate:{gte:first}}]}}),
+    db.calendarEvent.findMany({where:{tenantId,kind:{in:['HOLIDAY','ROSTER_OFF']},date:{lt:next},OR:[{endDate:null},{endDate:{gte:first}}]}}),
     db.leaveRequest.findMany({where:{tenantId,status:'APPROVED',startDate:{lt:next},endDate:{gte:first}}}),
     db.leaveType.findMany({where:{tenantId}}),
     db.attendanceDaily.findMany({where:{tenantId,date:{gte:first,lt:next}}}),
@@ -94,13 +94,12 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
   if(!shifts.length)throw new BadRequestException('Create a shift before reconciling attendance.');
   const shiftMap=new Map(shifts.map(s=>[s.id,s]));
   const leaveTypeMap=new Map(leaveTypes.map(t=>[t.id,t]));
-  const holidaySet=new Set<string>();
-  for(const h of holidays){const end=h.endDate??h.date;for(let t=+h.date;t<=+end;t+=86400000)holidaySet.add(key(new Date(t)));}
+  const holidaySet=new Set<string>(),rosterOffSet=new Set<string>();
+  for(const h of holidays){if(h.kind==='ROSTER_OFF'){if(h.shiftId)rosterOffSet.add(`${h.shiftId}:${key(h.date)}`);continue;}const end=h.endDate??h.date;for(let t=+h.date;t<=+end;t+=86400000)holidaySet.add(key(new Date(t)));}
   const existingMap=new Map(existing.map(r=>[`${r.employeeId}:${key(r.date)}`,r]));
   let generated=0,exceptions=0;
   for(const employee of employees){
     const shift=(employee.shiftId&&shiftMap.get(employee.shiftId))||shifts[0];
-    const workDays=workingDaySet(shift.workingDays);
     const start=employee.joiningDate>first?employee.joiningDate:first;
     const employeeLeaves=leaves.filter(l=>l.employeeId===employee.id);
     const punchesByDay=new Map<string,typeof punches>();
@@ -108,26 +107,30 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
     for(const day of eachDay(start,processNext)){
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`),dayPunches=punchesByDay.get(dateKey)??[];
       let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){const night=shift.endMinute<=shift.startMinute;punchCalc=calculateAttendance(dayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd:zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
-      const holiday=holidaySet.has(dateKey),weeklyOff=!workDays.has(day.getUTCDay());
+      const holiday=holidaySet.has(dateKey),rosterOff=rosterOffSet.has(`${shift.id}:${dateKey}`),weeklyOff=!isScheduledWorkDay(day,shift);
       const leave=employeeLeaves.find(l=>overlap(l.startDate,l.endDate,day));
       const leaveType=leave?leaveTypeMap.get(leave.leaveTypeId):undefined;
       const halfLeave=!!leave&&Number(leave.days)===0.5&&key(leave.startDate)===key(leave.endDate);
       const leaveUnits=leave?(halfLeave?50:100):0;
-      const dayType=leave?(leaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):holiday?'HOLIDAY':weeklyOff?'WEEK_OFF':'WORKING';
-      const scheduled=dayType==='WORKING'||dayType==='PAID_LEAVE'||dayType==='UNPAID_LEAVE',fullDayLeave=!!leave&&!halfLeave;
+      const effectiveLeave=!holiday&&!weeklyOff&&!rosterOff?leave:undefined;
+      const effectiveLeaveType=effectiveLeave?leaveType:undefined;
+      const effectiveHalfLeave=!!effectiveLeave&&halfLeave;
+      const effectiveLeaveUnits=effectiveLeave?(effectiveHalfLeave?50:100):0;
+      const dayType=holiday?'HOLIDAY':weeklyOff||rosterOff?'WEEK_OFF':effectiveLeave?(effectiveLeaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):'WORKING';
+      const scheduled=dayType==='WORKING'||dayType==='PAID_LEAVE'||dayType==='UNPAID_LEAVE',fullDayLeave=!!effectiveLeave&&!effectiveHalfLeave;
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone);
-      const currentNoPunchDay=dateKey===today&&scheduled&&!leave&&!holiday&&!weeklyOff&&!dayPunches.length&&!record?.correctionNote;
+      const currentNoPunchDay=dateKey===today&&scheduled&&!effectiveLeave&&!holiday&&!weeklyOff&&!rosterOff&&!dayPunches.length&&!record?.correctionNote;
       const noPunchPhase=currentNoPunchDay?noPunchAttendanceStatus(now,shiftStart,shift.graceMinutes,shift.halfDayMinutes):null;
-      let status=record?.correctionNote?record.status:currentNoPunchDay?(noPunchPhase==='PENDING'?'VOID':noPunchPhase):fullDayLeave?(leaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchCalc?.status??(holiday?'HOLIDAY':weeklyOff?'WEEK_OFF':leave?'HALF_DAY_LEAVE':'ABSENT');
+      let status=record?.correctionNote?record.status:currentNoPunchDay?(noPunchPhase==='PENDING'?'VOID':noPunchPhase):fullDayLeave?(effectiveLeaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchCalc?.status??(holiday?'HOLIDAY':weeklyOff||rosterOff?'WEEK_OFF':effectiveLeave?'HALF_DAY_LEAVE':'ABSENT');
       let payable=record?.correctionNote?record.payableUnits:attendancePayableUnits(status);
-      if(!record?.correctionNote&&leave){const worked=punchCalc?attendancePayableUnits(punchCalc.status):0;if(leaveType?.paid)payable=Math.min(100,worked+leaveUnits);else payable=worked;if(!punchCalc&&!record&&halfLeave)payable=leaveType?.paid?50:0;}
+      if(!record?.correctionNote&&effectiveLeave){const worked=punchCalc?attendancePayableUnits(punchCalc.status):0;if(effectiveLeaveType?.paid)payable=Math.min(100,worked+effectiveLeaveUnits);else payable=worked;if(!punchCalc&&!record&&effectiveHalfLeave)payable=effectiveLeaveType?.paid?50:0;}
       else if(!record?.correctionNote&&!scheduled){payable=0;if((punchCalc?.workMinutes??0)>0)status=punchCalc!.status;}
       const exceptionCode=status==='MISSING_PUNCH'?'MISSING_PUNCH':'';if(exceptionCode)exceptions++;
       const rawAttendanceValues=punchCalc?{firstIn:punchCalc.firstIn,lastOut:punchCalc.lastOut,workMinutes:punchCalc.workMinutes,lateMinutes:punchCalc.lateMinutes,earlyOutMinutes:punchCalc.earlyOutMinutes,overtimeMinutes:punchCalc.overtimeMinutes}:record?{firstIn:record.firstIn,lastOut:record.lastOut,workMinutes:record.workMinutes,lateMinutes:record.lateMinutes,earlyOutMinutes:record.earlyOutMinutes,overtimeMinutes:record.overtimeMinutes}:{firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0};
       const attendanceValues=fullDayLeave?{...rawAttendanceValues,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0}:rawAttendanceValues;
       if(currentNoPunchDay&&noPunchPhase==='PENDING')payable=0;
-      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:leaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,...attendanceValues};
-      if(record){await db.attendanceDaily.update({where:{id:record.id},data:record.correctionNote?{shiftId:shift.id,scheduledMinutes:values.scheduledMinutes,leaveUnits,dayType}:{...values}});}else{await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});generated++;}
+      const values={shiftId:shift.id,scheduledMinutes:currentNoPunchDay&&noPunchPhase==='PENDING'?0:(scheduled?shift.fullDayMinutes:0),payableUnits:payable,leaveUnits:currentNoPunchDay&&noPunchPhase==='PENDING'?0:effectiveLeaveUnits,dayType,status,exceptionCode:currentNoPunchDay?'':exceptionCode,...attendanceValues};
+      if(record){await db.attendanceDaily.update({where:{id:record.id},data:record.correctionNote?{shiftId:shift.id,scheduledMinutes:values.scheduledMinutes,leaveUnits:effectiveLeaveUnits,dayType}:{...values}});}else{await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});generated++;}
     }
   }
   await db.attendancePunch.updateMany({where:{tenantId,punchTime:{gte:new Date(+first-86400000),lt:new Date(+next+86400000)},processedAt:null},data:{processedAt:new Date()}});
@@ -144,12 +147,12 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
     db.employee.findMany({where:{tenantId,deletedAt:null,...(employeeIds?{id:{in:employeeIds}}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,shiftId:true,joiningDate:true}}),
     db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}}),
     db.shift.findMany({where:{tenantId},orderBy:{createdAt:'asc'}}),
-    db.calendarEvent.findMany({where:{tenantId,kind:'HOLIDAY',date:{lt:reportNext},OR:[{endDate:null},{endDate:{gte:first}}]}})
+    db.calendarEvent.findMany({where:{tenantId,kind:{in:['HOLIDAY','ROSTER_OFF']},date:{lt:reportNext},OR:[{endDate:null},{endDate:{gte:first}}]}})
   ]);
   const employeeMap=new Map(employees.map(e=>[e.id,e]));
   const shiftMap=new Map(shifts.map(s=>[s.id,s]));
-  const holidaySet=new Set<string>();
-  for(const h of holidays){const end=h.endDate??h.date;for(let t=Math.max(+first,+h.date);t<+next&&t<=+end;t+=86400000)holidaySet.add(key(new Date(t)));}
+  const holidaySet=new Set<string>(),summaryRosterOffSet=new Set<string>();
+  for(const h of holidays){if(h.kind==='ROSTER_OFF'){if(h.shiftId)summaryRosterOffSet.add(`${h.shiftId}:${key(h.date)}`);continue;}const end=h.endDate??h.date;for(let t=Math.max(+first,+h.date);t<+next&&t<=+end;t+=86400000)holidaySet.add(key(new Date(t)));}
   const groups=new Map<string,any>();
   for(const e of employees){
     if(e.joiningDate>=reportNext)continue;
@@ -174,11 +177,11 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
   }
   const items=[...groups.values()].map(g=>{
     const e=employeeMap.get(g.employeeId)!;const shift=(e.shiftId&&shiftMap.get(e.shiftId))||shifts[0];
-    const workDays=workingDaySet(shift?.workingDays);let fullScheduledDays=0,elapsedScheduledDays=0;
+    let fullScheduledDays=0,elapsedScheduledDays=0;
     if(shift){
-      for(const d of eachDay(first,next))if(workDays.has(d.getUTCDay())&&!holidaySet.has(key(d)))fullScheduledDays++;
+      for(const d of eachDay(first,next)){const dk=key(d);if(isScheduledWorkDay(d,shift)&&!holidaySet.has(dk)&&!summaryRosterOffSet.has(`${shift.id}:${dk}`))fullScheduledDays++;}
       const employeeStart=e.joiningDate>first?e.joiningDate:first;
-      for(const d of eachDay(employeeStart,reportNext))if(workDays.has(d.getUTCDay())&&!holidaySet.has(key(d)))elapsedScheduledDays++;
+      for(const d of eachDay(employeeStart,reportNext)){const dk=key(d);if(isScheduledWorkDay(d,shift)&&!holidaySet.has(dk)&&!summaryRosterOffSet.has(`${shift.id}:${dk}`))elapsedScheduledDays++;}
     }
     return {...g,scheduledDays:Math.max(g.scheduledDays,elapsedScheduledDays),fullScheduledDays};
   }).sort((a,b)=>a.employeeCode.localeCompare(b.employeeCode));
