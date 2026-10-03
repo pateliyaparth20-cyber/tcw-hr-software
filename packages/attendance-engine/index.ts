@@ -1,4 +1,15 @@
 export interface Punch {time: Date; type: 'IN'|'OUT'}
+export function attendanceElapsedSeconds(start:Date,end:Date){
+  return Math.max(0,Math.floor(end.getTime()/1000)-Math.floor(start.getTime()/1000));
+}
+export function attendanceCalculationPunches<T extends {punchTime:Date;punchType:string;verificationType?:string|null;rawPayload?:any}>(punches:T[]){
+  const explicitMobile=punches.filter(p=>p.verificationType==='FACE_SCAN'&&['IN','OUT'].includes(String(p.rawPayload?.intent??'')));
+  if(!explicitMobile.length)return punches;
+  return punches.filter(p=>{
+    if(p.verificationType!=='FACE_SCAN'||['IN','OUT'].includes(String(p.rawPayload?.intent??'')))return true;
+    return !explicitMobile.some(explicit=>explicit.punchType===p.punchType&&Math.abs(explicit.punchTime.getTime()-p.punchTime.getTime())<45000);
+  });
+}
 export interface AttendanceRule {
   shiftStart: Date;
   shiftEnd?: Date;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {allocateBreakUsageSeconds,calculateAttendance,isScheduledBreakOut,punchDrivenBreakUsageSeconds} from '../../packages/attendance-engine';
+import {allocateBreakUsageSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,calculateAttendance,isScheduledBreakOut,punchDrivenBreakUsageSeconds} from '../../packages/attendance-engine';
 
 test('only an OUT that starts inside the configured window is a scheduled break',()=>{
   const start=new Date('2026-10-03T07:30:00.000Z');
@@ -106,4 +106,25 @@ test('split flexible breaks consume one cumulative allowance across the shift',(
   assert.deepEqual(first,{breakSeconds:180,overBreakSeconds:0});
   assert.deepEqual(second,{breakSeconds:240,overBreakSeconds:0});
   assert.deepEqual(third,{breakSeconds:180,overBreakSeconds:120});
+});
+
+
+test('attendance history keeps valid legacy punches and removes only near duplicate mobile evidence',()=>{
+  const punches=[
+    {punchTime:new Date('2026-10-03T03:30:00.000Z'),punchType:'IN',verificationType:'FACE_SCAN',rawPayload:{}},
+    {punchTime:new Date('2026-10-03T05:00:00.000Z'),punchType:'OUT',verificationType:'FACE_SCAN',rawPayload:{}},
+    {punchTime:new Date('2026-10-03T06:00:00.000Z'),punchType:'IN',verificationType:'FACE_SCAN',rawPayload:{intent:'IN'}},
+    {punchTime:new Date('2026-10-03T06:00:20.000Z'),punchType:'IN',verificationType:'FACE_SCAN',rawPayload:{}},
+    {punchTime:new Date('2026-10-03T10:00:00.000Z'),punchType:'OUT',verificationType:'FACE_SCAN',rawPayload:{intent:'OUT'}}
+  ];
+  const effective=attendanceCalculationPunches(punches);
+  assert.equal(effective.length,4);
+  assert.equal(effective.some(p=>p.punchTime.toISOString()==='2026-10-03T03:30:00.000Z'),true);
+  assert.equal(effective.some(p=>p.punchTime.toISOString()==='2026-10-03T05:00:00.000Z'),true);
+  assert.equal(effective.some(p=>p.punchTime.toISOString()==='2026-10-03T06:00:20.000Z'),false);
+});
+
+test('attendance history second duration matches displayed whole-second punch times',()=>{
+  const start=new Date('2026-10-03T09:00:00.900Z'),end=new Date('2026-10-03T09:00:10.100Z');
+  assert.equal(attendanceElapsedSeconds(start,end),10);
 });
