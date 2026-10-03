@@ -8,6 +8,13 @@ export interface AttendanceRule {
   halfDayMinutes: number;
   overtimeAfterMinutes: number;
 }
+export function noPunchAttendanceStatus(now:Date,shiftStart:Date,graceMinutes:number,halfDayMinutes:number){
+  const lateCutoff=shiftStart.getTime()+Math.max(0,Number(graceMinutes)||0)*60000;
+  const absentCutoff=shiftStart.getTime()+Math.max(Math.max(0,Number(graceMinutes)||0),Math.max(0,Number(halfDayMinutes)||0))*60000;
+  if(now.getTime()<lateCutoff)return 'PENDING' as const;
+  if(now.getTime()<absentCutoff)return 'HALF_DAY' as const;
+  return 'ABSENT' as const;
+}
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
   let open: Date | null = null, workMinutes = 0, completedPairs = 0, overtimeByShiftMinutes = 0;
