@@ -6,30 +6,19 @@ import {Row,Field,readable} from './config';
 import {ModulePage} from './modules';
 export {FaceScanAttendanceModal} from './face';
 import {FaceScanAttendanceModal} from './face';
+import {attendanceClock12,attendanceDurationSeconds,attendanceMinuteClock12} from './attendance-format';
 
 function AttendanceRunningTimer({since,baseSeconds=0}:{since:any;baseSeconds?:number}){
- const[now,setNow]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[]);const start=since?new Date(since).getTime():now,total=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0))),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return <>{String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</>;
+ const[now,setNow]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[]);const start=since?new Date(since).getTime():now,total=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0)));return <>{attendanceDurationSeconds(total)}</>;
 }
 function AttendanceBreakLive({since,baseSeconds=0,allowedMinutes=0,over=false}:{since:any;baseSeconds?:number;allowedMinutes?:number;over?:boolean}){
  const[now,setNow]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[]);
- const start=since?new Date(since).getTime():now,raw=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0))),limit=Math.max(0,allowedMinutes*60),total=over?Math.max(0,raw-limit):Math.min(raw,limit),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;
- return <>{String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</>;
+ const start=since?new Date(since).getTime():now,raw=Math.max(0,Math.floor(baseSeconds+(since?(now-start)/1000:0))),limit=Math.max(0,allowedMinutes*60),total=over?Math.max(0,raw-limit):Math.min(raw,limit);
+ return <>{attendanceDurationSeconds(total)}</>;
 }
 function AttendanceTotalLive({rows,kind}:{rows:Row[];kind:'work'|'break'|'overtime'}){
  const[now,setNow]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[]);
- const total=rows.reduce((sum,r)=>{if(kind==='work'){const base=Number(r.completedWorkedSeconds??Number(r.workedMinutes??0)*60),start=r.openSessionSince?new Date(r.openSessionSince).getTime():0;return sum+base+(start?Math.max(0,Math.floor((now-start)/1000)):0)}if(kind==='overtime')return sum+Number(r.liveOvertimeSeconds??Number(r.overtimeMinutes??0)*60);const base=Number(r.breakMinutes??0)*60,start=r.currentBreakSince?new Date(r.currentBreakSince).getTime():0;return sum+base+(start?Math.max(0,Math.floor((now-start)/1000)):0)},0),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return <>{h}h {String(m).padStart(2,'0')}m {String(s).padStart(2,'0')}s</>;
-}
-
-
-function attendanceMinutesLabel(value:any){
- const minutes=Math.max(0,Math.floor(Number(value??0))),h=Math.floor(minutes/60),m=minutes%60;
- return h?`${h}h ${m}m`:`${m}m`;
-}
-function attendanceMinuteClock(value:any){
- if(value===null||value===undefined||value==='')return '—';
- const raw=Number(value);if(!Number.isFinite(raw))return '—';
- const minute=((Math.floor(raw)%1440)+1440)%1440,h=Math.floor(minute/60),m=minute%60;
- return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+ const total=rows.reduce((sum,r)=>{if(kind==='work'){const base=Number(r.completedWorkedSeconds??r.workedSeconds??Number(r.workedMinutes??0)*60),start=r.openSessionSince?new Date(r.openSessionSince).getTime():0;return sum+base+(start?Math.max(0,Math.floor((now-start)/1000)):0)}if(kind==='overtime')return sum+Number(r.liveOvertimeSeconds??r.overtimeSeconds??Number(r.overtimeMinutes??0)*60);const base=Number(r.breakSeconds??Number(r.breakMinutes??0)*60),start=r.currentBreakSince?new Date(r.currentBreakSince).getTime():0;return sum+base+(start?Math.max(0,Math.floor((now-start)/1000)):0)},0);return <>{attendanceDurationSeconds(total)}</>;
 }
 
 function AttendanceStatusMenu({value,onChange}:{value:string;onChange:(value:string)=>void}){
