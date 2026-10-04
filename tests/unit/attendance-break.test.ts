@@ -29,7 +29,7 @@ test('returning from a break does not leave an interim early-out value',()=>{
   assert.equal(result.earlyOutMinutes,0);
 });
 
-test('unused scheduled break allowance stays counted as working time',()=>{
+test('automatic scheduled break is excluded from working time even without an OUT punch',()=>{
   const result=calculateAttendance([
     {time:new Date('2026-10-03T03:30:00.000Z'),type:'IN'},
     {time:new Date('2026-10-03T12:30:00.000Z'),type:'OUT'}
@@ -44,11 +44,11 @@ test('unused scheduled break allowance stays counted as working time',()=>{
     halfDayMinutes:240,
     overtimeAfterMinutes:480
   });
-  assert.equal(result.workMinutes,540);
+  assert.equal(result.workMinutes,480);
   assert.equal(result.status,'PRESENT');
 });
 
-test('only the break actually taken is excluded and the unused balance becomes work',()=>{
+test('automatic mode excludes the whole configured break window from worked sessions',()=>{
   const result=calculateAttendance([
     {time:new Date('2026-10-03T03:30:00.000Z'),type:'IN'},
     {time:new Date('2026-10-03T06:50:00.000Z'),type:'OUT'},
@@ -65,7 +65,7 @@ test('only the break actually taken is excluded and the unused balance becomes w
     halfDayMinutes:240,
     overtimeAfterMinutes:480
   });
-  assert.equal(result.workMinutes,280);
+  assert.equal(result.workMinutes,240);
   assert.equal(result.status,'HALF_DAY');
 });
 
