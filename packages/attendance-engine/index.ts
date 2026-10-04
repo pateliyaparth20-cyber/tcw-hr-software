@@ -21,14 +21,10 @@ export interface AttendanceRule {
   breakStart?: Date;
   breakEnd?: Date;
 }
-export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,graceMinutes:number,absenceAfterMinutes?:number){
+export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,graceMinutes:number){
   const lateCutoff=shiftStart.getTime()+Math.max(0,Number(graceMinutes)||0)*60000;
   if(now.getTime()<lateCutoff)return 'PENDING' as const;
-  const configuredAbsenceCutoff=Number.isFinite(Number(absenceAfterMinutes))&&Number(absenceAfterMinutes)>0
-    ? shiftStart.getTime()+Math.max(0,Number(absenceAfterMinutes))*60000
-    : shiftEnd.getTime();
-  const absenceCutoff=Math.min(shiftEnd.getTime(),configuredAbsenceCutoff);
-  if(now.getTime()<absenceCutoff)return 'NOT_CLOCKED_IN' as const;
+  if(now.getTime()<shiftEnd.getTime())return 'NOT_CLOCKED_IN' as const;
   return 'ABSENT' as const;
 }
 export function punchedAttendanceStatusAtMoment(calculatedStatus:string,now:Date,shiftEnd:Date,hasPunch:boolean){
@@ -45,14 +41,14 @@ function workedMillisecondsBetween(start:Date,end:Date,rule:AttendanceRule){
 }
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
-  let open: Date | null = null, workMilliseconds = 0, completedPairs = 0, overtimeByShiftMilliseconds = 0;
+  let open: Date | null = null, workMilliseconds = 0, completedPairs = 0;
   let firstIn: Date | null = null, lastOut: Date | null = null, unmatched = false;
   for(const punch of sorted) {
     if(punch.type==='IN') {
       if(open) continue;
       open=punch.time;firstIn??=punch.time;
     } else if(open) {
-      const pairStart=open;workMilliseconds+=workedMillisecondsBetween(pairStart,punch.time,rule);if(rule.shiftEnd&&punch.time>rule.shiftEnd){const overtimeStart=new Date(Math.max(pairStart.getTime(),rule.shiftEnd.getTime()));overtimeByShiftMilliseconds+=workedMillisecondsBetween(overtimeStart,punch.time,rule);}
+      const pairStart=open;workMilliseconds+=workedMillisecondsBetween(pairStart,punch.time,rule);
       lastOut = punch.time;open = null;completedPairs++;
     } else {
       unmatched = true;
@@ -64,9 +60,10 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const status = open || (completedPairs===0 && (unmatched||sorted.length>0))
     ? 'MISSING_PUNCH'
     : completedPairs>0
-      ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'SHORT_HOURS' : 'INSUFFICIENT_HOURS')
+      ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : 'INSUFFICIENT_HOURS')
       : 'ABSENT';
-  const overtimeByShiftMinutes=attendanceBusinessMinutes(overtimeByShiftMilliseconds),compensatedShiftOvertimeMinutes=Math.max(0,overtimeByShiftMinutes-lateMinutes),thresholdOvertimeMinutes=Math.max(0,workMinutes-Math.max(0,Number(rule.overtimeAfterMinutes)||0)),overtimeMinutes=Math.max(compensatedShiftOvertimeMinutes,thresholdOvertimeMinutes);
+  const overtimeThresholdMinutes=Math.max(Math.max(0,Number(rule.fullDayMinutes)||0),Math.max(0,Number(rule.overtimeAfterMinutes)||0));
+  const overtimeMinutes=Math.max(0,workMinutes-overtimeThresholdMinutes);
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes,status};
 }
 /** UTC bounds for one local calendar day, including DST. */
@@ -135,8 +132,10 @@ export function monthBounds(month:string){
   const next=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,1));
   return {first,next};
 }
-export function attendancePayableUnits(status:string){
+export function attendancePayableUnits(status:string,workMinutes=0,partialDayThresholdMinutes=0){
   if(['PRESENT','PAID_LEAVE'].includes(status))return 100;
-  if(['SHORT_HOURS','HALF_DAY','HALF_DAY_LEAVE'].includes(status))return 50;
+  if(status==='HALF_DAY_LEAVE')return 50;
+  if(['SHORT_HOURS','HALF_DAY'].includes(status))return 50;
+  if(status==='INSUFFICIENT_HOURS'&&Math.max(0,Number(partialDayThresholdMinutes)||0)>0&&Math.max(0,Number(workMinutes)||0)>=Math.max(0,Number(partialDayThresholdMinutes)||0))return 50;
   return 0;
 }
