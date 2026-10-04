@@ -14771,7 +14771,18 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .shift-v5-days button strong{font-size:13px}
 .shift-v5-days button.active{border-color:#60a5fa;background:#eff6ff;color:#1d4ed8}
 .shift-v5-days button.active span{border-color:#2563eb;background:#2563eb;color:#fff}
-.shift-v5-threshold-row{display:grid;grid-template-columns:1.35fr repeat(3,1fr);gap:12px}
+.shift-v5-thresholds{display:flex;flex-direction:column;gap:17px}
+.shift-v5-roster-field{max-width:360px}
+.shift-v5-duration-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-top:2px}
+.shift-v5-duration-heading strong{font-size:14px;color:#0f172a}
+.shift-v5-duration-heading span{font-size:12px;color:#64748b;text-align:right}
+.shift-v5-duration-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.shift-v5-duration-field{gap:7px}
+.shift-v5-duration-input{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.shift-v5-duration-input>div{height:46px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;border:1px solid #d8e0ea;border-radius:8px;background:#fff;overflow:hidden}
+.shift-v5-duration-input>div:focus-within{border-color:#6f9fec;box-shadow:0 0 0 3px rgba(37,99,235,.09)}
+.shift-v5-duration-input input{height:44px;min-width:0;border:0!important;background:transparent!important;padding:0 11px!important;font-size:14px!important;color:#0f172a!important;outline:0!important;box-shadow:none!important}
+.shift-v5-duration-input strong{height:100%;display:flex;align-items:center;padding:0 10px;border-left:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:12px;font-weight:700;white-space:nowrap}
 .shift-v5-form-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid #e8edf3;background:#fff}
 .shift-v5-form-footer>div{display:flex;gap:8px}
 .shift-v5-form-footer .btn{min-height:40px;padding:0 16px;font-size:13px}
@@ -14809,7 +14820,8 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
  .shift-v5-list-head{padding:14px}
  .shift-v5-list-head .btn{padding:0 9px}
  .shift-v5-preview-panel{padding:15px}
- .shift-v5-threshold-row{grid-template-columns:1fr 1fr}
+ .shift-v5-duration-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .shift-v5-roster-field{max-width:none}
 }
 @media(max-width:1120px){
  .shift-v5-layout{grid-template-columns:220px minmax(0,1fr)}
@@ -14819,7 +14831,9 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
  .shift-v5-layout{grid-template-columns:1fr}
  .shift-v5-shift-list{position:static}
  .shift-v5-list-scroll{max-height:280px}
- .shift-v5-grid.two,.shift-v5-threshold-row{grid-template-columns:1fr}
+ .shift-v5-grid.two,.shift-v5-duration-grid{grid-template-columns:1fr}
+ .shift-v5-duration-heading{align-items:flex-start;flex-direction:column;gap:4px}
+ .shift-v5-duration-heading span{text-align:left}
  .shift-v5-grid .span-2{grid-column:auto}
  .shift-v5-days{grid-template-columns:repeat(4,1fr)}
  .shift-v5-preview-panel{grid-column:auto}
