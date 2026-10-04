@@ -33,8 +33,11 @@ export function punchedAttendanceStatusAtMoment(calculatedStatus:string,now:Date
 }
 export function attendanceBusinessMinutes(milliseconds:number){return Math.max(0,Math.round((Number(milliseconds)||0)/60000));}
 export function attendanceBusinessMinutesFromSeconds(seconds:number){return attendanceBusinessMinutes((Number(seconds)||0)*1000);}
-function workedMillisecondsBetween(start:Date,end:Date,_rule:AttendanceRule){
-  return Math.max(0,end.getTime()-start.getTime());
+function workedMillisecondsBetween(start:Date,end:Date,rule:AttendanceRule){
+  const startMs=start.getTime(),endMs=end.getTime(),gross=Math.max(0,endMs-startMs);
+  if(!rule.breakStart||!rule.breakEnd||endMs<=startMs)return gross;
+  const overlapStart=Math.max(startMs,rule.breakStart.getTime()),overlapEnd=Math.min(endMs,rule.breakEnd.getTime());
+  return Math.max(0,gross-Math.max(0,overlapEnd-overlapStart));
 }
 export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const sorted = [...punches].sort((a,b)=>a.time.getTime()-b.time.getTime());
