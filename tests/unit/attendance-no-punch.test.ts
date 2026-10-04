@@ -19,7 +19,8 @@ test('no-punch attendance becomes absent at assigned shift end',()=>{
 });
 
 
-test('no-punch attendance becomes absent at the configured short-hours threshold',()=>{
-  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T07:29:59.000Z'),start,end,10,240),'NOT_CLOCKED_IN');
-  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T07:30:00.000Z'),start,end,10,240),'ABSENT');
+test('no-punch attendance remains not checked in until the assigned shift ends',()=>{
+  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T07:30:00.000Z'),start,end,10),'NOT_CLOCKED_IN');
+  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T12:29:59.000Z'),start,end,10),'NOT_CLOCKED_IN');
+  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T12:30:00.000Z'),start,end,10),'ABSENT');
 });
