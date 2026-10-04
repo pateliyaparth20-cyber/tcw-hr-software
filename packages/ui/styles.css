@@ -14833,3 +14833,5 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
  .shift-v5-form-footer>div{width:100%}
  .shift-v5-form-footer .btn{flex:1}
 }
+
+.shift-v5-field-help{display:block;margin-top:3px;color:#64748b;font-size:10px;line-height:1.35;font-weight:500}
