@@ -14992,6 +14992,9 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .timeoff-v3-detail-head h2{margin:0;color:#121f36;font-size:19px;line-height:1.2;font-weight:800}
 .timeoff-v3-detail-body{padding:14px 16px 16px}
 .timeoff-v3-status-line{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;background:#fff4d9;color:#ad6800;font-size:13px;margin-bottom:15px}
+.timeoff-v3-status-line.approved{background:#eaf9f0;color:#157549}
+.timeoff-v3-status-line.rejected{background:#fff0f2;color:#c7273b}
+.timeoff-v3-status-line.cancelled{background:#f1f4f8;color:#64738a}
 .timeoff-v3-status-dot{width:9px;height:9px;border-radius:50%;background:#f0a400}
 .timeoff-v3-status-dot.approved{background:#17a05f}
 .timeoff-v3-status-dot.rejected{background:#e13c4f}
