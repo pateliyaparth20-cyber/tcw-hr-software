@@ -112,19 +112,86 @@ function SubscriptionLock({manage=false}:{manage?:boolean}){
    </section>
   </div>
  </div>;
- return <div className={'subscription-lock upgrade-lock subscription-dashboard-v2 '+(manage?'subscription-manage':'')}>
-  <div className="subscription-dashboard-hero">
-   <div className="subscription-dashboard-copy"><span className="subscription-kicker">SUBSCRIPTION & BILLING</span><h1>{manage?'Subscription Dashboard':company.status==='EXPIRED'?'Your free trial has ended':'Subscription payment required'}</h1><p>{manage?'Manage your TCW HR plan, usage, billing and payments from one secure workspace.':'Choose a plan to continue your TCW HR workspace. GST and the final payable amount are calculated automatically.'}</p>{manage&&<button className="btn subscription-hero-action" type="button" onClick={()=>document.getElementById('subscription-plans')?.scrollIntoView({behavior:'smooth',block:'start'})}>Upgrade / Change Plan <ArrowRight size={16}/></button>}</div>
-   <div className="subscription-current-card"><div><small>CURRENT PLAN</small><strong>{readable(String(company.plan??'starter').toLowerCase())}</strong><Badge value={company.status??'ACTIVE'}/><span>{currentPlan?currencyValue(currentPlan.monthlyPrice,currency)+'/month':'Plan pricing unavailable'}</span></div><BrandLogo/></div>
-  </div>
-  {manage&&<div className="subscription-overview-grid">
-   <section className="panel subscription-plan-overview"><div className="subscription-card-heading"><div><small>PLAN OVERVIEW</small><h2>{readable(String(company.plan??'starter').toLowerCase())}</h2></div><Badge value={company.status??'ACTIVE'}/></div><div className="subscription-price-row"><strong>{currentPlan?currencyValue(currentPlan.monthlyPrice,currency):'—'}</strong><span>{currentPlan?'/ month + GST':'Monthly price unavailable'}</span></div><div className="subscription-detail-grid"><span><small>Subscription status</small><strong>{readable(String(company.status??'active').toLowerCase())}</strong></span><span><small>{company.status==='TRIAL'?'Trial expiry':'Renewal / expiry'}</small><strong>{expiryLabel}</strong></span><span><small>GST at checkout</small><strong>{data.gstPercent??18}%</strong></span><span><small>Next billing / expiry</small><strong>{expiryLabel}</strong></span></div></section>
-   <section className="panel subscription-usage-card"><div className="subscription-card-heading"><div><small>PLAN USAGE</small><h2>Capacity</h2></div></div><div className="subscription-usage-item"><div><span>Employees</span><strong>{employeesUsed} / {employeeLimit??'—'}</strong></div>{Number(employeeLimit)>0&&<><div className="subscription-progress"><i style={{width:usagePercent(employeesUsed,employeeLimit)+'%'}}/></div><small>{usagePercent(employeesUsed,employeeLimit)}% of employee capacity used</small></>}</div>{deviceLimit!=null&&<div className="subscription-usage-item"><div><span>Devices</span><strong>{devicesUsed} / {deviceLimit}</strong></div>{Number(deviceLimit)>0&&<><div className="subscription-progress"><i style={{width:usagePercent(devicesUsed,deviceLimit)+'%'}}/></div><small>{usagePercent(devicesUsed,deviceLimit)}% of device capacity used</small></>}</div>}</section>
-   <section className="panel subscription-payment-card"><div className="subscription-card-heading"><div><small>BILLING & PAYMENT</small><h2>Payment status</h2></div>{latestInvoice&&<Badge value={latestInvoice.status}/>}</div>{pendingProof?.status==='AWAITING_VERIFICATION'?<div className="subscription-payment-state pending"><Clock3 size={20}/><span><strong>UTR verification pending</strong><small>Reference {pendingProof.utr} has been submitted for verification.</small></span></div>:latestInvoice?<div className="subscription-payment-state"><Receipt size={20}/><span><strong>{latestInvoice.number}</strong><small>{currencyValue(latestInvoice.total,currency)} · {readable(String(latestInvoice.status??'issued').toLowerCase())}</small></span></div>:<div className="subscription-payment-state"><Receipt size={20}/><span><strong>No billing record yet</strong><small>Your invoices will appear here after billing starts.</small></span></div>}<div className="subscription-payment-meta"><span><small>Payment method</small><strong>UPI</strong></span><span><small>Checkout</small><strong>{data.upiConfigured?'Available':'Unavailable'}</strong></span></div></section>
-  </div>}
-  <section id="subscription-plans" className="subscription-plans-section"><div className="subscription-section-heading"><div><small>AVAILABLE PLANS</small><h2>Compare plans and choose the right capacity</h2></div><span>Secure UPI checkout</span></div><div className="upgrade-plan-grid">{plans.map((p:Row)=><button key={p.id} type="button" className={'upgrade-plan-card '+(selected===p.name?'selected':'')} disabled={busy||!data.upiConfigured} onClick={()=>startPayment(String(p.name))}><span className="upgrade-plan-check">{selected===p.name?'✓':''}</span><small>{readable(String(p.name).toLowerCase())}{p.name===company.plan?' · CURRENT':''}</small><strong>{currencyValue(p.monthlyPrice,currency)}<em>/month + GST</em></strong><span>{p.employeeLimit} employees · {p.deviceLimit} device(s)</span><ul>{(p.features??[]).slice(0,6).map((f:string)=><li key={f}>{f}</li>)}</ul><span className="plan-pay-cta">{busy&&selected===p.name?'Preparing payment…':p.name===company.plan?'Renew / Pay':'Select & pay'}</span></button>)}</div></section>
-  {!data.upiConfigured&&<div className="panel payment-config-warning"><strong>UPI payment is temporarily unavailable.</strong><p>Payment configuration is being updated. Please try again shortly.</p></div>}
-  {manage&&<section className="panel subscription-history"><div className="panel-heading"><div><small>BILLING HISTORY</small><h2>Recent invoices</h2></div></div>{invoices.length?<div className="subscription-history-list">{invoices.slice(0,6).map((r:Row)=><div key={r.id}><span><strong>{r.number}</strong><small>{displayDate(r.createdAt)}{r.dueDate?' · Due '+displayDate(r.dueDate):''}</small></span><span><strong>{currencyValue(r.total,currency)}</strong><Badge value={r.status}/></span></div>)}</div>:<div className="subscription-history-empty"><Receipt size={22}/><span><strong>No invoices yet</strong><small>Billing history will appear here when an invoice is created.</small></span></div>}</section>}
+ const featureRows=[
+  {label:'Employee Management',keys:['Core HR','All modules']},
+  {label:'Attendance & Leave',keys:['Attendance','Leave','All modules']},
+  {label:'Payroll',keys:['Payroll','All modules']},
+  {label:'Recruitment (ATS)',keys:['Recruitment','All modules']},
+  {label:'Performance Management',keys:['All modules']},
+  {label:'Training Management',keys:['All modules']},
+  {label:'Asset Management',keys:['All modules']},
+  {label:'Advanced Reports',keys:['All modules']},
+  {label:'Multi-Location',keys:['All modules']},
+  {label:'API Access',keys:['All modules']},
+  {label:'Dedicated Support',keys:['Priority support','All modules']}
+ ];
+ const includesFeature=(plan:Row|undefined,keys:string[])=>{const features=(plan?.features??[]).map((v:any)=>String(v).toLowerCase());return keys.some(key=>features.includes(key.toLowerCase()))};
+ const planTone=(name:string)=>name==='STARTER'?'starter':name==='GROWTH'?'growth':'enterprise';
+ const planDescription=(name:string)=>name==='STARTER'?'Best for small teams':name==='GROWTH'?'Ideal for growing businesses':'For medium to large teams';
+ const activeFeatures=currentPlan?.features?.length??0;
+ const customFeatures=['All Enterprise features','Unlimited employee capacity','Custom integrations','Advanced security','Dedicated account support','Custom SLA options'];
+ const paymentButton=(p:Row)=>busy&&selected===p.name?'Preparing payment…':p.name===company.plan?'Renew / Pay':'Get Started';
+ return <div className={'subscription-plans-v3 '+(manage?'subscription-plans-v3-manage':'subscription-plans-v3-locked')}>
+  <div className="subscription-v3-breadcrumb"><span>Home</span><ChevronRight size={13}/><strong>Subscription</strong></div>
+  <header className="subscription-v3-head">
+   <div><h1>Subscription Plans</h1><p>{manage?'Choose the best plan for your organization and unlock the full potential of TCW HR Software.':company.status==='EXPIRED'?'Your subscription has ended. Choose a plan to restore your TCW HR workspace.':'Choose a plan to continue using TCW HR Software.'}</p></div>
+   <div className="subscription-v3-cycle" aria-label="Billing cycle"><button className="active" type="button">Monthly</button><button type="button" disabled title="Yearly billing is coming soon">Yearly</button><span>Monthly billing</span></div>
+  </header>
+
+  <section id="subscription-plans" className="subscription-v3-plan-grid">
+   {plans.map((p:Row,index:number)=><article key={p.id} className={'subscription-v3-plan '+planTone(String(p.name))+(p.name===company.plan?' current':'')+(p.name==='GROWTH'?' popular':'')}>
+    {p.name==='GROWTH'&&<span className="subscription-v3-popular">Most Popular</span>}
+    <div className="subscription-v3-plan-title"><span className="subscription-v3-plan-icon">{p.name==='STARTER'?<ArrowUpRight/>:p.name==='GROWTH'?<Sparkles/>:<BarChart3/>}</span><div><h2>{readable(String(p.name).toLowerCase())}</h2><p>{planDescription(String(p.name))}</p></div></div>
+    <div className="subscription-v3-price"><strong>{currencyValue(p.monthlyPrice,currency)}</strong><span>/ month</span></div>
+    <p className="subscription-v3-capacity">Up to {p.employeeLimit} Employees</p>
+    <button className={'subscription-v3-plan-cta '+(p.name==='GROWTH'?'primary':'')} type="button" disabled={busy||!data.upiConfigured} onClick={()=>startPayment(String(p.name))}>{paymentButton(p)}</button>
+    <ul>{(p.features??[]).slice(0,7).map((feature:string)=><li key={feature}><CheckCircle2 size={15}/>{feature}</li>)}</ul>
+    {p.name===company.plan&&<span className="subscription-v3-current-label">Current plan</span>}
+   </article>)}
+   <article className="subscription-v3-plan custom">
+    <div className="subscription-v3-plan-title"><span className="subscription-v3-plan-icon"><Layers/></span><div><h2>Custom Enterprise</h2><p>For large organizations</p></div></div>
+    <div className="subscription-v3-price custom-price"><strong>Custom Pricing</strong></div>
+    <p className="subscription-v3-capacity">Tailored capacity & support</p>
+    <button className="subscription-v3-plan-cta" type="button" onClick={()=>notify('Contact TCW HR Software support for a custom enterprise plan.')}>Contact Sales</button>
+    <ul>{customFeatures.map(feature=><li key={feature}><CheckCircle2 size={15}/>{feature}</li>)}</ul>
+   </article>
+  </section>
+
+  {!data.upiConfigured&&<div className="subscription-v3-warning"><AlertTriangle size={17}/><span><strong>UPI payment is temporarily unavailable.</strong><small>Plan comparison is available, but checkout will resume when payment configuration is ready.</small></span></div>}
+
+  <section className="subscription-v3-lower">
+   <div className="subscription-v3-comparison">
+    <div className="subscription-v3-card-head"><div><h2>Feature Comparison</h2><p>Compare what is included in every available plan.</p></div></div>
+    <div className="subscription-v3-table-wrap"><table><thead><tr><th>Features</th>{plans.map((p:Row)=><th key={p.id} className={p.name==='GROWTH'?'focus':''}>{readable(String(p.name).toLowerCase())}</th>)}<th>Custom</th></tr></thead><tbody>{featureRows.map(row=><tr key={row.label}><td>{row.label}</td>{plans.map((p:Row)=><td key={p.id}>{includesFeature(p,row.keys)?<CheckCircle2 className="yes" size={15}/>:<X className="no" size={14}/>}</td>)}<td><CheckCircle2 className="yes" size={15}/></td></tr>)}</tbody></table></div>
+   </div>
+
+   <aside className="subscription-v3-side">
+    <section className="subscription-v3-current">
+     <div className="subscription-v3-card-head"><div><h2>Your Current Plan</h2><p>Live company subscription details.</p></div><Badge value={company.status??'ACTIVE'}/></div>
+     <div className="subscription-v3-current-main"><span className="subscription-v3-current-icon"><Sparkles/></span><div><small>{readable(String(company.plan??'starter').toLowerCase())} Plan</small><strong>{currentPlan?currencyValue(currentPlan.monthlyPrice,currency)+'/ month':'Pricing unavailable'}</strong><span>Up to {employeeLimit??'—'} Employees</span><em>{company.status==='TRIAL'?'Trial ends: ':'Next billing / expiry: '}{expiryLabel}</em></div>{currentPlan&&<button type="button" onClick={()=>startPayment(String(currentPlan.name))} disabled={busy||!data.upiConfigured}>Manage Plan</button>}</div>
+     <div className="subscription-v3-usage">
+      <div><span><Users size={16}/></span><small>Employees Used</small><strong>{employeesUsed} / {employeeLimit??'—'}</strong>{Number(employeeLimit)>0&&<><div><i style={{width:usagePercent(employeesUsed,employeeLimit)+'%'}}/></div><em>{usagePercent(employeesUsed,employeeLimit)}%</em></>}</div>
+      <div><span><Monitor size={16}/></span><small>Devices Used</small><strong>{devicesUsed} / {deviceLimit??'—'}</strong>{Number(deviceLimit)>0&&<><div><i style={{width:usagePercent(devicesUsed,deviceLimit)+'%'}}/></div><em>{usagePercent(devicesUsed,deviceLimit)}%</em></>}</div>
+      <div><span><Layers size={16}/></span><small>Plan Features</small><strong>{activeFeatures}</strong><div><i style={{width:Math.min(100,activeFeatures*14)+'%'}}/></div><em>Active</em></div>
+     </div>
+    </section>
+
+    <section className="subscription-v3-addons">
+     <div className="subscription-v3-card-head"><div><h2>Available Add-ons</h2><p>Optional capabilities for larger HR operations.</p></div><button type="button" onClick={()=>document.getElementById('subscription-plans')?.scrollIntoView({behavior:'smooth'})}>View All</button></div>
+     <div className="subscription-v3-addon-grid">
+      <article><span><BarChart3 size={17}/></span><div><strong>Advanced Analytics</strong><small>Enterprise capability</small></div><button type="button" onClick={()=>document.getElementById('subscription-plans')?.scrollIntoView({behavior:'smooth'})}>View</button></article>
+      <article><span><Monitor size={17}/></span><div><strong>Biometric Integration</strong><small>Device-ready HR</small></div><button type="button" onClick={()=>document.getElementById('subscription-plans')?.scrollIntoView({behavior:'smooth'})}>View</button></article>
+      <article><span><Sparkles size={17}/></span><div><strong>Custom Branding</strong><small>Professional workspace</small></div><button type="button" onClick={()=>document.getElementById('subscription-plans')?.scrollIntoView({behavior:'smooth'})}>View</button></article>
+     </div>
+    </section>
+
+    {manage&&<section className="subscription-v3-billing">
+     <div className="subscription-v3-card-head"><div><h2>Recent Billing</h2><p>{pendingProof?.status==='AWAITING_VERIFICATION'?'Payment verification is pending.':'Latest subscription invoices.'}</p></div>{latestInvoice&&<Badge value={latestInvoice.status}/>}</div>
+     {pendingProof?.status==='AWAITING_VERIFICATION'&&<div className="subscription-v3-proof"><Clock3 size={16}/><span><strong>UTR verification pending</strong><small>Reference {pendingProof.utr}</small></span></div>}
+     <div className="subscription-v3-invoices">{invoices.slice(0,3).map((invoice:Row)=><div key={invoice.id}><span><strong>{invoice.number}</strong><small>{displayDate(invoice.createdAt)}</small></span><span><strong>{currencyValue(invoice.total,currency)}</strong><Badge value={invoice.status}/></span></div>)}{!invoices.length&&<div className="subscription-v3-no-invoice"><Receipt size={18}/><span>No invoices yet</span></div>}</div>
+    </section>}
+   </aside>
+  </section>
  </div>;
 }
 function Shell({page}:{page:string}){
