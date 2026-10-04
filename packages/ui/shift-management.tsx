@@ -17,6 +17,7 @@ const minuteTime=(minute:any)=>{const n=Math.max(0,Math.min(1439,Number(minute)|
 const minuteClock=(minute:any)=>{const n=Math.max(0,Math.min(1439,Number(minute)||0)),h=Math.floor(n/60),m=n%60;return String(h%12||12).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
 const timeMinute=(value:string)=>{const [h,m]=value.split(':').map(Number);return Math.max(0,Math.min(1439,(h||0)*60+(m||0)))};
 const spanMinutes=(start:number,end:number)=>end>start?end-start:1440-start+end;
+const minuteOffset=(start:number,target:number)=>target>=start?target-start:1440-start+target;
 const duration=(value:any)=>{const n=Math.max(0,Number(value)||0),h=Math.floor(n/60),m=n%60;return h&&m?`${h}h ${m}m`:h?`${h}h`:`${m}m`};
 const breakMode=(row:Row):ShiftDraft['breakMode']=>row.flexibleBreakAnytime?'FLEXIBLE_PUNCH':row.punchDrivenBreaks?'SCHEDULED_PUNCH':'AUTOMATIC_SCHEDULED';
 const breakModeLabel=(mode:string)=>mode==='AUTOMATIC_SCHEDULED'?'Auto · Fixed schedule':mode==='SCHEDULED_PUNCH'?'Manual · Scheduled punch':'Manual · Flexible punch';
@@ -134,6 +135,12 @@ export function ShiftManagement(){
   const previewWorkingMinutes=draft.breakMode==='AUTOMATIC_SCHEDULED'?Math.max(0,totalShiftSpan-draft.breakMinutes):draft.fullDayMinutes;
   const previewBreakStart=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?draft.breakStartMinute:null;
   const previewBreakEnd=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakEndMinute!=null?draft.breakEndMinute:null;
+  const previewBreakMinutes=Math.min(Math.max(0,draft.breakMinutes),totalShiftSpan);
+  const scheduledBreakOffset=previewBreakStart==null?null:Math.min(minuteOffset(draft.startMinute,previewBreakStart),Math.max(0,totalShiftSpan-previewBreakMinutes));
+  const previewBreakOffset=scheduledBreakOffset==null?Math.max(0,(totalShiftSpan-previewBreakMinutes)/2):scheduledBreakOffset;
+  const previewBeforeBreak=Math.max(0,previewBreakOffset);
+  const previewAfterBreak=Math.max(0,totalShiftSpan-previewBeforeBreak-previewBreakMinutes);
+  const previewManual=draft.breakMode!=='AUTOMATIC_SCHEDULED';
   return <div className="shift-v5-page">
    <div className="shift-v5-breadcrumb"><button type="button" onClick={()=>setEditor(null)}>Workspace</button><ChevronRight size={14}/><button type="button" onClick={()=>setEditor(null)}>Attendance</button><ChevronRight size={14}/><strong>{editor.id?'Edit Shift':'Add Shift'}</strong></div>
 
@@ -202,12 +209,20 @@ export function ShiftManagement(){
      <div className="shift-v5-preview-timeline">
       <div className="shift-v5-preview-points">
        <span><strong>{minuteClock(draft.startMinute)}</strong><small>IN</small></span>
-       {previewBreakStart!=null&&<span><strong>{minuteClock(previewBreakStart)}</strong><small>BREAK</small></span>}
+       {previewBreakStart!=null&&<span className={previewManual?'manual-break-point':''}><strong>{minuteClock(previewBreakStart)}</strong><small>{previewManual?'MANUAL BREAK':'AUTO BREAK'}</small></span>}
        {previewBreakEnd!=null&&<span><strong>{minuteClock(previewBreakEnd)}</strong><small>RESUME</small></span>}
+       {draft.breakMode==='FLEXIBLE_PUNCH'&&<span className="manual-break-point flexible"><strong>{duration(draft.breakMinutes)}</strong><small>MANUAL BREAK</small></span>}
        <span><strong>{minuteClock(draft.endMinute)}</strong><small>OUT</small></span>
       </div>
-      <div className="shift-v5-bar"><i className="work"/><i className="break"/><i className="work"/></div>
-      <div className="shift-v5-break-caption">{draft.breakMode==='FLEXIBLE_PUNCH'?'Flexible '+duration(draft.breakMinutes)+' break':duration(draft.breakMinutes)+' break'}</div>
+      <div className="shift-v5-bar" aria-label={`${previewManual?'Manual':'Automatic'} break ${duration(previewBreakMinutes)} of ${duration(totalShiftSpan)} shift`}>
+       <i className="work" style={{flexGrow:previewBeforeBreak}}/>
+       {previewBreakMinutes>0&&<i className={'break '+(previewManual?'manual':'auto')} style={{flexGrow:previewBreakMinutes}} title={`${previewManual?'Manual':'Automatic'} break · ${duration(previewBreakMinutes)}`}/>}
+       <i className="work" style={{flexGrow:previewAfterBreak}}/>
+      </div>
+      <div className={'shift-v5-break-caption '+(previewManual?'manual':'auto')}>
+       <strong>{previewManual?'Manual':'Automatic'} Break</strong>
+       <span>{draft.breakMode==='FLEXIBLE_PUNCH'?duration(draft.breakMinutes)+' flexible allowance':duration(draft.breakMinutes)+' break'}</span>
+      </div>
      </div>
 
      <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Work Duration</small><strong>{duration(previewWorkingMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(draft.breakMinutes)}</strong></div></div>
