@@ -18,9 +18,10 @@ function AttendanceBreakLive({since,baseSeconds=0,allowedMinutes=0,over=false,em
  return <>{emptyWhenZero&&total<=0?'—':attendanceDurationSeconds(total)}</>;
 }
 function AttendanceBreakCredit({row}:{row:Row}){
- const seconds=Math.max(0,Number(row.breakCreditSeconds??Number(row.breakCreditMinutes??0)*60)),minutes=attendanceBusinessMinutesFromSeconds(seconds);
- if(minutes<=0)return null;
- return <span className="attendance-break-credit" title="Unused break time counted in Working hours"><Plus size={10} strokeWidth={2.4}/>+{minutes} min <small>break</small></span>;
+ const seconds=Math.max(0,Math.floor(Number(row.breakCreditSeconds??Number(row.breakCreditMinutes??0)*60))),finalPresent=String(row.status??'')==='PRESENT'&&!!row.syncedAt&&!row.workingNow&&!row.liveState&&!row.currentBreakSince;
+ if(!finalPresent||seconds<=0)return null;
+ const minutes=Math.floor(seconds/60),rest=seconds%60,label=minutes>0?`${minutes}m ${rest}s`:`${rest}s`;
+ return <span className="attendance-break-credit" title="Unused break time counted in final Working hours">+ {label} <small>break</small></span>;
 }
 function attendanceResultStatus(row:Row,isWorking:boolean){
  const stored=String(row.status??'').trim();
