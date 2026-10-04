@@ -199,7 +199,7 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>
      </section>
 
-     <div className="shift-v5-info"><Info size={18}/><div><strong>Unused break allowance stays counted as working time.</strong><p>Final attendance and working hours follow the configured shift rules and thresholds.</p></div></div>
+     <div className="shift-v5-info"><Info size={18}/><div><strong>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Automatic scheduled break is excluded from working hours.':'Unused manual break allowance stays counted as working time.'}</strong><p>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'The configured break window is deducted automatically even if the employee stays checked in.':'Manual break time is deducted from actual OUT/IN punch usage; unused allowance remains working time.'}</p></div></div>
     </aside>
    </div>
 
