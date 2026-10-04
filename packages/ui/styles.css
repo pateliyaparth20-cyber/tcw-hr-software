@@ -15271,3 +15271,51 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 /* Single manual clock field: no browser-native time popup */
 .shift-v5-time-input input[type="text"]{cursor:text!important;-webkit-appearance:none!important;appearance:none!important}
 .shift-v5-time-input input[type="text"]::-webkit-calendar-picker-indicator{display:none!important}
+
+
+/* Single-box manual 12-hour time field: no nested picker/popover. */
+.time12-field.time12-manual{
+  min-height:46px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  padding:0 12px!important;
+  border:1px solid #d8e0ea!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  cursor:text!important;
+}
+.time12-field.time12-manual:focus-within{
+  border-color:#6f9fec!important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.09)!important;
+}
+.time12-field.time12-manual>svg{flex:0 0 auto;color:#6f8baa!important}
+.time12-field.time12-manual>input,
+.time12-field.time12-manual>input:hover,
+.time12-field.time12-manual>input:focus,
+.time12-field.time12-manual>input:focus-visible{
+  flex:1 1 auto!important;
+  width:100%!important;
+  min-width:0!important;
+  height:44px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-width:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#52627a!important;
+  font-size:15px!important;
+  font-weight:500!important;
+  font-variant-numeric:tabular-nums;
+}
+.time12-field.time12-manual .time12-unit{
+  flex:0 0 auto!important;
+  color:#8795a8!important;
+  font-size:11px!important;
+  font-weight:600!important;
+  white-space:nowrap;
+}
