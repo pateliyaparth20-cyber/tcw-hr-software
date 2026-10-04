@@ -18,7 +18,7 @@ const timeMinute=(value:string)=>{const [h,m]=value.split(':').map(Number);retur
 const spanMinutes=(start:number,end:number)=>end>start?end-start:1440-start+end;
 const duration=(value:any)=>{const n=Math.max(0,Number(value)||0),h=Math.floor(n/60),m=n%60;return h&&m?`${h}h ${m}m`:h?`${h}h`:`${m}m`};
 const breakMode=(row:Row):ShiftDraft['breakMode']=>row.flexibleBreakAnytime?'FLEXIBLE_PUNCH':row.punchDrivenBreaks?'SCHEDULED_PUNCH':'AUTOMATIC_SCHEDULED';
-const breakModeLabel=(mode:string)=>mode==='AUTOMATIC_SCHEDULED'?'Fixed (Auto-scheduled)':mode==='SCHEDULED_PUNCH'?'Scheduled Punch':'Flexible Punch';
+const breakModeLabel=(mode:string)=>mode==='AUTOMATIC_SCHEDULED'?'Auto · Fixed schedule':mode==='SCHEDULED_PUNCH'?'Manual · Scheduled punch':'Manual · Flexible punch';
 const workDaysFor=(row:Pick<ShiftDraft,'workWeekMode'|'workingDays'>)=>{
  if(row.workWeekMode==='MON_FRI')return ['1','2','3','4','5'];
  if(row.workWeekMode==='MON_SAT'||row.workWeekMode==='ALTERNATE_SATURDAY')return ['1','2','3','4','5','6'];
@@ -141,7 +141,7 @@ export function ShiftManagement(){
         <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
         <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
         <NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes})}/>
-        <label className="shift-v5-field"><span>Break Type</span><select value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Fixed (Auto-scheduled)</option><option value="SCHEDULED_PUNCH">Scheduled Punch</option><option value="FLEXIBLE_PUNCH">Flexible Punch</option></select></label>
+        <label className="shift-v5-field"><span>Break Type</span><select value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Auto — Fixed scheduled break</option><option value="SCHEDULED_PUNCH">Manual — Scheduled punch break</option><option value="FLEXIBLE_PUNCH">Manual — Flexible punch break</option></select><small className="shift-v5-field-help">{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Auto mode follows the configured break window.':'Manual mode starts from the employee OUT punch; flexible manual break can be taken any time in the shift.'}</small></label>
         {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute})}/></>}
         <NumberField label="Late Grace" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
         <NumberField label="Early-out Grace" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
