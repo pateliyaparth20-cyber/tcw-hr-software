@@ -291,6 +291,7 @@ model Shift {
   id                      String   @id @default(uuid()) @db.Uuid
   tenantId                String   @map("tenant_id") @db.Uuid
   name                    String
+  shiftType               String   @default("REGULAR") @map("shift_type")
   startMinute             Int
   endMinute               Int
   graceMinutes            Int      @default(10)
