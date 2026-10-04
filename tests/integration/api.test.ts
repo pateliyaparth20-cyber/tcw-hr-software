@@ -107,6 +107,20 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    const cleaned=await db.tenant.findUniqueOrThrow({where:{id:betaTenant!}});assert.equal((cleaned.profile as any)?.billingManualActive,undefined);
   });
   await t.test('tenant suspension invalidates existing sessions',async()=>{await db.tenant.update({where:{id:betaTenant!},data:{status:'SUSPENDED'}});assert.equal((await call('employees','GET',undefined,beta)).status,403)});
+  await t.test('company delete permanently purges paid and unpaid billing plus all company data',async()=>{
+   await db.shift.create({data:{tenantId:betaTenant!,name:'Delete me shift',startMinute:540,endMinute:1080}});
+   const unpaid=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-DELETE-UNPAID',amount:50000,tax:9000,dueDate:'2026-12-01'},root);assert.equal(unpaid.status,200,JSON.stringify(unpaid.data));
+   assert((await db.invoice.count({where:{tenantId:betaTenant!}}))>=2);
+   assert((await db.payment.count({where:{tenantId:betaTenant!}}))>=1);
+   assert((await db.lead.count({where:{notes:{contains:betaCode!}}}))>=1);
+   const deleted=await call(`platform/companies/${betaTenant}`,'DELETE',undefined,root);assert.equal(deleted.status,200,JSON.stringify(deleted.data));assert.equal(deleted.data.deleted,true);
+   const tenantModels=['user','session','pushSubscription','passwordReset','auditLog','outbox','branch','department','designation','team','location','costCenter','employee','employeeFaceProfile','shift','attendanceDevice','deviceEmployeeMap','deviceSyncLog','attendancePunch','attendanceDaily','attendancePeriodLock','leaveType','leaveRequest','calendarEvent','payrollRun','payrollItem','payrollPayout','payrollAdjustment','salaryRule','job','candidate','goal','course','asset','expenseClaim','travelRequest','employeeExit','document','activityEvent','productivityRule','notification','invoice','payment','supportTicket','supportTicketMessage','meghnaConversation'];
+   for(const model of tenantModels)assert.equal(await (db as any)[model].count({where:{tenantId:betaTenant!}}),0,model+' still has company rows');
+   assert.equal(await db.tenant.count({where:{id:betaTenant!}}),0);
+   assert.equal(await db.lead.count({where:{notes:{contains:betaCode!}}}),0);
+   const companies=await call('platform/companies','GET',undefined,root);assert.equal(companies.status,200,JSON.stringify(companies.data));assert.equal(companies.data.items.some((row:any)=>row.id===betaTenant),false);
+   assert.notEqual((await call('auth/login','POST',{email:'owner@example.test',password:'BetaStrong!2026',companyCode:betaCode!})).status,200);
+  });
   await t.test('password resets are single-use and revoke existing sessions',async()=>{
    assert.equal((await call('auth/forgot-password','POST',{email:'owner@example.test',companyCode:'ALPHA'})).status,200);
    const mail=await db.outbox.findFirstOrThrow({where:{tenantId:alphaTenant},orderBy:{createdAt:'desc'}});const text=(mail.payload as any).text as string;const raw=new URL(text.match(/http[^ ]+/)![0].replace(/\.$/,'')).searchParams.get('token');
