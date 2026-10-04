@@ -74,7 +74,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
       if(record?.correctionNote||record?.firstIn||record?.lastOut||syncedAfterShiftEnd)continue;
       const phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes);
       if(phase==='PENDING')continue;
-      const needsNoPunchSyncedFinalization=!!record?.syncedAt&&now.getTime()>=shiftEnd.getTime();
+      const needsNoPunchSyncedFinalization=now.getTime()>=shiftEnd.getTime();
       const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0,...(needsNoPunchSyncedFinalization?{syncedAt:now}:{})};
       if(record)await db.attendanceDaily.update({where:{id:record.id},data:values});
       else await db.attendanceDaily.create({data:{tenantId,employeeId:employee.id,date:day,...values}});
