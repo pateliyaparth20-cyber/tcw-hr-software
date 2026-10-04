@@ -102,8 +102,21 @@ const worker=new Worker('peopleos-outbox',async job=>{
   }
 },{connection,concurrency:4});
 worker.on('failed',(job,error)=>console.error('Outbox delivery failed for job',job?.id,String(error?.message??error??'unknown').slice(0,240)));
-const NO_PUNCH_REFRESH_MS=30_000;
-let lastNoPunchRefresh=0;
+let attendanceScanning=false,attendanceTimer:ReturnType<typeof setTimeout>|null=null;
+async function refreshAttendanceAtBoundary(){
+  if(attendanceScanning)return;
+  attendanceScanning=true;
+  try{
+    const refreshed=await refreshCurrentNoPunchAttendance(db,new Date());
+    if(refreshed.updated>0)console.log(`Attendance auto-status refreshed: ${refreshed.updated} no-punch record(s) updated across ${refreshed.companies} company(s).`);
+  }catch{console.error('Attendance auto-status refresh failed; retrying at the next minute boundary.')}
+  finally{attendanceScanning=false}
+}
+function scheduleAttendanceBoundaryRefresh(){
+  const now=Date.now(),delay=60_000-(now%60_000)+75;
+  attendanceTimer=setTimeout(async()=>{await refreshAttendanceAtBoundary();scheduleAttendanceBoundaryRefresh()},delay);
+  attendanceTimer.unref();
+}
 let scanning=false;
 async function scan(){if(scanning)return;scanning=true;try{
   const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
@@ -116,15 +129,9 @@ async function scan(){if(scanning)return;scanning=true;try{
   await syncCompanyAccess(db);
   await normalizeRecentHrAssignedLeave(db);
   await repairPrematureCurrentMonthPayrollLocks(db);
-  const attendanceNow=Date.now();
-  if(attendanceNow-lastNoPunchRefresh>=NO_PUNCH_REFRESH_MS){
-    const refreshed=await refreshCurrentNoPunchAttendance(db,new Date(attendanceNow));
-    lastNoPunchRefresh=attendanceNow;
-    if(refreshed.updated>0)console.log(`Attendance auto-status refreshed: ${refreshed.updated} no-punch record(s) updated across ${refreshed.companies} company(s).`);
-  }
   await prepareScheduledPayroll(db);
   await monitorAttendanceDevices(db);
 }catch{console.error('Worker scan failed; retrying on next interval.')}finally{scanning=false}}
-const interval=setInterval(scan,10000);scan();
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
-console.log('TCW HR Software worker running: email/SMS outbox, subscription expiry, payroll automation, automatic no-punch attendance status, attendance-device monitoring, and manual-sync attendance.');
+const interval=setInterval(scan,10000);scan();void refreshAttendanceAtBoundary();scheduleAttendanceBoundaryRefresh();
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);if(attendanceTimer)clearTimeout(attendanceTimer);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
+console.log('TCW HR Software worker running: email/SMS outbox, subscription expiry, payroll automation, minute-boundary no-punch attendance finalization, attendance-device monitoring, and manual-sync attendance.');
