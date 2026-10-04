@@ -15598,3 +15598,212 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   .form-footer{grid-template-columns:1fr!important}
   .shift-v5-time-popover,.time12-clean-popover{grid-template-columns:1fr!important}
 }
+
+
+/* v1.16 full phone UX hardening */
+@media(max-width:760px){
+  /* Global phone rhythm */
+  :root{--phone-gap:12px;--phone-radius:14px;--phone-control:48px}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{font-size:15px;overscroll-behavior-y:none}
+  .workspace-main{padding-top:12px!important}
+  .page-stage{min-width:0!important}
+  .app-footer{display:none!important}
+  .trial-topline{display:flex!important;gap:6px!important;align-items:center!important;justify-content:center!important;flex-wrap:wrap!important;padding:8px 12px!important;font-size:12px!important;line-height:1.35!important}
+  .trial-topline span{white-space:normal!important;text-align:center}
+
+  /* Login/auth: one clear phone card, no oversized desktop artwork */
+  .auth-pro-shell{min-height:100dvh!important;display:block!important;background:#f6f8fb!important}
+  .auth-pro-side{display:none!important}
+  .auth-pro-main{width:100%!important;min-height:100dvh!important;padding:18px 12px calc(24px + env(safe-area-inset-bottom))!important;display:flex!important;align-items:flex-start!important;justify-content:center!important}
+  .auth-pro-card{width:100%!important;max-width:520px!important;margin:0!important;padding:20px 16px!important;border-radius:18px!important;box-shadow:none!important;border:1px solid #e5eaf1!important}
+  .auth-pro-mobile-brand{display:flex!important;margin-bottom:18px!important}
+  .auth-pro-head h1{font-size:27px!important;line-height:1.15!important}
+  .auth-pro-subtitle{font-size:14px!important;line-height:1.5!important}
+  .auth-field-control,.auth-password-control{min-height:48px!important;border-radius:10px!important}
+  .auth-pro-form input,.auth-pro-form select{min-height:48px!important;font-size:16px!important}
+  .auth-pro-submit{min-height:50px!important;font-size:15px!important}
+  .auth-pro-options{gap:10px!important;align-items:flex-start!important;flex-wrap:wrap!important}
+  .auth-pro-legal{font-size:12px!important;line-height:1.45!important}
+
+  /* Top navigation */
+  .topbar{backdrop-filter:saturate(160%) blur(12px)!important}
+  .header-avatar .avatar{width:36px!important;height:36px!important}
+  .header-divider{display:none!important}
+  .mobile-bottom-nav{overflow:hidden}
+  .mobile-bottom-nav a,.mobile-bottom-nav button{min-width:0!important;padding:5px 4px!important}
+  .mobile-bottom-nav span{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Dashboard */
+  .hr-mobile-dashboard,.platform-mobile-dashboard,.employee-home-dashboard{display:block!important}
+  .hr-desktop-dashboard,.platform-desktop-dashboard{display:none!important}
+  .mobile-unified-hero,.mobile-unified-hero-platform{border-radius:16px!important;padding:16px!important;margin-bottom:12px!important}
+  .mobile-unified-user{align-items:center!important;gap:12px!important}
+  .mobile-unified-user h1{font-size:23px!important;line-height:1.18!important}
+  .mobile-hero-date{font-size:12px!important}
+  .mobile-app-stats,.platform-mobile-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .mobile-app-stats>*,.platform-mobile-stats>*{min-width:0!important;padding:13px!important;border-radius:13px!important}
+  .mobile-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .mobile-quick-action{min-height:86px!important;padding:13px!important;border-radius:14px!important}
+  .mobile-app-section{margin-top:14px!important;border-radius:14px!important}
+  .mobile-app-section-head{padding:14px!important}
+  .mobile-update-row{min-height:58px!important;padding:11px 12px!important}
+
+  /* Generic page controls */
+  .page-title,.device-v3-head,.recruit-v3-head,.shift-v5-form-head{min-width:0!important}
+  .page-title h1,.device-v3-head h1,.recruit-v3-head h1{font-size:26px!important}
+  .toolbar,.date-filters,.report-filters,.attendance-search-filters{gap:10px!important}
+  .toolbar>*,.date-filters>*,.report-filters>*,.attendance-search-filters>*{min-width:0!important}
+  .filter,.search-field,.attendance-filter-field,.attendance-status-filter{flex:1 1 100%!important;width:100%!important}
+  .filter input,.filter select,.search-field input,.attendance-filter-field input,.attendance-filter-field select,.attendance-status-filter select{height:var(--phone-control)!important;min-height:var(--phone-control)!important;font-size:16px!important}
+  .toolbar-note{width:100%!important;font-size:12px!important;line-height:1.45!important}
+  .tabs button{min-height:42px!important;font-size:13px!important}
+
+  /* Attendance */
+  .attendance-v2-hero{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:12px!important;padding:16px!important;border-radius:16px!important}
+  .attendance-v2-hero h1{font-size:26px!important}
+  .attendance-v2-hero-status{width:100%!important;justify-content:flex-start!important}
+  .attendance-v3-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .attendance-v3-kpis>*{min-width:0!important;padding:13px!important;border-radius:13px!important}
+  .attendance-v3-actions{grid-template-columns:1fr!important;gap:10px!important}
+  .attendance-action-card{min-height:74px!important;padding:13px!important;border-radius:13px!important}
+  .attendance-v3-analytics{grid-template-columns:1fr!important;gap:12px!important}
+  .attendance-trend-card,.attendance-hours-card{border-radius:14px!important;padding:14px!important;overflow:hidden!important}
+  .attendance-trend-shell{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  .attendance-trend-grid{min-width:620px!important}
+  .attendance-v3-table{border-radius:14px!important;overflow:hidden!important}
+  .attendance-v3-table .toolbar{padding:12px!important}
+  .attendance-search-filters{display:grid!important;grid-template-columns:1fr!important;width:100%!important}
+  .attendance-compact-dates{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;width:100%!important}
+  .attendance-compact-dates input{width:100%!important;min-width:0!important;height:46px!important}
+  .attendance-records-table{width:100%!important;max-width:100%!important;overflow:hidden!important}
+  .attendance-split-table{display:block!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;scroll-snap-type:x proximity}
+  .attendance-frozen-pane,.attendance-main-pane{display:contents!important}
+  .attendance-frozen-scroll,.attendance-main-scroll{overflow:visible!important;width:auto!important}
+  .attendance-frozen-table,.attendance-main-table{min-width:980px!important;width:980px!important}
+  .attendance-frozen-table th,.attendance-frozen-table td,.attendance-main-table th,.attendance-main-table td{min-height:46px!important;font-size:13px!important}
+  .attendance-pagination{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important;padding:12px!important}
+  .attendance-pagination>div{justify-content:center!important}
+  .attendance-status-options{position:fixed!important;left:10px!important;right:10px!important;top:auto!important;bottom:calc(86px + env(safe-area-inset-bottom))!important;width:auto!important;max-height:55dvh!important;overflow:auto!important;z-index:330!important;border-radius:16px!important}
+  .attendance-status-options button{min-height:48px!important;font-size:15px!important}
+  .attendance-view-modal{width:calc(100vw - 10px)!important;max-width:none!important;max-height:calc(100dvh - 10px)!important;border-radius:20px!important}
+  .attendance-view-profile{display:flex!important;align-items:center!important;gap:12px!important}
+  .attendance-view-top-summary,.attendance-view-metrics,.attendance-view-meta,.attendance-view-meta-five{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .attendance-view-session{grid-template-columns:36px 1fr!important;gap:10px!important}
+  .attendance-view-punch{min-width:0!important}
+  .attendance-view-alerts{gap:8px!important}
+
+  /* Shift management */
+  .shift-v5-page{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+  .shift-v5-breadcrumb{overflow-x:auto!important;white-space:nowrap!important;padding-bottom:2px!important}
+  .shift-v5-layout{gap:12px!important}
+  .shift-v5-shift-list,.shift-v5-form-panel,.shift-v5-preview-panel{border-radius:14px!important;box-shadow:none!important}
+  .shift-v5-list-head{padding:14px!important}
+  .shift-v5-list-scroll{max-height:none!important;display:flex!important;gap:8px!important;overflow-x:auto!important;padding:10px!important;scroll-snap-type:x proximity}
+  .shift-v5-list-scroll>button{flex:0 0 min(82vw,300px)!important;min-height:68px!important;scroll-snap-align:start;border-radius:12px!important}
+  .shift-v5-form-head{padding:15px!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:10px!important}
+  .shift-v5-form-body{padding:14px!important}
+  .shift-v5-section{padding:14px 0!important}
+  .shift-v5-grid,.shift-v5-duration-grid,.shift-v5-thresholds{grid-template-columns:1fr!important;gap:12px!important}
+  .shift-v5-field>span{font-size:13px!important}
+  .shift-v5-number-input,.shift-v5-time-input,.shift-v5-duration-clock{min-height:48px!important}
+  .shift-v5-days{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}
+  .shift-v5-days button{min-height:44px!important;min-width:0!important;padding:8px 4px!important}
+  .shift-v5-form-footer{position:sticky!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;z-index:45!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important;padding:10px 12px!important;background:rgba(255,255,255,.98)!important;border-top:1px solid #e7edf4!important}
+  .shift-v5-form-footer .btn{width:100%!important;justify-content:center!important}
+  .shift-v5-preview-panel{margin-top:0!important}
+  .shift-v5-preview-points{font-size:11px!important;overflow-x:auto!important;gap:12px!important}
+  .shift-v5-preview-metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+  .shift-v5-preview-metrics>div{min-width:0!important;padding:10px 6px!important}
+  .shift-v5-rule-summary>div{align-items:flex-start!important}
+  .shift-v5-info{align-items:flex-start!important}
+
+  /* Device management */
+  .device-v3{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+  .device-v3-head{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:12px!important}
+  .device-v3-head-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important;width:100%!important}
+  .device-v3-head-actions .btn{width:100%!important;justify-content:center!important}
+  .device-v3-layout{gap:12px!important}
+  .device-v3-list-panel,.device-v3-editor{border-radius:14px!important;box-shadow:none!important}
+  .device-v3-list-head{padding:14px!important}
+  .device-v3-tabs{overflow-x:auto!important;white-space:nowrap!important}
+  .device-v3-list{max-height:none!important}
+  .device-v3-list>button{min-height:68px!important;padding:12px!important}
+  .device-v3-editor-head{padding:14px!important}
+  .device-v3-editor-body{padding:14px!important}
+  .device-v3-identity{align-items:flex-start!important}
+  .device-v3-live-meta{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .device-v3-section{padding:14px 0!important}
+  .device-v3-grid,.device-v3-info-grid{grid-template-columns:1fr!important}
+  .device-v3-tools,.device-v3-connection-actions{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+  .device-v3-tools .btn,.device-v3-connection-actions .btn{width:100%!important;justify-content:center!important}
+  .device-v3-footer{position:sticky!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;z-index:45!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important;padding:10px 12px!important;background:rgba(255,255,255,.98)!important;border-top:1px solid #e7edf4!important}
+
+  /* Recruitment */
+  .recruit-v3-head{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:12px!important}
+  .recruit-v3-head-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important}
+  .recruit-v3-head-actions .btn{width:100%!important;justify-content:center!important}
+  .recruit-v3-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+  .recruit-v3-filterbar{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}
+  .recruit-v3-main-grid,.recruit-v3-bottom-grid{grid-template-columns:1fr!important;gap:12px!important}
+  .recruit-v3-panel{border-radius:14px!important;box-shadow:none!important}
+  .recruit-v3-board{display:flex!important;overflow-x:auto!important;gap:10px!important;scroll-snap-type:x mandatory;padding-bottom:4px!important}
+  .recruit-v3-board>*{flex:0 0 min(84vw,310px)!important;scroll-snap-align:start}
+  .recruit-v3-detail{position:fixed!important;inset:58px 0 0 0!important;z-index:250!important;border:0!important;border-radius:20px 20px 0 0!important;overflow:auto!important;background:#fff!important}
+  .recruit-v3-detail-top{position:sticky!important;top:0!important;background:#fff!important;z-index:2!important}
+  .recruit-v3-detail-cards{grid-template-columns:1fr!important}
+  .recruit-v3-wide-action{min-height:48px!important}
+
+  /* Settings and profile */
+  .settings-grid,.payment-settings-grid,.company-profile-v2-form-only,.my-profile-layout,.single-profile-layout,.employee-profile-detail-grid,.platform-profile-grid{grid-template-columns:1fr!important;gap:12px!important}
+  .settings-panel,.company-profile-v2-panel,.my-profile-card,.payment-settings-card{border-radius:14px!important;box-shadow:none!important}
+  .company-profile-v2-head,.employee-profile-details-head{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:10px!important}
+  .profile-photo-buttons,.platform-profile-logo-actions{display:grid!important;grid-template-columns:1fr!important;width:100%!important;gap:8px!important}
+  .profile-photo-buttons .btn,.platform-profile-logo-actions .btn{width:100%!important;justify-content:center!important}
+  .profile-actions-end{position:sticky!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;z-index:30!important;padding:10px!important;background:#fff!important;border-top:1px solid #e7edf4!important}
+
+  /* Tables stay readable: scroll, don't shrink text */
+  .table-scroll,.subscription-v3-table-wrap,.recruit-v3-table-wrap,.dashboard-calendar-scroll{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important}
+  .table-scroll table,.subscription-v3-table-wrap table,.recruit-v3-table-wrap table{font-size:13px!important}
+  .table-scroll th,.table-scroll td,.subscription-v3-table-wrap th,.subscription-v3-table-wrap td,.recruit-v3-table-wrap th,.recruit-v3-table-wrap td{white-space:nowrap!important;padding-top:11px!important;padding-bottom:11px!important}
+  .table-action-group{display:flex!important;gap:6px!important;flex-wrap:nowrap!important}
+  .table-action-group .icon-button{min-width:42px!important;min-height:42px!important}
+
+  /* Modal/action-sheet behavior */
+  .confirm-modal,.dialog,.modal{overscroll-behavior:contain}
+  .command-search{min-height:48px!important}
+  .command-results button{min-height:52px!important;padding:10px 12px!important}
+  .command-results{max-height:calc(100dvh - 170px)!important;overflow:auto!important}
+}
+
+@media(max-width:430px){
+  .attendance-v3-kpis,.mobile-app-stats,.platform-mobile-stats,.recruit-v3-metrics{grid-template-columns:1fr 1fr!important}
+  .attendance-view-top-summary,.attendance-view-metrics,.attendance-view-meta,.attendance-view-meta-five{grid-template-columns:1fr!important}
+  .device-v3-head-actions,.recruit-v3-head-actions,.device-v3-footer,.shift-v5-form-footer{grid-template-columns:1fr!important}
+  .shift-v5-days{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .shift-v5-preview-metrics{grid-template-columns:1fr!important}
+}
+
+
+/* Phone attendance keeps employee/status pinned while the metrics pane scrolls horizontally. */
+@media(max-width:760px){
+  .attendance-split-table{
+    display:grid!important;
+    grid-template-columns:220px minmax(0,1fr)!important;
+    width:100%!important;
+    overflow:hidden!important;
+    scroll-snap-type:none!important;
+  }
+  .attendance-frozen-pane,.attendance-main-pane{display:block!important;min-width:0!important;overflow:hidden!important}
+  .attendance-frozen-scroll{width:100%!important;max-height:none!important;overflow:visible!important;padding-bottom:0!important}
+  .attendance-main-scroll{width:100%!important;max-height:none!important;overflow-x:auto!important;overflow-y:visible!important;-webkit-overflow-scrolling:touch!important}
+  .attendance-split-table .attendance-frozen-table{width:220px!important;min-width:220px!important;max-width:220px!important}
+  .attendance-split-table .attendance-frozen-table col.c-employee{width:145px!important}
+  .attendance-split-table .attendance-frozen-table col.c-status{width:75px!important}
+  .attendance-split-table .attendance-main-table{width:1270px!important;min-width:1270px!important;max-width:1270px!important}
+  .attendance-frozen-table .person-cell{gap:8px!important}
+  .attendance-frozen-table .person-cell .avatar{width:34px!important;height:34px!important;flex:0 0 34px!important}
+  .attendance-frozen-table .person-cell strong{max-width:82px!important;font-size:12px!important}
+  .attendance-frozen-table .person-cell small{max-width:82px!important;font-size:10px!important}
+  .attendance-frozen-table .badge{max-width:70px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:10px!important;padding:5px 6px!important}
+}
