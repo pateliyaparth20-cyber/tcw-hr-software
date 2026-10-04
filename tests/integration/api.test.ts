@@ -92,6 +92,20 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    const payment={invoiceId:invoice.data.id,amount:118000,reference:'BANK-001',date:'2026-09-25'};
    assert.equal((await call('platform/payments','POST',payment,root)).status,200);assert.equal((await call('platform/payments','POST',{...payment,reference:'BANK-002'},root)).status,400);
   });
+  await t.test('manual super-admin activation stays active while overdue payment is outstanding',async()=>{
+   const invoice=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-MANUAL-ACTIVE',amount:364000,tax:0,dueDate:'2020-01-01'},root);assert.equal(invoice.status,200,JSON.stringify(invoice.data));
+   const suspendedList=await call('platform/companies','GET',undefined,root);assert.equal(suspendedList.status,200,JSON.stringify(suspendedList.data));
+   const suspended=suspendedList.data.items.find((row:any)=>row.id===betaTenant);assert.equal(suspended.status,'SUSPENDED');assert.equal(suspended.suspensionReason,'BILLING');
+   const before=await db.tenant.findUniqueOrThrow({where:{id:betaTenant!}});
+   const activated=await call(`platform/companies/${betaTenant}`,'PATCH',{status:'ACTIVE',plan:before.plan,employeeLimit:before.employeeLimit,expiresAt:before.expiresAt?.toISOString().slice(0,10)??null},root);assert.equal(activated.status,200,JSON.stringify(activated.data));
+   const refreshed=await call('platform/companies','GET',undefined,root);assert.equal(refreshed.status,200,JSON.stringify(refreshed.data));
+   const active=refreshed.data.items.find((row:any)=>row.id===betaTenant);assert.equal(active.status,'ACTIVE');assert.equal(active.suspensionReason,null);
+   const stored=await db.tenant.findUniqueOrThrow({where:{id:betaTenant!}});assert.equal((stored.profile as any)?.billingManualActive,true);
+   await login('owner@example.test','BetaStrong!2026',betaCode!);
+   assert.equal((await call(`platform/invoices/${invoice.data.id}`,'DELETE',undefined,root)).status,200);
+   assert.equal((await call('platform/companies','GET',undefined,root)).status,200);
+   const cleaned=await db.tenant.findUniqueOrThrow({where:{id:betaTenant!}});assert.equal((cleaned.profile as any)?.billingManualActive,undefined);
+  });
   await t.test('tenant suspension invalidates existing sessions',async()=>{await db.tenant.update({where:{id:betaTenant!},data:{status:'SUSPENDED'}});assert.equal((await call('employees','GET',undefined,beta)).status,403)});
   await t.test('password resets are single-use and revoke existing sessions',async()=>{
    assert.equal((await call('auth/forgot-password','POST',{email:'owner@example.test',companyCode:'ALPHA'})).status,200);
