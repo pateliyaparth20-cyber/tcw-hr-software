@@ -11,6 +11,7 @@ import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
 import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
+import {DeviceManagement} from './device-management';
 import {EmployeeFaceEnrollmentGate,preloadFaceEngine} from './face';
 import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,MyProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
 import {SupportPage} from './support';
@@ -248,6 +249,7 @@ function Shell({page}:{page:string}){
  else if(page==='recruitment')content=<Recruitment/>;
  else if(page==='leave')content=<LeavePage/>;
  else if(page==='attendance')content=<AttendancePage/>;
+ else if(page==='devices')content=<DeviceManagement/>;
  else if(page==='payroll')content=<PayrollPage/>;
  else if(page==='calendar')content=<CalendarPage/>;
  else if(page==='workforce')content=<WorkforcePage/>;
