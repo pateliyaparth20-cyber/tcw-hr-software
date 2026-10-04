@@ -15098,3 +15098,12 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .duration-clock-unit{color:#8090a6;font-size:12px;white-space:nowrap}
 .record-form input[type=number]::-webkit-inner-spin-button,.record-form input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .record-form input[type=number]{-moz-appearance:textfield;appearance:textfield}
+
+/* Shift editor manual HH:MM clock inputs */
+.shift-v5-duration-clock{height:48px;display:flex;align-items:center;gap:10px;border:1px solid #d8e0ea;border-radius:9px;background:#fff;padding:0 12px}
+.shift-v5-duration-clock:focus-within{border-color:#6f9fec;box-shadow:0 0 0 3px rgba(37,99,235,.09)}
+.shift-v5-duration-clock>svg{flex:0 0 auto;color:#6f8baa}
+.shift-v5-duration-clock input{flex:1;min-width:0;height:46px;border:0!important;background:transparent!important;outline:0!important;box-shadow:none!important;padding:0!important;font-size:16px!important;font-weight:700!important;letter-spacing:.02em;color:#0f172a!important;font-variant-numeric:tabular-nums}
+.shift-v5-duration-clock strong{flex:0 0 auto;color:#7b8aa0;font-size:11px;font-weight:800;letter-spacing:.04em}
+.shift-v5-number-input input{appearance:textfield;-moz-appearance:textfield}
+.shift-v5-number-input input::-webkit-inner-spin-button,.shift-v5-number-input input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
