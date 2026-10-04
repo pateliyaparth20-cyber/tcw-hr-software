@@ -14426,3 +14426,13 @@ body{overflow-y:auto!important}
 @media(max-width:1280px){.subscription-v3-plan-grid{grid-template-columns:repeat(2,1fr)}.subscription-v3-lower{grid-template-columns:1fr}.subscription-v3-side{display:grid;grid-template-columns:1fr 1fr}.subscription-v3-billing{grid-column:1/-1}}
 @media(max-width:850px){.subscription-v3-head{align-items:flex-start;flex-direction:column}.subscription-v3-cycle{align-self:stretch;width:max-content}.subscription-v3-side{grid-template-columns:1fr}.subscription-v3-billing{grid-column:auto}.subscription-v3-current-main{grid-template-columns:42px 1fr}.subscription-v3-current-main button{grid-column:1/-1}.subscription-v3-usage{grid-template-columns:1fr}.subscription-v3-addon-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.subscription-v3-plan-grid{grid-template-columns:1fr}.subscription-v3-addon-grid{grid-template-columns:1fr}.subscription-v3-head h1{font-size:23px}.subscription-v3-cycle span{display:none}}
+
+
+/* Attendance unused-break credit */
+.attendance-worked-value{display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.15}
+.attendance-worked-value>span:first-child{font-variant-numeric:tabular-nums}
+.attendance-break-credit{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:max-content;max-width:100%;padding:2px 5px;border-radius:999px;background:#eaf8ef;color:#168252;font-size:.56rem;font-weight:700;line-height:1;white-space:nowrap}
+.attendance-break-credit svg{flex:0 0 auto}
+.attendance-break-credit small{font-size:.52rem;font-weight:650;color:#39906a}
+.attendance-view-worked-metric .attendance-break-credit{margin-top:5px;padding:3px 6px;font-size:.6rem}
+.attendance-view-worked-metric .attendance-break-credit small{font-size:.56rem}
