@@ -412,7 +412,9 @@ export class DataService {
       const companyId=id.parse(recordId);
       return this.db.$transaction(async tx=>{
         const before=await tx.tenant.findUnique({where:{id:companyId}});if(!before)throw new NotFoundException('Company not found.');
-        // Permanent tenant purge: children first, then employee/company masters. Every tenant-scoped row is removed.
+        const owner=await tx.user.findFirst({where:{tenantId:companyId},orderBy:{createdAt:'asc'},select:{email:true}});
+        await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${companyId}, true), set_config('app.allow_raw_punch_delete', 'on', true), set_config('app.audit_delete_tenant', ${companyId}, true), set_config('app.allow_audit_delete', 'on', true)`;
+        // Permanent tenant purge: billing state does not block deletion. Children first, then every company-scoped master.
         await tx.supportTicketMessage.deleteMany({where:{tenantId:companyId}});
         await tx.payrollPayout.deleteMany({where:{tenantId:companyId}});
         await tx.payrollItem.deleteMany({where:{tenantId:companyId}});
@@ -458,8 +460,10 @@ export class DataService {
         await tx.costCenter.deleteMany({where:{tenantId:companyId}});
         await tx.location.deleteMany({where:{tenantId:companyId}});
         await tx.branch.deleteMany({where:{tenantId:companyId}});
+        await tx.shift.deleteMany({where:{tenantId:companyId}});
+        await tx.lead.deleteMany({where:{OR:[{notes:{contains:before.code}},...(owner?.email?[{company:before.name,email:owner.email}]:[])]}});
         await tx.tenant.delete({where:{id:companyId}});
-        await audit(tx,ctx,'COMPANY_PERMANENTLY_DELETED','tenants',companyId,{id:before.id,name:before.name,code:before.code},undefined);
+        await audit(tx,ctx,'COMPANY_PERMANENTLY_DELETED','tenants',companyId,undefined,{permanent:true});
         return {ok:true,deleted:true,id:companyId};
       });
     }
