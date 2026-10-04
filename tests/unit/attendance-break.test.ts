@@ -66,7 +66,7 @@ test('automatic mode excludes the whole configured break window from worked sess
     overtimeAfterMinutes:480
   });
   assert.equal(result.workMinutes,240);
-  assert.equal(result.status,'HALF_DAY');
+  assert.equal(result.status,'SHORT_HOURS');
 });
 
 
@@ -133,4 +133,15 @@ test('attendance history keeps valid legacy punches and removes only near duplic
 test('attendance history second duration matches displayed whole-second punch times',()=>{
   const start=new Date('2026-10-03T09:00:00.900Z'),end=new Date('2026-10-03T09:00:10.100Z');
   assert.equal(attendanceElapsedSeconds(start,end),10);
+});
+
+
+test('completed work below the short-hours threshold is insufficient hours, not half day',()=>{
+  const rule={shiftStart:new Date('2026-10-03T03:30:00.000Z'),shiftEnd:new Date('2026-10-03T12:30:00.000Z'),graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
+  const result=calculateAttendance([
+    {time:new Date('2026-10-03T03:30:00.000Z'),type:'IN'},
+    {time:new Date('2026-10-03T05:00:00.000Z'),type:'OUT'}
+  ],rule);
+  assert.equal(result.workMinutes,90);
+  assert.equal(result.status,'INSUFFICIENT_HOURS');
 });

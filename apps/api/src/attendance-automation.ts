@@ -72,7 +72,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
       }
       const syncedAfterShiftEnd=!!record?.syncedAt&&record.syncedAt.getTime()>=shiftEnd.getTime();
       if(record?.correctionNote||record?.firstIn||record?.lastOut||syncedAfterShiftEnd)continue;
-      const phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes);
+      const phase=noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes,shift.halfDayMinutes);
       if(phase==='PENDING')continue;
       const needsNoPunchSyncedFinalization=now.getTime()>=shiftEnd.getTime();
       const values={shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits:attendancePayableUnits(phase),leaveUnits:0,dayType:'WORKING',status:phase,exceptionCode:'',firstIn:null,lastOut:null,workMinutes:0,lateMinutes:0,earlyOutMinutes:0,overtimeMinutes:0,...(needsNoPunchSyncedFinalization?{syncedAt:now}:{})};
@@ -142,7 +142,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const dayType=holiday?'HOLIDAY':weeklyOff||rosterOff?'WEEK_OFF':effectiveLeave?(effectiveLeaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):'WORKING';
       const scheduled=dayType==='WORKING'||dayType==='PAID_LEAVE'||dayType==='UNPAID_LEAVE',fullDayLeave=!!effectiveLeave&&!effectiveHalfLeave;
       const currentNoPunchDay=dateKey===today&&scheduled&&!effectiveLeave&&!holiday&&!weeklyOff&&!rosterOff&&!dayPunches.length&&!record?.correctionNote;
-      const noPunchPhase=currentNoPunchDay?noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes):null;
+      const noPunchPhase=currentNoPunchDay?noPunchAttendanceStatus(now,shiftStart,shiftEnd,shift.graceMinutes,shift.halfDayMinutes):null;
       let status:string=record?.correctionNote?record.status:currentNoPunchDay?(noPunchPhase==='PENDING'?'VOID':noPunchPhase??'ABSENT'):fullDayLeave?(effectiveLeaveType?.paid?'PAID_LEAVE':'UNPAID_LEAVE'):punchStatus??(holiday?'HOLIDAY':weeklyOff||rosterOff?'WEEK_OFF':effectiveLeave?'HALF_DAY_LEAVE':'ABSENT');
       let payable=record?.correctionNote?record.payableUnits:attendancePayableUnits(status);
       if(!record?.correctionNote&&effectiveLeave){const worked=punchCalc?attendancePayableUnits(punchStatus??punchCalc.status):0;if(effectiveLeaveType?.paid)payable=Math.min(100,worked+effectiveLeaveUnits);else payable=worked;if(!punchCalc&&!record&&effectiveHalfLeave)payable=effectiveLeaveType?.paid?50:0;}
@@ -188,7 +188,7 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
     if(row.scheduledMinutes>0)g.scheduledDays++;
     g.payableUnits+=row.payableUnits;
     if(row.status==='PRESENT')g.presentDays++;
-    if(['HALF_DAY','HALF_DAY_LEAVE'].includes(row.status))g.halfDays++;
+    if(['SHORT_HOURS','HALF_DAY'].includes(row.status))g.halfDays++;
     if(row.dayType==='PAID_LEAVE')g.paidLeaveUnits+=row.leaveUnits;
     if(row.dayType==='UNPAID_LEAVE')g.unpaidLeaveUnits+=row.leaveUnits;
     const fullDayLeave=['PAID_LEAVE','UNPAID_LEAVE'].includes(row.dayType)&&row.leaveUnits>=100;
