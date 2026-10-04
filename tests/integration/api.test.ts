@@ -101,7 +101,7 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    const refreshed=await call('platform/companies','GET',undefined,root);assert.equal(refreshed.status,200,JSON.stringify(refreshed.data));
    const active=refreshed.data.items.find((row:any)=>row.id===betaTenant);assert.equal(active.status,'ACTIVE');assert.equal(active.suspensionReason,null);
    const stored=await db.tenant.findUniqueOrThrow({where:{id:betaTenant!}});assert.equal((stored.profile as any)?.billingManualActive,true);
-   await login('owner@example.test','BetaStrong!2026',betaCode!);
+   beta=await login('owner@example.test','BetaStrong!2026',betaCode!);
    assert.equal((await call(`platform/invoices/${invoice.data.id}`,'DELETE',undefined,root)).status,200);
    assert.equal((await call('platform/companies','GET',undefined,root)).status,200);
    const cleaned=await db.tenant.findUniqueOrThrow({where:{id:betaTenant!}});assert.equal((cleaned.profile as any)?.billingManualActive,undefined);
