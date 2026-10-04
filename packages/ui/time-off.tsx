@@ -99,6 +99,14 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
     ).reduce((n,r)=>n+Number(r.days??0),0);
     return {id:type.id,name:type.name,annual:Number(type.annualDays??0),remaining:Math.max(0,Number(type.annualDays??0)-used)};
   }):[];
+  const approvedSelectedYear=selected?rows.filter(r=>
+    r.employeeId===selected.employeeId&&
+    String(r.status)==='APPROVED'&&
+    new Date(r.startDate).getUTCFullYear()===selectedYear
+  ):[];
+  const paidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid!==false).reduce((n,r)=>n+Number(r.days??0),0);
+  const unpaidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid===false).reduce((n,r)=>n+Number(r.days??0),0);
+  const totalLeaveBalance=balances.reduce((n,b)=>n+Number(b.remaining??0),0);
 
   const canApproveSelected=!!selected&&selected.status==='PENDING'&&selected.employeeId!==session.user.employeeId&&can('leave','APPROVE');
   const canRejectSelected=!!selected&&selected.status==='PENDING'&&selected.employeeId!==session.user.employeeId&&can('leave','REJECT');
@@ -172,6 +180,12 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
         <div className="timeoff-v3-detail-body">
           <div className={'timeoff-v3-status-line '+String(selected.status??'pending').toLowerCase()}><span className={'timeoff-v3-status-dot '+String(selected.status??'').toLowerCase()}/><strong>{statusCopy(selected.status)}</strong></div>
           <div className="timeoff-v3-detail-person"><Avatar large name={selectedName} src={selectedEmployee?.photo}/><div><h3>{selectedName}</h3><p>{selectedEmployee?.designation??selectedEmployee?.employeeCode??''}</p></div></div>
+
+          <section className="timeoff-v3-employee-summary" aria-label={`${selectedYear} leave summary`}>
+            <article><small>Paid Leave Taken</small><strong>{paidLeaveTaken}</strong><span>days · {selectedYear}</span></article>
+            <article><small>Unpaid Leave Taken</small><strong>{unpaidLeaveTaken}</strong><span>days · {selectedYear}</span></article>
+            <article><small>Total Leave Balance</small><strong>{totalLeaveBalance}</strong><span>days remaining</span></article>
+          </section>
 
           <dl className="timeoff-v3-detail-grid">
             <dt>Leave Type</dt><dd>{selectedLeaveType?.name??'Leave'}</dd>
