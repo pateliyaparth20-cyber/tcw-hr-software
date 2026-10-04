@@ -1,5 +1,5 @@
 'use client';
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {AlarmClock,Check,ChevronLeft,ChevronRight,Clock3,Filter,Info,Layers3,Moon,MoreVertical,Plus,RotateCcw,Search,SunMedium,Trash2,Users} from 'lucide-react';
 import {Confirm,Empty,Failure,Loading,useApp,useData} from './core';
 import {Row,readable} from './config';
@@ -67,7 +67,8 @@ function NumberField({label,value,onChange,min=0,max=960,suffix='minutes'}:{labe
  return <label className="shift-v3-field"><span>{label}</span><div className="shift-v3-number"><input type="number" min={min} max={max} value={value} onChange={e=>onChange(Math.max(min,Math.min(max,Number(e.target.value)||0)))}/><small>{suffix}</small></div></label>;
 }
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
- return <label className="shift-v3-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v3-time"><Clock3 size={14}/><input type="time" value={value==null?'':minuteTime(value)} onChange={e=>onChange(e.target.value?timeMinute(e.target.value):null)}/></div></label>;
+ const openPicker=(host:HTMLElement)=>{const input=host.querySelector('input[type="time"]') as HTMLInputElement|null;if(!input||input.disabled||input.readOnly)return;input.focus();try{input.showPicker?.()}catch{}};
+ return <label className="shift-v3-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v3-time shift-v4-picker-field" onClick={e=>openPicker(e.currentTarget)}><Clock3 size={16}/><input type="time" value={value==null?'':minuteTime(value)} onClick={e=>{e.stopPropagation();try{e.currentTarget.showPicker?.()}catch{}}} onChange={e=>onChange(e.target.value?timeMinute(e.target.value):null)}/><span className="shift-v4-picker-hint">Choose time</span></div></label>;
 }
 
 export function ShiftManagement(){
@@ -78,6 +79,7 @@ export function ShiftManagement(){
  const canCreate=can('shifts','CREATE'),canEdit=can('shifts','EDIT'),canDelete=can('shifts','DELETE');
  const [search,setSearch]=useState(''),[kindFilter,setKindFilter]=useState(''),[assignmentFilter,setAssignmentFilter]=useState('');
  const [editor,setEditor]=useState<{id:string|null;draft:ShiftDraft}|null>(null),[remove,setRemove]=useState<Row|null>(null),[saving,setSaving]=useState(false);
+ useEffect(()=>{if(!editor)return;const onKeyDown=(event:KeyboardEvent)=>{if(event.key!=='Escape')return;if(remove)return;event.preventDefault();setEditor(null)};window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown)},[editor,remove]);
  const employeeCount=(shiftId:any)=>employees.filter(row=>String(row.shiftId??'')===String(shiftId)).length;
  const departmentCount=(shiftId:any)=>new Set(employees.filter(row=>String(row.shiftId??'')===String(shiftId)).map(row=>String(row.departmentId??'')).filter(Boolean)).size;
  const filtered=useMemo(()=>rows.filter(row=>{
@@ -110,7 +112,7 @@ export function ShiftManagement(){
  if(editor&&draft)return <div className="shift-v4-editor-page">
   <div className="shift-v4-editor-breadcrumb"><button type="button" onClick={()=>setEditor(null)}><ChevronLeft size={15}/>Shifts</button><ChevronRight size={13}/><strong>{editor.id?'Edit Shift':'Add Shift'}</strong></div>
   <header className="shift-v4-editor-hero">
-   <div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>{editor.id?'Edit Shift':'Add Shift'}</h1><p>{editor.id?'Update the complete shift schedule, break rules and attendance thresholds.':'Create a complete work shift with schedule, break and attendance rules.'}</p></div>
+   <div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>{editor.id?'Edit Shift':'Add Shift'}</h1><p>{editor.id?'Update the complete shift schedule, break rules and attendance thresholds.':'Create a complete work shift with schedule, break and attendance rules.'} <span className="shift-v4-esc-note">Press Esc to return.</span></p></div>
    <div className="shift-v4-editor-actions"><button className="btn secondary" onClick={()=>setEditor(null)}>Back to Shifts</button>{(editor.id?canEdit:canCreate)&&<button className="btn primary" disabled={saving||!draft.name.trim()} onClick={save}>{saving?'Saving…':editor.id?'Update Shift':'Create Shift'}</button>}</div>
   </header>
 
