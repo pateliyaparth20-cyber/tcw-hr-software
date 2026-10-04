@@ -465,7 +465,17 @@ export class DataService {
     }
     if(type==='companies'&&recordId){
       const input=z.object({status:z.enum(['TRIAL','ACTIVE','SUSPENDED','EXPIRED']),plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),employeeLimit:z.number().int().min(1).max(100000),expiresAt:date.nullable()}).strict().parse(body);
-      return this.db.$transaction(async tx=>{const before=await tx.tenant.findUnique({where:{id:id.parse(recordId)}});if(!before)throw new NotFoundException();const profile=before.profile&&typeof before.profile==='object'&&!Array.isArray(before.profile)?{...(before.profile as any)}:{};delete profile.billingSuspendedAt;delete profile.billingPreviousStatus;profile.suspensionReason=input.status==='SUSPENDED'?'MANUAL':undefined;const cleanProfile=Object.fromEntries(Object.entries(profile).filter(([,v])=>v!==undefined)) as Prisma.InputJsonObject;const after=await tx.tenant.update({where:{id:recordId},data:{...input,profile:cleanProfile}});if(!['ACTIVE','TRIAL'].includes(after.status))await tx.session.deleteMany({where:{tenantId:recordId}});await audit(tx,ctx,'SUBSCRIPTION_CHANGED','tenants',recordId,before,after);return after;});
+      return this.db.$transaction(async tx=>{
+        const before=await tx.tenant.findUnique({where:{id:id.parse(recordId)}});if(!before)throw new NotFoundException();
+        const profile=before.profile&&typeof before.profile==='object'&&!Array.isArray(before.profile)?{...(before.profile as any)}:{};
+        delete profile.billingSuspendedAt;delete profile.billingPreviousStatus;delete profile.billingManualActive;delete profile.billingManualActivatedAt;delete profile.suspensionReason;
+        if(input.status==='ACTIVE'){profile.billingManualActive=true;profile.billingManualActivatedAt=new Date().toISOString();}
+        else if(input.status==='SUSPENDED')profile.suspensionReason='MANUAL';
+        const cleanProfile=Object.fromEntries(Object.entries(profile).filter(([,v])=>v!==undefined)) as Prisma.InputJsonObject;
+        const after=await tx.tenant.update({where:{id:recordId},data:{...input,profile:cleanProfile}});
+        if(!['ACTIVE','TRIAL'].includes(after.status))await tx.session.deleteMany({where:{tenantId:recordId}});
+        await audit(tx,ctx,'SUBSCRIPTION_CHANGED','tenants',recordId,before,after);return after;
+      });
     }
     if(type==='leads'||type==='plans'){
       const input=(type==='leads'?leadSchema:planSchema).parse(body);
