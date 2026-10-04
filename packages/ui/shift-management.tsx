@@ -13,9 +13,7 @@ type ShiftDraft={
  overtimeAfterMinutes:number;timezone:string;
 };
 const week=[['1','Mon'],['2','Tue'],['3','Wed'],['4','Thu'],['5','Fri'],['6','Sat'],['0','Sun']] as const;
-const minuteTime=(minute:any)=>{const n=Math.max(0,Math.min(1439,Number(minute)||0));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')};
 const minuteClock=(minute:any)=>{const n=Math.max(0,Math.min(1439,Number(minute)||0)),h=Math.floor(n/60),m=n%60;return String(h%12||12).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
-const timeMinute=(value:string)=>{const [h,m]=value.split(':').map(Number);return Math.max(0,Math.min(1439,(h||0)*60+(m||0)))};
 const spanMinutes=(start:number,end:number)=>end>start?end-start:1440-start+end;
 const minuteOffset=(start:number,target:number)=>target>=start?target-start:1440-start+target;
 const duration=(value:any)=>{const n=Math.max(0,Number(value)||0),h=Math.floor(n/60),m=n%60;return h&&m?`${h}h ${m}m`:h?`${h}h`:`${m}m`};
@@ -91,8 +89,28 @@ function DurationField({label,value,onChange,min=1,max=960,help}:{label:string;v
  const commit=()=>parseAndApply(draft,true);
  return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-clock"><Clock3 size={18}/><input aria-label={label+' in HH:MM'} type="text" inputMode="numeric" placeholder="HH:MM" value={draft} onChange={e=>parseAndApply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>HH:MM</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
+function parseClockText(value:string){
+ const raw=value.trim().toUpperCase().replace(/\s+/g,' ');
+ let match=/^(\d{1,2}):(\d{2})\s*(AM|PM)$/.exec(raw);
+ if(match){
+  let hour=Number(match[1]),minute=Number(match[2]);if(hour<1||hour>12||minute<0||minute>59)return null;
+  hour%=12;if(match[3]==='PM')hour+=12;return hour*60+minute;
+ }
+ match=/^(\d{1,2}):(\d{2})$/.exec(raw);
+ if(match){const hour=Number(match[1]),minute=Number(match[2]);if(hour<0||hour>23||minute<0||minute>59)return null;return hour*60+minute;}
+ return null;
+}
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
- return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v5-time-input"><Clock3 size={18}/><input type="time" value={value==null?'':minuteTime(value)} onChange={e=>onChange(e.target.value?timeMinute(e.target.value):null)}/></div></label>;
+ const formatted=value==null?'':minuteClock(value);
+ const[draft,setDraft]=useState(formatted);
+ useEffect(()=>setDraft(formatted),[formatted]);
+ const apply=(raw:string,final=false)=>{
+  const clean=raw.replace(/[^0-9aApPmM:\s]/g,'').slice(0,11);setDraft(clean);
+  if(clean.trim()===''){if(!required)onChange(null);return;}
+  const parsed=parseClockText(clean);if(parsed==null){if(final)setDraft(formatted);return;}
+  onChange(parsed);if(final)setDraft(minuteClock(parsed));
+ };
+ return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v5-time-input"><Clock3 size={18}/><input type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/></div></label>;
 }
 
 export function ShiftManagement(){
@@ -193,7 +211,7 @@ export function ShiftManagement(){
         </div>
         <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Type values manually in HH:MM clock format. Exact minutes are saved in the backend.</span></div>
         <div className="shift-v5-duration-grid">
-         <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for Half Day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
+         <DurationField label="Short Hours Threshold" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for a payable partial day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
          <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
          <DurationField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} help="Worked-time threshold used for overtime" onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
         </div>
@@ -238,7 +256,7 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Early-out Grace</span><strong>{draft.earlyOutGraceMinutes} minute{draft.earlyOutGraceMinutes===1?'':'s'}</strong></div>
       <div><Layers3 size={18}/><span>Break Type</span><strong>{breakModeLabel(draft.breakMode)}</strong></div>
       <div><CalendarIcon/><span>Roster-off / Month</span><strong>{draft.monthlyFlexibleOffDays} day{draft.monthlyFlexibleOffDays===1?'':'s'}</strong></div>
-      <div><Clock3 size={18}/><span>Half Day</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
+      <div><Clock3 size={18}/><span>Short Hours Threshold</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Full Day</span><strong>{duration(draft.fullDayMinutes)}</strong></div>
       <div><AlarmClock size={18}/><span>Overtime After</span><strong>{duration(draft.overtimeAfterMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>

@@ -15267,3 +15267,7 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .attendance-compact-dates input{
   box-shadow:none;
 }
+
+/* Single manual clock field: no browser-native time popup */
+.shift-v5-time-input input[type="text"]{cursor:text!important;-webkit-appearance:none!important;appearance:none!important}
+.shift-v5-time-input input[type="text"]::-webkit-calendar-picker-indicator{display:none!important}
