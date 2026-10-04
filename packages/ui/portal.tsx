@@ -42,15 +42,15 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
   const cached=getLocalSessionSnapshot(scope);
   const localToken=getLocalSessionToken();
   if(cached&&scope==='TENANT'&&isHrPortalHost()&&cached.user?.role==='EMPLOYEE'){
-    const companyCode=String(cached.company?.code??'');
+    const companyCode=String(cached.company?.code??''),user=String(cached.user?.loginId??cached.user?.email??'');
     clearLocalSessionState();setSession(null);setChecking(false);
-    void api('auth/logout','POST',{},cached.csrf).catch(()=>{}).finally(()=>{window.location.replace(portalLoginUrl('EMPLOYEE',companyCode))});
+    void api('auth/logout','POST',{},cached.csrf).catch(()=>{}).finally(()=>{window.location.replace(portalLoginUrl('EMPLOYEE',companyCode,user))});
     return()=>{active=false};
   }
   if(cached&&scope==='TENANT'&&isEmployeePortalHost()&&cached.user?.role!=='EMPLOYEE'){
-    const companyCode=String(cached.company?.code??'');
+    const companyCode=String(cached.company?.code??''),user=String(cached.user?.loginId??cached.user?.email??'');
     clearLocalSessionState();setSession(null);setChecking(false);
-    void api('auth/logout','POST',{},cached.csrf).catch(()=>{}).finally(()=>{window.location.replace(portalLoginUrl('HR',companyCode))});
+    void api('auth/logout','POST',{},cached.csrf).catch(()=>{}).finally(()=>{window.location.replace(portalLoginUrl('HR',companyCode,user))});
     return()=>{active=false};
   }
   if(cached&&isEmployeeNativeApp()&&cached.user?.role!=='EMPLOYEE'){clearLocalSessionState();setSession(null);setChecking(false);setError('TCW Employee APK is only for Employee accounts. Use the TCW HR Software app for HR/Admin access.');return()=>{active=false};}
@@ -68,14 +68,14 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
     if(!active)return;
     if(scope!=='ANY'&&r.user?.scope!==scope){clearLocalSessionState();setSession(null);setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return;}
     if(scope==='TENANT'&&isHrPortalHost()&&r.user?.role==='EMPLOYEE'){
-      const companyCode=String(r.company?.code??'');
+      const companyCode=String(r.company?.code??''),user=String(r.user?.loginId??r.user?.email??'');
       try{await api('auth/logout','POST',{},r.csrf)}catch{}
-      clearLocalSessionState();setSession(null);setChecking(false);window.location.replace(portalLoginUrl('EMPLOYEE',companyCode));return;
+      clearLocalSessionState();setSession(null);setChecking(false);window.location.replace(portalLoginUrl('EMPLOYEE',companyCode,user));return;
     }
     if(scope==='TENANT'&&isEmployeePortalHost()&&r.user?.role!=='EMPLOYEE'){
-      const companyCode=String(r.company?.code??'');
+      const companyCode=String(r.company?.code??''),user=String(r.user?.loginId??r.user?.email??'');
       try{await api('auth/logout','POST',{},r.csrf)}catch{}
-      clearLocalSessionState();setSession(null);setChecking(false);window.location.replace(portalLoginUrl('HR',companyCode));return;
+      clearLocalSessionState();setSession(null);setChecking(false);window.location.replace(portalLoginUrl('HR',companyCode,user));return;
     }
     if(isEmployeeNativeApp()&&r.user?.role!=='EMPLOYEE'){try{await api('auth/logout','POST',{},r.csrf)}catch{}clearLocalSessionState();setSession(null);setError('TCW Employee APK is only for Employee accounts. Use the TCW HR Software app for HR/Admin access.');setChecking(false);return;}
     try{window.localStorage.setItem('tcw_portal_scope',String(r.user?.scope??''));window.sessionStorage.setItem(`tcw_active_window_${String(r.user?.scope??scope).toLowerCase()}`,'1')}catch{}
@@ -390,10 +390,10 @@ export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',pr
  useEffect(()=>{if(mode!=='login')return;let active=true;const key=`tcw_remember_${scope.toLowerCase()}`,activeKey=`tcw_active_window_${scope.toLowerCase()}`;let shouldResume=false;try{const saved=JSON.parse(window.localStorage.getItem(key)??'null');const windowActive=window.sessionStorage.getItem(activeKey)==='1';shouldResume=!!saved||windowActive;if(saved){setRemember(true);if(scope==='TENANT'&&saved.companyCode)setCompanyCode(String(saved.companyCode));if(saved.email)setEmail(String(saved.email));}}catch{}
  if(!shouldResume)return()=>{active=false};
  (async()=>{try{const current=await api('auth/me');if(active&&current?.user?.scope===scope){
-   if(scope==='TENANT'&&isHrPortalHost()&&current.user?.role==='EMPLOYEE'){const code=String(current.company?.code??companyCode);try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();window.location.replace(portalLoginUrl('EMPLOYEE',code,email));return;}
-   if(scope==='TENANT'&&isEmployeePortalHost()&&current.user?.role!=='EMPLOYEE'){const code=String(current.company?.code??companyCode);try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();window.location.replace(portalLoginUrl('HR',code,email));return;}
+   if(scope==='TENANT'&&isHrPortalHost()&&current.user?.role==='EMPLOYEE'){const code=String(current.company?.code??''),user=String(current.user?.loginId??current.user?.email??'');try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();window.location.replace(portalLoginUrl('EMPLOYEE',code,user));return;}
+   if(scope==='TENANT'&&isEmployeePortalHost()&&current.user?.role!=='EMPLOYEE'){const code=String(current.company?.code??''),user=String(current.user?.loginId??current.user?.email??'');try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();window.location.replace(portalLoginUrl('HR',code,user));return;}
    if(isEmployeeNativeApp()&&current.user?.role!=='EMPLOYEE'){try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();setError('This is the TCW Employee app. Sign in with an Employee account.');return;}
-   try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(activeKey,'1')}catch{}router.replace('/dashboard')}}catch{}})();return()=>{active=false}},[mode,scope,router,companyCode,email]);
+   try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(activeKey,'1')}catch{}router.replace('/dashboard')}}catch{}})();return()=>{active=false}},[mode,scope,router]);
  useEffect(()=>{if(mode!=='reset-password')return;let active=true;(async()=>{try{if(!resetToken)throw new Error('This reset link is invalid or expired.');await api('auth/reset-password/claim','POST',{token:resetToken});if(active){setResetReady(true);setResetChecking(false)}}catch(e:any){if(active){setResetReady(false);setResetChecking(false);setError(e?.message??'This reset link is invalid, expired, or already used.')}}})();return()=>{active=false}},[mode,resetToken]);
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{
   if(signup){if(!terms)throw new Error('Accept the Terms and Privacy notice to start a trial.');if(!contactConsent)throw new Error('Please allow us to contact you about your trial.');const r=await api('auth/signup','POST',{companyName,ownerName,ownerEmail:email.trim(),phone:phone.trim(),plan,acceptTerms:true,contactConsent:true});setCreated(r);setMessage(`Your company workspace is ready. Your Company Code, User ID and temporary password have been sent to ${email.trim()}.`)}
