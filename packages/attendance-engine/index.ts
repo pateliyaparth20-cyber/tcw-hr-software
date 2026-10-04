@@ -21,10 +21,14 @@ export interface AttendanceRule {
   breakStart?: Date;
   breakEnd?: Date;
 }
-export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,graceMinutes:number){
+export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,graceMinutes:number,absenceAfterMinutes?:number){
   const lateCutoff=shiftStart.getTime()+Math.max(0,Number(graceMinutes)||0)*60000;
   if(now.getTime()<lateCutoff)return 'PENDING' as const;
-  if(now.getTime()<shiftEnd.getTime())return 'NOT_CLOCKED_IN' as const;
+  const configuredAbsenceCutoff=Number.isFinite(Number(absenceAfterMinutes))&&Number(absenceAfterMinutes)>0
+    ? shiftStart.getTime()+Math.max(0,Number(absenceAfterMinutes))*60000
+    : shiftEnd.getTime();
+  const absenceCutoff=Math.min(shiftEnd.getTime(),configuredAbsenceCutoff);
+  if(now.getTime()<absenceCutoff)return 'NOT_CLOCKED_IN' as const;
   return 'ABSENT' as const;
 }
 export function punchedAttendanceStatusAtMoment(calculatedStatus:string,now:Date,shiftEnd:Date,hasPunch:boolean){
@@ -57,7 +61,11 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const workMinutes=attendanceBusinessMinutes(workMilliseconds);
   const lateRawMilliseconds=firstIn?Math.max(0,firstIn.getTime()-rule.shiftStart.getTime()):0,lateRawMinutes=attendanceBusinessMinutes(lateRawMilliseconds),lateMinutes=Math.max(0,lateRawMinutes-Math.max(0,Number(rule.graceMinutes)||0));
   const earlyOutRawMilliseconds=!open&&lastOut&&rule.shiftEnd?Math.max(0,rule.shiftEnd.getTime()-lastOut.getTime()):0,earlyOutRawMinutes=attendanceBusinessMinutes(earlyOutRawMilliseconds),earlyOutMinutes=Math.max(0,earlyOutRawMinutes-Math.max(0,Number(rule.earlyOutGraceMinutes??0)||0));
-  const status = open || (completedPairs===0 && (unmatched||sorted.length>0)) ? 'MISSING_PUNCH' : completedPairs>0 ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'HALF_DAY' : 'ABSENT') : 'ABSENT';
+  const status = open || (completedPairs===0 && (unmatched||sorted.length>0))
+    ? 'MISSING_PUNCH'
+    : completedPairs>0
+      ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes >= rule.halfDayMinutes ? 'SHORT_HOURS' : 'INSUFFICIENT_HOURS')
+      : 'ABSENT';
   const overtimeByShiftMinutes=attendanceBusinessMinutes(overtimeByShiftMilliseconds),compensatedShiftOvertimeMinutes=Math.max(0,overtimeByShiftMinutes-lateMinutes),thresholdOvertimeMinutes=Math.max(0,workMinutes-Math.max(0,Number(rule.overtimeAfterMinutes)||0)),overtimeMinutes=Math.max(compensatedShiftOvertimeMinutes,thresholdOvertimeMinutes);
   return {firstIn,lastOut,workMinutes,lateMinutes,earlyOutMinutes,overtimeMinutes,status};
 }
@@ -129,6 +137,6 @@ export function monthBounds(month:string){
 }
 export function attendancePayableUnits(status:string){
   if(['PRESENT','PAID_LEAVE'].includes(status))return 100;
-  if(['HALF_DAY','HALF_DAY_LEAVE'].includes(status))return 50;
+  if(['SHORT_HOURS','HALF_DAY','HALF_DAY_LEAVE'].includes(status))return 50;
   return 0;
 }
