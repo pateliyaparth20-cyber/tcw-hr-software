@@ -13,9 +13,7 @@ type ShiftDraft={
  overtimeAfterMinutes:number;timezone:string;
 };
 const week=[['1','Mon'],['2','Tue'],['3','Wed'],['4','Thu'],['5','Fri'],['6','Sat'],['0','Sun']] as const;
-const minuteTime=(minute:any)=>{const n=Math.max(0,Math.min(1439,Number(minute)||0));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')};
 const minuteClock=(minute:any)=>{const n=Math.max(0,Math.min(1439,Number(minute)||0)),h=Math.floor(n/60),m=n%60;return String(h%12||12).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
-const timeMinute=(value:string)=>{const [h,m]=value.split(':').map(Number);return Math.max(0,Math.min(1439,(h||0)*60+(m||0)))};
 const spanMinutes=(start:number,end:number)=>end>start?end-start:1440-start+end;
 const minuteOffset=(start:number,target:number)=>target>=start?target-start:1440-start+target;
 const duration=(value:any)=>{const n=Math.max(0,Number(value)||0),h=Math.floor(n/60),m=n%60;return h&&m?`${h}h ${m}m`:h?`${h}h`:`${m}m`};
