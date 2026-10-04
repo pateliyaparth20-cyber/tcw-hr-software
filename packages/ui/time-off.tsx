@@ -165,12 +165,12 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
                   const name=personName(employee,session.user.employeeId===row.employeeId?session.user.name:'Employee');
                   const type=leaveTypeFor(row.leaveTypeId);
                   return <tr key={row.id} className={selectedId===row.id?'selected':''} onClick={()=>selectRequest(row)}>
-                    <td><span className="timeoff-v3-person"><Avatar name={name} src={employee?.photo}/><span><strong>{name}</strong><small>{employee?.designation??employee?.employeeCode??''}</small></span></span></td>
-                    <td>{type?.name??'Leave'}</td>
-                    <td><span className="timeoff-v3-date-range">{displayDate(row.startDate)}{String(row.startDate).slice(0,10)!==String(row.endDate).slice(0,10)&&<><br/>{displayDate(row.endDate)}</>}</span></td>
-                    <td>{Number(row.days??0)}</td>
-                    <td><Badge value={row.status}/></td>
-                    <td className="timeoff-v3-actions-cell">
+                    <td data-label="Employee"><span className="timeoff-v3-person"><Avatar name={name} src={employee?.photo}/><span><strong>{name}</strong><small>{employee?.designation??employee?.employeeCode??''}</small></span></span></td>
+                    <td data-label="Leave Type">{type?.name??'Leave'}</td>
+                    <td data-label="Date Range"><span className="timeoff-v3-date-range">{displayDate(row.startDate)}{String(row.startDate).slice(0,10)!==String(row.endDate).slice(0,10)&&<><br/>{displayDate(row.endDate)}</>}</span></td>
+                    <td data-label="Days">{Number(row.days??0)}</td>
+                    <td data-label="Status"><Badge value={row.status}/></td>
+                    <td className="timeoff-v3-actions-cell" data-label="Actions">
                       <button type="button" className="icon-button timeoff-v3-more" aria-label={`Open actions for ${name} time off request`} aria-haspopup="menu" aria-expanded={actionMenu?.id===row.id} onClick={e=>{e.stopPropagation();if(actionMenu?.id===row.id){setActionMenu(null);return;}const rect=e.currentTarget.getBoundingClientRect();setActionMenu({id:row.id,top:rect.bottom+6,left:Math.max(12,Math.min(window.innerWidth-208,rect.right-196))})}}><MoreHorizontal size={20}/></button>
                       {actionMenu?.id===row.id&&(()=>{
                         const rowIsSelf=row.employeeId===session.user.employeeId;
