@@ -22,8 +22,8 @@ export interface AttendanceRule {
   breakEnd?: Date;
 }
 export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,graceMinutes:number){
-  const lateCutoff=shiftStart.getTime()+Math.max(0,Number(graceMinutes)||0)*60000;
-  if(now.getTime()<lateCutoff)return 'PENDING' as const;
+  void graceMinutes;
+  if(now.getTime()<shiftStart.getTime())return 'PENDING' as const;
   if(now.getTime()<shiftEnd.getTime())return 'NOT_CLOCKED_IN' as const;
   return 'ABSENT' as const;
 }
