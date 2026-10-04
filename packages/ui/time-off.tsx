@@ -32,6 +32,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const [requestKey,setRequestKey]=useState('');
   const [review,setReview]=useState<{row:Row;decision:'APPROVED'|'REJECTED'}|null>(null);
   const [cancelLeave,setCancelLeave]=useState<Row|null>(null);
+  const [actionMenuId,setActionMenuId]=useState<string|null>(null);
 
   const rows:Row[]=requests.data?.items??[];
   const people:Row[]=employees.data?.items??[];
@@ -61,6 +62,12 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const selected=selectedId?rows.find(r=>r.id===selectedId)??null:null;
 
   useEffect(()=>{setPage(1)},[status,search]);
+  useEffect(()=>{
+    if(!actionMenuId)return;
+    const close=()=>setActionMenuId(null);
+    window.addEventListener('click',close);
+    return()=>window.removeEventListener('click',close);
+  },[actionMenuId]);
   useEffect(()=>{
     if(detailClosed||!visible.length)return;
     if(!selectedId||!visible.some(r=>r.id===selectedId))setSelectedId(visible[0].id);
@@ -161,7 +168,21 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
                     <td><span className="timeoff-v3-date-range">{displayDate(row.startDate)}{String(row.startDate).slice(0,10)!==String(row.endDate).slice(0,10)&&<><br/>{displayDate(row.endDate)}</>}</span></td>
                     <td>{Number(row.days??0)}</td>
                     <td><Badge value={row.status}/></td>
-                    <td><button type="button" className="icon-button timeoff-v3-more" aria-label={`Open ${name} time off details`} onClick={e=>{e.stopPropagation();selectRequest(row)}}><MoreHorizontal size={20}/></button></td>
+                    <td className="timeoff-v3-actions-cell">
+                      <button type="button" className="icon-button timeoff-v3-more" aria-label={`Open actions for ${name} time off request`} aria-haspopup="menu" aria-expanded={actionMenuId===row.id} onClick={e=>{e.stopPropagation();setActionMenuId(actionMenuId===row.id?null:row.id)}}><MoreHorizontal size={20}/></button>
+                      {actionMenuId===row.id&&(()=>{
+                        const rowIsSelf=row.employeeId===session.user.employeeId;
+                        const approve=row.status==='PENDING'&&!rowIsSelf&&can('leave','APPROVE');
+                        const reject=row.status==='PENDING'&&!rowIsSelf&&can('leave','REJECT');
+                        const cancel=['PENDING','APPROVED'].includes(String(row.status))&&(rowIsSelf?can('leave','CREATE'):can('leave','EDIT'));
+                        return <div className="timeoff-v3-actions-menu" role="menu" onClick={e=>e.stopPropagation()}>
+                          <button type="button" role="menuitem" onClick={()=>{selectRequest(row);setActionMenuId(null)}}><Search size={16}/><span>View Details</span></button>
+                          {approve&&<button type="button" role="menuitem" onClick={()=>{setReview({row,decision:'APPROVED'});setActionMenuId(null)}}><Check size={16}/><span>Approve</span></button>}
+                          {reject&&<button type="button" role="menuitem" className="danger" onClick={()=>{setReview({row,decision:'REJECTED'});setActionMenuId(null)}}><X size={16}/><span>Reject</span></button>}
+                          {cancel&&<button type="button" role="menuitem" className="danger" onClick={()=>{setCancelLeave(row);setActionMenuId(null)}}><XCircle size={16}/><span>{row.status==='APPROVED'?'Cancel Leave':'Cancel Request'}</span></button>}
+                        </div>;
+                      })()}
+                    </td>
                   </tr>;
                 })}</tbody>
               </table>
