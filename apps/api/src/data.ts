@@ -413,6 +413,7 @@ export class DataService {
       return this.db.$transaction(async tx=>{
         const before=await tx.tenant.findUnique({where:{id:companyId}});if(!before)throw new NotFoundException('Company not found.');
         const owner=await tx.user.findFirst({where:{tenantId:companyId},orderBy:{createdAt:'asc'},select:{email:true}});
+        await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${companyId}, true), set_config('app.allow_raw_punch_delete', 'on', true), set_config('app.audit_delete_tenant', ${companyId}, true), set_config('app.allow_audit_delete', 'on', true)`;
         // Permanent tenant purge: billing state does not block deletion. Children first, then every company-scoped master.
         await tx.supportTicketMessage.deleteMany({where:{tenantId:companyId}});
         await tx.payrollPayout.deleteMany({where:{tenantId:companyId}});
