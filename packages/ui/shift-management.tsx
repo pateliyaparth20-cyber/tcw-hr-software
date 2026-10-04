@@ -71,22 +71,25 @@ const shiftPayload=(draft:ShiftDraft)=>({
 function NumberField({label,value,onChange,min=0,max=960,suffix='minutes',help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;suffix?:string;help?:string}){
  const[draft,setDraft]=useState(String(value));
  useEffect(()=>setDraft(String(value)),[value]);
- const commit=()=>{const parsed=Number(draft);const next=Math.max(min,Math.min(max,Number.isFinite(parsed)?parsed:min));onChange(next);setDraft(String(next))};
- return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="text" inputMode="numeric" value={draft} onChange={e=>setDraft(e.target.value.replace(/[^0-9]/g,''))} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
+ const apply=(raw:string)=>{const clean=raw.replace(/[^0-9]/g,'');setDraft(clean);if(clean==='')return;const parsed=Number(clean);if(Number.isFinite(parsed))onChange(Math.max(min,Math.min(max,parsed)))};
+ const commit=()=>{const parsed=Number(draft);const next=Math.max(min,Math.min(max,Number.isFinite(parsed)&&draft!==''?parsed:min));onChange(next);setDraft(String(next))};
+ return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="text" inputMode="numeric" value={draft} onChange={e=>apply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
 function DurationField({label,value,onChange,min=1,max=960,help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;help?:string}){
  const safe=Math.max(min,Math.min(max,Number(value)||0));
  const formatted=`${String(Math.floor(safe/60)).padStart(2,'0')}:${String(safe%60).padStart(2,'0')}`;
  const[draft,setDraft]=useState(formatted);
  useEffect(()=>setDraft(formatted),[formatted]);
- const commit=()=>{
-  const match=/^(\d{1,2}):([0-5]\d)$/.exec(draft.trim());
-  if(!match){setDraft(formatted);return;}
+ const parseAndApply=(raw:string,final=false)=>{
+  const clean=raw.replace(/[^0-9:]/g,'').slice(0,5);setDraft(clean);
+  const match=/^(\d{1,2}):([0-5]\d)$/.exec(clean.trim());
+  if(!match){if(final)setDraft(formatted);return;}
   const next=Math.max(min,Math.min(max,Number(match[1])*60+Number(match[2])));
   onChange(next);
-  setDraft(`${String(Math.floor(next/60)).padStart(2,'0')}:${String(next%60).padStart(2,'0')}`);
+  if(final)setDraft(`${String(Math.floor(next/60)).padStart(2,'0')}:${String(next%60).padStart(2,'0')}`);
  };
- return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-clock"><Clock3 size={18}/><input aria-label={label+' in HH:MM'} type="text" inputMode="numeric" placeholder="HH:MM" value={draft} onChange={e=>setDraft(e.target.value.replace(/[^0-9:]/g,'').slice(0,5))} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>HH:MM</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
+ const commit=()=>parseAndApply(draft,true);
+ return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-clock"><Clock3 size={18}/><input aria-label={label+' in HH:MM'} type="text" inputMode="numeric" placeholder="HH:MM" value={draft} onChange={e=>parseAndApply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>HH:MM</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
  return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v5-time-input"><Clock3 size={18}/><input type="time" value={value==null?'':minuteTime(value)} onChange={e=>onChange(e.target.value?timeMinute(e.target.value):null)}/></div></label>;
@@ -132,7 +135,7 @@ export function ShiftManagement(){
 
  if(editor&&draft){
   const totalShiftSpan=spanMinutes(draft.startMinute,draft.endMinute);
-  const previewWorkingMinutes=draft.breakMode==='AUTOMATIC_SCHEDULED'?Math.max(0,totalShiftSpan-draft.breakMinutes):draft.fullDayMinutes;
+  const previewWorkingMinutes=Math.max(0,totalShiftSpan-Math.min(Math.max(0,draft.breakMinutes),totalShiftSpan));
   const previewBreakStart=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?draft.breakStartMinute:null;
   const previewBreakEnd=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakEndMinute!=null?draft.breakEndMinute:null;
   const previewBreakMinutes=Math.min(Math.max(0,draft.breakMinutes),totalShiftSpan);
@@ -169,9 +172,9 @@ export function ShiftManagement(){
         <label className="shift-v5-field"><span>Timezone <b>*</b></span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{!['Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata (GMT +5:30)</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label>
         <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
         <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
-        <NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes})}/>
+        <NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes,...(draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?{breakEndMinute:(draft.breakStartMinute+breakMinutes)%1440}:{})})}/>
         <label className="shift-v5-field"><span>Break Type</span><select value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Auto — Fixed scheduled break</option><option value="SCHEDULED_PUNCH">Manual — Scheduled punch break</option><option value="FLEXIBLE_PUNCH">Manual — Flexible punch break</option></select><small className="shift-v5-field-help">{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Auto mode follows the configured break window.':'Manual mode starts from the employee OUT punch; flexible manual break can be taken any time in the shift.'}</small></label>
-        {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute})}/></>}
+        {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute,...(breakStartMinute!=null&&draft.breakEndMinute!=null?{breakMinutes:Math.min(180,spanMinutes(breakStartMinute,draft.breakEndMinute))}:{})})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute,...(draft.breakStartMinute!=null&&breakEndMinute!=null?{breakMinutes:Math.min(180,spanMinutes(draft.breakStartMinute,breakEndMinute))}:{})})}/></>}
         <NumberField label="Late Grace" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
         <NumberField label="Early-out Grace" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
        </div>
@@ -225,7 +228,7 @@ export function ShiftManagement(){
       </div>
      </div>
 
-     <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Work Duration</small><strong>{duration(previewWorkingMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(draft.breakMinutes)}</strong></div></div>
+     <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Work Duration</small><strong>{duration(previewWorkingMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(previewBreakMinutes)}</strong></div></div>
 
      <section className="shift-v5-rule-summary">
       <h3>Shift Rules & Summary</h3>
@@ -241,7 +244,7 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>
      </section>
 
-     <div className="shift-v5-info"><Info size={18}/><div><strong>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Automatic scheduled break is excluded from working hours.':'Unused manual break allowance stays counted as working time.'}</strong><p>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'The configured break window is deducted automatically even if the employee stays checked in.':'Manual break time is deducted from actual OUT/IN punch usage; unused allowance remains working time.'}</p></div></div>
+     <div className="shift-v5-info"><Info size={18}/><div><strong>Preview uses the configured shift span minus configured break duration.</strong><p>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Automatic scheduled break is deducted by policy.':'For manual break modes, actual attendance still deducts the employee\'s real OUT/IN break usage; this preview shows the configured planned duration.'}</p></div></div>
     </aside>
    </div>
 
