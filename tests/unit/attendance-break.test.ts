@@ -84,14 +84,18 @@ test('multiple scheduled breaks share one cumulative allowance',()=>{
   assert.deepEqual(second,{breakSeconds:360,overBreakSeconds:60});
 });
 
-test('scheduled punch-driven break clock starts from elapsed break-window time',()=>{
+test('scheduled punch-driven break clock starts at zero from the qualifying OUT punch',()=>{
   const windowStart=new Date('2026-10-03T07:30:00.000Z'),windowEnd=new Date('2026-10-03T07:40:00.000Z');
   const startThreeLate=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:33:00.000Z'),windowStart,windowEnd,10*60);
-  assert.equal(startThreeLate.startOffsetSeconds,3*60);assert.equal(startThreeLate.breakSeconds,3*60);assert.equal(startThreeLate.remainingAtStartSeconds,7*60);
+  assert.equal(startThreeLate.startOffsetSeconds,3*60);assert.equal(startThreeLate.breakSeconds,0);assert.equal(startThreeLate.remainingAtStartSeconds,10*60);
   const oneMinuteLater=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:34:00.000Z'),windowStart,windowEnd,10*60);
-  assert.equal(oneMinuteLater.breakSeconds,4*60);assert.equal(oneMinuteLater.overBreakSeconds,0);
-  const over=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:42:00.000Z'),windowStart,windowEnd,10*60);
+  assert.equal(oneMinuteLater.breakSeconds,60);assert.equal(oneMinuteLater.overBreakSeconds,0);
+  const exact=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:43:00.000Z'),windowStart,windowEnd,10*60);
+  assert.equal(exact.breakSeconds,10*60);assert.equal(exact.overBreakSeconds,0);
+  const over=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:33:00.000Z'),new Date('2026-10-03T07:45:00.000Z'),windowStart,windowEnd,10*60);
   assert.equal(over.breakSeconds,10*60);assert.equal(over.overBreakSeconds,2*60);
+  const outside=punchDrivenBreakUsageSeconds(new Date('2026-10-03T07:40:00.000Z'),new Date('2026-10-03T07:50:00.000Z'),windowStart,windowEnd,10*60);
+  assert.equal(outside.breakSeconds,0);assert.equal(outside.overBreakSeconds,0);
 });
 test('punch-driven break does not auto-deduct working time when employee stays checked in',()=>{
   const rule={shiftStart:new Date('2026-10-03T03:30:00.000Z'),shiftEnd:new Date('2026-10-03T11:30:00.000Z'),graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:480,halfDayMinutes:240,overtimeAfterMinutes:480};
