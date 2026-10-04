@@ -207,6 +207,7 @@ export class Api {
     if(resource==='platform'){return this.data.platformResource(ctx,key,method,action,body);}
     if(resource==='attendance')return this.flows.attendance(ctx,method,body,req.query,key,action);
     if(['leave','expenses','travel'].includes(resource)&&key&&action==='review'&&method==='POST')return this.flows.review(ctx,resource,key,body);
+    if(resource==='leave'&&key&&action==='cancel'&&method==='POST')return this.flows.cancelLeave(ctx,key,body);
     if(resource==='leave')return this.flows.leave(ctx,method,body);
     if(resource==='payroll-adjustments'&&method==='POST')return this.flows.adjustment(ctx,body);
     if(resource==='payroll'&&key&&action==='payouts'&&method==='GET')return this.payouts.list(ctx,id.parse(key));
