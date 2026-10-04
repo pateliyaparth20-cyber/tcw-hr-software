@@ -1,6 +1,6 @@
 'use client';
-import React,{useEffect,useMemo,useState} from 'react';
-import {AlarmClock,BriefcaseBusiness,Check,ChevronRight,Clock3,Edit3,Filter,Info,Layers3,Moon,MoreVertical,Plus,RotateCcw,Search,SunMedium,Trash2,Users,X} from 'lucide-react';
+import React,{useMemo,useState} from 'react';
+import {AlarmClock,Check,ChevronLeft,ChevronRight,Clock3,Filter,Info,Layers3,Moon,MoreVertical,Plus,RotateCcw,Search,SunMedium,Trash2,Users} from 'lucide-react';
 import {Confirm,Empty,Failure,Loading,useApp,useData} from './core';
 import {Row,readable} from './config';
 
@@ -78,7 +78,6 @@ export function ShiftManagement(){
  const canCreate=can('shifts','CREATE'),canEdit=can('shifts','EDIT'),canDelete=can('shifts','DELETE');
  const [search,setSearch]=useState(''),[kindFilter,setKindFilter]=useState(''),[assignmentFilter,setAssignmentFilter]=useState('');
  const [editor,setEditor]=useState<{id:string|null;draft:ShiftDraft}|null>(null),[remove,setRemove]=useState<Row|null>(null),[saving,setSaving]=useState(false);
- useEffect(()=>{if(!editor&&rows.length)setEditor({id:String(rows[0].id),draft:toDraft(rows[0])})},[rows.length]);
  const employeeCount=(shiftId:any)=>employees.filter(row=>String(row.shiftId??'')===String(shiftId)).length;
  const departmentCount=(shiftId:any)=>new Set(employees.filter(row=>String(row.shiftId??'')===String(shiftId)).map(row=>String(row.departmentId??'')).filter(Boolean)).size;
  const filtered=useMemo(()=>rows.filter(row=>{
@@ -108,83 +107,110 @@ export function ShiftManagement(){
  if(query.isLoading)return <Loading/>;
  if(query.error)return <Failure error={query.error} retry={()=>query.refetch()}/>;
 
- return <div className={'shift-v3 '+(editor?'has-editor':'')}>
+ if(editor&&draft)return <div className="shift-v4-editor-page">
+  <div className="shift-v4-editor-breadcrumb"><button type="button" onClick={()=>setEditor(null)}><ChevronLeft size={15}/>Shifts</button><ChevronRight size={13}/><strong>{editor.id?'Edit Shift':'Add Shift'}</strong></div>
+  <header className="shift-v4-editor-hero">
+   <div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>{editor.id?'Edit Shift':'Add Shift'}</h1><p>{editor.id?'Update the complete shift schedule, break rules and attendance thresholds.':'Create a complete work shift with schedule, break and attendance rules.'}</p></div>
+   <div className="shift-v4-editor-actions"><button className="btn secondary" onClick={()=>setEditor(null)}>Back to Shifts</button>{(editor.id?canEdit:canCreate)&&<button className="btn primary" disabled={saving||!draft.name.trim()} onClick={save}>{saving?'Saving…':editor.id?'Update Shift':'Create Shift'}</button>}</div>
+  </header>
+
+  <section className="shift-v4-summary">
+   <span className="shift-v4-summary-icon"><Clock3/></span>
+   <div><small>CURRENT SHIFT</small><h2>{draft.name||'New Shift'}</h2><p>{minuteClock(draft.startMinute)} - {minuteClock(draft.endMinute)} · {duration(spanMinutes(draft.startMinute,draft.endMinute))} · {workWeekLabel(draft)}</p></div>
+   <div className="shift-v4-summary-stats"><span><strong>{employeeCount(editor.id??'')}</strong><small>Employees</small></span><span><strong>{departmentCount(editor.id??'')}</strong><small>Departments</small></span><span><strong>{shiftKind(draft)}</strong><small>Shift Type</small></span></div>
+  </section>
+
+  <div className="shift-v4-editor-layout">
+   <div className="shift-v4-editor-content">
+    <section className="shift-v4-panel">
+     <div className="shift-v4-panel-head"><div><h3>Shift Details</h3><p>Set the shift name, working time and break configuration.</p></div><Clock3 size={19}/></div>
+     <div className="shift-v4-form-grid">
+      <label className="shift-v3-field span-2"><span>Shift Name <b>*</b></span><input value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
+      <label className="shift-v3-field"><span>Shift Type</span><input value={shiftKind(draft)} readOnly/></label>
+      <label className="shift-v3-field"><span>Total Shift Span</span><input value={duration(spanMinutes(draft.startMinute,draft.endMinute))} readOnly/></label>
+      <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
+      <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
+      <NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes})}/>
+      <label className="shift-v3-field"><span>Break Type</span><select value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Fixed (Auto-scheduled)</option><option value="SCHEDULED_PUNCH">Scheduled Punch</option><option value="FLEXIBLE_PUNCH">Flexible Punch</option></select></label>
+      {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute})}/></>}
+      <NumberField label="Late Grace" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
+      <NumberField label="Early-out Grace" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
+     </div>
+    </section>
+
+    <section className="shift-v4-panel">
+     <div className="shift-v4-panel-head"><div><h3>Working Week</h3><p>Choose the weekly pattern and roster-off allowance.</p></div><CalendarIcon/></div>
+     <div className="shift-v4-form-grid">
+      <label className="shift-v3-field span-2"><span>Working Week Pattern</span><select value={draft.workWeekMode} onChange={e=>update({workWeekMode:e.target.value})}><option value="MON_FRI">Mon - Fri</option><option value="MON_SAT">Mon - Sat</option><option value="ALTERNATE_SATURDAY">Alternate Saturday</option><option value="ALL_DAYS">All Days</option><option value="CUSTOM_WEEKLY">Custom Weekly</option></select></label>
+      {draft.workWeekMode==='ALTERNATE_SATURDAY'&&<label className="shift-v3-field span-2"><span>Alternate Saturday Rule</span><select value={draft.alternateSaturdayMode} onChange={e=>update({alternateSaturdayMode:e.target.value})}><option value="SECOND_FOURTH_OFF">2nd & 4th Saturday Off</option><option value="ODD_OFF">Odd Saturdays Off</option><option value="EVEN_OFF">Even Saturdays Off</option></select></label>}
+     </div>
+     <div className="shift-v4-days">{week.map(([key,label])=><button type="button" key={key} className={selectedDays.includes(key)?'active':''} onClick={()=>toggleDay(key)}><span>{selectedDays.includes(key)&&<Check size={14}/>}</span><strong>{label}</strong></button>)}</div>
+     <div className="shift-v4-roster-field"><NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/></div>
+    </section>
+
+    <section className="shift-v4-panel">
+     <div className="shift-v4-panel-head"><div><h3>Attendance Thresholds</h3><p>Configure half day, full day and overtime calculation limits.</p></div><AlarmClock size={19}/></div>
+     <div className="shift-v4-form-grid three">
+      <NumberField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} onChange={halfDayMinutes=>update({halfDayMinutes})}/>
+      <NumberField label="Full Working Time" value={draft.fullDayMinutes} min={1} max={960} onChange={fullDayMinutes=>update({fullDayMinutes})}/>
+      <NumberField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
+     </div>
+     <div className="shift-v4-timezone"><label className="shift-v3-field"><span>Timezone</span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{!['Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label></div>
+    </section>
+   </div>
+
+   <aside className="shift-v4-preview-column">
+    <section className="shift-v4-preview-card">
+     <div className="shift-v4-preview-head"><div><span>SHIFT PREVIEW</span><h3>{draft.name||'New Shift'}</h3></div><span className="shift-v3-active-chip">Active</span></div>
+     <div className="shift-v4-preview-primary"><strong>{minuteClock(draft.startMinute)}</strong><ChevronRight/><strong>{minuteClock(draft.endMinute)}</strong></div>
+     <div className="shift-v4-preview-meta"><span><small>Shift span</small><strong>{duration(spanMinutes(draft.startMinute,draft.endMinute))}</strong></span><span><small>Break allowance</small><strong>{duration(draft.breakMinutes)}</strong></span><span><small>Work pattern</small><strong>{workWeekLabel(draft)}</strong></span></div>
+     <div className="shift-v3-preview-times"><span><b>{minuteClock(draft.startMinute)}</b><small>IN</small></span>{draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null&&draft.breakEndMinute!=null?<><span><b>{minuteClock(draft.breakStartMinute)}</b><small>BREAK</small></span><span><b>{minuteClock(draft.breakEndMinute)}</b><small>RESUME</small></span></>:<span><b>{duration(draft.breakMinutes)}</b><small>BREAK ALLOWANCE</small></span>}<span><b>{minuteClock(draft.endMinute)}</b><small>OUT</small></span></div>
+     <div className="shift-v3-timeline"><i className="work"/><i className="break"/><i className="work"/></div>
+     <div className="shift-v3-preview-legend"><span>Working</span><span>{draft.breakMode==='FLEXIBLE_PUNCH'?'Flexible break':duration(draft.breakMinutes)+' break'}</span><span>Working</span></div>
+     <div className="shift-v4-rule-list">
+      <div><Check size={15}/><span><strong>{breakModeLabel(draft.breakMode)}</strong><small>Break timing mode</small></span></div>
+      <div><Check size={15}/><span><strong>{duration(draft.fullDayMinutes)}</strong><small>Required for Present / Full Day</small></span></div>
+      <div><Check size={15}/><span><strong>{duration(draft.halfDayMinutes)}</strong><small>Half Day worked-time threshold</small></span></div>
+      <div><Check size={15}/><span><strong>{draft.timezone}</strong><small>Attendance timezone</small></span></div>
+     </div>
+     <div className="shift-v3-preview-note"><Info size={15}/><span>Unused break allowance stays counted as working time. Final attendance follows the configured half/full-day thresholds.</span></div>
+    </section>
+
+    {editor.id&&canDelete&&<section className="shift-v4-danger-card"><div><Trash2 size={18}/><span><strong>Delete Shift</strong><small>{employeeCount(editor.id)>0?'Reassign employees before deleting this shift.':'This shift can be permanently deleted.'}</small></span></div><button className="btn danger" disabled={employeeCount(editor.id)>0} onClick={()=>editingRow&&setRemove(editingRow)}>Delete Shift</button></section>}
+   </aside>
+  </div>
+
+  <footer className="shift-v4-sticky-save"><button className="btn secondary" onClick={()=>setEditor(null)}>Cancel</button>{(editor.id?canEdit:canCreate)&&<button className="btn primary" disabled={saving||!draft.name.trim()} onClick={save}>{saving?'Saving…':editor.id?'Update Shift':'Create Shift'}</button>}</footer>
+  {remove&&<Confirm title="Delete shift?" description="This permanently removes the shift. Employees must be reassigned first and attendance references can prevent deletion." onClose={()=>setRemove(null)} onConfirm={async()=>{await mutate('shifts/'+remove.id,'DELETE');setRemove(null);setEditor(null)}}/>}
+ </div>;
+
+ return <div className="shift-v3 shift-v3-dashboard">
   <main className="shift-v3-main">
    <div className="shift-v3-breadcrumb"><span>Attendance</span><ChevronRight size={13}/><strong>Shifts</strong></div>
-   <header className="shift-v3-head"><div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>Work Shifts</h1><p>Create and manage work shifts for your organization.</p></div>{canCreate&&<button className="btn primary" onClick={add}><Plus size={16}/>Add Shift</button>}</header>
+   <header className="shift-v3-head"><div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>Work Shifts</h1><p>Create and manage work shifts for your organization.</p></div>{canCreate&&<button className="btn primary" onClick={add}><Plus size={17}/>Add Shift</button>}</header>
    <div className="shift-v3-tabs">
     <button className={!assignmentFilter?'active':''} onClick={()=>setAssignmentFilter('')}>All Shifts <span>{rows.length}</span></button>
     <button className={assignmentFilter==='ASSIGNED'?'active':''} onClick={()=>setAssignmentFilter('ASSIGNED')}>Assigned <span>{assignedTotal}</span></button>
     <button className={assignmentFilter==='UNASSIGNED'?'active':''} onClick={()=>setAssignmentFilter('UNASSIGNED')}>Unassigned <span>{unassignedTotal}</span></button>
    </div>
    <section className="shift-v3-toolbar">
-    <label><Search size={15}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shift by name…"/></label>
-    <div className="shift-v3-select"><Filter size={14}/><select value={kindFilter} onChange={e=>setKindFilter(e.target.value)}><option value="">All Types</option>{['Regular','Morning','Evening','Night','Half Day'].map(value=><option key={value}>{value}</option>)}</select></div>
-    <div className="shift-v3-select"><Users size={14}/><select value={assignmentFilter} onChange={e=>setAssignmentFilter(e.target.value)}><option value="">All Assignments</option><option value="ASSIGNED">Assigned</option><option value="UNASSIGNED">Unassigned</option></select></div>
-    <button className="shift-v3-reset" onClick={resetFilters}><RotateCcw size={14}/>Reset</button>
+    <label><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shift by name…"/></label>
+    <div className="shift-v3-select"><Filter size={15}/><select value={kindFilter} onChange={e=>setKindFilter(e.target.value)}><option value="">All Types</option>{['Regular','Morning','Evening','Night','Half Day'].map(value=><option key={value}>{value}</option>)}</select></div>
+    <div className="shift-v3-select"><Users size={15}/><select value={assignmentFilter} onChange={e=>setAssignmentFilter(e.target.value)}><option value="">All Assignments</option><option value="ASSIGNED">Assigned</option><option value="UNASSIGNED">Unassigned</option></select></div>
+    <button className="shift-v3-reset" onClick={resetFilters}><RotateCcw size={15}/>Reset</button>
    </section>
    {!rows.length?<Empty title="No shifts yet" description="Add the first work shift to configure attendance timing and break rules." action={canCreate?<button className="btn primary" onClick={add}><Plus size={16}/>Add Shift</button>:undefined}/>:!filtered.length?<Empty title="No matching shifts" description="Change the search or filters to see other shifts."/>:<section className="shift-v3-grid">
     {filtered.map((row,index)=>{
      const d=toDraft(row),kind=shiftKind(d),count=employeeCount(row.id),deps=departmentCount(row.id),tone=['blue','teal','orange','violet'][index%4];
-     return <article key={row.id} className={'shift-v3-card '+tone+(editor?.id===String(row.id)?' selected':'')} onClick={()=>openRow(row)}>
-      <div className="shift-v3-card-top"><span className="shift-v3-card-icon">{kind==='Night'?<Moon/>:kind==='Evening'?<SunMedium/>:<Clock3/>}</span><span className="shift-v3-card-status">Active</span><button className="shift-v3-card-menu" aria-label={'Edit '+row.name} onClick={e=>{e.stopPropagation();openRow(row)}}><MoreVertical size={16}/></button></div>
+     return <article key={row.id} className={'shift-v3-card '+tone} onClick={()=>openRow(row)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openRow(row)}}}>
+      <div className="shift-v3-card-top"><span className="shift-v3-card-icon">{kind==='Night'?<Moon/>:kind==='Evening'?<SunMedium/>:<Clock3/>}</span><span className="shift-v3-card-status">Active</span><button className="shift-v3-card-menu" aria-label={'Open '+row.name} onClick={e=>{e.stopPropagation();openRow(row)}}><MoreVertical size={17}/></button></div>
       <div className="shift-v3-card-title"><h3>{row.name}</h3><strong>{minuteClock(d.startMinute)} - {minuteClock(d.endMinute)}</strong><span>({duration(spanMinutes(d.startMinute,d.endMinute))})</span></div>
       <div className="shift-v3-tags"><span>{kind}</span><span>{workWeekLabel(d)}</span><span>{d.breakMinutes?duration(d.breakMinutes)+' Break':'No Break'}</span></div>
-      <div className="shift-v3-card-foot"><span><Users size={13}/><strong>{count}</strong> Employees</span><i/><span><Layers3 size={13}/><strong>{deps}</strong> Departments</span></div>
+      <div className="shift-v3-card-foot"><span><Users size={14}/><strong>{count}</strong> Employees</span><i/><span><Layers3 size={14}/><strong>{deps}</strong> Departments</span><span className="shift-v3-open-link">Open & Edit <ChevronRight size={13}/></span></div>
      </article>
     })}
    </section>}
   </main>
-
-  {editor&&draft&&<aside className="shift-v3-editor">
-   <div className="shift-v3-editor-head"><div><h2>{editor.id?'Edit Shift':'Add Shift'}</h2><p>{editor.id?'Update timing, break and attendance rules.':'Create a new attendance shift.'}</p></div><button className="icon-button" aria-label="Close shift editor" onClick={()=>setEditor(null)}><X size={18}/></button></div>
-   <div className="shift-v3-editor-scroll">
-    <section className="shift-v3-editor-summary"><span className="shift-v3-summary-icon"><Clock3/></span><div><strong>{draft.name||'New Shift'}</strong><small>{shiftKind(draft)} working shift · {duration(spanMinutes(draft.startMinute,draft.endMinute))}</small></div><span className="shift-v3-active-chip">Active</span></section>
-    <div className="shift-v3-form-grid">
-     <label className="shift-v3-field span-2"><span>Shift Name <b>*</b></span><input value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
-     <label className="shift-v3-field"><span>Shift Type</span><input value={shiftKind(draft)} readOnly/></label>
-     <label className="shift-v3-field"><span>Total Hours</span><input value={duration(spanMinutes(draft.startMinute,draft.endMinute))} readOnly/></label>
-     <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
-     <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
-     <NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes})}/>
-     <label className="shift-v3-field"><span>Break Type</span><select value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Fixed (Auto-scheduled)</option><option value="SCHEDULED_PUNCH">Scheduled Punch</option><option value="FLEXIBLE_PUNCH">Flexible Punch</option></select></label>
-     {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute})}/></>}
-     <NumberField label="Grace Time (Late)" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
-     <NumberField label="Grace Time (Early Out)" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
-    </div>
-
-    <section className="shift-v3-form-section">
-     <div className="shift-v3-section-title"><span><CalendarIcon/>Working Week</span><small>Choose a preset or customize individual days.</small></div>
-     <label className="shift-v3-field"><span>Working Week Pattern</span><select value={draft.workWeekMode} onChange={e=>update({workWeekMode:e.target.value})}><option value="MON_FRI">Mon - Fri</option><option value="MON_SAT">Mon - Sat</option><option value="ALTERNATE_SATURDAY">Alternate Saturday</option><option value="ALL_DAYS">All Days</option><option value="CUSTOM_WEEKLY">Custom Weekly</option></select></label>
-     {draft.workWeekMode==='ALTERNATE_SATURDAY'&&<label className="shift-v3-field"><span>Alternate Saturday Rule</span><select value={draft.alternateSaturdayMode} onChange={e=>update({alternateSaturdayMode:e.target.value})}><option value="SECOND_FOURTH_OFF">2nd & 4th Saturday Off</option><option value="ODD_OFF">Odd Saturdays Off</option><option value="EVEN_OFF">Even Saturdays Off</option></select></label>}
-     <div className="shift-v3-days">{week.map(([key,label])=><button type="button" key={key} className={selectedDays.includes(key)?'active':''} onClick={()=>toggleDay(key)}><span>{selectedDays.includes(key)&&<Check size={12}/>}</span>{label}</button>)}</div>
-     <NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/>
-    </section>
-
-    <section className="shift-v3-thresholds">
-     <div className="shift-v3-section-title"><span><AlarmClock size={16}/>Attendance Thresholds</span><small>These rules determine half day, present and overtime.</small></div>
-     <div className="shift-v3-form-grid three">
-      <NumberField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} onChange={halfDayMinutes=>update({halfDayMinutes})}/>
-      <NumberField label="Full Working Time" value={draft.fullDayMinutes} min={1} max={960} onChange={fullDayMinutes=>update({fullDayMinutes})}/>
-      <NumberField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
-     </div>
-     <label className="shift-v3-field"><span>Timezone</span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{![ 'Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label>
-    </section>
-
-    <section className="shift-v3-preview">
-     <div className="shift-v3-preview-title"><strong>Shift Preview</strong><small>{workWeekLabel(draft)} · {breakModeLabel(draft.breakMode)}</small></div>
-     <div className="shift-v3-preview-times"><span><b>{minuteClock(draft.startMinute)}</b><small>IN</small></span>{draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null&&draft.breakEndMinute!=null?<><span><b>{minuteClock(draft.breakStartMinute)}</b><small>BREAK</small></span><span><b>{minuteClock(draft.breakEndMinute)}</b><small>RESUME</small></span></>:<span><b>{duration(draft.breakMinutes)}</b><small>BREAK ALLOWANCE</small></span>}<span><b>{minuteClock(draft.endMinute)}</b><small>OUT</small></span></div>
-     <div className="shift-v3-timeline"><i className="work"/><i className="break"/><i className="work"/></div>
-     <div className="shift-v3-preview-legend"><span>Working</span><span>{draft.breakMode==='FLEXIBLE_PUNCH'?'Flexible break':duration(draft.breakMinutes)+' break'}</span><span>Working</span></div>
-     <div className="shift-v3-preview-note"><Info size={14}/><span>Unused break allowance stays counted as working time. Final attendance follows the configured half/full-day thresholds.</span></div>
-    </section>
-   </div>
-   <footer className="shift-v3-editor-foot">
-    <div>{editor.id&&canDelete&&<button className="btn danger" disabled={employeeCount(editor.id)>0} title={employeeCount(editor.id)>0?'Reassign employees before deleting this shift.':'Delete shift'} onClick={()=>editingRow&&setRemove(editingRow)}><Trash2 size={15}/>Delete Shift</button>}</div>
-    <div><button className="btn secondary" onClick={()=>setEditor(null)}>Cancel</button>{(editor.id?canEdit:canCreate)&&<button className="btn primary" disabled={saving||!draft.name.trim()} onClick={save}>{saving?'Saving…':editor.id?'Update Shift':'Create Shift'}</button>}</div>
-   </footer>
-  </aside>}
-  {remove&&<Confirm title="Delete shift?" description="This permanently removes the shift. Employees must be reassigned first and attendance references can prevent deletion." onClose={()=>setRemove(null)} onConfirm={async()=>{await mutate('shifts/'+remove.id,'DELETE');setRemove(null);setEditor(null)}}/>}
  </div>;
 }
 function CalendarIcon(){return <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 5h18v16H3z"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>}
