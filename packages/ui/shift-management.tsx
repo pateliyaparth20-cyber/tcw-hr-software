@@ -67,8 +67,16 @@ const shiftPayload=(draft:ShiftDraft)=>({
  fullDayMinutes:draft.fullDayMinutes,halfDayMinutes:draft.halfDayMinutes,overtimeAfterMinutes:draft.overtimeAfterMinutes,timezone:draft.timezone
 });
 
-function NumberField({label,value,onChange,min=0,max=960,suffix='minutes'}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;suffix?:string}){
- return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="number" min={min} max={max} value={value} onChange={e=>onChange(Math.max(min,Math.min(max,Number(e.target.value)||0)))}/><strong>{suffix}</strong></div></label>;
+function NumberField({label,value,onChange,min=0,max=960,suffix='minutes',help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;suffix?:string;help?:string}){
+ return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="number" min={min} max={max} value={value} onChange={e=>onChange(Math.max(min,Math.min(max,Number(e.target.value)||0)))}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
+}
+function DurationField({label,value,onChange,min=1,max=960,help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;help?:string}){
+ const safe=Math.max(min,Math.min(max,Number(value)||0)),hours=Math.floor(safe/60),minutes=safe%60;
+ const commit=(nextHours:number,nextMinutes:number)=>onChange(Math.max(min,Math.min(max,(Math.max(0,nextHours)||0)*60+Math.max(0,Math.min(59,nextMinutes||0)))));
+ return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-input">
+  <div><input aria-label={label+' hours'} type="number" min={0} max={Math.floor(max/60)} value={hours} onChange={e=>commit(Number(e.target.value)||0,minutes)}/><strong>hr</strong></div>
+  <div><input aria-label={label+' minutes'} type="number" min={0} max={59} value={minutes} onChange={e=>commit(hours,Number(e.target.value)||0)}/><strong>min</strong></div>
+ </div><small className="shift-v5-field-help">{help?help+' · ':''}{duration(safe)} total ({safe} minutes)</small></label>;
 }
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
  return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v5-time-input"><Clock3 size={18}/><input type="time" value={value==null?'':minuteTime(value)} onChange={e=>onChange(e.target.value?timeMinute(e.target.value):null)}/></div></label>;
@@ -160,11 +168,16 @@ export function ShiftManagement(){
         {draft.workWeekMode==='ALTERNATE_SATURDAY'&&<label className="shift-v5-field span-2"><span>Alternate Saturday Rule</span><select value={draft.alternateSaturdayMode} onChange={e=>update({alternateSaturdayMode:e.target.value})}><option value="SECOND_FOURTH_OFF">2nd & 4th Saturday Off</option><option value="ODD_OFF">Odd Saturdays Off</option><option value="EVEN_OFF">Even Saturdays Off</option></select></label>}
        </div>
        <div className="shift-v5-days">{week.map(([key,label])=><button type="button" key={key} className={selectedDays.includes(key)?'active':''} onClick={()=>toggleDay(key)}><span>{selectedDays.includes(key)&&<Check size={14}/>}</span><strong>{label}</strong></button>)}</div>
-       <div className="shift-v5-threshold-row">
-        <NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/>
-        <NumberField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} onChange={halfDayMinutes=>update({halfDayMinutes})}/>
-        <NumberField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} onChange={fullDayMinutes=>update({fullDayMinutes})}/>
-        <NumberField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
+       <div className="shift-v5-thresholds">
+        <div className="shift-v5-roster-field">
+         <NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" help="0 disables flexible roster-off. Example: 4 lets HR mark any 4 dates as roster off in a month." onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/>
+        </div>
+        <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Enter each rule in hours and minutes. The system will continue saving the exact total in minutes.</span></div>
+        <div className="shift-v5-duration-grid">
+         <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for Half Day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
+         <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
+         <DurationField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} help="Worked-time threshold used for overtime" onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
+        </div>
        </div>
       </section>
      </div>
@@ -197,6 +210,10 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Late Grace</span><strong>{draft.graceMinutes} minute{draft.graceMinutes===1?'':'s'}</strong></div>
       <div><Clock3 size={18}/><span>Early-out Grace</span><strong>{draft.earlyOutGraceMinutes} minute{draft.earlyOutGraceMinutes===1?'':'s'}</strong></div>
       <div><Layers3 size={18}/><span>Break Type</span><strong>{breakModeLabel(draft.breakMode)}</strong></div>
+      <div><CalendarIcon/><span>Roster-off / Month</span><strong>{draft.monthlyFlexibleOffDays} day{draft.monthlyFlexibleOffDays===1?'':'s'}</strong></div>
+      <div><Clock3 size={18}/><span>Half Day</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
+      <div><Clock3 size={18}/><span>Full Day</span><strong>{duration(draft.fullDayMinutes)}</strong></div>
+      <div><AlarmClock size={18}/><span>Overtime After</span><strong>{duration(draft.overtimeAfterMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>
      </section>
 
