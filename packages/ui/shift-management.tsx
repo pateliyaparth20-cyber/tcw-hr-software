@@ -68,15 +68,24 @@ const shiftPayload=(draft:ShiftDraft)=>({
 });
 
 function NumberField({label,value,onChange,min=0,max=960,suffix='minutes',help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;suffix?:string;help?:string}){
- return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="number" min={min} max={max} value={value} onChange={e=>onChange(Math.max(min,Math.min(max,Number(e.target.value)||0)))}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
+ const[draft,setDraft]=useState(String(value));
+ useEffect(()=>setDraft(String(value)),[value]);
+ const commit=()=>{const parsed=Number(draft);const next=Math.max(min,Math.min(max,Number.isFinite(parsed)?parsed:min));onChange(next);setDraft(String(next))};
+ return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="text" inputMode="numeric" value={draft} onChange={e=>setDraft(e.target.value.replace(/[^0-9]/g,''))} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
 function DurationField({label,value,onChange,min=1,max=960,help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;help?:string}){
- const safe=Math.max(min,Math.min(max,Number(value)||0)),hours=Math.floor(safe/60),minutes=safe%60;
- const commit=(nextHours:number,nextMinutes:number)=>onChange(Math.max(min,Math.min(max,(Math.max(0,nextHours)||0)*60+Math.max(0,Math.min(59,nextMinutes||0)))));
- return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-input">
-  <div><input aria-label={label+' hours'} type="number" min={0} max={Math.floor(max/60)} value={hours} onChange={e=>commit(Number(e.target.value)||0,minutes)}/><strong>hr</strong></div>
-  <div><input aria-label={label+' minutes'} type="number" min={0} max={59} value={minutes} onChange={e=>commit(hours,Number(e.target.value)||0)}/><strong>min</strong></div>
- </div><small className="shift-v5-field-help">{help?help+' · ':''}{duration(safe)} total ({safe} minutes)</small></label>;
+ const safe=Math.max(min,Math.min(max,Number(value)||0));
+ const formatted=`${String(Math.floor(safe/60)).padStart(2,'0')}:${String(safe%60).padStart(2,'0')}`;
+ const[draft,setDraft]=useState(formatted);
+ useEffect(()=>setDraft(formatted),[formatted]);
+ const commit=()=>{
+  const match=/^(\d{1,2}):([0-5]\d)$/.exec(draft.trim());
+  if(!match){setDraft(formatted);return;}
+  const next=Math.max(min,Math.min(max,Number(match[1])*60+Number(match[2])));
+  onChange(next);
+  setDraft(`${String(Math.floor(next/60)).padStart(2,'0')}:${String(next%60).padStart(2,'0')}`);
+ };
+ return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-clock"><Clock3 size={18}/><input aria-label={label+' in HH:MM'} type="text" inputMode="numeric" placeholder="HH:MM" value={draft} onChange={e=>setDraft(e.target.value.replace(/[^0-9:]/g,'').slice(0,5))} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}/><strong>HH:MM</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
  return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v5-time-input"><Clock3 size={18}/><input type="time" value={value==null?'':minuteTime(value)} onChange={e=>onChange(e.target.value?timeMinute(e.target.value):null)}/></div></label>;
@@ -149,7 +158,7 @@ export function ShiftManagement(){
        <div className="shift-v5-grid two">
         <label className="shift-v5-field"><span>Shift Name <b>*</b></span><input value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
         <label className="shift-v5-field"><span>Shift Type <b>*</b></span><select value={draft.shiftType} onChange={e=>update({shiftType:e.target.value as ShiftType})}><option value="REGULAR">Regular</option><option value="MORNING">Morning</option><option value="EVENING">Evening</option><option value="NIGHT">Night</option><option value="HALF_DAY">Half Day</option></select></label>
-        <label className="shift-v5-field"><span>Total Shift Span</span><div className="shift-v5-readonly-value"><strong>{duration(totalShiftSpan)}</strong><span>hours</span></div></label>
+        <DurationField label="Total Shift Span" value={totalShiftSpan} min={1} max={1440} help="Manual HH:MM. Changing this automatically adjusts End Time." onChange={minutes=>update({endMinute:(draft.startMinute+minutes)%1440})}/>
         <label className="shift-v5-field"><span>Timezone <b>*</b></span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{!['Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata (GMT +5:30)</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label>
         <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
         <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
@@ -172,7 +181,7 @@ export function ShiftManagement(){
         <div className="shift-v5-roster-field">
          <NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" help="0 disables flexible roster-off. Example: 4 lets HR mark any 4 dates as roster off in a month." onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/>
         </div>
-        <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Enter each rule in hours and minutes. The system will continue saving the exact total in minutes.</span></div>
+        <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Type values manually in HH:MM clock format. Exact minutes are saved in the backend.</span></div>
         <div className="shift-v5-duration-grid">
          <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for Half Day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
          <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
