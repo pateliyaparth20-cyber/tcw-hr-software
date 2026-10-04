@@ -4,8 +4,9 @@ import {AlarmClock,Check,ChevronLeft,ChevronRight,Clock3,Filter,Info,Layers3,Moo
 import {Confirm,Empty,Failure,Loading,useApp,useData} from './core';
 import {Row} from './config';
 
+type ShiftType='REGULAR'|'MORNING'|'EVENING'|'NIGHT'|'HALF_DAY';
 type ShiftDraft={
- name:string;startMinute:number;endMinute:number;graceMinutes:number;earlyOutGraceMinutes:number;
+ name:string;shiftType:ShiftType;startMinute:number;endMinute:number;graceMinutes:number;earlyOutGraceMinutes:number;
  workWeekMode:string;workingDays:string;alternateSaturdayMode:string;monthlyFlexibleOffDays:number;
  breakMinutes:number;breakMode:'AUTOMATIC_SCHEDULED'|'SCHEDULED_PUNCH'|'FLEXIBLE_PUNCH';
  breakStartMinute:number|null;breakEndMinute:number|null;fullDayMinutes:number;halfDayMinutes:number;
@@ -32,21 +33,24 @@ const workWeekLabel=(row:Pick<ShiftDraft,'workWeekMode'|'workingDays'|'alternate
  if(row.workWeekMode==='ALTERNATE_SATURDAY')return row.alternateSaturdayMode==='ODD_OFF'?'Alternate Sat · odd off':row.alternateSaturdayMode==='EVEN_OFF'?'Alternate Sat · even off':'2nd & 4th Sat off';
  const selected=workDaysFor(row);return week.filter(([key])=>selected.includes(key)).map(([,label])=>label).join(', ')||'Custom';
 };
-const shiftKind=(row:Pick<ShiftDraft,'startMinute'|'endMinute'|'fullDayMinutes'>)=>{
- if(row.endMinute<=row.startMinute)return 'Night';
- if(row.fullDayMinutes<=300)return 'Half Day';
- if(row.startMinute<720)return 'Morning';
- if(row.startMinute>=780)return 'Evening';
- return 'Regular';
+const inferShiftType=(row:{startMinute?:any;endMinute?:any;name?:any}):ShiftType=>{
+ const start=Number(row.startMinute??0),end=Number(row.endMinute??0),name=String(row.name??'').toLowerCase();
+ if(name.includes('half'))return 'HALF_DAY';
+ if(end<=start)return 'NIGHT';
+ if(start<720)return 'MORNING';
+ if(start>=780)return 'EVENING';
+ return 'REGULAR';
 };
+const shiftTypeLabel=(type:string)=>type==='HALF_DAY'?'Half Day':type==='MORNING'?'Morning':type==='EVENING'?'Evening':type==='NIGHT'?'Night':'Regular';
+const shiftKind=(row:Pick<ShiftDraft,'shiftType'>)=>shiftTypeLabel(row.shiftType);
 const defaultDraft=():ShiftDraft=>({
- name:'',startMinute:570,endMinute:1110,graceMinutes:10,earlyOutGraceMinutes:10,workWeekMode:'MON_SAT',
+ name:'',shiftType:'REGULAR',startMinute:570,endMinute:1110,graceMinutes:10,earlyOutGraceMinutes:10,workWeekMode:'MON_SAT',
  workingDays:'1,2,3,4,5,6',alternateSaturdayMode:'SECOND_FOURTH_OFF',monthlyFlexibleOffDays:0,breakMinutes:30,
  breakMode:'AUTOMATIC_SCHEDULED',breakStartMinute:840,breakEndMinute:870,fullDayMinutes:480,halfDayMinutes:240,
  overtimeAfterMinutes:480,timezone:'Asia/Kolkata'
 });
 const toDraft=(row:Row):ShiftDraft=>({
- name:String(row.name??''),startMinute:Number(row.startMinute??570),endMinute:Number(row.endMinute??1110),
+ name:String(row.name??''),shiftType:(String(row.shiftType??inferShiftType(row)) as ShiftType),startMinute:Number(row.startMinute??570),endMinute:Number(row.endMinute??1110),
  graceMinutes:Number(row.graceMinutes??10),earlyOutGraceMinutes:Number(row.earlyOutGraceMinutes??10),
  workWeekMode:String(row.workWeekMode??'CUSTOM_WEEKLY'),workingDays:String(row.workingDays??'1,2,3,4,5'),
  alternateSaturdayMode:String(row.alternateSaturdayMode??'SECOND_FOURTH_OFF'),monthlyFlexibleOffDays:Number(row.monthlyFlexibleOffDays??0),
@@ -56,7 +60,7 @@ const toDraft=(row:Row):ShiftDraft=>({
  overtimeAfterMinutes:Number(row.overtimeAfterMinutes??480),timezone:String(row.timezone??'Asia/Kolkata')
 });
 const shiftPayload=(draft:ShiftDraft)=>({
- name:draft.name.trim(),startMinute:draft.startMinute,endMinute:draft.endMinute,graceMinutes:draft.graceMinutes,earlyOutGraceMinutes:draft.earlyOutGraceMinutes,
+ name:draft.name.trim(),shiftType:draft.shiftType,startMinute:draft.startMinute,endMinute:draft.endMinute,graceMinutes:draft.graceMinutes,earlyOutGraceMinutes:draft.earlyOutGraceMinutes,
  workWeekMode:draft.workWeekMode,workingDays:draft.workingDays,alternateSaturdayMode:draft.alternateSaturdayMode,monthlyFlexibleOffDays:draft.monthlyFlexibleOffDays,
  breakMinutes:draft.breakMinutes,punchDrivenBreaks:draft.breakMode!=='AUTOMATIC_SCHEDULED',flexibleBreakAnytime:draft.breakMode==='FLEXIBLE_PUNCH',
  breakStartMinute:draft.breakMode==='FLEXIBLE_PUNCH'?null:draft.breakStartMinute,breakEndMinute:draft.breakMode==='FLEXIBLE_PUNCH'?null:draft.breakEndMinute,
@@ -110,6 +114,7 @@ export function ShiftManagement(){
 
  if(editor&&draft){
   const totalShiftSpan=spanMinutes(draft.startMinute,draft.endMinute);
+  const previewWorkingMinutes=draft.breakMode==='AUTOMATIC_SCHEDULED'?Math.max(0,totalShiftSpan-draft.breakMinutes):draft.fullDayMinutes;
   const previewBreakStart=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?draft.breakStartMinute:null;
   const previewBreakEnd=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakEndMinute!=null?draft.breakEndMinute:null;
   return <div className="shift-v5-page">
@@ -135,7 +140,7 @@ export function ShiftManagement(){
       <section className="shift-v5-section">
        <div className="shift-v5-grid two">
         <label className="shift-v5-field"><span>Shift Name <b>*</b></span><input value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
-        <label className="shift-v5-field"><span>Shift Type</span><input value={shiftKind(draft)} readOnly/></label>
+        <label className="shift-v5-field"><span>Shift Type <b>*</b></span><select value={draft.shiftType} onChange={e=>update({shiftType:e.target.value as ShiftType})}><option value="REGULAR">Regular</option><option value="MORNING">Morning</option><option value="EVENING">Evening</option><option value="NIGHT">Night</option><option value="HALF_DAY">Half Day</option></select></label>
         <label className="shift-v5-field"><span>Total Shift Span</span><div className="shift-v5-readonly-value"><strong>{duration(totalShiftSpan)}</strong><span>hours</span></div></label>
         <label className="shift-v5-field"><span>Timezone <b>*</b></span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{!['Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata (GMT +5:30)</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label>
         <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
@@ -183,7 +188,7 @@ export function ShiftManagement(){
       <div className="shift-v5-break-caption">{draft.breakMode==='FLEXIBLE_PUNCH'?'Flexible '+duration(draft.breakMinutes)+' break':duration(draft.breakMinutes)+' break'}</div>
      </div>
 
-     <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Full Day Target</small><strong>{duration(draft.fullDayMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(draft.breakMinutes)}</strong></div></div>
+     <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Work Duration</small><strong>{duration(previewWorkingMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(draft.breakMinutes)}</strong></div></div>
 
      <section className="shift-v5-rule-summary">
       <h3>Shift Rules & Summary</h3>
@@ -195,7 +200,7 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>
      </section>
 
-     <div className="shift-v5-info"><Info size={18}/><div><strong>Unused break allowance stays counted as working time.</strong><p>Final attendance and working hours follow the configured shift rules and thresholds.</p></div></div>
+     <div className="shift-v5-info"><Info size={18}/><div><strong>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Automatic scheduled break is excluded from working hours.':'Unused manual break allowance stays counted as working time.'}</strong><p>{draft.breakMode==='AUTOMATIC_SCHEDULED'?'The configured break window is deducted automatically even if the employee stays checked in.':'Manual break time is deducted from actual OUT/IN punch usage; unused allowance remains working time.'}</p></div></div>
     </aside>
    </div>
 
