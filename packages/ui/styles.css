@@ -15783,3 +15783,27 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   .shift-v5-days{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   .shift-v5-preview-metrics{grid-template-columns:1fr!important}
 }
+
+
+/* Phone attendance keeps employee/status pinned while the metrics pane scrolls horizontally. */
+@media(max-width:760px){
+  .attendance-split-table{
+    display:grid!important;
+    grid-template-columns:220px minmax(0,1fr)!important;
+    width:100%!important;
+    overflow:hidden!important;
+    scroll-snap-type:none!important;
+  }
+  .attendance-frozen-pane,.attendance-main-pane{display:block!important;min-width:0!important;overflow:hidden!important}
+  .attendance-frozen-scroll{width:100%!important;max-height:none!important;overflow:visible!important;padding-bottom:0!important}
+  .attendance-main-scroll{width:100%!important;max-height:none!important;overflow-x:auto!important;overflow-y:visible!important;-webkit-overflow-scrolling:touch!important}
+  .attendance-split-table .attendance-frozen-table{width:220px!important;min-width:220px!important;max-width:220px!important}
+  .attendance-split-table .attendance-frozen-table col.c-employee{width:145px!important}
+  .attendance-split-table .attendance-frozen-table col.c-status{width:75px!important}
+  .attendance-split-table .attendance-main-table{width:1270px!important;min-width:1270px!important;max-width:1270px!important}
+  .attendance-frozen-table .person-cell{gap:8px!important}
+  .attendance-frozen-table .person-cell .avatar{width:34px!important;height:34px!important;flex:0 0 34px!important}
+  .attendance-frozen-table .person-cell strong{max-width:82px!important;font-size:12px!important}
+  .attendance-frozen-table .person-cell small{max-width:82px!important;font-size:10px!important}
+  .attendance-frozen-table .badge{max-width:70px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:10px!important;padding:5px 6px!important}
+}
