@@ -94,9 +94,9 @@ export function allocateBreakUsageSeconds(elapsedSeconds:number,usedBreakSeconds
   return {breakSeconds,overBreakSeconds:Math.max(0,elapsed-breakSeconds)};
 }
 export function punchDrivenBreakUsageSeconds(gapStart:Date,gapEnd:Date,windowStart:Date,windowEnd:Date,allowedBreakSeconds:number){
-  const allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),windowStartMs=windowStart.getTime(),entitlementEndMs=Math.min(windowEnd.getTime(),windowStartMs+allowed*1000),startMs=gapStart.getTime(),endMs=Math.max(startMs,gapEnd.getTime());
-  if(allowed<=0||startMs<windowStartMs||startMs>=entitlementEndMs)return {breakSeconds:0,overBreakSeconds:0,startOffsetSeconds:0,remainingAtStartSeconds:0,entitlementEnd:new Date(entitlementEndMs)};
-  const startOffsetSeconds=Math.max(0,Math.floor((startMs-windowStartMs)/1000)),breakClockEndMs=Math.min(endMs,entitlementEndMs),breakSeconds=Math.max(0,Math.floor((breakClockEndMs-windowStartMs)/1000)),overBreakSeconds=Math.max(0,Math.floor((endMs-entitlementEndMs)/1000)),remainingAtStartSeconds=Math.max(0,Math.floor((entitlementEndMs-startMs)/1000));
+  const allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),windowStartMs=windowStart.getTime(),windowEndMs=windowEnd.getTime(),startMs=gapStart.getTime(),endMs=Math.max(startMs,gapEnd.getTime()),entitlementEndMs=startMs+allowed*1000;
+  if(allowed<=0||startMs<windowStartMs||startMs>=windowEndMs)return {breakSeconds:0,overBreakSeconds:0,startOffsetSeconds:0,remainingAtStartSeconds:0,entitlementEnd:new Date(entitlementEndMs)};
+  const startOffsetSeconds=Math.max(0,Math.floor((startMs-windowStartMs)/1000)),elapsedSeconds=Math.max(0,Math.floor((endMs-startMs)/1000)),breakSeconds=Math.min(elapsedSeconds,allowed),overBreakSeconds=Math.max(0,elapsedSeconds-allowed),remainingAtStartSeconds=allowed;
   return {breakSeconds,overBreakSeconds,startOffsetSeconds,remainingAtStartSeconds,entitlementEnd:new Date(entitlementEndMs)};
 }
 export function workingDaySet(value:string|undefined|null){
