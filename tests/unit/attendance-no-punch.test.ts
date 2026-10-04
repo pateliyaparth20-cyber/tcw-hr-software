@@ -9,9 +9,9 @@ test('no-punch attendance stays pending until late grace expires',()=>{
   assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T03:39:59.000Z'),start,end,10),'PENDING');
 });
 
-test('no-punch attendance stays half day after late grace until assigned shift end',()=>{
-  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T03:40:00.000Z'),start,end,10),'HALF_DAY');
-  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T12:29:59.000Z'),start,end,10),'HALF_DAY');
+test('no-punch attendance is not clocked in after grace until assigned shift end',()=>{
+  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T03:40:00.000Z'),start,end,10),'NOT_CLOCKED_IN');
+  assert.equal(noPunchAttendanceStatus(new Date('2026-10-03T12:29:59.000Z'),start,end,10),'NOT_CLOCKED_IN');
 });
 
 test('no-punch attendance becomes absent at assigned shift end',()=>{
