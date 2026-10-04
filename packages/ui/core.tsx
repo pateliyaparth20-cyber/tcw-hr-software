@@ -227,9 +227,18 @@ function Time12Field({id,value,onChange}:{id:string;value:any;onChange:(value:st
  return <div id={id} className={'time12-field '+(open?'open':'')} role="button" aria-expanded={open} tabIndex={0} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();setOpen(false);return}if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><Clock3 size={17}/><span>{display}</span><ChevronRight size={16} className="time12-chevron"/>{open&&<div className="time12-popover" onClick={e=>e.stopPropagation()}><div className="time12-grid"><div><span>Hour</span><select value={hour} onChange={e=>update(Number(e.target.value),mm,period)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div><div><span>Minute</span><select value={mm} onChange={e=>update(hour,Number(e.target.value),period)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div><div><span>AM / PM</span><select value={period} onChange={e=>update(hour,mm,e.target.value as 'AM'|'PM')}><option>AM</option><option>PM</option></select></div></div><div className="time12-actions"><button type="button" className="btn secondary small" onClick={()=>{onChange('');setOpen(false)}}>Clear</button><button type="button" className="btn primary small" onClick={()=>setOpen(false)}>Done</button></div></div>}</div>;
 }
 function DurationField({id,value,onChange}:{id:string;value:any;onChange:(value:number)=>void}){
- const[open,setOpen]=useState(false),total=Math.max(0,Number(value??0)),hours=Math.floor(total/60),minutes=total%60,display=`${hours}h ${String(minutes).padStart(2,'0')}m`;
- const update=(nextHours:number,nextMinutes:number)=>onChange(Math.max(0,nextHours)*60+Math.min(59,Math.max(0,nextMinutes)));
- return <div id={id} className={'duration-clock-field '+(open?'open':'')} role="button" aria-expanded={open} tabIndex={0} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();setOpen(false);return}if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><Clock3 size={17}/><span>{display}</span><ChevronRight size={16} className="time12-chevron"/>{open&&<div className="duration-clock-popover" onClick={e=>e.stopPropagation()}><div className="duration-clock-grid"><div><span>Hours</span><select value={Math.min(23,hours)} onChange={e=>update(Number(e.target.value),minutes)}>{Array.from({length:24},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div><div><span>Minutes</span><select value={minutes} onChange={e=>update(hours,Number(e.target.value))}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div></div><div className="time12-actions"><button type="button" className="btn primary small" onClick={()=>setOpen(false)}>Done</button></div></div>}</div>;
+ const total=Math.max(0,Number(value??0));
+ const formatted=`${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+ const [draft,setDraft]=useState(formatted);
+ useEffect(()=>setDraft(formatted),[formatted]);
+ const commit=()=>{
+  const match=/^(\d{1,3}):([0-5]\d)$/.exec(draft.trim());
+  if(!match){setDraft(formatted);return;}
+  const minutes=Number(match[1])*60+Number(match[2]);
+  onChange(minutes);
+  setDraft(`${String(Number(match[1])).padStart(2,'0')}:${match[2]}`);
+ };
+ return <div className="duration-clock-field duration-clock-manual"><Clock3 size={18}/><input id={id} type="text" inputMode="numeric" aria-label="Duration in hours and minutes" aria-description="Enter duration as hours colon minutes, for example 08:30" placeholder="HH:MM" pattern="[0-9]{1,3}:[0-5][0-9]" value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><span className="duration-clock-unit">HH:MM</span></div>;
 }
 
 const getPath=(obj:any,path:string)=>path.split('.').reduce((v,k)=>v?.[k],obj);
