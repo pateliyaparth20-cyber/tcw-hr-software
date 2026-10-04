@@ -79,7 +79,7 @@ test('punched attendance stays present until shift end and finalizes afterwards'
 
 test('no punch becomes absent only at shift end',()=>{
  const start=t('09:00'),end=t('17:00');
- assert.equal(noPunchAttendanceStatus(t('09:05'),start,end,10),'PENDING');
+ assert.equal(noPunchAttendanceStatus(t('08:59'),start,end,10),'PENDING');assert.equal(noPunchAttendanceStatus(t('09:00'),start,end,10),'NOT_CLOCKED_IN');
  assert.equal(noPunchAttendanceStatus(t('12:00'),start,end,10),'NOT_CLOCKED_IN');
  assert.equal(noPunchAttendanceStatus(end,start,end,10),'ABSENT');
 });
