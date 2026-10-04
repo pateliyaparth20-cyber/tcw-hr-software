@@ -170,7 +170,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
       {selected&&!detailClosed&&<aside className="timeoff-v3-detail">
         <div className="timeoff-v3-detail-head"><h2>Time Off Details</h2><button className="icon-button" aria-label="Close time off details" onClick={()=>{setDetailClosed(true);setSelectedId(null)}}><X size={20}/></button></div>
         <div className="timeoff-v3-detail-body">
-          <div className="timeoff-v3-status-line"><span className={'timeoff-v3-status-dot '+String(selected.status??'').toLowerCase()}/><strong>{statusCopy(selected.status)}</strong></div>
+          <div className={'timeoff-v3-status-line '+String(selected.status??'pending').toLowerCase()}><span className={'timeoff-v3-status-dot '+String(selected.status??'').toLowerCase()}/><strong>{statusCopy(selected.status)}</strong></div>
           <div className="timeoff-v3-detail-person"><Avatar large name={selectedName} src={selectedEmployee?.photo}/><div><h3>{selectedName}</h3><p>{selectedEmployee?.designation??selectedEmployee?.employeeCode??''}</p></div></div>
 
           <dl className="timeoff-v3-detail-grid">
