@@ -29,7 +29,7 @@ test('returning from a break does not leave an interim early-out value',()=>{
   assert.equal(result.earlyOutMinutes,0);
 });
 
-test('configured break is excluded from automatic total work and full-day status',()=>{
+test('unused scheduled break allowance stays counted as working time',()=>{
   const result=calculateAttendance([
     {time:new Date('2026-10-03T03:30:00.000Z'),type:'IN'},
     {time:new Date('2026-10-03T12:30:00.000Z'),type:'OUT'}
@@ -44,13 +44,15 @@ test('configured break is excluded from automatic total work and full-day status
     halfDayMinutes:240,
     overtimeAfterMinutes:480
   });
-  assert.equal(result.workMinutes,480);
+  assert.equal(result.workMinutes,540);
   assert.equal(result.status,'PRESENT');
 });
 
-test('half-day threshold also uses work time after scheduled break is excluded',()=>{
+test('only the break actually taken is excluded and the unused balance becomes work',()=>{
   const result=calculateAttendance([
     {time:new Date('2026-10-03T03:30:00.000Z'),type:'IN'},
+    {time:new Date('2026-10-03T06:50:00.000Z'),type:'OUT'},
+    {time:new Date('2026-10-03T07:10:00.000Z'),type:'IN'},
     {time:new Date('2026-10-03T08:30:00.000Z'),type:'OUT'}
   ],{
     shiftStart:new Date('2026-10-03T03:30:00.000Z'),
@@ -63,7 +65,7 @@ test('half-day threshold also uses work time after scheduled break is excluded',
     halfDayMinutes:240,
     overtimeAfterMinutes:480
   });
-  assert.equal(result.workMinutes,240);
+  assert.equal(result.workMinutes,280);
   assert.equal(result.status,'HALF_DAY');
 });
 
