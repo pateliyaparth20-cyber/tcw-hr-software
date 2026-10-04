@@ -15089,3 +15089,12 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   .timeoff-v3-detail-grid{grid-template-columns:92px minmax(0,1fr)}
   .leave-policy-workspace-head>div{flex-direction:column}
 }
+
+/* Manual clock-style shift duration inputs */
+.duration-clock-manual{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 14px;border:1px solid #d9e2ef;border-radius:10px;background:#fff;color:#48617f;cursor:text}
+.duration-clock-manual:focus-within{border-color:#2f78ff;box-shadow:0 0 0 3px rgba(47,120,255,.12)}
+.duration-clock-manual input{flex:1;min-width:0;border:0!important;background:transparent!important;outline:none!important;box-shadow:none!important;font:inherit;font-size:17px!important;font-weight:600;color:#17243c;padding:10px 0!important;appearance:textfield;-moz-appearance:textfield}
+.duration-clock-manual input::-webkit-inner-spin-button,.duration-clock-manual input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.duration-clock-unit{color:#8090a6;font-size:12px;white-space:nowrap}
+.record-form input[type=number]::-webkit-inner-spin-button,.record-form input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.record-form input[type=number]{-moz-appearance:textfield;appearance:textfield}
