@@ -114,6 +114,7 @@ export function ShiftManagement(){
 
  if(editor&&draft){
   const totalShiftSpan=spanMinutes(draft.startMinute,draft.endMinute);
+  const previewWorkingMinutes=draft.breakMode==='AUTOMATIC_SCHEDULED'?Math.max(0,totalShiftSpan-draft.breakMinutes):draft.fullDayMinutes;
   const previewBreakStart=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?draft.breakStartMinute:null;
   const previewBreakEnd=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakEndMinute!=null?draft.breakEndMinute:null;
   return <div className="shift-v5-page">
@@ -187,7 +188,7 @@ export function ShiftManagement(){
       <div className="shift-v5-break-caption">{draft.breakMode==='FLEXIBLE_PUNCH'?'Flexible '+duration(draft.breakMinutes)+' break':duration(draft.breakMinutes)+' break'}</div>
      </div>
 
-     <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Full Day Target</small><strong>{duration(draft.fullDayMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(draft.breakMinutes)}</strong></div></div>
+     <div className="shift-v5-preview-metrics"><div><small>Total Shift</small><strong>{duration(totalShiftSpan)}</strong></div><div><small>Work Duration</small><strong>{duration(previewWorkingMinutes)}</strong></div><div><small>Break Duration</small><strong>{duration(draft.breakMinutes)}</strong></div></div>
 
      <section className="shift-v5-rule-summary">
       <h3>Shift Rules & Summary</h3>
