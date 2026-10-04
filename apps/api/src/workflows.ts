@@ -34,6 +34,14 @@ export class Workflows {
       await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT','attendance',out.id,last,{leaveId:row.id,employeeId:row.employeeId,punchTime:now});
     });
   }
+  private async reconcileApprovedLeaveAttendance(ctx:Context,row:any){
+    if(!row)return;
+    const tid=tenant(ctx),company=await this.db.tenant.findUnique({where:{id:tid},select:{timezone:true}}),currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
+    for(const month of monthsCovered(row.startDate,row.endDate)){
+      if(month>currentMonth)continue;
+      await reconcileAttendanceMonth(this.db,tid,month);
+    }
+  }
   async attendance(ctx:Context,method:string,body:any,query:any={},recordId?:string,action?:string){
     const tid=tenant(ctx);const scope=await employeeScope(this.db,ctx);
     if(recordId==='face-profile'){
@@ -227,6 +235,7 @@ export class Workflows {
     await this.notifyLeaveReporting(ctx,after,autoApprove);
     if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
+      await this.reconcileApprovedLeaveAttendance(ctx,after);
       const user=await this.db.user.findFirst({where:{tenantId:tid,employeeId:after.employeeId}});
       if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave assigned',message:'HR assigned approved leave to your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
     }
@@ -245,6 +254,7 @@ export class Workflows {
     });
     if(type==='leave'&&input.decision==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,reviewed);
+      await this.reconcileApprovedLeaveAttendance(ctx,reviewed);
     }
     return reviewed;
   }
