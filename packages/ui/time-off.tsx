@@ -104,7 +104,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
     String(r.status)==='APPROVED'&&
     new Date(r.startDate).getUTCFullYear()===selectedYear
   ):[];
-  const paidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid!==false).reduce((n,r)=>n+Number(r.days??0),0);
+  const paidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid===true).reduce((n,r)=>n+Number(r.days??0),0);
   const unpaidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid===false).reduce((n,r)=>n+Number(r.days??0),0);
   const totalLeaveBalance=balances.reduce((n,b)=>n+Number(b.remaining??0),0);
 
