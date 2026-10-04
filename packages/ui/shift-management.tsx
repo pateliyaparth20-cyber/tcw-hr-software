@@ -101,16 +101,24 @@ function parseClockText(value:string){
  return null;
 }
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
- const formatted=value==null?'':minuteClock(value);
- const[draft,setDraft]=useState(formatted);
- useEffect(()=>setDraft(formatted),[formatted]);
+ const[open,setOpen]=useState(false),formatted=value==null?'':minuteClock(value),baseMinuteOfDay=value==null?540:Math.max(0,Math.min(1439,Number(value)||0)),baseHour24=Math.floor(baseMinuteOfDay/60),pickerMinute=baseMinuteOfDay%60,pickerHour=((baseHour24+11)%12)+1,pickerPeriod:('AM'|'PM')=baseHour24>=12?'PM':'AM';
+ const[draft,setDraft]=useState(formatted);useEffect(()=>setDraft(formatted),[formatted]);
  const apply=(raw:string,final=false)=>{
   const clean=raw.replace(/[^0-9aApPmM:\s]/g,'').slice(0,11);setDraft(clean);
   if(clean.trim()===''){if(!required)onChange(null);return;}
   const parsed=parseClockText(clean);if(parsed==null){if(final)setDraft(formatted);return;}
   onChange(parsed);if(final)setDraft(minuteClock(parsed));
  };
- return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className="shift-v5-time-input"><Clock3 size={18}/><input type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/></div></label>;
+ const choose=(hour:number,minute:number,period:'AM'|'PM')=>{let h=hour%12;if(period==='PM')h+=12;const next=h*60+minute;onChange(next);setDraft(minuteClock(next));};
+ return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className={'shift-v5-time-input '+(open?'open':'')} onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&e.currentTarget.contains(next))return;setOpen(false)}}>
+  <Clock3 size={18}/><input type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
+  <span className="shift-v5-time-dropdown-button" role="button" tabIndex={0} aria-label={'Open '+label.toLowerCase()+' picker'} aria-expanded={open} onMouseDown={e=>e.preventDefault()} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><ChevronRight size={16} className="shift-v5-time-chevron"/></span>
+  {open&&<div className="shift-v5-time-popover">
+   <div><span>Hour</span><select value={pickerHour} onChange={e=>choose(Number(e.target.value),pickerMinute,pickerPeriod)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+   <div><span>Minute</span><select value={pickerMinute} onChange={e=>choose(pickerHour,Number(e.target.value),pickerPeriod)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+   <div><span>AM / PM</span><select value={pickerPeriod} onChange={e=>choose(pickerHour,pickerMinute,e.target.value as 'AM'|'PM')}><option>AM</option><option>PM</option></select></div>
+  </div>}
+ </div></label>;
 }
 
 export function ShiftManagement(){
@@ -211,7 +219,7 @@ export function ShiftManagement(){
         </div>
         <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Type values manually in HH:MM clock format. Exact minutes are saved in the backend.</span></div>
         <div className="shift-v5-duration-grid">
-         <DurationField label="Short Hours Threshold" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for a payable partial day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
+         <DurationField label="Insufficient Hours Threshold" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for a payable partial day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
          <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
          <DurationField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} help="Worked-time threshold used for overtime" onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
         </div>
@@ -256,7 +264,7 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Early-out Grace</span><strong>{draft.earlyOutGraceMinutes} minute{draft.earlyOutGraceMinutes===1?'':'s'}</strong></div>
       <div><Layers3 size={18}/><span>Break Type</span><strong>{breakModeLabel(draft.breakMode)}</strong></div>
       <div><CalendarIcon/><span>Roster-off / Month</span><strong>{draft.monthlyFlexibleOffDays} day{draft.monthlyFlexibleOffDays===1?'':'s'}</strong></div>
-      <div><Clock3 size={18}/><span>Short Hours Threshold</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
+      <div><Clock3 size={18}/><span>Insufficient Hours Threshold</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Full Day</span><strong>{duration(draft.fullDayMinutes)}</strong></div>
       <div><AlarmClock size={18}/><span>Overtime After</span><strong>{duration(draft.overtimeAfterMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>
@@ -273,7 +281,7 @@ export function ShiftManagement(){
  return <div className="shift-v3 shift-v3-dashboard">
   <main className="shift-v3-main">
    <div className="shift-v3-breadcrumb"><span>Attendance</span><ChevronRight size={13}/><strong>Shifts</strong></div>
-   <header className="shift-v3-head"><div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>Work Shifts</h1><p>Create and manage work shifts for your organization.</p></div>{canCreate&&<button className="btn primary" onClick={add}><Plus size={17}/>Add Shift</button>}</header>
+   <header className="shift-v3-head"><div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>Workspace</h1><p>Create and manage work shifts for your organization.</p></div>{canCreate&&<button className="btn primary" onClick={add}><Plus size={17}/>Add Shift</button>}</header>
    <div className="shift-v3-tabs">
     <button className={!assignmentFilter?'active':''} onClick={()=>setAssignmentFilter('')}>All Shifts <span>{rows.length}</span></button>
     <button className={assignmentFilter==='ASSIGNED'?'active':''} onClick={()=>setAssignmentFilter('ASSIGNED')}>Assigned <span>{assignedTotal}</span></button>
