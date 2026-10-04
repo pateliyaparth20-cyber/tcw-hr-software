@@ -14789,27 +14789,27 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
 .shift-v5-preview-panel{position:sticky;top:10px;padding:18px}
 .shift-v5-preview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.shift-v5-preview-head h2{margin:0;font-size:20px;color:#0f172a}
+.shift-v5-preview-head h2{margin:0;font-size:20px;color:#334155;font-weight:700}
 .shift-v5-preview-head p{margin:4px 0 0;font-size:12px;line-height:1.4;color:#64748b}
 .shift-v5-preview-timeline{margin:28px 0 20px}
 .shift-v5-preview-points{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .shift-v5-preview-points span{display:flex;min-width:0;flex-direction:column}
-.shift-v5-preview-points strong{font-size:13px;color:#0f172a;white-space:nowrap}
+.shift-v5-preview-points strong{font-size:13px;color:#475569;white-space:nowrap;font-weight:600}
 .shift-v5-preview-points small{margin-top:3px;font-size:11px;color:#64748b}
-.shift-v5-bar{display:grid;grid-template-columns:1.7fr .55fr 1.7fr;height:10px;margin-top:12px;border-radius:999px;overflow:hidden;background:#e2e8f0}
-.shift-v5-bar .work{background:#16a34a}.shift-v5-bar .break{background:#f59e0b}
-.shift-v5-break-caption{margin-top:7px;text-align:center;color:#64748b;font-size:11px}
+.shift-v5-bar{display:flex;height:10px;margin-top:12px;border-radius:999px;overflow:hidden;background:#e2e8f0}
+.shift-v5-bar i{display:block;min-width:0}.shift-v5-bar .work{background:#22c55e}.shift-v5-bar .break{background:#f59e0b}.shift-v5-bar .break.manual{background:#f59e0b}
+.shift-v5-break-caption{margin-top:8px;display:flex;justify-content:center;align-items:center;gap:7px;text-align:center;color:#64748b;font-size:11px}.shift-v5-break-caption strong{font-size:11px;font-weight:700;color:#64748b}.shift-v5-break-caption.manual strong{color:#b45309}.shift-v5-break-caption.manual span{color:#92400e}.shift-v5-preview-points .manual-break-point small{color:#b45309;font-weight:700}
 .shift-v5-preview-metrics{display:grid;grid-template-columns:repeat(3,1fr);margin:18px 0;border:1px solid #e5ebf2;border-radius:10px;background:#f8fafc;overflow:hidden}
 .shift-v5-preview-metrics>div{display:flex;flex-direction:column;gap:4px;padding:13px 11px;border-right:1px solid #e5ebf2}
 .shift-v5-preview-metrics>div:last-child{border-right:0}
 .shift-v5-preview-metrics small{font-size:11px;color:#64748b}
-.shift-v5-preview-metrics strong{font-size:15px;color:#0f172a}
+.shift-v5-preview-metrics strong{font-size:15px;color:#475569;font-weight:600}
 .shift-v5-rule-summary{margin-top:20px}
-.shift-v5-rule-summary h3{margin:0 0 10px;font-size:17px;color:#0f172a}
+.shift-v5-rule-summary h3{margin:0 0 10px;font-size:17px;color:#334155;font-weight:700}
 .shift-v5-rule-summary>div{display:grid;grid-template-columns:22px minmax(92px,.8fr) minmax(0,1.2fr);gap:8px;align-items:center;padding:11px 0;border-bottom:1px solid #edf1f5}
 .shift-v5-rule-summary>div>svg{color:#334155}
 .shift-v5-rule-summary span{font-size:12px;color:#475569}
-.shift-v5-rule-summary strong{font-size:12px;color:#1e293b;text-align:right;overflow-wrap:anywhere}
+.shift-v5-rule-summary strong{font-size:12px;color:#475569;font-weight:600;text-align:right;overflow-wrap:anywhere}
 .shift-v5-info{display:flex;align-items:flex-start;gap:9px;margin-top:18px;padding:13px;border-radius:9px;background:#eff6ff;color:#1d4ed8}
 .shift-v5-info>svg{flex:0 0 auto;margin-top:1px}
 .shift-v5-info strong{display:block;font-size:12px;color:#1e40af}
@@ -15103,7 +15103,7 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .shift-v5-duration-clock{height:48px;display:flex;align-items:center;gap:10px;border:1px solid #d8e0ea;border-radius:9px;background:#fff;padding:0 12px}
 .shift-v5-duration-clock:focus-within{border-color:#6f9fec;box-shadow:0 0 0 3px rgba(37,99,235,.09)}
 .shift-v5-duration-clock>svg{flex:0 0 auto;color:#6f8baa}
-.shift-v5-duration-clock input{flex:1;min-width:0;height:46px;border:0!important;background:transparent!important;outline:0!important;box-shadow:none!important;padding:0!important;font-size:16px!important;font-weight:700!important;letter-spacing:.02em;color:#0f172a!important;font-variant-numeric:tabular-nums}
+.shift-v5-duration-clock input{flex:1;min-width:0;height:46px;border:0!important;background:transparent!important;outline:0!important;box-shadow:none!important;padding:0!important;font-size:16px!important;font-weight:600!important;letter-spacing:.02em;color:#475569!important;font-variant-numeric:tabular-nums}
 .shift-v5-duration-clock strong{flex:0 0 auto;color:#7b8aa0;font-size:11px;font-weight:800;letter-spacing:.04em}
 .shift-v5-number-input input{appearance:textfield;-moz-appearance:textfield}
 .shift-v5-number-input input::-webkit-inner-spin-button,.shift-v5-number-input input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
