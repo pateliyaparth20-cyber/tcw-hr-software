@@ -141,10 +141,11 @@ export class Workflows {
       });
     }
     if(recordId&&action==='correct'&&method==='POST'){
-      requirePermission(ctx,'attendance','MANAGE');const input=z.object({status:z.enum(['PRESENT','HALF_DAY','ABSENT']),workMinutes:z.number().int().min(0).max(1440).optional(),note:z.string().trim().min(5).max(1000)}).strict().parse(body);
+      requirePermission(ctx,'attendance','MANAGE');const input=z.object({status:z.enum(['PRESENT','SHORT_HOURS','INSUFFICIENT_HOURS','ABSENT','HALF_DAY']),workMinutes:z.number().int().min(0).max(1440).optional(),note:z.string().trim().min(5).max(1000)}).strict().parse(body);
       const before=await this.db.attendanceDaily.findFirst({where:{tenantId:tid,id:id.parse(recordId)}});if(!before)throw new NotFoundException();await assertAttendanceUnlocked(this.db,tid,before.date);
-      const shift=before.shiftId?await this.db.shift.findFirst({where:{tenantId:tid,id:before.shiftId}}):null,correctedWork=input.workMinutes??before.workMinutes;
-      const after=await this.db.attendanceDaily.update({where:{id:before.id},data:{status:input.status,workMinutes:correctedWork,overtimeMinutes:shift?Math.max(0,correctedWork-shift.overtimeAfterMinutes):before.overtimeMinutes,payableUnits:attendancePayableUnits(input.status),exceptionCode:'',correctionNote:input.note}});
+      const shift=before.shiftId?await this.db.shift.findFirst({where:{tenantId:tid,id:before.shiftId}}):null,correctedWork=input.workMinutes??before.workMinutes,normalizedStatus=input.status==='HALF_DAY'?'SHORT_HOURS':input.status;
+      const payableUnits=normalizedStatus==='SHORT_HOURS'?50:attendancePayableUnits(normalizedStatus);
+      const after=await this.db.attendanceDaily.update({where:{id:before.id},data:{status:normalizedStatus,workMinutes:correctedWork,overtimeMinutes:shift?Math.max(0,correctedWork-shift.overtimeAfterMinutes):before.overtimeMinutes,payableUnits,exceptionCode:'',correctionNote:input.note}});
       await audit(this.db,ctx,'ATTENDANCE_CORRECTED','attendance',before.id,before,after);return after;
     }
     requirePermission(ctx,'attendance',method==='GET'?'VIEW':'CREATE');
