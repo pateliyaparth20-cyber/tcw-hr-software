@@ -109,9 +109,12 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await t.test('tenant suspension invalidates existing sessions',async()=>{await db.tenant.update({where:{id:betaTenant!},data:{status:'SUSPENDED'}});assert.equal((await call('employees','GET',undefined,beta)).status,403)});
   await t.test('company delete permanently purges paid and unpaid billing plus all company data',async()=>{
    await db.shift.create({data:{tenantId:betaTenant!,name:'Delete me shift',startMinute:540,endMinute:1080}});
+   const companyDeleteSourceId=randomUUID();await db.attendancePunch.create({data:{tenantId:betaTenant!,employeeId:b.data.id,sourceId:companyDeleteSourceId,punchTime:new Date(),punchType:'IN',verificationType:'MANUAL',rawPayload:{test:true}}});
    const unpaid=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-DELETE-UNPAID',amount:50000,tax:9000,dueDate:'2026-12-01'},root);assert.equal(unpaid.status,200,JSON.stringify(unpaid.data));
    assert((await db.invoice.count({where:{tenantId:betaTenant!}}))>=2);
    assert((await db.payment.count({where:{tenantId:betaTenant!}}))>=1);
+   assert.equal(await db.attendancePunch.count({where:{tenantId:betaTenant!,sourceId:companyDeleteSourceId}}),1);
+   assert((await db.auditLog.count({where:{tenantId:betaTenant!}}))>=1);
    assert((await db.lead.count({where:{notes:{contains:betaCode!}}}))>=1);
    const deleted=await call(`platform/companies/${betaTenant}`,'DELETE',undefined,root);assert.equal(deleted.status,200,JSON.stringify(deleted.data));assert.equal(deleted.data.deleted,true);
    const tenantModels=['user','session','pushSubscription','passwordReset','auditLog','outbox','branch','department','designation','team','location','costCenter','employee','employeeFaceProfile','shift','attendanceDevice','deviceEmployeeMap','deviceSyncLog','attendancePunch','attendanceDaily','attendancePeriodLock','leaveType','leaveRequest','calendarEvent','payrollRun','payrollItem','payrollPayout','payrollAdjustment','salaryRule','job','candidate','goal','course','asset','expenseClaim','travelRequest','employeeExit','document','activityEvent','productivityRule','notification','invoice','payment','supportTicket','supportTicketMessage','meghnaConversation'];
