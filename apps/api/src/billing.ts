@@ -14,6 +14,7 @@ export async function syncCompanyAccess(db:Database,tenantId?:string){
   const expired=await db.tenant.findMany({where:{...tenantWhere,status:{in:['ACTIVE','TRIAL']},expiresAt:{lt:now}}});
   for(const company of expired){
     const profile=jsonObject(company.profile),isTrial=company.status==='TRIAL'||!!profile.trialDays;
+    delete profile.billingManualActive;delete profile.billingManualActivatedAt;
     const trialProfile=isTrial?{...profile,trialFollowupStatus:['CONTACTED','NO_ANSWER','FOLLOW_UP','INTERESTED','NOT_INTERESTED'].includes(String(profile.trialFollowupStatus))?profile.trialFollowupStatus:'CALL_DUE',trialNextFollowupAt:profile.trialNextFollowupAt??now.toISOString(),trialExpiredAt:profile.trialExpiredAt??now.toISOString()}:profile;
     await db.$transaction(async tx=>{
       await tx.tenant.update({where:{id:company.id},data:{status:'EXPIRED',profile:trialProfile}});
@@ -32,7 +33,7 @@ export async function syncCompanyAccess(db:Database,tenantId?:string){
     if(company.status==='ARCHIVED'||company.status==='EXPIRED')continue;
     const overdue=await db.invoice.count({where:{tenantId:company.id,status:'OVERDUE',dueDate:{lte:cutoff}}});
     const profile=jsonObject(company.profile);
-    if(overdue>0&&['ACTIVE','TRIAL'].includes(company.status)){
+    if(overdue>0&&['ACTIVE','TRIAL'].includes(company.status)&&profile.billingManualActive!==true){
       await db.$transaction(async tx=>{
         await tx.tenant.update({where:{id:company.id},data:{status:'SUSPENDED',profile:{...profile,suspensionReason:'BILLING',billingPreviousStatus:company.status,billingSuspendedAt:now.toISOString()}}});
         await tx.session.deleteMany({where:{tenantId:company.id}});
@@ -45,6 +46,9 @@ export async function syncCompanyAccess(db:Database,tenantId?:string){
         await tx.tenant.update({where:{id:company.id},data:{status:restore,profile:cleanProfile}});
         await tx.auditLog.create({data:{tenantId:company.id,action:'BILLING_AUTO_REACTIVATED',entity:'tenants',entityId:company.id}});
       });
+    }else if(overdue===0&&profile.billingManualActive===true){
+      const {billingManualActive,billingManualActivatedAt,...cleanProfile}=profile;
+      await db.tenant.update({where:{id:company.id},data:{profile:cleanProfile}});
     }
   }
 }
