@@ -58,15 +58,19 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    const item=await db.payrollItem.findFirstOrThrow({where:{runId:prepared.data.id}});await assert.rejects(()=>db.payrollItem.update({where:{id:item.id},data:{net:1}}));
    const slips=await call('payroll','GET',undefined,self);assert.equal(slips.data.items.length,1);assert.equal(slips.data.items[0].employeeId,a.data.id);
   });
-  await t.test('leave overlap, review transitions, and self-approval controls',async()=>{
+  await t.test('leave overlap, approval, cancellation, and self-approval controls',async()=>{
    const type=await db.leaveType.findFirstOrThrow({where:{tenantId:alphaTenant,paid:true}});
    const input={employeeId:a.data.id,leaveTypeId:type.id,startDate:'2026-10-05',endDate:'2026-10-06',reason:'Test leave'};
    const row=await call('leave','POST',input,self);assert.equal(row.status,200,JSON.stringify(row.data));
    assert.equal((await call('leave','POST',input,self)).status,409);
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'APPROVED'},self)).status,403);
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'APPROVED'},beta)).status,404);
-   assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'APPROVED'},alpha)).status,200);
+   const approved=await call(`leave/${row.data.id}/review`,'POST',{decision:'APPROVED'},alpha);assert.equal(approved.status,200,JSON.stringify(approved.data));assert.equal(approved.data.status,'APPROVED');
    assert.equal((await call(`leave/${row.data.id}/review`,'POST',{decision:'REJECTED'},alpha)).status,409);
+   assert.equal((await call(`leave/${row.data.id}/cancel`,'POST',{note:'Plans changed'},beta)).status,404);
+   const cancelled=await call(`leave/${row.data.id}/cancel`,'POST',{note:'Plans changed'},self);assert.equal(cancelled.status,200,JSON.stringify(cancelled.data));assert.equal(cancelled.data.status,'CANCELLED');
+   assert.equal((await call(`leave/${row.data.id}/cancel`,'POST',{},self)).status,409);
+   const replacement=await call('leave','POST',{...input,requestKey:randomUUID()},self);assert.equal(replacement.status,200,JSON.stringify(replacement.data));assert.equal(replacement.data.status,'PENDING');
   });
    await t.test('attendance shows live Working Out Break states across repeated sessions and finalizes after shift end',async()=>{
     const shift=await db.shift.findFirstOrThrow({where:{tenantId:alphaTenant}}),now=new Date(),minute=now.getUTCHours()*60+now.getUTCMinutes(),startMinute=(minute+1350)%1440,endMinute=(minute+90)%1440;

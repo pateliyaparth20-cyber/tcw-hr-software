@@ -31,6 +31,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const [requestOpen,setRequestOpen]=useState(false);
   const [requestKey,setRequestKey]=useState('');
   const [review,setReview]=useState<{row:Row;decision:'APPROVED'|'REJECTED'}|null>(null);
+  const [cancelLeave,setCancelLeave]=useState<Row|null>(null);
 
   const rows:Row[]=requests.data?.items??[];
   const people:Row[]=employees.data?.items??[];
@@ -108,8 +109,10 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const unpaidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid===false).reduce((n,r)=>n+Number(r.days??0),0);
   const totalLeaveBalance=balances.reduce((n,b)=>n+Number(b.remaining??0),0);
 
-  const canApproveSelected=!!selected&&selected.status==='PENDING'&&selected.employeeId!==session.user.employeeId&&can('leave','APPROVE');
-  const canRejectSelected=!!selected&&selected.status==='PENDING'&&selected.employeeId!==session.user.employeeId&&can('leave','REJECT');
+  const selectedIsSelf=!!selected&&selected.employeeId===session.user.employeeId;
+  const canApproveSelected=!!selected&&selected.status==='PENDING'&&!selectedIsSelf&&can('leave','APPROVE');
+  const canRejectSelected=!!selected&&selected.status==='PENDING'&&!selectedIsSelf&&can('leave','REJECT');
+  const canCancelSelected=!!selected&&['PENDING','APPROVED'].includes(String(selected.status))&&(selectedIsSelf?can('leave','CREATE'):can('leave','EDIT'));
 
   return <div className="timeoff-v3">
     <div className="timeoff-v3-head">
@@ -210,9 +213,10 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
             </div>
           </section>
 
-          {(canApproveSelected||canRejectSelected)&&<div className="timeoff-v3-review-actions">
+          {(canApproveSelected||canRejectSelected||canCancelSelected)&&<div className="timeoff-v3-review-actions">
             {canApproveSelected&&<button className="btn timeoff-v3-approve" onClick={()=>setReview({row:selected,decision:'APPROVED'})}><Check size={19}/>Approve</button>}
             {canRejectSelected&&<button className="btn danger timeoff-v3-reject" onClick={()=>setReview({row:selected,decision:'REJECTED'})}><X size={19}/>Reject</button>}
+            {canCancelSelected&&<button className="btn secondary timeoff-v3-cancel" onClick={()=>setCancelLeave(selected)}><XCircle size={19}/>{selected.status==='APPROVED'?'Cancel Leave':'Cancel Request'}</button>}
           </div>}
         </div>
       </aside>}
@@ -240,6 +244,15 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
         onCancel={()=>setReview(null)}
         onSave={async body=>{await mutate(`leave/${review.row.id}/review`,'POST',{...body,decision:review.decision});setReview(null)}}
         submit={review.decision==='APPROVED'?'Approve Request':'Reject Request'}
+      />
+    </Modal>}
+
+    {cancelLeave&&<Modal title={cancelLeave.status==='APPROVED'?'Cancel approved leave':'Cancel time off request'} onClose={()=>setCancelLeave(null)}>
+      <RecordForm
+        fields={[{key:'note',label:'Cancellation note',type:'textarea',required:false,hint:'Optional note explaining why this time off is being cancelled.'}]}
+        onCancel={()=>setCancelLeave(null)}
+        onSave={async body=>{await mutate(`leave/${cancelLeave.id}/cancel`,'POST',body);setCancelLeave(null)}}
+        submit={cancelLeave.status==='APPROVED'?'Cancel Leave':'Cancel Request'}
       />
     </Modal>}
   </div>;

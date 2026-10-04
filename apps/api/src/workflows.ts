@@ -34,7 +34,7 @@ export class Workflows {
       await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT','attendance',out.id,last,{leaveId:row.id,employeeId:row.employeeId,punchTime:now});
     });
   }
-  private async reconcileApprovedLeaveAttendance(ctx:Context,row:any){
+  private async reconcileLeaveAttendance(ctx:Context,row:any){
     if(!row)return;
     const tid=tenant(ctx),company=await this.db.tenant.findUnique({where:{id:tid},select:{timezone:true}}),currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
     for(const month of monthsCovered(row.startDate,row.endDate)){
@@ -235,12 +235,55 @@ export class Workflows {
     await this.notifyLeaveReporting(ctx,after,autoApprove);
     if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);
-      await this.reconcileApprovedLeaveAttendance(ctx,after);
+      await this.reconcileLeaveAttendance(ctx,after);
       const user=await this.db.user.findFirst({where:{tenantId:tid,employeeId:after.employeeId}});
       if(user){const notice=await this.db.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave assigned',message:'HR assigned approved leave to your schedule.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});}
     }
     return after;
   }
+  async cancelLeave(ctx:Context,recordId:string,body:any={}){
+    const tid=tenant(ctx),input=z.object({note:z.string().trim().max(1000).default('')}).strict().parse(body??{});
+    const before=await this.db.leaveRequest.findFirst({where:{tenantId:tid,id:id.parse(recordId)}});if(!before)throw new NotFoundException('Leave request not found.');
+    await assertEmployee(this.db,ctx,before.employeeId);
+    const isSelf=before.employeeId===ctx.user.employeeId;
+    requirePermission(ctx,'leave',isSelf?'CREATE':'EDIT');
+    if(!['PENDING','APPROVED'].includes(String(before.status)))throw new ConflictException('Only pending or approved leave can be cancelled.');
+    const affectedMonths=monthsCovered(before.startDate,before.endDate);
+    const locked=await this.db.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});
+    if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before cancelling this leave.`);
+    const after=await this.db.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT id FROM leave_requests WHERE id = ${before.id}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+      const current=await tx.leaveRequest.findFirst({where:{tenantId:tid,id:before.id}});if(!current)throw new NotFoundException('Leave request not found.');
+      if(!['PENDING','APPROVED'].includes(String(current.status)))throw new ConflictException('This leave request can no longer be cancelled.');
+      const cancellationNote=input.note?(`Cancelled: ${input.note}`):'Cancelled';
+      const updated=await tx.leaveRequest.update({where:{id:current.id},data:{status:'CANCELLED',reviewNote:current.reviewNote?[current.reviewNote,cancellationNote].join('\n'):cancellationNote}});
+      await audit(tx,ctx,'LEAVE_CANCELLED','leave',current.id,current,updated);
+      const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:current.employeeId}});
+      if(user&&user.id!==ctx.user.id){
+        const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave cancelled',message:'Your time off request has been cancelled.'}});
+        sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});
+      }
+      return updated;
+    });
+    if(String(before.status)==='APPROVED'){
+      await this.db.$transaction(async tx=>{
+        const sourceId=`leave-${before.id}-auto-out`;
+        const generated=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});
+        if(generated){
+          await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${tid}, true), set_config('app.allow_raw_punch_delete', 'on', true)`;
+          await tx.attendancePunch.delete({where:{id:generated.id}});
+          await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT_REVERSED','attendance',generated.id,generated,{leaveId:before.id,cancelled:true});
+        }
+        await tx.attendanceDaily.updateMany({
+          where:{tenantId:tid,employeeId:before.employeeId,date:{gte:before.startDate,lte:before.endDate},dayType:{in:['PAID_LEAVE','UNPAID_LEAVE']},correctionNote:''},
+          data:{syncedAt:null}
+        });
+      });
+      await this.reconcileLeaveAttendance(ctx,after);
+    }
+    return after;
+  }
+
   async review(ctx:Context,type:string,recordId:string,body:any){
     const models:Record<string,string>={leave:'leaveRequest',expenses:'expenseClaim',travel:'travelRequest'};const model=models[type];if(!model)throw new NotFoundException();const tid=tenant(ctx);
     const input=z.object({decision:z.enum(['APPROVED','REJECTED']),note:z.string().max(1000).default('')}).strict().parse(body);requirePermission(ctx,type,input.decision==='APPROVED'?'APPROVE':'REJECT');let affectedMonths:string[]=[];
@@ -254,7 +297,7 @@ export class Workflows {
     });
     if(type==='leave'&&input.decision==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,reviewed);
-      await this.reconcileApprovedLeaveAttendance(ctx,reviewed);
+      await this.reconcileLeaveAttendance(ctx,reviewed);
     }
     return reviewed;
   }
