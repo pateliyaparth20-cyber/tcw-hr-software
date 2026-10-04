@@ -197,7 +197,7 @@ export function useData(path:string,enabled=true,refetchInterval?:number){return
 export function Loading(){return <div className="loading" role="status"><LoaderCircle className="spin" size={24}/><span>Loading your workspace…</span></div>}
 export function Failure({error,retry}:{error:Error;retry?:()=>void}){return <div className="empty error-state"><AlertCircle/><h3>Unable to load this view</h3><p>{error.message}</p>{retry&&<button className="btn secondary" onClick={retry}>Try again</button>}</div>}
 export function Empty({title='Nothing here yet',description='New records will appear here.',action}:{title?:string;description?:string;action?:React.ReactNode}){return <div className="empty"><span className="empty-icon"><Inbox size={26}/></span><h3>{title}</h3><p>{description}</p>{action}</div>}
-export function Badge({value}:{value:any}){const str=String(value??'—'),label=str==='HALF_DAY'?'Short Hours':readable(str.toLowerCase());return <span className={'badge '+(['ACTIVE','PRESENT','APPROVED','PAID','COMPLETED','HIRED','WON','AVAILABLE','WORKING','CONNECTED','ONLINE','LOCKED','RESOLVED','INFO','CLEAR','OPEN','PAID_LEAVE','CONTACTED','INTERESTED','CONVERTED','HOLIDAY','WEEK_OFF','LOW'].includes(str)?'green':['PENDING','TRIAL','REVIEW','PROBATION','MEETING','PART_PAID','IN_PROGRESS','AWAITING_CONNECTION','DEGRADED','WARN','NORMAL','HIGH','FOLLOW_UP','NO_ANSWER','HALF_DAY','SHORT_HOURS','NOT_CLOCKED_IN'].includes(str)?'amber':['REJECTED','ABSENT','INSUFFICIENT_HOURS','SUSPENDED','EXPIRED','ARCHIVED','OVERDUE','MISSING_PUNCH','LOST','OFFLINE','ERROR','URGENT','CALL_DUE','NOT_INTERESTED'].includes(str)?'red':'blue')}>{label}</span>}
+export function Badge({value}:{value:any}){const str=String(value??'—'),label=['HALF_DAY','SHORT_HOURS'].includes(str)?'Insufficient Hours':readable(str.toLowerCase());return <span className={'badge '+(['ACTIVE','PRESENT','APPROVED','PAID','COMPLETED','HIRED','WON','AVAILABLE','WORKING','CONNECTED','ONLINE','LOCKED','RESOLVED','INFO','CLEAR','OPEN','PAID_LEAVE','CONTACTED','INTERESTED','CONVERTED','HOLIDAY','WEEK_OFF','LOW'].includes(str)?'green':['PENDING','TRIAL','REVIEW','PROBATION','MEETING','PART_PAID','IN_PROGRESS','AWAITING_CONNECTION','DEGRADED','WARN','NORMAL','HIGH','FOLLOW_UP','NO_ANSWER','HALF_DAY','SHORT_HOURS','INSUFFICIENT_HOURS','NOT_CLOCKED_IN'].includes(str)?'amber':['REJECTED','ABSENT','SUSPENDED','EXPIRED','ARCHIVED','OVERDUE','MISSING_PUNCH','LOST','OFFLINE','ERROR','URGENT','CALL_DUE','NOT_INTERESTED'].includes(str)?'red':'blue')}>{label}</span>}
 export const displayDate=(v:any)=>v?new Date(v).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
 export const currencyValue=(v:number,currency='INR')=>new Intl.NumberFormat('en-IN',{style:'currency',currency,maximumFractionDigits:2}).format((v??0)/100);
 export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:string|null}){const tones=['#e4edff','#dff4ee','#f4e9ff','#fff0da'],photo=avatarPhotoSrc(src),initials=avatarInitials(name);return <span className={'avatar '+(large?'large':'')+(photo?' has-photo':'')} style={{background:tones[(String(name??'').charCodeAt(0)||0)%4]}}><span className="avatar-initials" aria-hidden={!!photo}>{initials}</span>{photo&&<img src={photo} alt={name+' profile photo'} onError={e=>{e.currentTarget.style.display='none'}}/>}</span>}
@@ -222,7 +222,7 @@ function Choice({field,value,onChange}:{field:Field;value:any;onChange:(v:any)=>
  </select>;
 }
 function Time12Field({id,value,onChange}:{id:string;value:any;onChange:(value:string)=>void}){
- const raw=String(value??'');
+ const[open,setOpen]=useState(false);const raw=String(value??'');
  const toDisplay=(v:string)=>{
   if(!/^\d{2}:\d{2}$/.test(v))return '';
   const[h,m]=v.split(':').map(Number);if(h<0||h>23||m<0||m>59)return '';
@@ -240,17 +240,28 @@ function Time12Field({id,value,onChange}:{id:string;value:any;onChange:(value:st
   if(match){const h=Number(match[1]),m=Number(match[2]);if(h<0||h>23||m<0||m>59)return null;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;}
   return null;
  };
- const formatted=toDisplay(raw);
- const[draft,setDraft]=useState(formatted);
- useEffect(()=>setDraft(formatted),[formatted]);
+ const formatted=toDisplay(raw),base=/^\d{2}:\d{2}$/.test(raw)?raw:'09:00',parts=base.split(':').map(Number),baseHour24=parts[0],baseMinute=parts[1],pickerHour=((baseHour24+11)%12)+1,pickerPeriod:('AM'|'PM')=baseHour24>=12?'PM':'AM';
+ const[draft,setDraft]=useState(formatted);useEffect(()=>setDraft(formatted),[formatted]);
  const apply=(next:string,final=false)=>{
   const clean=next.replace(/[^0-9aApPmM:\s]/g,'').slice(0,11);setDraft(clean);
   if(!clean.trim()){onChange('');return;}
-  const parsed=parse(clean);
-  if(parsed){onChange(parsed);if(final)setDraft(toDisplay(parsed));}
-  else if(final)setDraft(formatted);
+  const parsed=parse(clean);if(parsed){onChange(parsed);if(final)setDraft(toDisplay(parsed));}else if(final)setDraft(formatted);
  };
- return <div id={id} className="time12-field time12-manual"><Clock3 size={17}/><input type="text" inputMode="text" autoComplete="off" spellCheck={false} aria-label="Time" placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/><span className="time12-unit">AM/PM</span></div>;
+ const choose=(hour:number,minute:number,period:'AM'|'PM')=>{
+  let h=hour%12;if(period==='PM')h+=12;const next=`${String(h).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;onChange(next);setDraft(toDisplay(next));
+ };
+ return <div id={id} className={'time12-field time12-manual '+(open?'open':'')} onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&e.currentTarget.contains(next))return;setOpen(false)}}>
+  <Clock3 size={17}/>
+  <input type="text" inputMode="text" autoComplete="off" spellCheck={false} aria-label="Time" placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
+  <span className="time12-dropdown-button" role="button" tabIndex={0} aria-label="Open time picker" aria-expanded={open} onMouseDown={e=>e.preventDefault()} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><ChevronRight size={16} className="time12-chevron"/></span>
+  {open&&<div className="time12-popover time12-clean-popover">
+   <div className="time12-grid">
+    <div><span>Hour</span><select value={pickerHour} onChange={e=>choose(Number(e.target.value),baseMinute,pickerPeriod)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+    <div><span>Minute</span><select value={baseMinute} onChange={e=>choose(pickerHour,Number(e.target.value),pickerPeriod)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+    <div><span>AM / PM</span><select value={pickerPeriod} onChange={e=>choose(pickerHour,baseMinute,e.target.value as 'AM'|'PM')}><option>AM</option><option>PM</option></select></div>
+   </div>
+  </div>}
+ </div>;
 }
 function DurationField({id,value,onChange}:{id:string;value:any;onChange:(value:number)=>void}){
  const total=Math.max(0,Number(value??0));
