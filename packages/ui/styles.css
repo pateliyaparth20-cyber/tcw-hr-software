@@ -15115,3 +15115,155 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .shift-v5-page .shift-v5-active-chip{font-weight:600}
 .shift-v5-page .shift-v5-days button strong{font-weight:500}
 .shift-v5-page .shift-v5-break-caption strong{font-weight:600}
+
+
+/* v1.14.6 global single-box control cleanup
+   Composite controls own the only visible outline. Their inner native controls
+   must never render a second border/focus ring. */
+.search-field>input,
+.search-field>select,
+.command-search>input,
+.support-search>input,
+.device-v3-search>input,
+.timeoff-v3-search>input,
+.recruit-v3-search>input,
+.filter>input,
+.filter>select,
+.attendance-employee-search>input,
+.shift-v3-toolbar>label>input,
+.shift-v3-number>input,
+.shift-v3-time>input,
+.shift-v5-number-input>input,
+.shift-v5-time-input>input,
+.shift-v5-duration-input>div>input,
+.shift-v5-duration-clock>input,
+.duration-clock-manual>input,
+.profile-field-control>input{
+  border:0!important;
+  border-width:0!important;
+  border-color:transparent!important;
+  border-radius:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+
+.search-field>input:focus,
+.search-field>input:focus-visible,
+.search-field>select:focus,
+.search-field>select:focus-visible,
+.command-search>input:focus,
+.command-search>input:focus-visible,
+.support-search>input:focus,
+.support-search>input:focus-visible,
+.device-v3-search>input:focus,
+.device-v3-search>input:focus-visible,
+.timeoff-v3-search>input:focus,
+.timeoff-v3-search>input:focus-visible,
+.recruit-v3-search>input:focus,
+.recruit-v3-search>input:focus-visible,
+.filter>input:focus,
+.filter>input:focus-visible,
+.filter>select:focus,
+.filter>select:focus-visible,
+.attendance-employee-search>input:focus,
+.attendance-employee-search>input:focus-visible,
+.shift-v3-toolbar>label>input:focus,
+.shift-v3-toolbar>label>input:focus-visible,
+.shift-v3-number>input:focus,
+.shift-v3-number>input:focus-visible,
+.shift-v3-time>input:focus,
+.shift-v3-time>input:focus-visible,
+.shift-v5-number-input>input:focus,
+.shift-v5-number-input>input:focus-visible,
+.shift-v5-time-input>input:focus,
+.shift-v5-time-input>input:focus-visible,
+.shift-v5-duration-input>div>input:focus,
+.shift-v5-duration-input>div>input:focus-visible,
+.shift-v5-duration-clock>input:focus,
+.shift-v5-duration-clock>input:focus-visible,
+.duration-clock-manual>input:focus,
+.duration-clock-manual>input:focus-visible,
+.profile-field-control>input:focus,
+.profile-field-control>input:focus-visible{
+  border:0!important;
+  border-width:0!important;
+  border-color:transparent!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+
+/* Remove card-inside-card treatment from search/filter toolbars. */
+.tenant-shell .toolbar,
+.platform-shell .toolbar,
+.employee-app-shell .toolbar,
+.tenant-shell .date-filters,
+.platform-shell .date-filters,
+.employee-app-shell .date-filters,
+.recruit-v3-filterbar,
+.shift-v3-toolbar{
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+
+.recruit-v3-filterbar,
+.shift-v3-toolbar{
+  padding-left:0!important;
+  padding-right:0!important;
+}
+
+/* A toolbar inside a panel may keep one separator line, never a surrounding box. */
+.tenant-shell .panel>.toolbar,
+.platform-shell .panel>.toolbar,
+.employee-app-shell .panel>.toolbar,
+.attendance-v3-table>.toolbar{
+  border:0!important;
+  border-bottom:1px solid #e8edf3!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
+
+/* Suffix text belongs to the same field, not a second mini-box. */
+.shift-v5-number-input>strong,
+.shift-v5-duration-input>div>strong,
+.shift-v3-number>small{
+  border-left:0!important;
+  background:transparent!important;
+}
+
+/* Composite focus is shown only on the outside control. */
+.search-field:focus-within,
+.support-search:focus-within,
+.device-v3-search:focus-within,
+.timeoff-v3-search:focus-within,
+.recruit-v3-search:focus-within,
+.filter:focus-within,
+.attendance-employee-search:focus-within,
+.shift-v3-toolbar>label:focus-within,
+.shift-v3-number:focus-within,
+.shift-v3-time:focus-within,
+.shift-v5-number-input:focus-within,
+.shift-v5-time-input:focus-within,
+.shift-v5-duration-input>div:focus-within,
+.shift-v5-duration-clock:focus-within,
+.duration-clock-manual:focus-within,
+.profile-field-control:focus-within{
+  outline:0!important;
+}
+
+/* Keep all standard controls as one clean native box. */
+.record-form .field>input,
+.record-form .field>select,
+.record-form .field>textarea,
+.auth-pro-form input,
+.auth-pro-form select,
+.attendance-filter-field>input,
+.attendance-filter-field>select,
+.attendance-status-filter>select,
+.attendance-compact-dates input{
+  box-shadow:none;
+}
