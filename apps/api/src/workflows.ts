@@ -248,13 +248,12 @@ export class Workflows {
     const isSelf=before.employeeId===ctx.user.employeeId;
     requirePermission(ctx,'leave',isSelf?'CREATE':'EDIT');
     if(!['PENDING','APPROVED'].includes(String(before.status)))throw new ConflictException('Only pending or approved leave can be cancelled.');
-    const affectedMonths=monthsCovered(before.startDate,before.endDate);
-    const locked=await this.db.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});
-    if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before cancelling this leave.`);
-    const after=await this.db.$transaction(async tx=>{
+    const cancellation=await this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM leave_requests WHERE id = ${before.id}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       const current=await tx.leaveRequest.findFirst({where:{tenantId:tid,id:before.id}});if(!current)throw new NotFoundException('Leave request not found.');
       if(!['PENDING','APPROVED'].includes(String(current.status)))throw new ConflictException('This leave request can no longer be cancelled.');
+      const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:monthsCovered(current.startDate,current.endDate)},status:'LOCKED'}});
+      if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before cancelling this leave.`);
       const cancellationNote=input.note?(`Cancelled: ${input.note}`):'Cancelled';
       const updated=await tx.leaveRequest.update({where:{id:current.id},data:{status:'CANCELLED',reviewNote:current.reviewNote?[current.reviewNote,cancellationNote].join('\n'):cancellationNote}});
       await audit(tx,ctx,'LEAVE_CANCELLED','leave',current.id,current,updated);
@@ -263,19 +262,20 @@ export class Workflows {
         const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave cancelled',message:'Your time off request has been cancelled.'}});
         sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});
       }
-      return updated;
+      return {updated,wasApproved:String(current.status)==='APPROVED'};
     });
-    if(String(before.status)==='APPROVED'){
+    const after=cancellation.updated;
+    if(cancellation.wasApproved){
       await this.db.$transaction(async tx=>{
-        const sourceId=`leave-${before.id}-auto-out`;
+        const sourceId=`leave-${after.id}-auto-out`;
         const generated=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});
         if(generated){
           await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${tid}, true), set_config('app.allow_raw_punch_delete', 'on', true)`;
           await tx.attendancePunch.delete({where:{id:generated.id}});
-          await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT_REVERSED','attendance',generated.id,generated,{leaveId:before.id,cancelled:true});
+          await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT_REVERSED','attendance',generated.id,generated,{leaveId:after.id,cancelled:true});
         }
         await tx.attendanceDaily.updateMany({
-          where:{tenantId:tid,employeeId:before.employeeId,date:{gte:before.startDate,lte:before.endDate},dayType:{in:['PAID_LEAVE','UNPAID_LEAVE']},correctionNote:''},
+          where:{tenantId:tid,employeeId:after.employeeId,date:{gte:after.startDate,lte:after.endDate},dayType:{in:['PAID_LEAVE','UNPAID_LEAVE']},correctionNote:''},
           data:{syncedAt:null}
         });
       });

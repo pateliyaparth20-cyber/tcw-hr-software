@@ -14996,6 +14996,13 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .timeoff-v3-date-range{line-height:1.45;color:#44536c}
 .timeoff-v3-table .badge{font-size:12px;padding:6px 10px;border-radius:8px}
 .timeoff-v3-more{width:36px;height:36px}
+.timeoff-v3-actions-cell{position:relative;width:64px;text-align:right}
+.timeoff-v3-actions-menu{position:fixed;z-index:260;width:220px;padding:8px;border:1px solid #dfe6ef;border-radius:12px;background:#fff;box-shadow:0 14px 34px rgba(31,45,70,.16)}
+.timeoff-v3-actions-menu button{width:100%;min-height:44px;display:flex;align-items:center;gap:10px;padding:9px 11px;border:0;border-radius:8px;background:transparent;color:#334155;font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.timeoff-v3-actions-menu button:hover,.timeoff-v3-actions-menu button:focus-visible{background:#f4f7fb;outline:0}
+.timeoff-v3-actions-menu button.danger{color:#b93845}
+.timeoff-v3-actions-menu button.danger:hover,.timeoff-v3-actions-menu button.danger:focus-visible{background:#fff1f2}
+.timeoff-v3-actions-menu svg{flex:0 0 auto}
 .timeoff-v3-pagination{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 15px;background:#fff;color:#697891;font-size:13px}
 .timeoff-v3-pagination>div{display:flex;align-items:center;gap:6px}
 .timeoff-v3-page{width:36px;height:36px;border:1px solid #dfe6f0;border-radius:7px;background:#fff;color:#30405b;font-weight:700;cursor:pointer}

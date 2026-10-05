@@ -5,6 +5,8 @@ import {modules,Row,readable} from './config';
 import {useApp,useData,Avatar,Badge,Modal,RecordForm,Loading,Failure,Empty,displayDate} from './core';
 
 const PAGE_SIZE=10;
+const ACTION_MENU_WIDTH=220;
+const ACTION_MENU_ESTIMATED_HEIGHT=224;
 const leaveRequestFields=modules.leave.fields;
 
 function personName(row:Row|undefined,fallback='Employee'){
@@ -32,6 +34,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const [requestKey,setRequestKey]=useState('');
   const [review,setReview]=useState<{row:Row;decision:'APPROVED'|'REJECTED'}|null>(null);
   const [cancelLeave,setCancelLeave]=useState<Row|null>(null);
+  const [actionMenu,setActionMenu]=useState<{id:string;top:number;left:number;focusLast:boolean}|null>(null);
 
   const rows:Row[]=requests.data?.items??[];
   const people:Row[]=employees.data?.items??[];
@@ -62,6 +65,36 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
 
   useEffect(()=>{setPage(1)},[status,search]);
   useEffect(()=>{
+    if(!actionMenu)return;
+    const menuId=`timeoff-actions-menu-${actionMenu.id}`,triggerId=`timeoff-actions-trigger-${actionMenu.id}`;
+    const closeForLayout=()=>setActionMenu(null);
+    const closeForOutside=(event:PointerEvent)=>{
+      const target=event.target as Node|null,menu=document.getElementById(menuId),trigger=document.getElementById(triggerId);
+      if(target&&(menu?.contains(target)||trigger?.contains(target)))return;
+      setActionMenu(null);
+    };
+    const closeForEscape=(event:KeyboardEvent)=>{
+      if(event.key!=='Escape')return;
+      event.preventDefault();
+      setActionMenu(null);
+      requestAnimationFrame(()=>document.getElementById(triggerId)?.focus());
+    };
+    window.addEventListener('pointerdown',closeForOutside);
+    window.addEventListener('resize',closeForLayout);
+    window.addEventListener('scroll',closeForLayout,true);
+    window.addEventListener('keydown',closeForEscape);
+    requestAnimationFrame(()=>{
+      const items=Array.from(document.querySelectorAll<HTMLButtonElement>(`#${menuId} [role="menuitem"]`));
+      (actionMenu.focusLast?items.at(-1):items[0])?.focus();
+    });
+    return()=>{
+      window.removeEventListener('pointerdown',closeForOutside);
+      window.removeEventListener('resize',closeForLayout);
+      window.removeEventListener('scroll',closeForLayout,true);
+      window.removeEventListener('keydown',closeForEscape);
+    };
+  },[actionMenu?.id,actionMenu?.focusLast]);
+  useEffect(()=>{
     if(detailClosed||!visible.length)return;
     if(!selectedId||!visible.some(r=>r.id===selectedId))setSelectedId(visible[0].id);
   },[detailClosed,visible.length,safePage,status,search,selectedId]);
@@ -83,6 +116,21 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const pageNumbers=Array.from({length:Math.min(5,pageCount)},(_,i)=>pageStart+i).filter(v=>v<=pageCount);
   const openRequest=()=>{setRequestKey(crypto.randomUUID());setRequestOpen(true)};
   const selectRequest=(row:Row)=>{setDetailClosed(false);setSelectedId(row.id)};
+  const openActionMenu=(rowId:string,button:HTMLButtonElement,focusLast=false)=>{
+    const rect=button.getBoundingClientRect();
+    const below=rect.bottom+6,top=below+ACTION_MENU_ESTIMATED_HEIGHT<=window.innerHeight-12?below:Math.max(12,rect.top-ACTION_MENU_ESTIMATED_HEIGHT-6);
+    const left=Math.max(12,Math.min(window.innerWidth-ACTION_MENU_WIDTH-12,rect.right-ACTION_MENU_WIDTH));
+    setActionMenu({id:rowId,top,left,focusLast});
+  };
+  const handleActionMenuKeyDown=(event:React.KeyboardEvent<HTMLDivElement>)=>{
+    const items=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    if(!items.length)return;
+    const index=items.indexOf(document.activeElement as HTMLButtonElement);
+    if(event.key==='ArrowDown'){event.preventDefault();items[(index+1+items.length)%items.length].focus();}
+    else if(event.key==='ArrowUp'){event.preventDefault();items[(index-1+items.length)%items.length].focus();}
+    else if(event.key==='Home'){event.preventDefault();items[0].focus();}
+    else if(event.key==='End'){event.preventDefault();items[items.length-1].focus();}
+  };
 
   if(requests.isLoading)return <Loading/>;
   if(requests.error)return <Failure error={requests.error as Error} retry={()=>requests.refetch()}/>;
@@ -161,7 +209,45 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
                     <td><span className="timeoff-v3-date-range">{displayDate(row.startDate)}{String(row.startDate).slice(0,10)!==String(row.endDate).slice(0,10)&&<><br/>{displayDate(row.endDate)}</>}</span></td>
                     <td>{Number(row.days??0)}</td>
                     <td><Badge value={row.status}/></td>
-                    <td><button type="button" className="icon-button timeoff-v3-more" aria-label={`Open ${name} time off details`} onClick={e=>{e.stopPropagation();selectRequest(row)}}><MoreHorizontal size={20}/></button></td>
+                    <td className="timeoff-v3-actions-cell">
+                      <button
+                        id={`timeoff-actions-trigger-${row.id}`}
+                        type="button"
+                        className="icon-button timeoff-v3-more"
+                        aria-label={`Open actions for ${name} time off request`}
+                        aria-haspopup="menu"
+                        aria-controls={actionMenu?.id===row.id?`timeoff-actions-menu-${row.id}`:undefined}
+                        aria-expanded={actionMenu?.id===row.id}
+                        onClick={e=>{e.stopPropagation();if(actionMenu?.id===row.id){setActionMenu(null);return;}openActionMenu(row.id,e.currentTarget)}}
+                        onKeyDown={e=>{
+                          if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openActionMenu(row.id,e.currentTarget,e.key==='ArrowUp');
+                        }}
+                      ><MoreHorizontal size={20}/></button>
+                      {actionMenu?.id===row.id&&(()=>{
+                        const rowIsSelf=row.employeeId===session.user.employeeId;
+                        const approve=row.status==='PENDING'&&!rowIsSelf&&can('leave','APPROVE');
+                        const reject=row.status==='PENDING'&&!rowIsSelf&&can('leave','REJECT');
+                        const cancel=['PENDING','APPROVED'].includes(String(row.status))&&(rowIsSelf?can('leave','CREATE'):can('leave','EDIT'));
+                        return <div
+                          id={`timeoff-actions-menu-${row.id}`}
+                          className="timeoff-v3-actions-menu"
+                          role="menu"
+                          aria-label={`Actions for ${name} time off request`}
+                          style={{top:actionMenu!.top,left:actionMenu!.left}}
+                          onClick={e=>e.stopPropagation()}
+                          onKeyDown={handleActionMenuKeyDown}
+                          onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&!e.currentTarget.contains(next))setActionMenu(null)}}
+                        >
+                          <button type="button" role="menuitem" tabIndex={-1} onClick={()=>{selectRequest(row);setActionMenu(null)}}><Search size={17}/><span>View Details</span></button>
+                          {approve&&<button type="button" role="menuitem" tabIndex={-1} onClick={()=>{setReview({row,decision:'APPROVED'});setActionMenu(null)}}><Check size={17}/><span>Approve</span></button>}
+                          {reject&&<button type="button" role="menuitem" tabIndex={-1} className="danger" onClick={()=>{setReview({row,decision:'REJECTED'});setActionMenu(null)}}><X size={17}/><span>Reject</span></button>}
+                          {cancel&&<button type="button" role="menuitem" tabIndex={-1} className="danger" onClick={()=>{setCancelLeave(row);setActionMenu(null)}}><XCircle size={17}/><span>{row.status==='APPROVED'?'Cancel Leave':'Cancel Request'}</span></button>}
+                        </div>;
+                      })()}
+                    </td>
                   </tr>;
                 })}</tbody>
               </table>
