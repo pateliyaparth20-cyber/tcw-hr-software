@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye,Check,Bell,Trash2,Sparkles,KeyRound,RefreshCw,Search,Clock3,AlertTriangle,Building2,UserCircle,UserRound,Mail,IdCard} from 'lucide-react';
+import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye,Check,Bell,Trash2,Sparkles,KeyRound,RefreshCw,Search,Clock3,AlertTriangle,Building2,UserCircle,UserRound,Mail,IdCard,Sheet,FileDown,BarChart3,CalendarDays} from 'lucide-react';
 import {useApp,useData,api,PageTitle,Table,Modal,PhotoViewer,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,notificationTarget,displayDate,currencyValue} from './core';
 import {Row,Field,readable} from './config';
 import {avatarInitials} from './avatar';
@@ -193,9 +193,73 @@ export function DocumentsPage(){
 }
 export function ReportsPage(){
  const{can}=useApp();const[preview,setPreview]=useState<string|null>(null),[from,setFrom]=useState(new Date(Date.now()-30*86400000).toISOString().slice(0,10)),[to,setTo]=useState(new Date().toISOString().slice(0,10));
- const reports=[['employees','Employee directory','employees'],['attendance','Attendance records','attendance'],['leave','Leave requests','leave'],['payroll','Payroll runs','payroll'],['expenses','Expense claims','expenses'],['assets','Asset inventory','assets'],['goals','Performance goals','performance'],['candidates','Recruitment pipeline','recruitment']];
+ const reports=[
+  {name:'employees',label:'Employee directory',resource:'employees',description:'Employee codes, contact and employment records.'},
+  {name:'attendance',label:'Attendance records',resource:'attendance',description:'Attendance status, work time, overtime and exceptions.'},
+  {name:'leave',label:'Time off & leave',resource:'leave',description:'Leave requests, dates, days and approval status.'},
+  {name:'payroll',label:'Payroll runs',resource:'payroll',description:'Payroll run status, month and payroll totals.'},
+  {name:'expenses',label:'Expense claims',resource:'expenses',description:'Employee expense claims and approval status.'},
+  {name:'assets',label:'Asset inventory',resource:'assets',description:'Assigned assets, serials, ownership and status.'},
+  {name:'goals',label:'Performance goals',resource:'performance',description:'Goals, targets, progress and completion status.'},
+  {name:'candidates',label:'Recruitment pipeline',resource:'recruitment',description:'Candidate pipeline and current recruitment stage.'}
+ ];
+ const allowed=reports.filter(r=>can(r.resource,'EXPORT'));
  const q=useData(preview===null?'':`${preview}${preview==='attendance'?`?from=${from}&to=${to}`:'?pageSize=500'}`,!!preview);
- return <><PageTitle title="Reports & analytics" subtitle="Export the records your role is authorized to access."/><div className="date-filters report-filters"><label>Attendance from<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Attendance to<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label></div><div className="record-cards report-cards">{reports.filter(([, ,res])=>can(res,'EXPORT')).map(([name,label])=><section className="panel report-card" key={name}><span className="card-symbol"><FileText/></span><h2>{label}</h2><p>{name==='attendance'?'Selected date range.':'Current records, up to 500 per export.'}</p><div className="card-actions"><button className="btn secondary small" onClick={()=>setPreview(name)}><Eye size={16}/>Preview</button><a className="btn primary small" href={`/api/reports/${name}${name==='attendance'?`?from=${from}&to=${to}`:''}`}><Download size={16}/>CSV</a></div></section>)}</div>{preview&&<Modal title={readable(preview)+' report preview'} onClose={()=>setPreview(null)} wide><div className="modal-body">{q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<><p>Showing the first 25 records in this preview.</p><Table rows={q.data.items.slice(0,25)} columns={Object.keys(q.data.items[0]).filter(k=>!['tenantId','personal','items','updatedAt'].includes(k)).slice(1,8)} cell={(r,k)=>typeof r[k]==='object'?JSON.stringify(r[k]):String(r[k]??'—')}/><button className="btn secondary no-print" onClick={()=>window.print()}><Printer size={16}/>Print / Save PDF</button></>:<Empty title="No report data"/>}</div></Modal>}</>;
+ const href=(name:string,format:'csv'|'xlsx'|'pdf')=>{
+  const params=new URLSearchParams({format});
+  if(name==='attendance'){params.set('from',from);params.set('to',to)}
+  return `/api/reports/${name}?${params.toString()}`;
+ };
+ const active=reports.find(r=>r.name===preview);
+ return <div className="reports-v2">
+  <PageTitle title="Reports & analytics" subtitle="Preview authorized HR data and download real PDF, Excel or CSV files."/>
+  <section className="reports-v2-summary">
+   <article><span className="reports-v2-summary-icon"><BarChart3 size={21}/></span><div><small>Available reports</small><strong>{allowed.length}</strong><p>Based on your export permissions</p></div></article>
+   <article><span className="reports-v2-summary-icon"><FileDown size={21}/></span><div><small>Export formats</small><strong>3</strong><p>PDF · Excel · CSV</p></div></article>
+   <article><span className="reports-v2-summary-icon"><ShieldCheck size={21}/></span><div><small>File integrity</small><strong>Native</strong><p>Correct file type and extension</p></div></article>
+  </section>
+
+  <section className="panel reports-v2-range">
+   <div className="reports-v2-range-copy"><span><CalendarDays size={20}/></span><div><h2>Attendance date range</h2><p>This range applies only to Attendance Records exports and preview.</p></div></div>
+   <div className="reports-v2-range-fields">
+    <label><span>From</span><input type="date" value={from} max={to} onChange={e=>setFrom(e.target.value)}/></label>
+    <label><span>To</span><input type="date" value={to} min={from} onChange={e=>setTo(e.target.value)}/></label>
+   </div>
+  </section>
+
+  <div className="reports-v2-grid">
+   {allowed.map(report=><section className="panel reports-v2-card" key={report.name}>
+    <div className="reports-v2-card-head"><span className="reports-v2-card-icon"><FileText size={22}/></span><span className="reports-v2-ready">READY</span></div>
+    <h2>{report.label}</h2>
+    <p>{report.description}</p>
+    <div className="reports-v2-meta"><span>{report.name==='attendance'?from+' → '+to:'Current authorized records'}</span></div>
+    <div className="reports-v2-card-actions">
+     <button type="button" className="btn secondary reports-v2-preview" onClick={()=>setPreview(report.name)}><Eye size={17}/>Preview</button>
+     <div className="reports-v2-export-actions">
+      <a className="reports-v2-format csv" href={href(report.name,'csv')} download><FileText size={16}/><span><strong>CSV</strong><small>.csv</small></span></a>
+      <a className="reports-v2-format excel" href={href(report.name,'xlsx')} download><Sheet size={16}/><span><strong>Excel</strong><small>.xlsx</small></span></a>
+      <a className="reports-v2-format pdf" href={href(report.name,'pdf')} download><FileDown size={16}/><span><strong>PDF</strong><small>.pdf</small></span></a>
+     </div>
+    </div>
+   </section>)}
+  </div>
+
+  {!allowed.length&&<Empty title="No report exports available" description="Your current role does not have export permission for these reports."/>}
+
+  {preview&&<Modal title={(active?.label??readable(preview))+' preview'} onClose={()=>setPreview(null)} wide>
+   <div className="modal-body reports-v2-preview-modal">
+    <div className="reports-v2-preview-top">
+     <div><strong>Report preview</strong><p>Showing up to the first 25 records. Downloads include the full authorized export result.</p></div>
+     <div className="reports-v2-preview-downloads">
+      <a className="btn secondary small" href={href(preview,'csv')} download><FileText size={16}/>CSV</a>
+      <a className="btn secondary small" href={href(preview,'xlsx')} download><Sheet size={16}/>Excel</a>
+      <a className="btn primary small" href={href(preview,'pdf')} download><FileDown size={16}/>PDF</a>
+     </div>
+    </div>
+    {q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<div className="reports-v2-preview-table"><Table rows={q.data.items.slice(0,25)} columns={Object.keys(q.data.items[0]).filter(k=>!['tenantId','personal','items','passwordHash','updatedAt'].includes(k)).slice(0,8)} cell={(r,k)=>typeof r[k]==='object'?JSON.stringify(r[k]):String(r[k]??'—')}/></div>:<Empty title="No report data" description="There are no authorized records for the current report selection."/>}
+   </div>
+  </Modal>}
+ </div>;
 }
 export function AuditPage(){const q=useData('audit');return <><PageTitle title="Audit trail" subtitle="A record of important changes and sign-in events. Latest 200 events."/><div className="panel">{q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<Table columns={['action','entity','actorId','ip','createdAt']} rows={q.data.items} cell={(r,k)=>k==='action'?readable(r.action.toLowerCase()):k==='createdAt'?new Date(r.createdAt).toLocaleString('en-IN'):undefined}/>:<Empty title="No events recorded"/>}</div></>}
 export function SystemPage(){
