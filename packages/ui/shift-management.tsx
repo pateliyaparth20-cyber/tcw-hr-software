@@ -187,7 +187,7 @@ export function ShiftManagement(){
     </aside>
 
     <main className="shift-v5-form-panel">
-     <header className="shift-v5-form-head"><div><h1>{editor.id?'Edit Shift':'Add Shift'}</h1><p>{editor.id?'Update the shift details and working hours.':'Create a complete shift schedule.'}</p></div><span className="shift-v5-active-chip">Active</span></header>
+     <header className="shift-v5-form-head"><div><h1>Shift Details</h1><p>{editor.id?'Configure this shift schedule and attendance rules.':'Create a complete shift schedule and attendance rules.'}</p></div><span className="shift-v5-active-chip">Active</span></header>
 
      <div className="shift-v5-form-body">
       <section className="shift-v5-section">
@@ -234,7 +234,7 @@ export function ShiftManagement(){
     </main>
 
     <aside className="shift-v5-preview-panel">
-     <header className="shift-v5-preview-head"><div><h2>Shift Preview</h2><p>Visual representation of the shift with break schedule.</p></div><span className="shift-v5-active-chip">Active</span></header>
+     <header className="shift-v5-preview-head"><div><h2>Shift Preview</h2><p>Preview of this shift schedule and break flow.</p></div><span className="shift-v5-active-chip">Active</span></header>
      <div className="shift-v5-preview-timeline">
       <div className="shift-v5-preview-points">
        <span><strong>{minuteClock(draft.startMinute)}</strong><small>IN</small></span>
