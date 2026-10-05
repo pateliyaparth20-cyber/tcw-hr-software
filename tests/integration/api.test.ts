@@ -71,6 +71,19 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    const cancelled=await call(`leave/${row.data.id}/cancel`,'POST',{note:'Plans changed'},self);assert.equal(cancelled.status,200,JSON.stringify(cancelled.data));assert.equal(cancelled.data.status,'CANCELLED');
    assert.equal((await call(`leave/${row.data.id}/cancel`,'POST',{},self)).status,409);
    const replacement=await call('leave','POST',{...input,requestKey:randomUUID()},self);assert.equal(replacement.status,200,JSON.stringify(replacement.data));assert.equal(replacement.data.status,'PENDING');
+   const lockedInput={...input,startDate:'2026-09-07',endDate:'2026-09-08',reason:'Locked attendance cancellation'};
+   const lockedRow=await call('leave','POST',{...lockedInput,requestKey:randomUUID()},self);assert.equal(lockedRow.status,200,JSON.stringify(lockedRow.data));
+   const lockedApproved=await call(`leave/${lockedRow.data.id}/review`,'POST',{decision:'APPROVED'},alpha);assert.equal(lockedApproved.status,200,JSON.stringify(lockedApproved.data));assert.equal(lockedApproved.data.status,'APPROVED');
+   const leaveDay=new Date('2026-09-07T00:00:00.000Z');
+   const leaveAttendance=await db.attendanceDaily.findUnique({where:{tenantId_employeeId_date:{tenantId:alphaTenant,employeeId:a.data.id,date:leaveDay}}});assert.equal(leaveAttendance?.dayType,'PAID_LEAVE');
+   await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId:alphaTenant,month:'2026-09'}},create:{tenantId:alphaTenant,month:'2026-09'},update:{status:'LOCKED',unlockedAt:null}});
+   const blockedCancel=await call(`leave/${lockedRow.data.id}/cancel`,'POST',{note:'Blocked by locked attendance'},self);assert.equal(blockedCancel.status,409,JSON.stringify(blockedCancel.data));
+   assert.equal((await db.leaveRequest.findUniqueOrThrow({where:{id:lockedRow.data.id}})).status,'APPROVED');
+   assert.equal((await db.attendanceDaily.findUniqueOrThrow({where:{tenantId_employeeId_date:{tenantId:alphaTenant,employeeId:a.data.id,date:leaveDay}}})).dayType,'PAID_LEAVE');
+   await db.attendancePeriodLock.update({where:{tenantId_month:{tenantId:alphaTenant,month:'2026-09'}},data:{status:'UNLOCKED',unlockedAt:new Date()}});
+   const unlockedCancel=await call(`leave/${lockedRow.data.id}/cancel`,'POST',{note:'Plans changed after unlock'},self);assert.equal(unlockedCancel.status,200,JSON.stringify(unlockedCancel.data));assert.equal(unlockedCancel.data.status,'CANCELLED');
+   const reconciledAttendance=await db.attendanceDaily.findUniqueOrThrow({where:{tenantId_employeeId_date:{tenantId:alphaTenant,employeeId:a.data.id,date:leaveDay}}});assert.equal(reconciledAttendance.dayType,'WORKING');assert.equal(reconciledAttendance.leaveUnits,0);assert.notEqual(reconciledAttendance.status,'PAID_LEAVE');assert.notEqual(reconciledAttendance.status,'UNPAID_LEAVE');
+   const restoredBalanceReplacement=await call('leave','POST',{...lockedInput,requestKey:randomUUID()},self);assert.equal(restoredBalanceReplacement.status,200,JSON.stringify(restoredBalanceReplacement.data));assert.equal(restoredBalanceReplacement.data.status,'PENDING');
   });
    await t.test('attendance shows live Working Out Break states across repeated sessions and finalizes after shift end',async()=>{
     const shift=await db.shift.findFirstOrThrow({where:{tenantId:alphaTenant}}),now=new Date(),minute=now.getUTCHours()*60+now.getUTCMinutes(),startMinute=(minute+1350)%1440,endMinute=(minute+90)%1440;
