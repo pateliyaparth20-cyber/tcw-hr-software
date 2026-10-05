@@ -13301,7 +13301,7 @@ input[type="month"]{
 }
 .attendance-view-metrics .warn{color:#a46f22!important}
 .attendance-view-meta.attendance-view-meta-five{
-  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
 }
 .attendance-view-meta.attendance-view-meta-five>div{
   min-width:0;
@@ -13475,9 +13475,9 @@ input[type="month"]{
   margin:0!important;
 }
 .attendance-split-table .attendance-main-table{
-  width:1270px!important;
-  min-width:1270px!important;
-  max-width:1270px!important;
+  width:1390px!important;
+  min-width:1390px!important;
+  max-width:1390px!important;
   table-layout:fixed!important;
   border-collapse:separate!important;
   border-spacing:0!important;
@@ -13487,6 +13487,7 @@ input[type="month"]{
 .attendance-frozen-table col.c-employee{width:215px!important}
 .attendance-frozen-table col.c-status{width:100px!important}
 .attendance-main-table col.c-date{width:105px!important}
+.attendance-main-table col.c-daytype{width:120px!important}
 .attendance-main-table col.c-shift{width:110px!important}
 .attendance-main-table col.c-in{width:100px!important}
 .attendance-main-table col.c-out{width:100px!important}
