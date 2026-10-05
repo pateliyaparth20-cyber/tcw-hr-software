@@ -96,6 +96,11 @@ export function allocateBreakUsageSeconds(elapsedSeconds:number,usedBreakSeconds
   const elapsed=Math.max(0,Math.floor(Number(elapsedSeconds)||0)),used=Math.max(0,Math.floor(Number(usedBreakSeconds)||0)),allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),remaining=Math.max(0,allowed-used),breakSeconds=Math.min(elapsed,remaining);
   return {breakSeconds,overBreakSeconds:Math.max(0,elapsed-breakSeconds)};
 }
+export function flexibleBreakLiveState(usedBreakSeconds:number,allowedBreakSeconds:number,currentGapSeconds:number){
+  const used=Math.max(0,Math.floor(Number(usedBreakSeconds)||0)),allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),elapsed=Math.max(0,Math.floor(Number(currentGapSeconds)||0));
+  if(allowed<=0||used>=allowed)return 'OUT' as const;
+  return elapsed>allowed-used?'OVER_BREAK' as const:'BREAK' as const;
+}
 export function punchDrivenBreakUsageSeconds(gapStart:Date,gapEnd:Date,windowStart:Date,windowEnd:Date,allowedBreakSeconds:number){
   const allowed=Math.max(0,Math.floor(Number(allowedBreakSeconds)||0)),windowStartMs=windowStart.getTime(),windowEndMs=windowEnd.getTime(),startMs=gapStart.getTime(),endMs=Math.max(startMs,gapEnd.getTime()),entitlementEndMs=startMs+allowed*1000;
   if(allowed<=0||startMs<windowStartMs||startMs>=windowEndMs)return {breakSeconds:0,overBreakSeconds:0,startOffsetSeconds:0,remainingAtStartSeconds:0,entitlementEnd:new Date(entitlementEndMs)};

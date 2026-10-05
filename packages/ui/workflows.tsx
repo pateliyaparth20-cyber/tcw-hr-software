@@ -33,7 +33,7 @@ function attendanceResultStatus(row:Row,isWorking:boolean){
 function AttendanceLiveStatus({row,isWorking}:{row:Row;isWorking:boolean}){
  const[now,setNow]=useState(Date.now());useEffect(()=>{if(!row.currentBreakSince)return;const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[row.currentBreakSince]);
  let value=String(row.liveState??(isWorking?'WORKING':attendanceResultStatus(row,isWorking)));
- if(row.currentBreakSince&&!isWorking){if(row.breakMode==='PUNCH_SCHEDULED'&&row.breakEntitlementEnd){const rawOver=Math.max(0,Math.floor((now-new Date(row.breakEntitlementEnd).getTime())/1000));value=attendanceBusinessMinutesFromSeconds(rawOver)>0?'OVER_BREAK':'BREAK'}else{const start=new Date(row.currentBreakSince).getTime(),base=Number(row.breakSeconds??Number(row.breakMinutes??0)*60),allowedMinutes=Math.max(0,Number(row.allowedBreakMinutes??0)),raw=Math.max(0,Math.floor(base+(now-start)/1000));value=attendanceBusinessMinutesFromSeconds(raw)>allowedMinutes?'OVER_BREAK':'BREAK'}}
+ if(row.currentBreakSince&&!isWorking){if(row.breakMode==='PUNCH_SCHEDULED'&&row.breakEntitlementEnd){const rawOver=Math.max(0,Math.floor((now-new Date(row.breakEntitlementEnd).getTime())/1000));value=attendanceBusinessMinutesFromSeconds(rawOver)>0?'OVER_BREAK':'BREAK'}else{const start=new Date(row.currentBreakSince).getTime(),base=Number(row.breakSeconds??Number(row.breakMinutes??0)*60),allowedSeconds=Math.max(0,Number(row.allowedBreakSeconds??Number(row.allowedBreakMinutes??0)*60)),raw=Math.max(0,Math.floor(base+(now-start)/1000));value=raw>allowedSeconds?'OVER_BREAK':'BREAK'}}
  return <Badge value={value}/>;
 }
 function AttendanceTotalLive({rows,kind}:{rows:Row[];kind:'work'|'break'|'overtime'}){
