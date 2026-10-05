@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {allocateBreakUsageSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,calculateAttendance,isScheduledBreakOut,punchDrivenBreakUsageSeconds} from '../../packages/attendance-engine';
+import {allocateBreakUsageSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,calculateAttendance,flexibleBreakLiveState,isScheduledBreakOut,punchDrivenBreakUsageSeconds} from '../../packages/attendance-engine';
 
 test('only an OUT that starts inside the configured window is a scheduled break',()=>{
   const start=new Date('2026-10-03T07:30:00.000Z');
@@ -112,6 +112,16 @@ test('split flexible breaks consume one cumulative allowance across the shift',(
   assert.deepEqual(first,{breakSeconds:180,overBreakSeconds:0});
   assert.deepEqual(second,{breakSeconds:240,overBreakSeconds:0});
   assert.deepEqual(third,{breakSeconds:180,overBreakSeconds:120});
+});
+
+test('flexible break becomes OUT after entitlement is already consumed',()=>{
+  assert.equal(flexibleBreakLiveState(10*60,10*60,0),'OUT');
+  assert.equal(flexibleBreakLiveState(10*60,10*60,5*60),'OUT');
+});
+
+test('active flexible break becomes over break only after its remaining entitlement is exceeded',()=>{
+  assert.equal(flexibleBreakLiveState(4*60,10*60,6*60),'BREAK');
+  assert.equal(flexibleBreakLiveState(4*60,10*60,6*60+1),'OVER_BREAK');
 });
 
 
