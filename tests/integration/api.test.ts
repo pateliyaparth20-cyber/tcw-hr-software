@@ -116,6 +116,27 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
     await refreshTenantCurrentNoPunchAttendance(db,alphaTenant,new Date(shiftEnd.getTime()+60000),0);daily=await db.attendanceDaily.findUniqueOrThrow({where:{id:daily.id}});assert.equal(daily.status,'INSUFFICIENT_HOURS');assert(daily.syncedAt&&daily.syncedAt.getTime()>=shiftEnd.getTime());
     await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId:alphaTenant,month}},create:{tenantId:alphaTenant,month,status:'UNLOCKED'},update:{status:'UNLOCKED'}});const reset=await call('attendance/reset-month','DELETE',{month},alpha);assert.equal(reset.status,200,JSON.stringify(reset.data));assert.equal(reset.data.permanent,true);assert(reset.data.deletedPunches>=6);assert.equal(await db.attendancePunch.count({where:{tenantId:alphaTenant,sourceId}}),0);
    });
+  await t.test('Break Anytime stops creating breaks after entitlement and shows active over break',async()=>{
+   const shift=await db.shift.findFirstOrThrow({where:{tenantId:alphaTenant}}),now=new Date(),minute=now.getUTCHours()*60+now.getUTCMinutes(),startMinute=(minute+1320)%1440,endMinute=(minute+120)%1440;
+   await db.shift.update({where:{id:shift.id},data:{timezone:'UTC',startMinute,endMinute,workingDays:'0,1,2,3,4,5,6',graceMinutes:0,earlyOutGraceMinutes:0,fullDayMinutes:90,halfDayMinutes:45,overtimeAfterMinutes:90,breakMinutes:10,breakStartMinute:null,breakEndMinute:null,punchDrivenBreaks:true,flexibleBreakAnytime:true}});
+   const done=await call('employees','POST',{...employeeInput,employeeCode:'A03',email:'flex-break-done@example.test',phone:'9876543212'},alpha);assert.equal(done.status,200,JSON.stringify(done.data));await db.employee.update({where:{id:done.data.id},data:{shiftId:shift.id}});
+   const over=await call('employees','POST',{...employeeInput,employeeCode:'A04',email:'flex-over-break@example.test',phone:'9876543213'},alpha);assert.equal(over.status,200,JSON.stringify(over.data));await db.employee.update({where:{id:over.data.id},data:{shiftId:shift.id}});
+   const punch=async(employeeId:string,punchTime:Date,punchType:'IN'|'OUT')=>call('attendance','POST',{employeeId,punchTime:punchTime.toISOString(),punchType,sourceId:randomUUID(),shiftId:shift.id},alpha);
+   const workDay=attendanceWorkdayDate(new Date(now.getTime()-50*60000),startMinute,endMinute,'UTC'),month=workDay.slice(0,7);
+   assert.equal((await punch(done.data.id,new Date(now.getTime()-50*60000),'IN')).status,200);
+   assert.equal((await punch(done.data.id,new Date(now.getTime()-40*60000),'OUT')).status,200);
+   assert.equal((await punch(done.data.id,new Date(now.getTime()-30*60000),'IN')).status,200);
+   assert.equal((await punch(done.data.id,new Date(now.getTime()-60*1000),'OUT')).status,200);
+   let attendance=await call(`attendance?from=${workDay}&to=${workDay}&employeeId=${done.data.id}`,'GET',undefined,alpha);assert.equal(attendance.status,200,JSON.stringify(attendance.data));let row=attendance.data.items.find((item:any)=>item.employeeId===done.data.id);assert.equal(row.liveState,'OUT');assert.equal(row.currentBreakSince,null);
+   let workforce=await call('workforce','GET',undefined,alpha);assert.equal(workforce.status,200,JSON.stringify(workforce.data));assert.equal(workforce.data.items.find((item:any)=>item.id===done.data.id)?.status,'OUT');
+   assert.equal((await punch(over.data.id,new Date(now.getTime()-20*60000),'IN')).status,200);
+   assert.equal((await punch(over.data.id,new Date(now.getTime()-15*60000),'OUT')).status,200);
+   attendance=await call(`attendance?from=${workDay}&to=${workDay}&employeeId=${over.data.id}`,'GET',undefined,alpha);assert.equal(attendance.status,200,JSON.stringify(attendance.data));row=attendance.data.items.find((item:any)=>item.employeeId===over.data.id);assert.equal(row.liveState,'OVER_BREAK');assert(row.currentBreakSince,'active flexible break must keep its start time while over break');
+   workforce=await call('workforce','GET',undefined,alpha);assert.equal(workforce.status,200,JSON.stringify(workforce.data));assert.equal(workforce.data.items.find((item:any)=>item.id===over.data.id)?.status,'OVER_BREAK');
+   await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId:alphaTenant,month}},create:{tenantId:alphaTenant,month,status:'UNLOCKED'},update:{status:'UNLOCKED'}});
+   const reset=await call('attendance/reset-month','DELETE',{month},alpha);assert.equal(reset.status,200,JSON.stringify(reset.data));
+  });
+
   await t.test('invoice payments cannot overpay and references are unique',async()=>{
    const invoice=await call('platform/invoices','POST',{tenantId:betaTenant!,number:'TEST-001',amount:100000,tax:18000,dueDate:'2026-10-01'},root);assert.equal(invoice.status,200,JSON.stringify(invoice.data));
    const payment={invoiceId:invoice.data.id,amount:118000,reference:'BANK-001',date:'2026-09-25'};
