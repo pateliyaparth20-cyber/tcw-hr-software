@@ -125,14 +125,15 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
       const dateKey=key(day),record=existingMap.get(`${employee.id}:${dateKey}`);
       const shift=(record?.shiftId&&shiftMap.get(record.shiftId))||currentShift;
       const night=shift.endMinute<=shift.startMinute,shiftStart=zonedMinute(dateKey,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(dateKey,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(dateKey,shift);
-      if(record?.syncedAt&&record.syncedAt.getTime()>=shiftEnd.getTime())continue;
+      const approvedLeave=employeeLeaves.find(l=>overlap(l.startDate,l.endDate,day));
+      if(record?.syncedAt&&record.syncedAt.getTime()>=shiftEnd.getTime()&&!approvedLeave)continue;
       const recordStart=record?.firstIn?new Date(record.firstIn.getTime()-60000):null;
       const recordEnd=record?.firstIn&&record.status!=='MISSING_PUNCH'&&record.lastOut?new Date(record.lastOut.getTime()+60000):null;
       const dayPunches=employeePunches.filter(p=>recordStart?(p.punchTime>=recordStart&&(!recordEnd||p.punchTime<=recordEnd)):attendanceWorkdayDate(p.punchTime,shift.startMinute,shift.endMinute,shift.timezone)===dateKey);
       let punchCalc:any=null;if(dayPunches.length&&!record?.correctionNote){const effectiveDayPunches=attendanceCalculationPunches(dayPunches);punchCalc=calculateAttendance(effectiveDayPunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart,shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});}
       const punchStatus=punchCalc?punchedAttendanceStatusAtMoment(punchCalc.status,now,shiftEnd,dayPunches.length>0):null;
       const holiday=holidaySet.has(dateKey),rosterOff=rosterOffSet.has(`${shift.id}:${dateKey}`),weeklyOff=!isScheduledWorkDay(day,shift);
-      const leave=employeeLeaves.find(l=>overlap(l.startDate,l.endDate,day));
+      const leave=approvedLeave;
       const leaveType=leave?leaveTypeMap.get(leave.leaveTypeId):undefined;
       const halfLeave=!!leave&&Number(leave.days)===0.5&&key(leave.startDate)===key(leave.endDate);
       const effectiveLeave=!holiday&&!weeklyOff&&!rosterOff?leave:undefined;
