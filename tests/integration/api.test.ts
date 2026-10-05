@@ -46,9 +46,45 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await db.user.create({data:{tenantId:alphaTenant,name:'Test Employee',email:'employee-login@example.test',passwordHash:await hashPassword('test-employee-password'),employeeId:a.data.id,roleId:employeeRole.id}});
   const self=await login('employee-login@example.test','test-employee-password','ALPHA');
   await t.test('employee permissions and personal scope are enforced',async()=>{assert.equal((await call('employees','POST',employeeInput,self)).status,403);assert.equal((await call('payroll','POST',{month:'2026-08'},self)).status,403);const rows=await call('employees','GET',undefined,self);assert.equal(rows.data.items.length,1);assert.equal(rows.data.items[0].id,a.data.id);assert.equal((await call('users','GET',undefined,self)).status,403)});
+  await t.test('HR profile edits preserve hidden bank details and cannot overwrite them',async()=>{
+   const bank={bankName:'Test Bank',accountHolder:'Test Employee',accountNumber:'1234567890',ifsc:'TEST0000001',bankBranch:'Test Branch'};
+   await db.employee.update({where:{id:a.data.id},data:{personal:{...bank,city:'Old city'}}});
+   const role=await db.role.findUniqueOrThrow({where:{code:'HR_EXECUTIVE'}});
+   await db.user.create({data:{tenantId:alphaTenant,name:'HR editor',email:'hr-editor@example.test',passwordHash:await hashPassword('test-hr-editor-password'),roleId:role.id}});
+   const editor=await login('hr-editor@example.test','test-hr-editor-password','ALPHA');
+   const {monthlySalary,...editable}=employeeInput;
+   const updated=await call('employees/'+a.data.id,'PATCH',{...editable,personal:{city:'New city'}},editor);
+   assert.equal(updated.status,200,JSON.stringify(updated.data));assert.equal(updated.data.personal.city,'New city');assert.equal(updated.data.personal.accountNumber,undefined);
+   const stored=await db.employee.findUniqueOrThrow({where:{id:a.data.id}});
+   assert.deepEqual(stored.personal,{...bank,city:'New city'});assert.equal(stored.monthlySalary,monthlySalary);
+   assert.equal((await call('employees/'+a.data.id,'PATCH',{...editable,personal:{accountNumber:'999'}},editor)).status,403);
+  });
+  await t.test('employees cannot read company payout records or sync provider payments',async()=>{
+   const run=await db.payrollRun.create({data:{tenantId:alphaTenant,month:'2025-12'}});
+   await db.payrollPayout.create({data:{tenantId:alphaTenant,runId:run.id,employeeId:a.data.id,employeeName:'Private salary',employeeCode:'A01',amount:500000,provider:'TEST',reference:'privacy-regression'}});
+   assert.equal((await call(`payroll/${run.id}/payouts`,'GET',undefined,self)).status,403);
+   assert.equal((await call(`payroll/${run.id}/payout-sync`,'POST',{},self)).status,403);
+   assert.equal((await call(`payroll/${run.id}/payouts`,'GET',undefined,alpha)).data.items.length,1);
+   assert.equal((await call(`payroll/${run.id}/payouts`,'GET',undefined,beta)).data.items.length,0);
+   await db.payrollPayout.deleteMany({where:{runId:run.id}});await db.payrollRun.delete({where:{id:run.id}});
+  });
+  await t.test('employee reports include every matching page and preserve filters',async()=>{
+   await db.employee.createMany({data:Array.from({length:501},(_,i)=>({tenantId:alphaTenant,employeeCode:'EXPORT-'+i,firstName:'Export',lastName:String(i),email:`export-${i}@example.test`,joiningDate:new Date('2099-01-01')}))});
+   const exported=await call('reports/employees?q=EXPORT-&format=csv','GET',undefined,alpha);
+   assert.equal(exported.status,200);assert.equal(exported.data.split('\r\n').length,502);assert.equal(new Set(exported.data.match(/EXPORT-\d+/g)).size,501);assert(!exported.data.includes('employee@example.test'));
+   const filtered=await call('reports/employees?q=EXPORT-&status=INACTIVE&format=csv','GET',undefined,alpha);
+   assert.equal(filtered.status,200);assert(!filtered.data.includes('EXPORT-'));
+   await db.employee.deleteMany({where:{tenantId:alphaTenant,employeeCode:{startsWith:'EXPORT-'}}});
+  });
   await t.test('payroll prepare, reopen and finalization use one safe workflow',async()=>{
    assert.equal((await call('payroll','POST',{month:'2026-10'},alpha)).status,400);
+   const prior=await db.payrollRun.create({data:{tenantId:alphaTenant,month:'2026-07',status:'LOCKED'}});
+   const excluded=await db.employee.create({data:{tenantId:alphaTenant,employeeCode:'FUTURE',firstName:'Future',lastName:'Employee',email:'future@example.test',joiningDate:new Date('2099-01-01')}});
+   const includedAdjustment=await db.payrollAdjustment.create({data:{tenantId:alphaTenant,originalRunId:prior.id,employeeId:a.data.id,targetMonth:'2026-08',amount:100,reason:'Included in payroll'}});
+   const pendingAdjustment=await db.payrollAdjustment.create({data:{tenantId:alphaTenant,originalRunId:prior.id,employeeId:excluded.id,targetMonth:'2026-08',amount:100,reason:'No eligible payroll item'}});
    const prepared=await call('payroll','POST',{month:'2026-08'},alpha);assert.equal(prepared.status,200,JSON.stringify(prepared.data));assert.equal(prepared.data.status,'REVIEW');assert(prepared.data.items.length>0);
+   assert.equal((await db.payrollAdjustment.findUniqueOrThrow({where:{id:includedAdjustment.id}})).appliedRunId,prepared.data.id);
+   assert.equal((await db.payrollAdjustment.findUniqueOrThrow({where:{id:pendingAdjustment.id}})).appliedRunId,null);
    const attendanceLock=await db.attendancePeriodLock.findUniqueOrThrow({where:{tenantId_month:{tenantId:alphaTenant,month:'2026-08'}}});assert.equal(attendanceLock.status,'LOCKED');
    const reopened=await call(`payroll/${prepared.data.id}/reopen`,'POST',{},alpha);assert.equal(reopened.status,200,JSON.stringify(reopened.data));assert.equal(reopened.data.status,'DRAFT');
    const reopenedAttendance=await db.attendancePeriodLock.findUniqueOrThrow({where:{tenantId_month:{tenantId:alphaTenant,month:'2026-08'}}});assert.equal(reopenedAttendance.status,'UNLOCKED');assert.equal(await db.payrollItem.count({where:{runId:prepared.data.id}}),0);
@@ -56,6 +92,8 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    const finalized=await call(`payroll/${prepared.data.id}/finalize`,'POST',{},alpha);assert.equal(finalized.status,200,JSON.stringify(finalized.data));assert.equal(finalized.data.status,'LOCKED');
    await assert.rejects(()=>db.payrollRun.update({where:{id:prepared.data.id},data:{totalNet:1}}));
    const item=await db.payrollItem.findFirstOrThrow({where:{runId:prepared.data.id}});await assert.rejects(()=>db.payrollItem.update({where:{id:item.id},data:{net:1}}));
+   assert.equal((await db.payrollAdjustment.findUniqueOrThrow({where:{id:pendingAdjustment.id}})).appliedRunId,null);
+   await db.payrollAdjustment.delete({where:{id:pendingAdjustment.id}});await db.employee.delete({where:{id:excluded.id}});
    const slips=await call('payroll','GET',undefined,self);assert.equal(slips.data.items.length,1);assert.equal(slips.data.items[0].employeeId,a.data.id);
   });
   await t.test('leave overlap, approval, cancellation, and self-approval controls',async()=>{

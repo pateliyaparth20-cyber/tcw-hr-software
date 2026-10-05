@@ -1,5 +1,5 @@
 'use client';
-import React,{createContext,useContext,useEffect,useRef,useState} from 'react';
+import React,{createContext,useContext,useEffect,useRef,useState,useId} from 'react';
 import {useQuery,QueryClient,QueryClientProvider,useQueryClient} from '@tanstack/react-query';
 import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight,Clock3} from 'lucide-react';
 import {Field,Row,readable} from './config';
@@ -7,7 +7,7 @@ import {avatarInitials,avatarPhotoSrc} from './avatar';
 export type Session={user:Row;csrf:string;company?:Row};
 export function notificationTarget(row:Row){
   const explicit=String(row.target??row.url??'').trim();
-  if(explicit.startsWith('/'))return explicit;
+  if(/^\/(?![\/\\])/.test(explicit)&&!/[\\\u0000-\u0020]/.test(explicit))return explicit;
   const text=(String(row.title??'')+' '+String(row.message??'')).toLowerCase();
   const routes:[RegExp,string][]=[
     [/attendance|punch|clock.?in|clock.?out|late|absent/,'/attendance'],
@@ -195,7 +195,7 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
 }
 export function useData(path:string,enabled=true,refetchInterval?:number){return useQuery<Row>({queryKey:[path],queryFn:()=>api(path),enabled,refetchInterval:enabled&&refetchInterval?refetchInterval:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true});}
 export function Loading(){return <div className="loading" role="status"><LoaderCircle className="spin" size={24}/><span>Loading your workspace…</span></div>}
-export function Failure({error,retry}:{error:Error;retry?:()=>void}){return <div className="empty error-state"><AlertCircle/><h3>Unable to load this view</h3><p>{error.message}</p>{retry&&<button className="btn secondary" onClick={retry}>Try again</button>}</div>}
+export function Failure({error,retry}:{error:Error;retry?:()=>void}){return <div className="empty error-state" role="alert"><AlertCircle aria-hidden="true"/><h3>Unable to load this view</h3><p>{error.message}</p>{retry&&<button className="btn secondary" onClick={retry}>Try again</button>}</div>}
 export function Empty({title='Nothing here yet',description='New records will appear here.',action}:{title?:string;description?:string;action?:React.ReactNode}){return <div className="empty"><span className="empty-icon"><Inbox size={26}/></span><h3>{title}</h3><p>{description}</p>{action}</div>}
 export function Badge({value}:{value:any}){const str=String(value??'—'),label=['HALF_DAY','SHORT_HOURS'].includes(str)?'Insufficient Hours':str==='NOT_CLOCKED_IN'?'Not Checked In':readable(str.toLowerCase());return <span className={'badge '+(['ACTIVE','PRESENT','APPROVED','PAID','COMPLETED','HIRED','WON','AVAILABLE','WORKING','CONNECTED','ONLINE','LOCKED','RESOLVED','INFO','CLEAR','OPEN','PAID_LEAVE','CONTACTED','INTERESTED','CONVERTED','HOLIDAY','WEEK_OFF','LOW'].includes(str)?'green':['PENDING','TRIAL','REVIEW','PROBATION','MEETING','PART_PAID','IN_PROGRESS','AWAITING_CONNECTION','DEGRADED','WARN','NORMAL','HIGH','FOLLOW_UP','NO_ANSWER','HALF_DAY','SHORT_HOURS','INSUFFICIENT_HOURS','NOT_CLOCKED_IN'].includes(str)?'amber':['REJECTED','ABSENT','SUSPENDED','EXPIRED','ARCHIVED','OVERDUE','MISSING_PUNCH','LOST','OFFLINE','ERROR','URGENT','CALL_DUE','NOT_INTERESTED'].includes(str)?'red':'blue')}>{label}</span>}
 export const displayDate=(v:any)=>v?new Date(v).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
@@ -203,8 +203,9 @@ export const currencyValue=(v:number,currency='INR')=>new Intl.NumberFormat('en-
 export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:string|null}){const tones=['#e4edff','#dff4ee','#f4e9ff','#fff0da'],photo=avatarPhotoSrc(src),initials=avatarInitials(name);return <span className={'avatar '+(large?'large':'')+(photo?' has-photo':'')} style={{background:tones[(String(name??'').charCodeAt(0)||0)%4]}}><span className="avatar-initials" aria-hidden={!!photo}>{initials}</span>{photo&&<img src={photo} alt={name+' profile photo'} onError={e=>{e.currentTarget.style.display='none'}}/>}</span>}
 export function Modal({title,children,onClose,wide=false}:{title:string;children:React.ReactNode;onClose:()=>void;wide?:boolean}){
   const ref=useRef<HTMLDialogElement>(null);
+  const titleId=useId();
   useEffect(()=>{const d=ref.current;d?.showModal();return()=>{if(d?.open)d.close()}},[]);
-  return <dialog ref={ref} className={'modal '+(wide?'wide':'')} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target===ref.current)onClose()}}><div className="modal-head"><h2>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
+  return <dialog ref={ref} className={'modal '+(wide?'wide':'')} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target!==ref.current)return;const rect=e.currentTarget.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)onClose()}}><div className="modal-head"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
 }
 export function PhotoViewer({src,name,onClose}:{src:string;name:string;onClose:()=>void}){
   const ref=useRef<HTMLDialogElement>(null);
@@ -215,7 +216,8 @@ export function PhotoViewer({src,name,onClose}:{src:string;name:string;onClose:(
   </dialog>;
 }
 function Choice({field,value,onChange}:{field:Field;value:any;onChange:(v:any)=>void}){
- const data=useData(field.source??'',!!field.source);const rows=data.data?.items??[];
+ const source=field.source?field.source+(field.source.includes('?')?'&':'?')+'pageSize=500':'';
+ const data=useData(source,!!field.source);const rows=data.data?.items??[];
  return <select id={'field-'+field.key} required={field.required} value={value??''} onChange={e=>onChange(e.target.value)} disabled={!!field.source&&data.isLoading}>
   <option value="">{data.isLoading?'Loading…':data.isError?'Unable to load options':field.emptyLabel??('Select '+field.label.toLowerCase())}</option>
   {field.source?rows.map((r:Row)=>{const optionValue=field.sourceValue==='name'?String(r.name??r.title??r.number??''):r.id;return <option key={r.id} value={optionValue}>{r.firstName?`${r.firstName} ${r.lastName} · ${r.employeeCode}`:r.name??r.title??r.number}</option>}):field.options?.map(v=><option key={v} value={v}>{readable(v.toLowerCase())}</option>)}
@@ -250,9 +252,9 @@ function Time12Field({id,value,onChange}:{id:string;value:any;onChange:(value:st
  const choose=(hour:number,minute:number,period:'AM'|'PM')=>{
   let h=hour%12;if(period==='PM')h+=12;const next=`${String(h).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;onChange(next);setDraft(toDisplay(next));
  };
- return <div id={id} className={'time12-field time12-manual '+(open?'open':'')} onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&e.currentTarget.contains(next))return;setOpen(false)}}>
+ return <div className={'time12-field time12-manual '+(open?'open':'')} onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&e.currentTarget.contains(next))return;setOpen(false)}}>
   <Clock3 size={17}/>
-  <input type="text" inputMode="text" autoComplete="off" spellCheck={false} aria-label="Time" placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
+  <input id={id} type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
   <span className="time12-dropdown-button" role="button" tabIndex={0} aria-label="Open time picker" aria-expanded={open} onMouseDown={e=>e.preventDefault()} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><ChevronRight size={16} className="time12-chevron"/></span>
   {open&&<div className="time12-popover time12-clean-popover">
    <div className="time12-grid">
@@ -275,7 +277,7 @@ function DurationField({id,value,onChange}:{id:string;value:any;onChange:(value:
   onChange(minutes);
   setDraft(`${String(Number(match[1])).padStart(2,'0')}:${match[2]}`);
  };
- return <div className="duration-clock-field duration-clock-manual"><Clock3 size={18}/><input id={id} type="text" inputMode="numeric" aria-label="Duration in hours and minutes" aria-description="Enter duration as hours colon minutes, for example 08:30" placeholder="HH:MM" pattern="[0-9]{1,3}:[0-5][0-9]" value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><span className="duration-clock-unit">HH:MM</span></div>;
+ return <div className="duration-clock-field duration-clock-manual"><Clock3 size={18}/><input id={id} type="text" inputMode="numeric" aria-description="Enter duration as hours colon minutes, for example 08:30" placeholder="HH:MM" pattern="[0-9]{1,3}:[0-5][0-9]" value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><span className="duration-clock-unit">HH:MM</span></div>;
 }
 
 const getPath=(obj:any,path:string)=>path.split('.').reduce((v,k)=>v?.[k],obj);
@@ -283,11 +285,12 @@ const setPath=(obj:any,path:string,value:any)=>{const keys=path.split('.');let c
 export function RecordForm({fields,initial,onSave,onCancel,submit='Save changes',fieldFilter,formClassName='' }:{fields:Field[];initial?:Row;onSave:(data:Row)=>Promise<any>;onCancel:()=>void;submit?:string|((values:Row)=>string);fieldFilter?:(field:Field,values:Row)=>boolean;formClassName?:string}){
  const[values,setValues]=useState<Row>(()=>Object.fromEntries(fields.map(f=>{let v=getPath(initial,f.key)??f.default??(f.type==='checkbox'?false:'');if(v&&f.type==='date')v=String(v).slice(0,10);if(v&&f.type==='datetime-local')v=new Date(new Date(v).getTime()-new Date(v).getTimezoneOffset()*60000).toISOString().slice(0,16);if(f.type==='money'&&v!=='')v=Number(v)/100;if(f.type==='time'&&v!=='')v=`${String(Math.floor(Number(v)/60)).padStart(2,'0')}:${String(Number(v)%60).padStart(2,'0')}`;if(f.type==='lines'&&Array.isArray(v))v=v.join('\n');return [f.key,v];})));
  const[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const saving=useRef(false);
  const visibleFields=fields.filter(f=>!fieldFilter||fieldFilter(f,values));
- async function save(e:React.FormEvent){e.preventDefault();setError('');setBusy(true);try{
-  const body:Row={};for(const f of visibleFields){let v=values[f.key];if(f.type==='checkbox')v=!!v;else if(v===''||v===undefined){if(f.required)throw new Error(`${f.label} is required.`);if(f.key.startsWith('personal.'))v='';else if(f.type==='select'||['date','datetime-local','money','time','hours','duration'].includes(f.type??'')){v=null;}else v='';}else if(f.type==='money')v=Math.round(Number(v)*100);else if(f.type==='number')v=Number(v);else if(f.type==='datetime-local')v=new Date(v).toISOString();else if(f.type==='time'){const[h,m]=v.split(':').map(Number);v=h*60+m;}else if(f.type==='lines')v=v.split('\n').map((s:string)=>s.trim()).filter(Boolean);setPath(body,f.key,v);}
+ async function save(e:React.FormEvent){e.preventDefault();if(saving.current)return;saving.current=true;setError('');setBusy(true);try{
+  const body:Row={};for(const f of visibleFields){let v=values[f.key];if(f.type==='checkbox')v=!!v;else if(v===''||v===undefined){if(f.required)throw new Error(`${f.label} is required.`);if(f.key.startsWith('personal.'))v='';else if(f.type==='select'||['date','datetime-local','money','time','hours','duration'].includes(f.type??'')){v=null;}else v='';}else if(f.type==='money')v=Math.round(Number(v)*100);else if(f.type==='number'||f.type==='hours')v=Number(v);else if(f.type==='datetime-local')v=new Date(v).toISOString();else if(f.type==='time'){const[h,m]=v.split(':').map(Number);v=h*60+m;}else if(f.type==='lines')v=v.split('\n').map((s:string)=>s.trim()).filter(Boolean);setPath(body,f.key,v);}
   await onSave(body);
- }catch(e:any){setError(e.message);}finally{setBusy(false)}}
+ }catch(e:any){setError(e.message);}finally{saving.current=false;setBusy(false)}}
  const submitLabel=typeof submit==='function'?submit(values):submit;
  return <form onSubmit={save} className={'record-form '+formClassName}><div className="form-grid">{visibleFields.map(f=><label key={f.key} className={'field '+(['textarea','lines'].includes(f.type??'')?'span-two ':'')+(f.type==='checkbox'?'checkbox-field ':'')+(f.type==='date'?'date-field ':'')} htmlFor={'field-'+f.key}><span>{f.label}{f.required&&f.type!=='checkbox'&&<i> *</i>}</span>{f.type==='select'?<Choice field={f} value={values[f.key]} onChange={v=>setValues({...values,[f.key]:v})}/>:f.type==='textarea'||f.type==='lines'?<textarea id={'field-'+f.key} required={f.required} value={values[f.key]} rows={4} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>:f.type==='checkbox'?<span className="form-switch-row"><span className="form-switch-copy"><strong>{values[f.key]?'Yes':'No'}</strong><small>{f.hint??(values[f.key]?'Enabled':'Disabled')}</small></span><input id={'field-'+f.key} className="form-switch-input" type="checkbox" checked={!!values[f.key]} onChange={e=>setValues({...values,[f.key]:e.target.checked})}/><span className="form-switch-ui" aria-hidden="true"><span/></span></span>:f.type==='time'?<Time12Field id={'field-'+f.key} value={values[f.key]} onChange={v=>setValues({...values,[f.key]:v})}/>:f.type==='duration'?<DurationField id={'field-'+f.key} value={values[f.key]} onChange={v=>setValues({...values,[f.key]:v})}/>:f.type==='image'?<div className="image-field">{values[f.key]?<img src={values[f.key]} alt={f.label+' preview'}/>:<span>No photo</span>}<div><label className="btn secondary small">Choose photo<input id={'field-'+f.key} className="sr-only" type="file" accept="image/png,image/jpeg" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){setError('Choose a PNG or JPEG photo up to 5 MB.');return;}const reader=new FileReader();reader.onload=()=>setValues({...values,[f.key]:String(reader.result)});reader.readAsDataURL(file)}}/></label>{values[f.key]&&<button type="button" className="btn secondary small" onClick={()=>setValues({...values,[f.key]:''})}>Remove photo</button>}</div></div>:<input id={'field-'+f.key} type={['money','hours'].includes(f.type??'')?'number':f.type??'text'} required={f.required} min={f.min} max={f.max} minLength={f.type==='password'?8:undefined} step={['money','number','hours'].includes(f.type??'')?'any':undefined} value={values[f.key]} onClick={f.type==='date'||f.type==='datetime-local'||f.type==='month'?e=>{try{(e.currentTarget as HTMLInputElement).showPicker?.()}catch{}}:undefined} onChange={e=>{let next=e.target.value;if(f.key==='name'&&!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(next))next=next.replace(/[0-9]/g,'');setValues({...values,[f.key]:next})}} autoComplete={f.type==='password'?'new-password':'off'}/>} {f.hint&&f.type!=='checkbox'&&<small>{f.hint}</small>}</label>)}</div>{error&&<p className="form-error" role="alert">{error}</p>}<div className="form-actions-end"><button type="button" className="btn secondary" onClick={onCancel}>Cancel</button><button className="btn primary" disabled={busy}>{busy?<><LoaderCircle size={17} className="spin"/>Saving…</>:submitLabel}</button></div></form>;
 }

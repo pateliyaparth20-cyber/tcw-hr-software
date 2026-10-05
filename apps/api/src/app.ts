@@ -435,7 +435,15 @@ export class Api {
   async report(ctx:Context,type:string,req:Request,res:Response){
     requirePermission(ctx,'reports','EXPORT');
     let rows:any[]=[];
-    if(type==='employees'){requirePermission(ctx,'employees','EXPORT');rows=(await this.data.employees(ctx,'GET',undefined,undefined,{...req.query,pageSize:500})).items;}
+    if(type==='employees'){
+      requirePermission(ctx,'employees','EXPORT');
+      // Export every matching page; the directory page size is not a report limit.
+      for(let page=1;;page++){
+        const result=await this.data.employees(ctx,'GET',undefined,undefined,{...req.query,page,pageSize:500});
+        rows.push(...result.items);
+        if(!result.items.length||rows.length>=result.total)break;
+      }
+    }
     else if(type==='attendance'){requirePermission(ctx,'attendance','EXPORT');rows=((await this.flows.attendance(ctx,'GET',undefined,req.query)) as any).items;}
     else if(type==='attendance-summary'){requirePermission(ctx,'attendance','EXPORT');const tid=tenant(ctx);const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(String(req.query.month??''));rows=(await (await import('./attendance-automation')).attendanceMonthSummary(this.db,tid,month)).items;}
     else if(type==='leave'){requirePermission(ctx,'leave','EXPORT');rows=((await this.flows.leave(ctx,'GET',undefined)) as any).items;}

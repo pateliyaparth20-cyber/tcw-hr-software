@@ -18,7 +18,7 @@ async function run(){
    const protectedPage=await fetch(origin+'/employees');assert.equal(protectedPage.status,200);const protectedHtml=await protectedPage.text();assert(protectedHtml.includes('Opening your workspace'),'protected route should render the client-side session gate');
    const login=await fetch(origin+'/api/auth/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({email:index?process.env.ADMIN_EMAIL:process.env.OWNER_EMAIL,password:index?process.env.ADMIN_PASSWORD:process.env.OWNER_PASSWORD,...(!index?{companyCode:process.env.DEMO_COMPANY_CODE}: {})})});
    assert.equal(login.status,200,await login.text());const cookie=login.headers.get('set-cookie')!.split(';')[0];
-   const me=await fetch(origin+'/api/auth/me',{headers:{Cookie:cookie,Origin:origin}});assert.equal(me.status,200,await me.text());const session=await me.json();assert.equal(session.user.scope,index?'PLATFORM':'TENANT');
+   const me=await fetch(origin+'/api/auth/me',{headers:{Cookie:cookie,Origin:origin}});const meText=await me.text();assert.equal(me.status,200,meText);const session=JSON.parse(meText);assert.equal(session.user.scope,index?'PLATFORM':'TENANT');
    const dashboard=await fetch(origin+'/dashboard',{headers:{Cookie:cookie}});assert.equal(dashboard.status,200);const html=await dashboard.text();assert(html.includes('Opening your workspace'));console.log(name+': login proxy, cookie forwarding and protected app shell passed');
   }
  }finally{children.forEach(c=>c.kill('SIGTERM'));io.close();await app.close();await fixture.close();}

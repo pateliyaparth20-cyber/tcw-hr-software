@@ -32,3 +32,9 @@ test('PDF export is a native PDF document with readable report content',()=>{
   assert.match(text,/Ravi Joshi/);
   assert.ok(text.endsWith('%%EOF'));
 });
+
+test('Excel sheet names are sanitized before XML escaping and length limits',()=>{
+  const xlsx=toXlsx(rows,'123456789012345678901234567890&bad/name').toString('utf8');
+  assert(xlsx.includes('name="123456789012345678901234567890&amp;"'));
+  assert(toXlsx(rows,"'Team/[HR]:*?' ").toString('utf8').includes('name="Team  HR'));
+});
