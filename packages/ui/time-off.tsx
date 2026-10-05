@@ -236,7 +236,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
                           className="timeoff-v3-actions-menu"
                           role="menu"
                           aria-label={`Actions for ${name} time off request`}
-                          style={{top:actionMenu.top,left:actionMenu.left}}
+                          style={{top:actionMenu!.top,left:actionMenu!.left}}
                           onClick={e=>e.stopPropagation()}
                           onKeyDown={handleActionMenuKeyDown}
                           onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&!e.currentTarget.contains(next))setActionMenu(null)}}
