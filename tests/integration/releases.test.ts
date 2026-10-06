@@ -6,7 +6,7 @@ import {createApp} from '../../apps/api/src/app';
 import {hashPassword} from '../../packages/auth';
 import {claimReleaseNotice,releaseRecipients} from '../../apps/api/src/releases';
 test('manual updates require one authorized exact-version request without company approvals',async()=>{
- const before={enabled:process.env.RELEASE_CONTROL_ENABLED,sha:process.env.GIT_COMMIT_SHA};process.env.NODE_ENV='test';process.env.APP_ORIGINS='http://localhost:3000,http://localhost:3001';process.env.RELEASE_CONTROL_ENABLED='true';process.env.GIT_COMMIT_SHA='a'.repeat(40);
+ const before={enabled:process.env.RELEASE_CONTROL_ENABLED,sha:process.env.GIT_COMMIT_SHA,railwaySha:process.env.RAILWAY_GIT_COMMIT_SHA};process.env.NODE_ENV='test';process.env.APP_ORIGINS='http://localhost:3000,http://localhost:3001';process.env.RELEASE_CONTROL_ENABLED='true';process.env.GIT_COMMIT_SHA='a'.repeat(40);process.env.RAILWAY_GIT_COMMIT_SHA='a'.repeat(40);
  const fixture=await embeddedDatabase(),db=fixture.db;await seed(db,{adminEmail:'release-admin@example.test',adminPassword:'SyntheticAdmin!2026',ownerEmail:'release-owner@example.test',ownerPassword:'SyntheticOwner!2026',companyCode:'RELEASE'});
  let version='b'.repeat(40),reads=0,failAfter=Infinity,stale=false;const source=async()=>{if(++reads>failAfter)throw new Error('Synthetic release lookup outage');return {version,title:'Synthetic next release',publishedAt:'2026-10-06T00:00:00Z',url:'https://github.com/example/test/commit/'+version,...(stale?{lookupUnavailable:true}:{})};};
  const {app,io}=await createApp(db,source);await app.listen(0,'127.0.0.1');const base=`http://127.0.0.1:${app.getHttpServer().address().port}/api/`;
@@ -38,5 +38,5 @@ test('manual updates require one authorized exact-version request without compan
   assert.equal((await call('releases/status','GET',undefined,admin)).data.canUpdate,true);assert.equal((await call('releases/update','POST',{version},admin)).status,200);assert.equal((await call('releases/deployable')).data.version,version);
   const claims=await Promise.all(Array.from({length:10},()=>claimReleaseNotice(db,version)));assert.equal(claims.filter(Boolean).length,1);assert.equal(await claimReleaseNotice(db,version),false);
   process.env.RELEASE_CONTROL_ENABLED='false';assert.equal((await call('releases/deployable')).data.version,null);assert.equal((await call('releases/update','POST',{version},owner)).status,503);
- }finally{io.close();await app.close();await fixture.close();if(before.enabled===undefined)delete process.env.RELEASE_CONTROL_ENABLED;else process.env.RELEASE_CONTROL_ENABLED=before.enabled;if(before.sha===undefined)delete process.env.GIT_COMMIT_SHA;else process.env.GIT_COMMIT_SHA=before.sha;}
+ }finally{io.close();await app.close();await fixture.close();if(before.enabled===undefined)delete process.env.RELEASE_CONTROL_ENABLED;else process.env.RELEASE_CONTROL_ENABLED=before.enabled;if(before.sha===undefined)delete process.env.GIT_COMMIT_SHA;else process.env.GIT_COMMIT_SHA=before.sha;if(before.railwaySha===undefined)delete process.env.RAILWAY_GIT_COMMIT_SHA;else process.env.RAILWAY_GIT_COMMIT_SHA=before.railwaySha;}
 });
