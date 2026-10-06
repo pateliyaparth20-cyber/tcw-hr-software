@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {totp} from '../../packages/auth/totp';
 // Mutating browser tests are allowed only against the isolated local fixture.
 test.beforeEach(async({baseURL,page})=>{
  expect(process.env.PEOPLEOS_E2E_ISOLATED).toBe('true');expect(baseURL).toBe('http://localhost:3000');
@@ -35,7 +36,7 @@ test('HR directory create edit search and delete',async({page})=>{
  await row.getByRole('button',{name:'Delete employee'}).click();await page.getByRole('dialog').getByRole('button',{name:'Confirm'}).click();await expect(row).not.toBeVisible();
 });
 test('command search and mobile navigation',async({page})=>{
- await login(page);await page.keyboard.press('Control+k');await page.getByRole('textbox',{name:'Search pages and employees'}).fill('Calendar');await page.getByRole('dialog').getByRole('button',{name:'Calendar',exact:true}).click();await expect(page.getByRole('heading',{name:'Calendar',exact:true})).toBeVisible();
+ await login(page);await page.getByRole('button',{name:'Search workspace',exact:true}).click();await page.getByRole('textbox',{name:'Search pages and employees'}).fill('Calendar');await page.getByRole('dialog').getByRole('button',{name:'Calendar',exact:true}).click();await expect(page.getByRole('heading',{name:'Calendar',exact:true})).toBeVisible();
  await page.setViewportSize({width:390,height:844});
  const shortcuts=page.getByRole('navigation',{name:'Mobile shortcuts'});
  const more=shortcuts.getByRole('button',{name:'Open menu'});await more.click();await expect(page.locator('.sidebar')).toHaveClass(/open/);
@@ -109,7 +110,7 @@ test('employee Excel CSV import and lifecycle checklist work on desktop and mobi
  await dialog.getByLabel('Employee file').setInputFiles({name:'employees.csv',mimeType:'text/csv',buffer:Buffer.from(`employeeCode,firstName,lastName,email,phone,joiningDate\nIMP-${suffix},Import,Browser,import-${suffix}@example.test,9000000000,2026-01-01`)});
  await dialog.getByRole('button',{name:'Preview file',exact:true}).click();await expect(dialog).toContainText('Ready to import');
  await dialog.getByRole('button',{name:'Import 1 employees',exact:true}).click();await expect(dialog).not.toBeVisible();
- await page.getByRole('textbox',{name:'Search people directory'}).fill('IMP-'+suffix);const row=page.getByRole('row').filter({hasText:'IMP-'+suffix});await expect(row).toBeVisible();
+ await page.getByRole('textbox',{name:'Search people directory'}).fill('IMP-'+suffix);const row=page.getByRole('row').filter({hasText:'import-'+suffix+'@example.test'});await expect(row).toBeVisible();
  await row.getByRole('button',{name:'Checklists for Import Browser',exact:true}).click();dialog=page.getByRole('dialog');
  await dialog.getByRole('button',{name:'Start standard checklist',exact:true}).click();await expect(dialog).toContainText('0 of 5 tasks complete');
  await dialog.getByRole('checkbox',{name:/Verify identity/}).check();await expect(dialog).toContainText('1 of 5 tasks complete');
@@ -122,7 +123,7 @@ test('salary structures and two-stage policy settings persist',async({page})=>{
  await page.getByRole('textbox',{name:'Search employee name or code',exact:true}).fill('CHART-MEMBER');await page.getByRole('button',{name:/QA Member.*CHART-MEMBER/}).click();
  await page.getByRole('button',{name:'Add salary revision',exact:true}).click();const dialog=page.getByRole('dialog');
  const month=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'});
- await dialog.getByLabel('Effective month (YYYY-MM)').fill(month);await dialog.getByLabel('Basic salary',{exact:true}).fill('20000');await dialog.getByLabel('HRA',{exact:true}).fill('5000');await dialog.getByLabel('Other allowances',{exact:true}).fill('1000');await dialog.getByLabel('Overtime rate per hour',{exact:true}).fill('100');await dialog.getByLabel('Reason for salary revision').fill('Browser verified salary structure');
+ await dialog.getByLabel('Effective month (YYYY-MM)').fill(month);await dialog.getByLabel('Basic salary').fill('20000');await dialog.getByLabel('HRA').fill('5000');await dialog.getByLabel('Other allowances').fill('1000');await dialog.getByLabel('Overtime rate per hour').fill('100');await dialog.getByLabel('Reason for salary revision').fill('Browser verified salary structure');
  await dialog.getByRole('button',{name:'Save salary revision',exact:true}).click();await expect(dialog).not.toBeVisible();await expect(page.locator('.hr-salary-detail')).toContainText('Browser verified salary structure');
  await page.goto('/settings');const policy=page.getByRole('combobox',{name:'expenses approval policy',exact:true});await policy.selectOption('MANAGER_HR');await expect(policy).toHaveValue('MANAGER_HR');await page.reload();await expect(policy).toHaveValue('MANAGER_HR');await policy.selectOption('SINGLE');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
@@ -130,13 +131,13 @@ test('salary structures and two-stage policy settings persist',async({page})=>{
 
 test('training participants record completion and issue a certificate',async({page})=>{
  await login(page);await page.goto('/courses');const card=page.locator('.record-card').filter({hasText:'E2E Operations Training'});await card.getByRole('button',{name:'Participants',exact:true}).click();const dialog=page.getByRole('dialog');
- await dialog.getByRole('button',{name:'Enroll employee',exact:true}).click();await dialog.getByLabel('Employee',{exact:true}).selectOption({label:'QA Member · CHART-MEMBER'});await dialog.getByRole('button',{name:'Enroll employee',exact:true}).last().click();
+ await dialog.getByRole('button',{name:'Enroll employee',exact:true}).click();await dialog.getByLabel('Employee').selectOption({label:'QA Member · CHART-MEMBER'});await dialog.getByRole('button',{name:'Enroll employee',exact:true}).last().click();
  const row=dialog.getByRole('row').filter({hasText:'CHART-MEMBER'});await expect(row).toBeVisible();await row.getByRole('button',{name:'Update progress',exact:true}).click();await dialog.getByLabel('Enrollment status').selectOption('COMPLETED');await dialog.getByLabel('Assessment score (optional)').fill('95');await dialog.getByRole('button',{name:'Save progress',exact:true}).click();await expect(row).toContainText('Completed');
  const download=page.waitForEvent('download');await row.getByRole('link',{name:'Certificate PDF',exact:true}).click();expect((await download).suggestedFilename()).toBe('training-certificate.pdf');
 });
 
 test('authenticator enrollment and recovery code sign-in work in the browser',async({page})=>{
- const {totp}=await import('../../packages/auth/totp');await login(page);await page.goto('/security');await page.getByRole('button',{name:'Set up authenticator',exact:true}).click();let dialog=page.getByRole('dialog');
+ await login(page);await page.goto('/security');await page.getByRole('button',{name:'Set up authenticator',exact:true}).click();let dialog=page.getByRole('dialog');
  await dialog.getByLabel('Current password',{exact:true}).fill(process.env.OWNER_PASSWORD!);await dialog.getByRole('button',{name:'Create setup key',exact:true}).click();const secret=(await dialog.locator('.hr-auth-key').textContent())!;
  await dialog.getByLabel('Current password',{exact:true}).fill(process.env.OWNER_PASSWORD!);await dialog.getByLabel('Authenticator code',{exact:true}).fill(totp(secret));await dialog.getByRole('button',{name:'Enable authenticator',exact:true}).click();dialog=page.getByRole('dialog');await expect(dialog).toContainText('Save your recovery codes');const codes=await dialog.locator('.hr-recovery-codes code').allTextContents();expect(codes).toHaveLength(10);await dialog.getByRole('button',{name:'Close dialog'}).click();
  const result=await page.evaluate(async()=>{const me=await (await fetch('/api/auth/me')).json();return (await fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':me.csrf},body:'{}'})).status});expect(result).toBe(200);
