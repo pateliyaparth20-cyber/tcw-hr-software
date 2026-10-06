@@ -1,3 +1,4 @@
+import {lockPayrollRun} from './payroll-lock';
 import {BadRequestException,ForbiddenException,ServiceUnavailableException} from '@nestjs/common';
 import type {Database} from '../../../packages/database';
 import type {Context} from './context';
@@ -12,6 +13,9 @@ function payoutConfig(company:any){
   return {provider,enabled,mode:String(profile.payoutMode??'IMPS').toUpperCase(),accountLabel:String(profile.payoutAccountLabel??'')};
 }
 function safeProviderDetails(data:any){return {id:data?.id??null,status:data?.status??null,utr:data?.utr??null,mode:data?.mode??null,fees:data?.fees??null,tax:data?.tax??null,status_details:data?.status_details??null};}
+function requirePayoutCredentials(){
+  if(!process.env.RAZORPAY_KEY_ID?.trim()||!process.env.RAZORPAY_KEY_SECRET?.trim()||!process.env.RAZORPAYX_ACCOUNT_NUMBER?.trim())throw new ServiceUnavailableException('RazorpayX payout credentials are incomplete.');
+}
 async function razorpayPayout(payoutId:string,employee:any,amount:number,month:string,mode:string){
   const key=process.env.RAZORPAY_KEY_ID?.trim(),secret=process.env.RAZORPAY_KEY_SECRET?.trim(),sourceAccount=process.env.RAZORPAYX_ACCOUNT_NUMBER?.trim();
   if(!key||!secret||!sourceAccount)throw new ServiceUnavailableException('RazorpayX payout credentials are incomplete.');
@@ -21,6 +25,7 @@ async function razorpayPayout(payoutId:string,employee:any,amount:number,month:s
   const response=await fetch('https://api.razorpay.com/v1/payouts',{method:'POST',signal:AbortSignal.timeout(30000),headers:{Authorization:`Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}`,'Content-Type':'application/json','X-Payout-Idempotency':payoutId},body:JSON.stringify(payload)});
   const text=await response.text();let data:any={};try{data=JSON.parse(text)}catch{}
   if(!response.ok)throw new ServiceUnavailableException(`RazorpayX payout failed (${response.status}). ${String(data?.error?.description??'Check payout account, IP allowlist and balance.').slice(0,240)}`);
+  if(typeof data.id!=='string'||!data.id||typeof data.status!=='string'||!data.status)throw new ServiceUnavailableException('The payout response could not be verified. Check the provider dashboard before any further transfer.');
   return data;
 }
 
@@ -32,8 +37,14 @@ async function razorpayPayoutStatus(providerRef:string){
   if(!response.ok)throw new ServiceUnavailableException(`RazorpayX payout status check failed (${response.status}).`);
   return data;
 }
+export interface PayoutProvider{
+  validateConfiguration():void;
+  send(payoutId:string,employee:any,amount:number,month:string,mode:string):Promise<any>;
+  status(providerRef:string):Promise<any>;
+}
+const defaultProvider:PayoutProvider={validateConfiguration:requirePayoutCredentials,send:razorpayPayout,status:razorpayPayoutStatus};
 export class PayoutService{
-  constructor(private db:Database){}
+  constructor(private db:Database,private provider:PayoutProvider=defaultProvider){}
   async list(ctx:Context,runId:string){
     const tid=tenant(ctx);requirePermission(ctx,'payroll','VIEW');
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Salary payouts are managed by your payroll team.');
@@ -49,7 +60,13 @@ export class PayoutService{
     const rows=await this.db.payrollPayout.findMany({where:{tenantId:tid,runId,provider:'RAZORPAYX',providerRef:{not:null}}});const results=[] as any[];
     for(const row of rows){
       if(['processed','reversed','cancelled','rejected','FAILED'].includes(row.status)) {results.push(row);continue;}
-      try{const remote=await razorpayPayoutStatus(row.providerRef!);results.push(await this.db.payrollPayout.update({where:{id:row.id},data:{status:String(remote.status??row.status),utr:remote.utr??row.utr,details:safeProviderDetails(remote),error:null}}));}
+      try{
+        const remote=await this.provider.status(row.providerRef!);
+        if(remote?.id!==row.providerRef||typeof remote?.status!=='string'||!remote.status)throw new Error('The provider status response could not be verified.');
+        // Ignore stale overlapping sync responses instead of regressing a newer status.
+        await this.db.payrollPayout.updateMany({where:{id:row.id,updatedAt:row.updatedAt},data:{status:remote.status,utr:remote.utr??row.utr,details:safeProviderDetails(remote),error:null}});
+        results.push(await this.db.payrollPayout.findUniqueOrThrow({where:{id:row.id}}));
+      }
       catch(e:any){results.push(await this.db.payrollPayout.update({where:{id:row.id},data:{error:String(e?.message??'Status sync failed').slice(0,500)}}));}
     }
     return {items:results};
@@ -58,23 +75,48 @@ export class PayoutService{
     const tid=tenant(ctx);requirePermission(ctx,'payroll','APPROVE');
     if(body?.confirm!==true)throw new BadRequestException('Confirm the salary payout before sending money.');
     const mode=String(body?.mode??'IMPS').toUpperCase();if(!['IMPS','NEFT','RTGS'].includes(mode))throw new BadRequestException('Choose IMPS, NEFT or RTGS.');
-    const [run,company]=await Promise.all([this.db.payrollRun.findFirst({where:{id:runId,tenantId:tid},include:{items:true}}),this.db.tenant.findUnique({where:{id:tid}})]);
-    if(!run||!company)throw new BadRequestException('Payroll run was not found.');
-    if(run.status!=='LOCKED')throw new BadRequestException('Lock payroll before sending salary payouts.');
-    const config=payoutConfig(company);if(config.provider!=='RAZORPAYX')throw new BadRequestException('Set Salary payout method to RazorpayX in Company settings before using Pay salaries.');
-    if(!config.enabled)throw new ForbiddenException('Live payouts are not enabled for this company. Configure PAYROLL_PAYOUTS_ENABLED, PAYOUT_COMPANY_CODE and RazorpayX credentials on the server.');
-    const employees=await this.db.employee.findMany({where:{tenantId:tid,id:{in:run.items.map(i=>i.employeeId)}}});const byId=new Map(employees.map(e=>[e.id,e]));
-    const missing=employees.filter(e=>{const p=object(e.personal);return !String(p.accountNumber??'').trim()||!String(p.ifsc??'').trim()});if(missing.length)throw new BadRequestException(`Complete bank account number and IFSC for: ${missing.slice(0,5).map(e=>e.employeeCode).join(', ')}${missing.length>5?'…':''}`);
-    const results=[] as any[];
-    for(const item of run.items){
-      if(item.net<=0)continue;const employee=byId.get(item.employeeId);if(!employee)continue;
-      let payout=await this.db.payrollPayout.findUnique({where:{tenantId_runId_employeeId:{tenantId:tid,runId:run.id,employeeId:item.employeeId}}});
-      if(payout&&['processed','processing','queued','pending','PAID'].includes(payout.status)) {results.push(payout);continue;}
-      payout=payout?await this.db.payrollPayout.update({where:{id:payout.id},data:{status:'INITIATING',error:null,mode,amount:item.net}}):await this.db.payrollPayout.create({data:{tenantId:tid,runId:run.id,employeeId:item.employeeId,employeeName:item.employeeName,employeeCode:item.employeeCode,amount:item.net,provider:'RAZORPAYX',mode,status:'INITIATING',reference:`SAL-${run.month}-${item.employeeCode}`.slice(0,80),initiatedBy:ctx.user.id}});
-      try{const remote=await razorpayPayout(payout.id,employee,item.net,run.month,mode);const updated=await this.db.payrollPayout.update({where:{id:payout.id},data:{status:String(remote.status??'processing'),providerRef:remote.id??null,utr:remote.utr??null,details:safeProviderDetails(remote)}});results.push(updated);}
-      catch(e:any){const updated=await this.db.payrollPayout.update({where:{id:payout.id},data:{status:'FAILED',error:String(e?.message??'Payout failed').slice(0,500)}});results.push(updated);}
+    if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Salary payouts are managed by your payroll team.');
+    // Claim each employee exactly once while holding the same period lock as reopen/delete.
+    // Network requests run after commit so a slow provider does not hold database locks.
+    const batch=await this.db.$transaction(async tx=>{
+      await lockPayrollRun(tx,tid,runId);
+      const [run,company]=await Promise.all([tx.payrollRun.findFirst({where:{id:runId,tenantId:tid},include:{items:true}}),tx.tenant.findUnique({where:{id:tid}})]);
+      if(!run||!company)throw new BadRequestException('Payroll run was not found.');
+      if(run.status!=='LOCKED')throw new BadRequestException('Lock payroll before sending salary payouts.');
+      const config=payoutConfig(company);if(config.provider!=='RAZORPAYX')throw new BadRequestException('Set Salary payout method to RazorpayX in Company settings before using Pay salaries.');
+      if(!config.enabled)throw new ForbiddenException('Live payouts are not enabled for this company. Configure PAYROLL_PAYOUTS_ENABLED, PAYOUT_COMPANY_CODE and RazorpayX credentials on the server.');
+      const existing=await tx.payrollPayout.findMany({where:{tenantId:tid,runId}}),claimedIds=new Set(existing.map(p=>p.employeeId));
+      const unpaid=run.items.filter(item=>item.net>0&&!claimedIds.has(item.employeeId));
+      const claims=[] as {payout:any;employee:any}[];
+      if(unpaid.length){
+        this.provider.validateConfiguration();
+        const employees=await tx.employee.findMany({where:{tenantId:tid,id:{in:unpaid.map(i=>i.employeeId)}}}),byId=new Map(employees.map(e=>[e.id,e]));
+        const missing=unpaid.filter(item=>{const employee=byId.get(item.employeeId),p=object(employee?.personal);return !employee||!String(p.accountNumber??'').trim()||!String(p.ifsc??'').trim()});
+        if(missing.length)throw new BadRequestException(`Complete bank account number and IFSC for: ${missing.slice(0,5).map(e=>e.employeeCode).join(', ')}${missing.length>5?'…':''}`);
+        for(const item of unpaid){
+          const payout=await tx.payrollPayout.create({data:{tenantId:tid,runId,employeeId:item.employeeId,employeeName:item.employeeName,employeeCode:item.employeeCode,amount:item.net,provider:'RAZORPAYX',mode,status:'INITIATING',reference:`SAL-${run.month}-${item.employeeCode}`.slice(0,80),initiatedBy:ctx.user.id}});
+          claims.push({payout,employee:byId.get(item.employeeId)!});
+        }
+        await audit(tx,ctx,'PAYROLL_PAYOUT_CLAIMED','payroll',runId,undefined,{month:run.month,count:claims.length,provider:'RAZORPAYX',mode,total:claims.reduce((n,c)=>n+c.payout.amount,0)});
+      }
+      return {month:run.month,existing,claims};
+    },{timeout:30000});
+    const results=[...batch.existing];
+    for(const {payout,employee} of batch.claims){
+      let remote:any;
+      try{
+        remote=await this.provider.send(payout.id,employee,payout.amount,batch.month,payout.mode);
+        if(typeof remote?.id!=='string'||!remote.id||typeof remote?.status!=='string'||!remote.status)throw new Error('The payout response could not be verified.');
+      }catch(e:any){
+        // A timeout/error does not prove that money was not sent. Never reuse this row to
+        // initiate another transfer; reconcile with the provider first.
+        results.push(await this.db.payrollPayout.update({where:{id:payout.id},data:{status:'UNKNOWN',error:`Verify this transfer in the provider dashboard. ${String(e?.message??'Payout response unavailable').slice(0,380)}`}}));
+        continue;
+      }
+      // If persistence fails after a successful provider response, leave the committed
+      // INITIATING claim intact. A later Pay request must still never resend it.
+      results.push(await this.db.payrollPayout.update({where:{id:payout.id},data:{status:remote.status,providerRef:remote.id,utr:remote.utr??null,details:safeProviderDetails(remote),error:null}}));
     }
-    await audit(this.db,ctx,'PAYROLL_PAYOUT_SENT','payroll',run.id,undefined,{month:run.month,count:results.length,provider:'RAZORPAYX',mode,total:results.reduce((n,r)=>n+r.amount,0)});
-    return {items:results,failed:results.filter(r=>r.status==='FAILED').length,processed:results.filter(r=>['processed','processing','queued','pending'].includes(r.status)).length};
+    return {items:results,initiated:batch.claims.length,skipped:batch.existing.length,unknown:results.filter(r=>r.status==='UNKNOWN').length,failed:results.filter(r=>['FAILED','failed','rejected','reversed','cancelled'].includes(r.status)).length,processed:results.filter(r=>['processed','processing','queued','pending'].includes(r.status)).length};
   }
 }

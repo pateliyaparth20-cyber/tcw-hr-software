@@ -1,3 +1,4 @@
+import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
 import {z} from 'zod';
 import {createHash} from 'node:crypto';
@@ -62,9 +63,11 @@ export class Workflows {
       requirePermission(ctx,'attendance','MANAGE');
       const {month}=z.object({month:z.string().refine(value=>value.length===7&&value.charAt(4)==='-'&&Number(value.slice(0,4))>=2000&&Number(value.slice(5,7))>=1&&Number(value.slice(5,7))<=12,{message:'Month must use YYYY-MM format'})}).strict().parse(body);
       const [year,monthNumber]=month.split('-').map(Number),first=new Date(Date.UTC(year,monthNumber-1,1)),next=new Date(Date.UTC(year,monthNumber,1));
-      const payroll=await this.db.payrollRun.findUnique({where:{tenantId_month:{tenantId:tid,month}}});
-      if(payroll&&payroll.status!=='DRAFT')throw new ConflictException('Finalized payroll exists for this month. Reopen or remove payroll before deleting synced attendance.');
       const result=await this.db.$transaction(async tx=>{
+        await lockPayrollPeriod(tx,tid,month);
+        const payroll=await tx.payrollRun.findUnique({where:{tenantId_month:{tenantId:tid,month}}});
+        if(payroll&&payroll.status!=='DRAFT')throw new ConflictException('Reopen or remove payroll before deleting synced attendance.');
+        if(payroll&&await tx.payrollPayout.count({where:{tenantId:tid,runId:payroll.id}}))throw new ConflictException('Attendance with salary payout records cannot be deleted.');
         const rows=await tx.attendanceDaily.findMany({where:{tenantId:tid,date:{gte:first,lt:next}},select:{id:true,employeeId:true,date:true,shiftId:true}});
         const employeeIds=[...new Set(rows.map(r=>r.employeeId))];
         if(employeeIds.length)await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${tid}, true), set_config('app.allow_raw_punch_delete', 'on', true)`;
@@ -116,7 +119,8 @@ export class Workflows {
         const statePunches=(await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{lte:punchTime}},orderBy:{punchTime:'desc'},take:200})).reverse(),effectiveState=attendanceCalculationPunches(statePunches);let openPunch:any=null,lastAccepted:any=null;for(const p of effectiveState){if(p.punchType==='IN'){if(!openPunch){openPunch=p;lastAccepted=p}}else if(openPunch){openPunch=null;lastAccepted=p}}if(openPunch&&input.intent!=='IN'){const resolved=await shiftForOpenPunch(tx,tid,employeeId,openPunch,shift);shift=resolved.shift;day=resolved.day??attendanceWorkdayDate(openPunch.punchTime,shift.startMinute,shift.endMinute,shift.timezone);night=shift.endMinute<=shift.startMinute;const scheduledStart=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone);start=new Date(Math.min(+scheduledStart,+openPunch.punchTime-60000));const scheduledEnd=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);end=new Date(Math.max(+scheduledEnd,punchTime.getTime()+300000));await assertAttendanceUnlocked(tx as any,tid,new Date(day));}const priorPunches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
         if(lastAccepted&&punchTime.getTime()-lastAccepted.punchTime.getTime()<45000)throw new ConflictException('A Face Scan punch was just recorded. Wait a few seconds before scanning again.');
         let punchType:'IN'|'OUT';if(input.intent==='IN'){if(openPunch)throw new ConflictException('You are already checked in. Check out before starting another IN.');punchType='IN';}else if(input.intent==='OUT'){if(!openPunch)throw new ConflictException('You are not currently checked in. Check in before checking out.');punchType='OUT';}else punchType=openPunch?'OUT':'IN';
-        const targetDate=new Date(day),targetAttendance=await tx.attendanceDaily.findUnique({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:targetDate}}});if(targetAttendance?.shiftId===shift.id&&targetAttendance.firstIn)start=new Date(targetAttendance.firstIn.getTime()-60000);else if(punchType==='IN')start=new Date(punchTime.getTime()-60000);
+        await lockPayrollPeriod(tx,tid,day.slice(0,7));await assertAttendanceUnlocked(tx,tid,new Date(day));
+      const targetDate=new Date(day),targetAttendance=await tx.attendanceDaily.findUnique({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:targetDate}}});if(targetAttendance?.shiftId===shift.id&&targetAttendance.firstIn)start=new Date(targetAttendance.firstIn.getTime()-60000);else if(punchType==='IN')start=new Date(punchTime.getTime()-60000);
         const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:mobileDevice.id,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',app:'TCW_EMPLOYEE',intent:punchType,actorId:ctx.user.id,faceCaptureHash:faceHash,captureBytes:bytes.length,rawImageStored:false,faceMatched:true,faceDistance:match.distance,faceThreshold:match.threshold}}});
         const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
         const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
@@ -142,6 +146,11 @@ export class Workflows {
       const end=before.firstIn?(before.lastOut?new Date(before.lastOut.getTime()+60000):new Date(Date.now()+60000)):new Date(scheduledEnd.getTime()+120*60000);
       if(before.syncedAt)throw new ConflictException('This attendance day is already synced and cannot be deleted.');
       return this.db.$transaction(async tx=>{
+        await lockPayrollPeriod(tx,tid,day.slice(0,7));
+        await assertAttendanceUnlocked(tx,tid,before.date);
+        const current=await tx.attendanceDaily.findFirst({where:{id:before.id,tenantId:tid}});
+        if(!current)throw new NotFoundException('Attendance record not found.');
+        if(current.syncedAt)throw new ConflictException('This attendance day is already synced and cannot be deleted.');
         const removed=await tx.attendancePunch.deleteMany({where:{tenantId:tid,employeeId:before.employeeId,punchTime:{gte:start,lt:end}}});
         await tx.attendanceDaily.delete({where:{id:before.id}});
         await audit(tx,ctx,'ATTENDANCE_DAY_DELETED','attendance',before.id,before,{deletedPunches:removed.count,date:day,shiftId:before.shiftId,permanent:true});
@@ -150,12 +159,17 @@ export class Workflows {
     }
     if(recordId&&action==='correct'&&method==='POST'){
       requirePermission(ctx,'attendance','MANAGE');const input=z.object({status:z.enum(['PRESENT','INSUFFICIENT_HOURS','ABSENT','SHORT_HOURS','HALF_DAY']),workMinutes:z.number().int().min(0).max(1440).optional(),note:z.string().trim().min(5).max(1000)}).strict().parse(body);
-      const before=await this.db.attendanceDaily.findFirst({where:{tenantId:tid,id:id.parse(recordId)}});if(!before)throw new NotFoundException();await assertAttendanceUnlocked(this.db,tid,before.date);
-      const shift=before.shiftId?await this.db.shift.findFirst({where:{tenantId:tid,id:before.shiftId}}):null,correctedWork=input.workMinutes??before.workMinutes,normalizedStatus=['HALF_DAY','SHORT_HOURS'].includes(input.status)?'INSUFFICIENT_HOURS':input.status;
-      const payableUnits=attendancePayableUnits(normalizedStatus,correctedWork,shift?.halfDayMinutes??0);
-      const overtimeThreshold=shift?Math.max(Number(shift.fullDayMinutes)||0,Number(shift.overtimeAfterMinutes)||0):0;
-      const after=await this.db.attendanceDaily.update({where:{id:before.id},data:{status:normalizedStatus,workMinutes:correctedWork,overtimeMinutes:shift?Math.max(0,correctedWork-overtimeThreshold):before.overtimeMinutes,payableUnits,exceptionCode:'',correctionNote:input.note}});
-      await audit(this.db,ctx,'ATTENDANCE_CORRECTED','attendance',before.id,before,after);return after;
+      const located=await this.db.attendanceDaily.findFirst({where:{tenantId:tid,id:id.parse(recordId)},select:{date:true}});if(!located)throw new NotFoundException();
+      return this.db.$transaction(async tx=>{
+        await lockPayrollPeriod(tx,tid,located.date.toISOString().slice(0,7));
+        const before=await tx.attendanceDaily.findFirst({where:{tenantId:tid,id:recordId}});if(!before)throw new NotFoundException();
+        await assertAttendanceUnlocked(tx,tid,before.date);
+        const shift=before.shiftId?await tx.shift.findFirst({where:{tenantId:tid,id:before.shiftId}}):null,correctedWork=input.workMinutes??before.workMinutes,normalizedStatus=['HALF_DAY','SHORT_HOURS'].includes(input.status)?'INSUFFICIENT_HOURS':input.status;
+        const payableUnits=attendancePayableUnits(normalizedStatus,correctedWork,shift?.halfDayMinutes??0);
+        const overtimeThreshold=shift?Math.max(Number(shift.fullDayMinutes)||0,Number(shift.overtimeAfterMinutes)||0):0;
+        const after=await tx.attendanceDaily.update({where:{id:before.id},data:{status:normalizedStatus,workMinutes:correctedWork,overtimeMinutes:shift?Math.max(0,correctedWork-overtimeThreshold):before.overtimeMinutes,payableUnits,exceptionCode:'',correctionNote:input.note}});
+        await audit(tx,ctx,'ATTENDANCE_CORRECTED','attendance',before.id,before,after);return after;
+      },{timeout:30000});
     }
     requirePermission(ctx,'attendance',method==='GET'?'VIEW':'CREATE');
     if(method==='GET'){
@@ -176,6 +190,7 @@ export class Workflows {
       const existing=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId:input.sourceId}}});
       if(existing){if(existing.employeeId!==input.employeeId||existing.punchType!==input.punchType||+existing.punchTime!==+input.punchTime)throw new ConflictException('Source ID already belongs to another punch.');return {ok:true,duplicate:true};}
       if(input.punchType==='OUT'){const statePunches=(await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:input.employeeId,punchTime:{lte:input.punchTime}},orderBy:{punchTime:'desc'},take:200})).reverse(),validState=attendanceCalculationPunches(statePunches);let open:any=null;for(const p of validState){if(p.punchType==='IN'){if(!open)open=p}else if(open)open=null}if(open){const resolved=await shiftForOpenPunch(tx,tid,input.employeeId,open,shift);shift=resolved.shift;day=resolved.day??attendanceWorkdayDate(open.punchTime,shift.startMinute,shift.endMinute,shift.timezone);night=shift.endMinute<=shift.startMinute;const scheduledStart=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone);start=new Date(Math.min(+scheduledStart,+open.punchTime-60000));const scheduledEnd=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);end=new Date(Math.max(+scheduledEnd,input.punchTime.getTime()+300000));await assertAttendanceUnlocked(tx as any,tid,new Date(day));}}
+      await lockPayrollPeriod(tx,tid,day.slice(0,7));await assertAttendanceUnlocked(tx,tid,new Date(day));
       const targetDate=new Date(day),targetAttendance=await tx.attendanceDaily.findUnique({where:{tenantId_employeeId_date:{tenantId:tid,employeeId:input.employeeId,date:targetDate}}});if(targetAttendance?.shiftId===shift.id&&targetAttendance.firstIn)start=new Date(targetAttendance.firstIn.getTime()-60000);else if(input.punchType==='IN')start=new Date(input.punchTime.getTime()-60000);
       const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId:input.employeeId,sourceId:input.sourceId,punchTime:input.punchTime,punchType:input.punchType,verificationType:'MANUAL',rawPayload:{...body,source:'MANUAL',actorId:ctx.user.id}}});
       const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:input.employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
@@ -215,6 +230,7 @@ export class Workflows {
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing)return existing;}
       const leaveType=await tx.leaveType.findFirst({where:{id:input.leaveTypeId,tenantId:tid}});if(!leaveType)throw new BadRequestException('Leave type not found.');
+      for(const month of monthsCovered(input.startDate,input.endDate))await lockPayrollPeriod(tx,tid,month);
       const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:monthsCovered(input.startDate,input.endDate)},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before creating leave that changes payroll.`);
       const overlap=await tx.leaveRequest.count({where:{tenantId:tid,employeeId:input.employeeId,status:{in:['PENDING','APPROVED']},startDate:{lte:input.endDate},endDate:{gte:input.startDate}}});
       if(overlap)throw new ConflictException('This employee already has leave requested for these dates.');
@@ -249,6 +265,7 @@ export class Workflows {
     requirePermission(ctx,'leave',isSelf?'CREATE':'EDIT');
     if(!['PENDING','APPROVED'].includes(String(before.status)))throw new ConflictException('Only pending or approved leave can be cancelled.');
     const cancellation=await this.db.$transaction(async tx=>{
+      for(const month of monthsCovered(before.startDate,before.endDate))await lockPayrollPeriod(tx,tid,month);
       await tx.$queryRaw`SELECT id FROM leave_requests WHERE id = ${before.id}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       const current=await tx.leaveRequest.findFirst({where:{tenantId:tid,id:before.id}});if(!current)throw new NotFoundException('Leave request not found.');
       if(!['PENDING','APPROVED'].includes(String(current.status)))throw new ConflictException('This leave request can no longer be cancelled.');
@@ -262,23 +279,23 @@ export class Workflows {
         const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:'Leave cancelled',message:'Your time off request has been cancelled.'}});
         sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:'/leave',tag:'tcw-'+notice.id}).catch(()=>{});
       }
-      return {updated,wasApproved:String(current.status)==='APPROVED'};
-    });
-    const after=cancellation.updated;
-    if(cancellation.wasApproved){
-      await this.db.$transaction(async tx=>{
-        const sourceId=`leave-${after.id}-auto-out`;
+      if(current.status==='APPROVED'){
+        const sourceId=`leave-${current.id}-auto-out`;
         const generated=await tx.attendancePunch.findUnique({where:{tenantId_sourceId:{tenantId:tid,sourceId}}});
         if(generated){
           await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${tid}, true), set_config('app.allow_raw_punch_delete', 'on', true)`;
           await tx.attendancePunch.delete({where:{id:generated.id}});
-          await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT_REVERSED','attendance',generated.id,generated,{leaveId:after.id,cancelled:true});
+          await audit(tx,ctx,'LEAVE_AUTO_CHECKOUT_REVERSED','attendance',generated.id,generated,{leaveId:current.id,cancelled:true});
         }
         await tx.attendanceDaily.updateMany({
-          where:{tenantId:tid,employeeId:after.employeeId,date:{gte:after.startDate,lte:after.endDate},dayType:{in:['PAID_LEAVE','UNPAID_LEAVE']},correctionNote:''},
+          where:{tenantId:tid,employeeId:current.employeeId,date:{gte:current.startDate,lte:current.endDate},dayType:{in:['PAID_LEAVE','UNPAID_LEAVE']},correctionNote:''},
           data:{syncedAt:null}
         });
-      });
+      }
+      return {updated,wasApproved:String(current.status)==='APPROVED'};
+    });
+    const after=cancellation.updated;
+    if(cancellation.wasApproved){
       await this.reconcileLeaveAttendance(ctx,after);
     }
     return after;
@@ -290,7 +307,7 @@ export class Workflows {
     const reviewed=await this.db.$transaction(async tx=>{
       const table=(tx as any)[model];const before=await table.findFirst({where:{id:id.parse(recordId),tenantId:tid}});if(!before)throw new NotFoundException();await assertEmployee(tx,ctx,before.employeeId);
       if(before.employeeId===ctx.user.employeeId)throw new ForbiddenException('You cannot approve your own request.');
-      if(type==='leave'){affectedMonths=monthsCovered(before.startDate,before.endDate);const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before reviewing this leave.`);}
+      if(type==='leave'){affectedMonths=monthsCovered(before.startDate,before.endDate);for(const month of affectedMonths)await lockPayrollPeriod(tx,tid,month);const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before reviewing this leave.`);}
       const data=type==='leave'?{status:input.decision,reviewerId:ctx.user.id,reviewNote:input.note}:{status:input.decision,reviewedBy:ctx.user.id};
       const result=await table.updateMany({where:{id:recordId,tenantId:tid,status:'PENDING'},data});if(result.count!==1)throw new ConflictException('This request has already been reviewed.');
       await audit(tx,ctx,`${type.toUpperCase()}_${input.decision}`,type,recordId,before,data);const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:before.employeeId}});if(user){const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:`${type} ${input.decision.toLowerCase()}`,message:'Your request has been reviewed.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:type==='leave'?'/leave':'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});}return table.findUnique({where:{id:recordId}});
@@ -326,7 +343,7 @@ export class Workflows {
     if(method==='DELETE'){
       if(!recordId)throw new BadRequestException('Payroll run id is required.');
       return this.db.$transaction(async tx=>{
-        await tx.$queryRaw`SELECT id FROM payroll_runs WHERE id = ${id.parse(recordId)}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+        await lockPayrollRun(tx,tid,id.parse(recordId));
         const run=await tx.payrollRun.findFirst({where:{id:recordId,tenantId:tid}});
         if(!run)throw new NotFoundException('Payroll run not found.');
         if(await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}}))throw new ConflictException('Payroll with payout records cannot be deleted.');
@@ -366,9 +383,9 @@ export class Workflows {
     if(action==='finalize'||action==='lock'||action==='approve'){
       const before=await this.db.payrollRun.findFirst({where:{id:id.parse(recordId),tenantId:tid}});
       if(!before)throw new NotFoundException('Payroll run not found.');
-      const after=await finalizePayrollMonth(this.db,tid,recordId,ctx.user.id);
+      const {run:after,changed}=await finalizePayrollMonth(this.db,tid,recordId,ctx.user.id);
       await audit(this.db,ctx,'PAYROLL_FINALIZED','payroll',recordId,before,after);
-      if(before.status!=='LOCKED'){
+      if(changed){
         const finalNotice=await this.db.notification.create({data:{tenantId:tid,title:`Payroll ${after.month} finalized`,message:'Payroll is finalized. Payslips and payout data now use this locked payroll.'}});
         sendPush(this.db,{tenantId:tid,title:finalNotice.title,body:finalNotice.message,url:'/payroll',tag:'tcw-'+finalNotice.id}).catch(()=>{});
         const items=after.items??[];
@@ -391,10 +408,19 @@ export class Workflows {
     const tid=tenant(ctx);requirePermission(ctx,'payroll','MANAGE');
     const input=z.object({originalRunId:id,employeeId:id,targetMonth:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),amount:z.number().int().min(-1e9).max(1e9),reason:z.string().min(5).max(1000)}).strict().parse(body);
     await assertEmployee(this.db,ctx,input.employeeId);
-    const original=await this.db.payrollRun.findFirst({where:{tenantId:tid,id:input.originalRunId,status:'LOCKED'}});
-    if(!original||input.targetMonth<=original.month)throw new BadRequestException('Select a locked original run and a later adjustment month.');
-    if(await this.db.payrollRun.findFirst({where:{tenantId:tid,month:input.targetMonth,status:{not:'DRAFT'}}}))throw new BadRequestException('The target month is already under review or finalized.');
-    return this.db.$transaction(async tx=>{const row=await tx.payrollAdjustment.create({data:{tenantId:tid,...input}});await audit(tx,ctx,'PAYROLL_ADJUSTMENT_CREATED','payroll',row.id,undefined,row);return row;});
+    return this.db.$transaction(async tx=>{
+      const original=await tx.payrollRun.findFirst({where:{tenantId:tid,id:input.originalRunId}});
+      if(!original||input.targetMonth<=original.month)throw new BadRequestException('Select a locked original run and a later adjustment month.');
+      // Acquire periods chronologically so two-period actions cannot deadlock each other.
+      await lockPayrollPeriod(tx,tid,original.month);
+      await lockPayrollPeriod(tx,tid,input.targetMonth);
+      const lockedOriginal=await tx.payrollRun.findFirst({where:{tenantId:tid,id:input.originalRunId,status:'LOCKED'}});
+      if(!lockedOriginal)throw new BadRequestException('Select a locked original run and a later adjustment month.');
+      if(await tx.payrollRun.findFirst({where:{tenantId:tid,month:input.targetMonth,status:{not:'DRAFT'}}}))throw new BadRequestException('The target month is already under review or finalized.');
+      const row=await tx.payrollAdjustment.create({data:{tenantId:tid,...input}});
+      await audit(tx,ctx,'PAYROLL_ADJUSTMENT_CREATED','payroll',row.id,undefined,row);
+      return row;
+    },{timeout:30000});
   }
   async workforce(ctx:Context,method:string,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'workforce',method==='GET'?'VIEW':'CREATE');

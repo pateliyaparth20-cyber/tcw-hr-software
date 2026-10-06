@@ -1,13 +1,15 @@
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
+import type {Prisma} from '@prisma/client';
+import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
 import type {Database} from '../../../packages/database';
 import {localDate,monthBounds} from '../../../packages/attendance-engine';
 import {calculatePay} from '../../../packages/payroll-engine';
-import {attendanceMonthSummary,lockAttendanceMonth,reconcileAttendanceMonth} from './attendance-automation';
+import {attendanceMonthSummary,lockAttendanceMonthInTransaction,reconcileAttendanceMonthInTransaction} from './attendance-automation';
 
 const monthPattern=/^\d{4}-(0[1-9]|1[0-2])$/;
 const nextMonthStart=(month:string)=>new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),1));
 
-async function completedMonthGuard(db:Database,tenantId:string,month:string){
+async function completedMonthGuard(db:Prisma.TransactionClient,tenantId:string,month:string){
   if(!monthPattern.test(month))throw new BadRequestException('Choose a valid payroll month.');
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   if(!company)throw new NotFoundException('Company not found.');
@@ -17,30 +19,22 @@ async function completedMonthGuard(db:Database,tenantId:string,month:string){
 }
 
 export async function preparePayrollMonth(db:Database,tenantId:string,month:string,actorId:string){
-  await completedMonthGuard(db,tenantId,month);
-  const existing=await db.payrollRun.findUnique({where:{tenantId_month:{tenantId,month}}});
-  if(existing?.status==='LOCKED')throw new ConflictException('This payroll is finalized. Reopen it before making changes.');
-  if(existing?.status==='APPROVED')throw new ConflictException('This legacy approved payroll must be reopened before recalculation.');
-  if(existing&&await db.payrollPayout.count({where:{tenantId,runId:existing.id}}))throw new ConflictException('Payroll with payout records cannot be recalculated.');
-
-  let period=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
-  if(period?.status!=='LOCKED'){
-    await reconcileAttendanceMonth(db,tenantId,month);
-    const preview=await attendanceMonthSummary(db,tenantId,month);
-    if(preview.totals.missingPunchDays)throw new BadRequestException(`Resolve ${preview.totals.missingPunchDays} missing-punch day(s) before preparing payroll.`);
-    period=(await lockAttendanceMonth(db,tenantId,month,actorId)).lock;
-  }
-  const summary=await attendanceMonthSummary(db,tenantId,month);
-  if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before preparing payroll.`);
-  const attendanceByEmployee=new Map(summary.items.map((r:any)=>[r.employeeId,r]));
-  const employeeIds=[...attendanceByEmployee.keys()];
-  if(!employeeIds.length)throw new BadRequestException('No attendance records are available for this payroll month.');
-
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+month}))) AS advisory_lock`;
+    await lockPayrollPeriod(tx,tenantId,month);
+    await completedMonthGuard(tx,tenantId,month);
     let run=await tx.payrollRun.findUnique({where:{tenantId_month:{tenantId,month}}});
     if(run?.status==='LOCKED'||run?.status==='APPROVED')throw new ConflictException('Reopen this payroll before recalculation.');
     if(run&&await tx.payrollPayout.count({where:{tenantId,runId:run.id}}))throw new ConflictException('Payroll with payout records cannot be recalculated.');
+    let period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
+    if(period?.status!=='LOCKED'){
+      await reconcileAttendanceMonthInTransaction(tx,tenantId,month);
+      period=(await lockAttendanceMonthInTransaction(tx,tenantId,month,actorId)).lock;
+    }
+    const summary=await attendanceMonthSummary(tx,tenantId,month);
+    if(summary.totals.missingPunchDays)throw new BadRequestException(`Resolve ${summary.totals.missingPunchDays} missing-punch day(s) before preparing payroll.`);
+    const attendanceByEmployee=new Map(summary.items.map((r:any)=>[r.employeeId,r]));
+    const employeeIds=[...attendanceByEmployee.keys()];
+    if(!employeeIds.length)throw new BadRequestException('No attendance records are available for this payroll month.');
     if(!run)run=await tx.payrollRun.create({data:{tenantId,month,attendanceLockId:period!.id}});
     await tx.payrollAdjustment.updateMany({where:{tenantId,appliedRunId:run.id},data:{appliedRunId:null}});
     await tx.payrollItem.deleteMany({where:{tenantId,runId:run.id}});
@@ -78,22 +72,18 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
     if(!itemCount)throw new BadRequestException('No payable employees are available for this payroll month.');
     if(appliedAdjustmentIds.length)await tx.payrollAdjustment.updateMany({where:{tenantId,id:{in:appliedAdjustmentIds}},data:{appliedRunId:run.id}});
     return tx.payrollRun.update({where:{id:run.id},data:{status:'REVIEW',totalGross,totalDeductions,totalNet,approvedBy:null,lockedAt:null,attendanceLockId:period!.id},include:{items:true}});
-  },{timeout:30000});
+  },{timeout:60000});
 }
 
 export async function reopenPayrollMonth(db:Database,tenantId:string,runId:string,actorId:string){
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+runId}))) AS advisory_lock`;
+    await lockPayrollRun(tx,tenantId,runId);
     const run=await tx.payrollRun.findFirst({where:{id:runId,tenantId}});
     if(!run)throw new NotFoundException('Payroll run not found.');
     if(await tx.payrollPayout.count({where:{tenantId,runId}}))throw new ConflictException('Salary payout has already started. Use a later-month adjustment instead of reopening this payroll.');
     if(!['DRAFT','REVIEW','APPROVED','LOCKED'].includes(run.status))throw new ConflictException('This payroll cannot be reopened.');
 
-    if(run.status==='LOCKED'){
-      await tx.payrollRun.update({where:{id:runId},data:{status:'DRAFT',lockedAt:null,approvedBy:null,attendanceLockId:null}});
-    }else{
-      await tx.payrollRun.update({where:{id:runId},data:{status:'DRAFT',lockedAt:null,approvedBy:null,attendanceLockId:null}});
-    }
+    await tx.payrollRun.update({where:{id:runId},data:{status:'DRAFT',lockedAt:null,approvedBy:null,attendanceLockId:null}});
     await tx.payrollAdjustment.updateMany({where:{tenantId,appliedRunId:runId},data:{appliedRunId:null}});
     await tx.payrollItem.deleteMany({where:{tenantId,runId}});
     await tx.payrollRun.update({where:{id:runId},data:{totalGross:0,totalDeductions:0,totalNet:0}});
@@ -110,14 +100,15 @@ export async function reopenPayrollMonth(db:Database,tenantId:string,runId:strin
 
 export async function finalizePayrollMonth(db:Database,tenantId:string,runId:string,actorId:string){
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${tenantId+':payroll:'+runId}))) AS advisory_lock`;
+    await lockPayrollRun(tx,tenantId,runId);
     const run=await tx.payrollRun.findFirst({where:{id:runId,tenantId},include:{items:true}});
     if(!run)throw new NotFoundException('Payroll run not found.');
-    if(run.status==='LOCKED')return run;
+    if(run.status==='LOCKED')return {run,changed:false};
     if(!['REVIEW','APPROVED'].includes(run.status))throw new ConflictException('Prepare payroll and review the employee amounts before finalizing.');
     if(!run.items.length)throw new BadRequestException('Payroll has no employee items. Prepare it again.');
     const period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month:run.month}}});
     if(!period||period.status!=='LOCKED')throw new ConflictException('Attendance changed after payroll preparation. Prepare payroll again before finalizing.');
-    return tx.payrollRun.update({where:{id:runId},data:{status:'LOCKED',approvedBy:actorId,lockedAt:new Date(),attendanceLockId:period.id},include:{items:true}});
+    const finalized=await tx.payrollRun.update({where:{id:runId},data:{status:'LOCKED',approvedBy:actorId,lockedAt:new Date(),attendanceLockId:period.id},include:{items:true}});
+    return {run:finalized,changed:true};
   },{timeout:30000});
 }

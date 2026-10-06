@@ -1,4 +1,6 @@
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
+import type {Prisma} from '@prisma/client';
+import {lockPayrollPeriod} from './payroll-lock';
 import type {Database} from '../../../packages/database';
 import {attendanceCalculationPunches,attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,isScheduledWorkDay,punchedAttendanceStatusAtMoment,localDate,monthBounds,noPunchAttendanceStatus,zonedMinute} from '../../../packages/attendance-engine';
 
@@ -8,7 +10,7 @@ const eachDay=(first:Date,next:Date)=>{const out:Date[]=[];for(let t=+first;t<+n
 const overlap=(start:Date,end:Date,date:Date)=>+start<=+date&&+end>=+date;
 const shiftBreakWindow=(day:string,shift:any)=>{if(shift?.breakStartMinute==null||shift?.breakEndMinute==null)return null;const night=shift.endMinute<=shift.startMinute;let startMinute=Number(shift.breakStartMinute),endMinute=Number(shift.breakEndMinute);if(night&&startMinute<shift.startMinute)startMinute+=1440;if(night&&endMinute<shift.startMinute)endMinute+=1440;if(endMinute<=startMinute)endMinute+=1440;const shiftStart=zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),start=new Date(Math.max(+shiftStart,+zonedMinute(day,startMinute,shift.timezone))),end=new Date(Math.min(+shiftEnd,+zonedMinute(day,endMinute,shift.timezone)));return end>start?{start,end}:null;};
 
-export async function assertAttendanceUnlocked(db:Database,tenantId:string,date:Date){
+export async function assertAttendanceUnlocked(db:Prisma.TransactionClient,tenantId:string,date:Date){
   const month=key(date).slice(0,7);
   const lock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
   if(lock?.status==='LOCKED')throw new ConflictException(`Attendance for ${month} is locked. Unlock it before making corrections.`);
@@ -92,6 +94,13 @@ export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()
 }
 
 export async function reconcileAttendanceMonth(db:Database,tenantId:string,month:string){
+  return db.$transaction(async tx=>{
+    await lockPayrollPeriod(tx,tenantId,month);
+    return reconcileAttendanceMonthInTransaction(tx,tenantId,month);
+  },{timeout:60000});
+}
+
+export async function reconcileAttendanceMonthInTransaction(db:Prisma.TransactionClient,tenantId:string,month:string){
   const {first,next}=monthBounds(month),now=new Date();
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
@@ -161,7 +170,7 @@ export async function reconcileAttendanceMonth(db:Database,tenantId:string,month
   return {month,employees:employees.length,generated,exceptions};
 }
 
-export async function attendanceMonthSummary(db:Database,tenantId:string,month:string,employeeIds?:string[]|null){
+export async function attendanceMonthSummary(db:Prisma.TransactionClient,tenantId:string,month:string,employeeIds?:string[]|null){
   const {first,next}=monthBounds(month),now=new Date();
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const tenantTimezone=company?.timezone||'Asia/Kolkata',today=localDate(now,tenantTimezone),currentMonth=today.slice(0,7);
@@ -215,6 +224,13 @@ export async function attendanceMonthSummary(db:Database,tenantId:string,month:s
 }
 
 export async function lockAttendanceMonth(db:Database,tenantId:string,month:string,userId:string){
+  return db.$transaction(async tx=>{
+    await lockPayrollPeriod(tx,tenantId,month);
+    return lockAttendanceMonthInTransaction(tx,tenantId,month,userId);
+  },{timeout:30000});
+}
+
+export async function lockAttendanceMonthInTransaction(db:Prisma.TransactionClient,tenantId:string,month:string,userId:string){
   const company=await db.tenant.findUnique({where:{id:tenantId},select:{timezone:true}});
   const currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
   if(month>=currentMonth)throw new BadRequestException('The current attendance month must stay open. Lock it only after the month has ended.');
@@ -226,22 +242,22 @@ export async function lockAttendanceMonth(db:Database,tenantId:string,month:stri
   const now=new Date();
   const activeOpen=await db.attendanceDaily.findFirst({where:{tenantId,date:{gte:first,lt:next},status:'MISSING_PUNCH',firstIn:{not:null},lastOut:null}});
   if(activeOpen)throw new BadRequestException('An employee is still working with an open IN punch. Check out or close the work session before locking attendance.');
-  const row=await db.$transaction(async tx=>{
-    await tx.attendanceDaily.updateMany({where:{tenantId,date:{gte:first,lt:next}},data:{lockedAt:now}});
-    return tx.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId,month}},create:{tenantId,month,status:'LOCKED',lockedBy:userId,lockedAt:now,summary:summary.totals},update:{status:'LOCKED',lockedBy:userId,lockedAt:now,unlockedBy:null,unlockedAt:null,summary:summary.totals}});
-  });
+  await db.attendanceDaily.updateMany({where:{tenantId,date:{gte:first,lt:next}},data:{lockedAt:now}});
+  const row=await db.attendancePeriodLock.upsert({where:{tenantId_month:{tenantId,month}},create:{tenantId,month,status:'LOCKED',lockedBy:userId,lockedAt:now,summary:summary.totals},update:{status:'LOCKED',lockedBy:userId,lockedAt:now,unlockedBy:null,unlockedAt:null,summary:summary.totals}});
   return {lock:row,summary};
 }
 
 export async function unlockAttendanceMonth(db:Database,tenantId:string,month:string,userId:string){
-  const {first,next}=monthBounds(month);
-  const payroll=await db.payrollRun.findUnique({where:{tenantId_month:{tenantId,month}}});
-  if(payroll&&payroll.status!=='DRAFT')throw new ConflictException('Reopen payroll to draft before unlocking attendance for this month.');
-  const current=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
-  if(!current)throw new NotFoundException('Attendance month has not been locked.');
-  const now=new Date();
   return db.$transaction(async tx=>{
+    await lockPayrollPeriod(tx,tenantId,month);
+    const {first,next}=monthBounds(month);
+    const payroll=await tx.payrollRun.findUnique({where:{tenantId_month:{tenantId,month}}});
+    if(payroll&&payroll.status!=='DRAFT')throw new ConflictException('Reopen payroll to draft before unlocking attendance for this month.');
+    if(payroll&&await tx.payrollPayout.count({where:{tenantId,runId:payroll.id}}))throw new ConflictException('Attendance with salary payout records cannot be unlocked.');
+    const current=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month}}});
+    if(!current)throw new NotFoundException('Attendance month has not been locked.');
+    const now=new Date();
     await tx.attendanceDaily.updateMany({where:{tenantId,date:{gte:first,lt:next}},data:{lockedAt:null}});
     return tx.attendancePeriodLock.update({where:{id:current.id},data:{status:'UNLOCKED',unlockedBy:userId,unlockedAt:now}});
-  });
+  },{timeout:30000});
 }

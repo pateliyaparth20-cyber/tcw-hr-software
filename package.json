@@ -22,7 +22,7 @@
     "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web && tsc --noEmit -p apps/super-admin",
     "test": "node --import tsx --test tests/unit/*.test.ts",
-    "test:integration": "node --import tsx --test tests/integration/*.test.ts",
+    "test:integration": "node --import tsx --test --test-concurrency=1 tests/integration/*.test.ts",
     "test:e2e": "playwright test",
     "test:browser": "node --import tsx tests/e2e/run.ts",
     "build": "npm run build:backend && npm run build:frontends",
@@ -52,7 +52,8 @@
     "railway:start": "node scripts/railway-gateway.mjs",
     "railway:predeploy": "npm run db:migrate && npm run db:seed",
     "railway:boot": "npm run db:migrate && npm run db:seed && npm run railway:start",
-    "security:audit": "npm audit --omit=dev --audit-level=high"
+    "security:audit": "npm audit --omit=dev --audit-level=high",
+    "test:concurrency": "node --import tsx --test tests/concurrency/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0",

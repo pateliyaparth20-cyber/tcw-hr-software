@@ -61,3 +61,22 @@ test('organization reporting chart searches and collapses manager relationships'
  await page.getByRole('textbox',{name:'Search reporting chart'}).fill('');await page.setViewportSize({width:390,height:844});await expect(chart.getByRole('link',{name:'QA Member',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });
+
+test('payroll shows paid and unverified transfers without opening the payout dialog',async({page})=>{
+ await login(page);
+ const now=new Date(),previous=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1)),month=previous.toISOString().slice(0,7);
+ const items=[{id:'item-paid',employeeId:'employee-paid',employeeName:'Synthetic Paid',employeeCode:'PAY-01',gross:100000,deductions:0,net:100000},{id:'item-unknown',employeeId:'employee-unknown',employeeName:'Synthetic Unverified',employeeCode:'PAY-02',gross:100000,deductions:0,net:100000}];
+ await page.route(/\/api\/payroll(?:\?.*)?$/,route=>route.fulfill({json:{items:[{id:'synthetic-run',month,status:'LOCKED',totalGross:200000,totalNet:200000,items}]}}));
+ await page.route('**/api/payroll/synthetic-run/payouts',route=>route.fulfill({json:{items:[{id:'payout-paid',employeeId:'employee-paid',status:'processed',utr:'SYNTHETIC-UTR',amount:100000},{id:'payout-unknown',employeeId:'employee-unknown',status:'UNKNOWN',error:'Verify synthetic transfer in provider dashboard.',amount:100000}],config:{provider:'RAZORPAYX',enabled:false,mode:'IMPS'}}}));
+ await page.goto('/payroll');
+ const status=page.locator('.payroll-v6-employee-status');
+ await expect(status.getByRole('row').filter({hasText:'PAY-01'}).getByText('Paid',{exact:true})).toBeVisible();
+ await expect(status.getByRole('row').filter({hasText:'PAY-02'}).getByText('Unverified',{exact:true})).toBeVisible();
+ await expect(page.locator('.payroll-v6-payment-cards .paid strong')).toHaveText('1');
+ await page.getByRole('button',{name:'Bank payout',exact:true}).click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toContainText('Each employee transfer is initiated once.');
+ await expect(dialog).toContainText('Verify synthetic transfer in provider dashboard.');
+ await dialog.getByRole('button',{name:'Close dialog'}).click();
+ await expect(status.getByRole('row').filter({hasText:'PAY-01'}).getByText('Paid',{exact:true})).toBeVisible();
+ await expect(page.locator('.payroll-v6-payment-cards .paid strong')).toHaveText('1');
+});
