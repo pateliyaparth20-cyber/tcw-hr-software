@@ -9,12 +9,12 @@ on:
 permissions:
   contents: write
   actions: read
-concurrency:
-  group: company-production-release
-  cancel-in-progress: true
 jobs:
   release:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    concurrency:
+      group: company-production-release
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
