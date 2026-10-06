@@ -58,6 +58,13 @@ test('software update errors allow a retry and restricted users cannot start an 
  canUpdate=false;await page.reload();await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);await expect(page.getByText('Your HR/Admin can start software updates.',{exact:true})).toBeVisible();
 });
 
+test('update lookup outages keep the current version visible and never show approval or start controls',async({page})=>{
+ await login(page);let unavailable=true;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:null,available:false,updateRequested:false,canUpdate:true,checkUnavailable:unavailable}}));
+ await page.goto('/software-update');await expect(page.getByRole('heading',{name:'Update check is temporarily unavailable',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Current software version',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Unable to load this view',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);await expect(page.getByText(/Pending approval|Approve company update/)).toHaveCount(0);
+ unavailable=false;await page.getByRole('button',{name:'Check for updates',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software is up to date',exact:true})).toBeVisible();
+});
+
 test('update action is hidden when current and appears only after a new version is available to this device',async({page})=>{
  await login(page);let currentVersion='a'.repeat(40),navigations=0;
  await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion,available:false,updateRequested:false,canUpdate:true,checkedAt:new Date().toISOString()}}));
