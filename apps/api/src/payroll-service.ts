@@ -1,3 +1,4 @@
+import {MANUAL_SALARY,manualSalary,manualSalaryValues} from '../../../packages/payroll-engine/manual';
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Prisma} from '@prisma/client';
 import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
@@ -37,6 +38,8 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
     if(!employeeIds.length)throw new BadRequestException('No attendance records are available for this payroll month.');
     if(!run)run=await tx.payrollRun.create({data:{tenantId,month,attendanceLockId:period!.id}});
     await tx.payrollAdjustment.updateMany({where:{tenantId,appliedRunId:run.id},data:{appliedRunId:null}});
+    const previousItems=await tx.payrollItem.findMany({where:{tenantId,runId:run.id},select:{employeeId:true,components:true}});
+    const manualByEmployee=new Map(previousItems.map(i=>[i.employeeId,manualSalary(i.components)]));
     await tx.payrollItem.deleteMany({where:{tenantId,runId:run.id}});
 
     const [employees,rules,adjustments]=await Promise.all([
@@ -58,15 +61,18 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       const employeeAdjustments=adjustments.filter(a=>a.employeeId===employee.id);
       const adjustment=employeeAdjustments.reduce((sum,a)=>sum+a.amount,0);
       const result=calculatePay(attendanceGross,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
+      const override=manualByEmployee.get(employee.id);
+      const values=override?manualSalaryValues(override.net,result.deductions):result;
+      const components=[...result.components,{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:employee.monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
-        gross:result.gross,deductions:result.deductions,net:result.net,
-        components:[...result.components,{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:employee.monthlySalary}],
+        gross:values.gross,deductions:values.deductions,net:values.net,
+        components,
         scheduledDays:eligibleDays,payableUnits,presentDays:attendance.presentDays,halfDays:attendance.halfDays,
         paidLeaveUnits:attendance.paidLeaveUnits,unpaidLeaveUnits:attendance.unpaidLeaveUnits,absentDays:attendance.absentDays,
         lateMinutes:attendance.lateMinutes,overtimeMinutes:attendance.overtimeMinutes
       }});
-      totalGross+=result.gross;totalDeductions+=result.deductions;totalNet+=result.net;itemCount++;
+      totalGross+=values.gross;totalDeductions+=values.deductions;totalNet+=values.net;itemCount++;
       appliedAdjustmentIds.push(...employeeAdjustments.map(a=>a.id));
     }
     if(!itemCount)throw new BadRequestException('No payable employees are available for this payroll month.');

@@ -80,3 +80,25 @@ test('payroll shows paid and unverified transfers without opening the payout dia
  await expect(status.getByRole('row').filter({hasText:'PAY-01'}).getByText('Paid',{exact:true})).toBeVisible();
  await expect(page.locator('.payroll-v6-payment-cards .paid strong')).toHaveText('1');
 });
+
+test('HR sets a person-specific manual salary, keeps it on recalculation and restores automatic pay',async({page})=>{
+ await login(page);await page.goto('/payroll');
+ await page.getByRole('button',{name:'Prepare payroll',exact:true}).click();
+ const run=page.locator('.payroll-v2-run'),row=run.getByRole('row').filter({hasText:'CHART-LEAD'});
+ await expect(row).toBeVisible();
+ await row.getByRole('button',{name:'Set manual salary for Team Lead',exact:true}).click();
+ let dialog=page.getByRole('dialog');
+ await dialog.getByLabel('Final salary to pay (INR)').fill('25000');
+ await dialog.getByLabel('Reason for manual salary').fill('Agreed salary for this month');
+ await dialog.getByRole('button',{name:'Save manual salary',exact:true}).click();await expect(dialog).not.toBeVisible();
+ await expect(row.getByText('Manual',{exact:true})).toBeVisible();await expect(row).toContainText('₹25,000.00');
+ await page.getByRole('button',{name:'Recalculate',exact:true}).click();await expect(row).toContainText('₹25,000.00');
+ await page.reload();await expect(row.getByText('Manual',{exact:true})).toBeVisible();await expect(row).toContainText('₹25,000.00');
+ await row.getByRole('button',{name:'Set manual salary for Team Lead',exact:true}).click();
+ dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Reason for manual salary')).toHaveValue('Agreed salary for this month');
+ await dialog.getByRole('button',{name:'Use calculated salary',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();
+ await expect(row.getByText('Calculated',{exact:true})).toBeVisible();await expect(row).not.toContainText('₹25,000.00');
+ await page.getByRole('button',{name:'Finalize payroll',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();
+ await expect(row.getByRole('button',{name:'Set manual salary for Team Lead',exact:true})).not.toBeVisible();
+});

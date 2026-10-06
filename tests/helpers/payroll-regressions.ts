@@ -1,3 +1,4 @@
+import type {PayrollItem} from '@prisma/client';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import type {TestContext} from 'node:test';
@@ -9,6 +10,7 @@ import {PayoutService,type PayoutProvider} from '../../apps/api/src/payouts';
 import {Workflows} from '../../apps/api/src/workflows';
 import {lockPayrollPeriod} from '../../apps/api/src/payroll-lock';
 import {unlockAttendanceMonth,reconcileAttendanceMonth} from '../../apps/api/src/attendance-automation';
+import {manualSalary} from '../../packages/payroll-engine/manual';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve};};
 
@@ -28,6 +30,48 @@ export async function payrollRegressions(db:Database,t:TestContext,concurrent=fa
   const previous=Object.fromEntries(['PAYROLL_PAYOUTS_ENABLED','PAYOUT_PROVIDER','PAYOUT_COMPANY_CODE'].map(key=>[key,process.env[key]]));
   process.env.PAYROLL_PAYOUTS_ENABLED='true';process.env.PAYOUT_PROVIDER='RAZORPAYX';process.env.PAYOUT_COMPANY_CODE=company.code;
   try{
+    await t.test('manual employee salary updates totals, survives recalculation and restores calculated pay',async()=>{
+      const r=await run('2024-08');
+      const second=await db.employee.create({data:{tenantId:tid,employeeCode:'SYNTHETIC-02',firstName:'Second',lastName:'Employee',email:'second@example.test',joiningDate:new Date('2020-01-01'),monthlySalary:200000,shiftId:shift.id}});
+      await db.payrollItem.create({data:{tenantId:tid,runId:r.id,employeeId:second.id,employeeName:'Second Employee',employeeCode:second.employeeCode,gross:200000,deductions:0,net:200000,components:[]}});
+      let item=await db.payrollItem.findFirstOrThrow({where:{runId:r.id,employeeId:employee.id}});
+      item=await db.payrollItem.update({where:{id:item.id},data:{deductions:5000,net:95000}});
+      const original={employeeId:employee.id,expectedUpdatedAt:item.updatedAt.toISOString(),expectedNet:item.net};
+      const changed=await workflow.payroll(ctx,'POST',r.id,'manual-salary',{...original,net:250000,reason:'Agreed special final salary'}) as PayrollItem;
+      assert.equal(changed.net,250000);assert.equal(changed.gross,255000);assert.equal(changed.deductions,5000);
+      assert.equal(manualSalary(changed.components)?.calculatedNet,95000);
+      assert.equal((await db.employee.findUniqueOrThrow({where:{id:employee.id}})).monthlySalary,100000);
+      const total=await db.payrollRun.findUniqueOrThrow({where:{id:r.id}});assert.equal(total.totalGross,455000);assert.equal(total.totalNet,450000);assert.equal(total.totalDeductions,5000);
+      assert.equal((await db.payrollItem.findFirstOrThrow({where:{runId:r.id,employeeId:second.id}})).net,200000);
+      await assert.rejects(()=>workflow.payroll(ctx,'POST',r.id,'manual-salary',{...original,net:200000,reason:'Stale browser amount'}));
+      const recalculated=await preparePayrollMonth(db,tid,r.month,actorId);
+      item=recalculated.items.find(i=>i.employeeId===employee.id)!;
+      assert.equal(item.net,250000);assert.equal(manualSalary(item.components)?.calculatedNet,100000);
+      assert.equal(recalculated.totalNet,recalculated.items.reduce((n,i)=>n+i.net,0));
+      const reset=await workflow.payroll(ctx,'POST',r.id,'manual-salary',{employeeId:employee.id,reset:true,expectedUpdatedAt:item.updatedAt.toISOString(),expectedNet:item.net}) as PayrollItem;
+      assert.equal(reset.net,100000);assert.equal(manualSalary(reset.components),null);
+      const zero=await workflow.payroll(ctx,'POST',r.id,'manual-salary',{employeeId:employee.id,expectedUpdatedAt:reset.updatedAt.toISOString(),expectedNet:reset.net,net:0,reason:'No payment this month'}) as PayrollItem;assert.equal(zero.net,0);
+      assert.equal(await db.auditLog.count({where:{tenantId:tid,action:'PAYROLL_MANUAL_SALARY_SET'}}),2);
+      await finalizePayrollMonth(db,tid,r.id,actorId);
+      await assert.rejects(()=>workflow.payroll(ctx,'POST',r.id,'manual-salary',{employeeId:employee.id,expectedUpdatedAt:zero.updatedAt.toISOString(),expectedNet:0,net:100000,reason:'Locked salary must stay'}));
+      await reopenPayrollMonth(db,tid,r.id,actorId);
+      assert.equal(await db.payrollItem.count({where:{runId:r.id}}),0);
+      // This fixture employee should not affect other regression totals.
+      await db.employee.update({where:{id:second.id},data:{status:'INACTIVE'}});
+    });
+    await t.test('manual salary rejects unauthorized, foreign, invalid and payout-started edits',async()=>{
+      const r=await run('2024-09'),item=await db.payrollItem.findFirstOrThrow({where:{runId:r.id}});
+      const body={employeeId:employee.id,expectedUpdatedAt:item.updatedAt.toISOString(),expectedNet:item.net,net:120000,reason:'Synthetic valid manual salary'};
+      const finance=roleDefinitions.find(r=>r.code==='FINANCE_USER')!;
+      await assert.rejects(()=>workflow.payroll({...ctx,user:{...ctx.user,role:finance}},'POST',r.id,'manual-salary',body));
+      await assert.rejects(()=>workflow.payroll({...ctx,tenantId:randomUUID()},'POST',r.id,'manual-salary',body));
+      await assert.rejects(()=>workflow.payroll(ctx,'POST',r.id,'manual-salary',{...body,employeeId:randomUUID()}));
+      for(const net of [-1,0.5,1000000001])await assert.rejects(()=>workflow.payroll(ctx,'POST',r.id,'manual-salary',{...body,net}));
+      await assert.rejects(()=>workflow.payroll(ctx,'POST',r.id,'manual-salary',{...body,reason:'   '}));
+      await db.payrollPayout.create({data:{tenantId:tid,runId:r.id,employeeId:employee.id,employeeName:'Synthetic Employee',employeeCode:employee.employeeCode,amount:100000,provider:'TEST',reference:'manual-guard'}});
+      await assert.rejects(()=>workflow.payroll(ctx,'POST',r.id,'manual-salary',body));
+      assert.equal((await db.payrollItem.findUniqueOrThrow({where:{id:item.id}})).net,100000);
+    });
     await t.test('failed preparation rolls back reconciled days and the attendance lock',async()=>{
       const empty=await db.tenant.create({data:{name:'Empty synthetic company',code:'EMPTY-'+randomUUID()}});
       await db.shift.create({data:{tenantId:empty.id,name:'Test shift',startMinute:540,endMinute:1080}});
@@ -86,11 +130,12 @@ export async function payrollRegressions(db:Database,t:TestContext,concurrent=fa
     });
     if(concurrent){
       await t.test('finalize, reopen, delete and unlock serialize against an in-flight period change',async()=>{
-        for(const [index,action] of ['finalize','reopen','delete','unlock'].entries()){
+        for(const [index,action] of ['finalize','reopen','delete','unlock','manual'].entries()){
           const r=await run(`2023-${String(index+1).padStart(2,'0')}`),entered=deferred(),release=deferred();
           const holding=db.$transaction(async tx=>{await lockPayrollPeriod(tx,tid,r.month);entered.resolve();await release.promise;await tx.payrollRun.update({where:{id:r.id},data:{status:'LOCKED',lockedAt:new Date()}});},{timeout:20000});
           await entered.promise;
-          const operation=action==='finalize'?finalizePayrollMonth(db,tid,r.id,actorId):action==='reopen'?reopenPayrollMonth(db,tid,r.id,actorId):action==='delete'?workflow.payroll(ctx,'DELETE',r.id):unlockAttendanceMonth(db,tid,r.month,actorId);
+          const manualItem=action==='manual'?await db.payrollItem.findFirstOrThrow({where:{runId:r.id}}):null;
+          const operation=action==='manual'?workflow.payroll(ctx,'POST',r.id,'manual-salary',{employeeId:employee.id,expectedUpdatedAt:manualItem!.updatedAt.toISOString(),expectedNet:manualItem!.net,net:50000,reason:'Must reject after concurrent finalization'}):action==='finalize'?finalizePayrollMonth(db,tid,r.id,actorId):action==='reopen'?reopenPayrollMonth(db,tid,r.id,actorId):action==='delete'?workflow.payroll(ctx,'DELETE',r.id):unlockAttendanceMonth(db,tid,r.month,actorId);
           const outcome=operation.then(value=>({ok:true,value}),()=>({ok:false,value:null}));
           try{
             const deadline=Date.now()+5000;let waiting=false;
