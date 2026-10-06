@@ -546,10 +546,12 @@ export async function createApp(db:Database){
   app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb'}));
   // Edge Nginx adds an independent shared limit. This cap protects a local instance.
   const windows=new Map<string,{start:number;count:number}>();
+  // The isolated browser suite shares one loopback IP across every synthetic user.
+  const requestLimit=process.env.NODE_ENV==='test'&&process.env.PEOPLEOS_E2E_ISOLATED==='true'?3000:300;
   app.use((req:Request,res:Response,next:()=>void)=>{
     const now=Date.now(),key=req.ip??'unknown',row=windows.get(key);
     if(!row||now-row.start>60000){windows.set(key,{start:now,count:1});if(windows.size>10000)for(const[k,v]of windows)if(now-v.start>60000)windows.delete(k);}
-    else if(++row.count>300){res.status(429).json({message:'Too many requests. Try again in a minute.'});return;}
+    else if(++row.count>requestLimit){res.status(429).json({message:'Too many requests. Try again in a minute.'});return;}
     res.setHeader('Cache-Control','no-store');next();
   });
   await app.init();
