@@ -37,10 +37,11 @@ test('HR directory create edit search and delete',async({page})=>{
 test('command search and mobile navigation',async({page})=>{
  await login(page);await page.keyboard.press('Control+k');await page.getByRole('textbox',{name:'Search pages and employees'}).fill('Calendar');await page.getByRole('dialog').getByRole('button',{name:'Calendar',exact:true}).click();await expect(page.getByRole('heading',{name:'Calendar',exact:true})).toBeVisible();
  await page.setViewportSize({width:390,height:844});
- const more=page.getByRole('button',{name:'Open navigation'});await more.click();await expect(page.locator('.mobile-toggle[aria-label="Close navigation"]')).toBeVisible();
- await page.locator('.mobile-toggle[aria-label="Close navigation"]').click();await expect(page.getByRole('button',{name:'Open navigation'})).toBeVisible();
- await page.getByRole('button',{name:'Open navigation'}).click();await page.getByRole('link',{name:'Attendance',exact:true}).click();await expect(page.getByRole('heading',{name:'Attendance',exact:true}).first()).toBeVisible();
- await expect(page.getByRole('button',{name:'Open navigation'})).toBeVisible();
+ const shortcuts=page.getByRole('navigation',{name:'Mobile shortcuts'});
+ const more=shortcuts.getByRole('button',{name:'Open menu'});await more.click();await expect(shortcuts.getByRole('button',{name:'Close menu'})).toBeVisible();
+ await shortcuts.getByRole('button',{name:'Close menu'}).click();await expect(shortcuts.getByRole('button',{name:'Open menu'})).toBeVisible();
+ await shortcuts.getByRole('button',{name:'Open menu'}).click();await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Attendance',exact:true}).click();await expect(page.getByRole('heading',{name:'Attendance',exact:true}).first()).toBeVisible();
+ await expect(shortcuts.getByRole('button',{name:'Open menu'})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });
 test('platform company and sales pages',async({page})=>{
