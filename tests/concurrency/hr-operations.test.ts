@@ -53,6 +53,7 @@ test('HR operations serialize concurrent salary, enrollment, approval and authen
       const usage=await db.leaveRequest.aggregate({where:{tenantId:tid,employeeId:employee.id,leaveTypeId:type.id},_sum:{days:true}});assert.equal(Number(usage._sum.days),1);
     });
     await t.test('simultaneous exact leave retries create one request and one approval',async()=>{
+      await db.approvalPolicy.create({data:{tenantId:tid,resource:'leave',mode:'MANAGER_HR'}});
       const type=await db.leaveType.create({data:{tenantId:tid,name:'Retry-safe leave',annualDays:12,paid:true}});
       const self:Context={...ctx,user:{id:randomUUID(),employeeId:second.id,role:roleDefinitions.find(r=>r.code==='EMPLOYEE')!}},flows=new Workflows(db);
       const payload={employeeId:second.id,leaveTypeId:type.id,startDate:'2027-01-06',endDate:'2027-01-06',reason:'Exact concurrent retry',requestKey:randomUUID()};
