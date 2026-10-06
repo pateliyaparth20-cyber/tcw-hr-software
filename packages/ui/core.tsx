@@ -1,9 +1,11 @@
 'use client';
 import React,{createContext,useContext,useEffect,useRef,useState,useId} from 'react';
 import {useQuery,QueryClient,QueryClientProvider,useQueryClient} from '@tanstack/react-query';
+import {io} from 'socket.io-client';
 import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight,Clock3} from 'lucide-react';
 import {Field,Row,readable} from './config';
 import {avatarInitials,avatarPhotoSrc} from './avatar';
+import {liveRefreshInterval,shouldRefreshForServerChange} from './live-refresh';
 export type Session={user:Row;csrf:string;company?:Row};
 export function notificationTarget(row:Row){
   const explicit=String(row.target??row.url??'').trim();
@@ -177,11 +179,24 @@ export async function api(path:string,method='GET',data?:any,csrf?:string){
 const Context=createContext<any>(null);
 export function useApp(){return useContext(Context) as {session:Session;can:(r:string,a?:string)=>boolean;notify:(v:string,error?:boolean)=>void;mutate:(path:string,method:string,data?:any)=>Promise<any>;currency:string};}
 export function Providers({children,session}:{children:React.ReactNode;session:Session}){
-  const[client]=useState(()=>new QueryClient({defaultOptions:{queries:{retry:false,staleTime:25000,refetchOnWindowFocus:false,refetchOnReconnect:true,...(process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false'?{refetchInterval:30000}: {})}}}));
+  const[client]=useState(()=>new QueryClient({defaultOptions:{queries:{retry:false,staleTime:5000,refetchOnWindowFocus:true,refetchOnReconnect:true}}}));
   const[toast,setToast]=useState<{text:string;error:boolean}|null>(null);
   const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const notify=(text:string,error=false)=>{setToast({text,error});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);};
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
+  useEffect(()=>{
+    if(typeof window==='undefined'||process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false')return;
+    let refreshTimer:ReturnType<typeof setTimeout>|null=null;
+    const localSessionToken=getLocalSessionToken();
+    const socket=io({path:'/socket.io',withCredentials:true,transports:['websocket','polling'],...(localSessionToken?{auth:{localSessionToken}}:{})});
+    const scheduleRefresh=(payload?:{resource?:string})=>{
+      if(refreshTimer)clearTimeout(refreshTimer);
+      refreshTimer=setTimeout(()=>{refreshTimer=null;void client.invalidateQueries({predicate:query=>shouldRefreshForServerChange(String(query.queryKey[0]??''),payload?.resource),refetchType:'active'})},250);
+    };
+    socket.on('changed',scheduleRefresh);
+    socket.on('connect',()=>{void client.refetchQueries({type:'active'})});
+    return()=>{if(refreshTimer)clearTimeout(refreshTimer);socket.off('changed',scheduleRefresh);socket.disconnect()};
+  },[client]);
   useEffect(()=>{const openPicker=(event:MouseEvent)=>{const target=event.target instanceof Element?event.target:null;if(!target)return;let input=target instanceof HTMLInputElement?target:null;if(!input){const field=target.closest('label.field,.native-picker-field');input=field?.querySelector('input[type="date"],input[type="datetime-local"],input[type="month"],input[type="time"]') as HTMLInputElement|null}if(!input||!['date','datetime-local','month','time'].includes(input.type)||input.disabled||input.readOnly)return;input.focus();try{input.showPicker?.()}catch{}};document.addEventListener('click',openPicker);return()=>document.removeEventListener('click',openPicker)},[]);
   const mutate=async(path:string,method:string,data?:any)=>{try{
     const r=await api(path,method,data,session.csrf);await client.invalidateQueries();
@@ -193,7 +208,7 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
   }catch(e:any){notify(e.message,true);throw e;}};
   return <QueryClientProvider client={client}><Context.Provider value={{session,can:(r:string,a='VIEW')=>r==='self'||session.user.permissions.includes(`${r}:${a}`),notify,mutate,currency:session.company?.currency??'INR'}}>{children}{toast&&<div role={toast.error?'alert':'status'} className={'toast '+(toast.error?'error':'')}>{toast.error?<AlertCircle size={19}/>:<Check size={19}/>}<span>{toast.text}</span><button aria-label="Dismiss notification" onClick={()=>setToast(null)}><X size={16}/></button></div>}</Context.Provider></QueryClientProvider>;
 }
-export function useData(path:string,enabled=true,refetchInterval?:number){return useQuery<Row>({queryKey:[path],queryFn:()=>api(path),enabled,refetchInterval:enabled&&refetchInterval?refetchInterval:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true});}
+export function useData(path:string,enabled=true,refetchInterval?:number|false){const interval=refetchInterval===undefined?liveRefreshInterval(path):refetchInterval;return useQuery<Row>({queryKey:[path],queryFn:()=>api(path),enabled,refetchInterval:enabled?interval:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true,refetchOnReconnect:true});}
 export function Loading(){return <div className="loading" role="status"><LoaderCircle className="spin" size={24}/><span>Loading your workspace…</span></div>}
 export function Failure({error,retry}:{error:Error;retry?:()=>void}){return <div className="empty error-state" role="alert"><AlertCircle aria-hidden="true"/><h3>Unable to load this view</h3><p>{error.message}</p>{retry&&<button className="btn secondary" onClick={retry}>Try again</button>}</div>}
 export function Empty({title='Nothing here yet',description='New records will appear here.',action}:{title?:string;description?:string;action?:React.ReactNode}){return <div className="empty"><span className="empty-icon"><Inbox size={26}/></span><h3>{title}</h3><p>{description}</p>{action}</div>}
