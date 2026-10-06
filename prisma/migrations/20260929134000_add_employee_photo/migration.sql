@@ -1,1 +1,0 @@
-ALTER TABLE "employees" ADD COLUMN "photo" TEXT NOT NULL DEFAULT '';
