@@ -201,6 +201,7 @@ export class Api {
     }
     if(resource==='company'&&['GET','PATCH'].includes(method))return this.data.company(ctx,method==='PATCH'?body:undefined);
     if(resource==='employees'&&key&&action==='app-access')return this.data.employeeAppAccess(ctx,key,method,body);
+    if(resource==='organization-chart'&&method==='GET')return this.data.organizationChart(ctx);
     if(resource==='employees')return this.data.employees(ctx,method,key,body,req.query);
     if(resource==='users')return this.data.users(ctx,method,body,key);
     if(resource==='roles'&&method==='GET'){requirePermission(ctx,'users','VIEW');return {items:await this.db.role.findMany({where:{scope:ctx.user.role.scope}})};}
