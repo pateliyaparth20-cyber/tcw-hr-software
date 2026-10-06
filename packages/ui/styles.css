@@ -12559,7 +12559,7 @@ input[type="month"]{
   border-radius:13px;
   background:#fbfeff;
 }
-.attendance-view-profile>.avatar{width:40px;height:40px}
+.attendance-view-profile>.avatar{width:40px;height:40px;flex:0 0 40px;font-size:.875rem;font-weight:700;line-height:1;color:#244a5b}
 .attendance-view-profile>div{flex:1;min-width:0}
 .attendance-view-profile strong{
   display:block;
@@ -12567,7 +12567,7 @@ input[type="month"]{
   font-size:.9rem;
   font-weight:600;
 }
-.attendance-view-profile span{
+.attendance-view-profile-copy>span{
   display:block;
   margin-top:3px;
   color:#8998aa;
