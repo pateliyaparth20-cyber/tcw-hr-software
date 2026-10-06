@@ -34,3 +34,16 @@ test('only a successful main-push verification can publish the candidate feed',a
  const {readFile}=await import('node:fs/promises');const workflow=await readFile('.github/workflows/publish-software-candidate.yml','utf8');
  assert.match(workflow,/conclusion == 'success'/);assert.match(workflow,/event == 'push'/);assert.match(workflow,/head_branch == 'main'/);assert.match(workflow,/main\.data\.object\.sha !== version/);assert.match(workflow,/branch = 'release\/catalog'/);assert.doesNotMatch(workflow,/ref: 'heads\/release\/production'/);
 });
+
+test('deployment progress is fresh validated and coalesces concurrent checks',async()=>{
+ const {createReleaseProgressSource}=await import('../../apps/api/src/release-source');let calls=0,clock=Date.parse('2026-10-06T12:00:00Z');
+ const source=createReleaseProgressSource({now:()=>clock,fetcher:async()=>{calls++;return Response.json({version:'b'.repeat(40),stage:'deploying',checkedAt:new Date(clock).toISOString()})}});
+ const values=await Promise.all(Array.from({length:15},()=>source()));assert.equal(calls,1);assert.ok(values.every(p=>p?.stage==='deploying'));await source();assert.equal(calls,1);
+});
+test('stale invalid and unavailable deployment progress never becomes a fake status',async()=>{
+ const {createReleaseProgressSource}=await import('../../apps/api/src/release-source');const clock=Date.parse('2026-10-06T12:00:00Z');
+ for(const p of [{version:'b'.repeat(40),stage:'ready',checkedAt:new Date(clock-180000).toISOString()},{version:'main',stage:'deploying',checkedAt:new Date(clock).toISOString()},{version:'b'.repeat(40),stage:'unknown',checkedAt:new Date(clock).toISOString()}]){
+  const source=createReleaseProgressSource({now:()=>clock,fetcher:async()=>Response.json(p)});assert.equal(await source(),null);
+ }
+ const source=createReleaseProgressSource({now:()=>clock,fetcher:async()=>{throw new Error('Offline')}});assert.equal(await source(),null);
+});

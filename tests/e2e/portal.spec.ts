@@ -45,9 +45,9 @@ test('software update starts directly with one click and never reloads automatic
  await page.route('**/api/releases/update',route=>{expect(route.request().postDataJSON()).toEqual({version});updateCalls++;requested=true;return route.fulfill({json:{updateRequested:true}})});
  await page.goto('/software-update');await expect(page.getByRole('heading',{name:'A software update is available'})).toBeVisible();expect(updateCalls).toBe(0);
  await expect(page.getByRole('button',{name:'Approve company update'})).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(0);
- await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();expect(updateCalls).toBe(1);
+ await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is starting'})).toBeVisible();expect(updateCalls).toBe(1);
  await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page).toHaveURL(/software-update$/);await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);
- for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();}
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Your software update is starting'})).toBeVisible();}
 });
 
 test('software update errors allow a retry and restricted users cannot start an update',async({page})=>{
@@ -70,6 +70,7 @@ test('update action is hidden when current and appears only after a new version 
  await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion,available:false,updateRequested:false,canUpdate:true,checkedAt:new Date().toISOString()}}));
  await page.goto('/software-update');await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();
  await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Refresh this device',exact:true})).toHaveCount(0);
+ await page.route('**/api/releases/assets',route=>route.fulfill({json:{version:'b'.repeat(40),files:[{url:'/_next/static/chunks/synthetic-update.js',bytes:2}]}}));await page.route('**/_next/static/chunks/synthetic-update.js',route=>route.fulfill({body:'hi',contentType:'application/javascript'}));
  page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigations++});currentVersion='b'.repeat(40);
  await page.getByRole('button',{name:'Check for updates',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is live'})).toBeVisible();await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(1);expect(navigations).toBe(0);
  await Promise.all([page.waitForEvent('framenavigated',frame=>frame===page.mainFrame()),page.getByRole('button',{name:'Update',exact:true}).click()]);
@@ -340,4 +341,36 @@ test('Add Employee sections scroll with wheel input and keep actions reachable',
   await expect.poll(()=>dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await dialog.getByRole('button',{name:'Cancel',exact:true}).click();await expect(dialog).not.toBeVisible();
  }
+});
+
+
+test('a requested update follows server progress then downloads and opens only the consenting device',async({page})=>{
+ await login(page);const version='b'.repeat(40);let requested=false,live=false,stage='verifying',calls=0,navigations=0;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:live?version:'a'.repeat(40),candidate:{version,title:'Synthetic download update'},available:!live,updateRequested:requested&&!live,canUpdate:true,deployment:{version,stage},checkedAt:new Date().toISOString()}}));
+ await page.route('**/api/releases/update',route=>{calls++;requested=true;return route.fulfill({json:{updateRequested:true}})});
+ await page.route('**/api/releases/assets',async route=>{await new Promise(r=>setTimeout(r,150));return route.fulfill({json:{version,files:[{url:'/_next/static/chunks/synthetic-download.js',bytes:4096}]}})});
+ await page.route('**/_next/static/chunks/synthetic-download.js',async route=>{await new Promise(r=>setTimeout(r,400));return route.fulfill({body:Buffer.alloc(4096,32),contentType:'application/javascript'})});
+ await page.goto('/software-update');page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigations++});
+ await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByText('Verifying the requested release',{exact:true})).toBeVisible();expect(calls).toBe(1);expect(navigations).toBe(0);
+ await expect(page.getByText('No app files are downloading during server preparation.',{exact:true})).toBeVisible();await expect(page.getByRole('progressbar',{name:'Server preparation'})).toBeVisible();expect(await page.getByRole('progressbar',{name:'Server preparation'}).getAttribute('value')).toBeNull();
+ stage='deploying';await page.getByRole('button',{name:'Check for updates',exact:true}).click();await expect(page.getByText('Building and starting the servers',{exact:true})).toBeVisible();
+ live=true;await page.getByRole('button',{name:'Check for updates',exact:true}).click();await expect(page.getByRole('heading',{name:'Downloading your software update'})).toBeVisible();await expect(page.locator('.update-download-progress')).toContainText('4.00 KB');
+ await expect.poll(()=>navigations).toBe(1);await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();expect(calls).toBe(1);
+});
+
+test('download failures retain the app and allow an explicit retry',async({page})=>{
+ await login(page);let currentVersion='a'.repeat(40),fail=true;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion,available:false,canUpdate:true}}));
+ await page.route('**/api/releases/assets',route=>route.fulfill({json:{version:'b'.repeat(40),files:[{url:'/_next/static/chunks/retry-update.js',bytes:2048}]}}));
+ await page.route('**/_next/static/chunks/retry-update.js',route=>fail?route.fulfill({status:503,body:'Unavailable'}):route.fulfill({body:Buffer.alloc(2048,32),contentType:'application/javascript'}));
+ await page.goto('/software-update');currentVersion='b'.repeat(40);await page.getByRole('button',{name:'Check for updates',exact:true}).click();await page.getByRole('button',{name:'Update',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('A software file could not download');await expect(page.getByRole('button',{name:'Update',exact:true})).toBeEnabled();await expect(page).toHaveURL(/software-update$/);
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();}
+ fail=false;await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();
+});
+
+
+test('production download manifest contains readable build assets with exact decoded sizes',async({page})=>{
+ const response=await page.request.get('/api/releases/assets');expect(response.ok()).toBeTruthy();const manifest=await response.json();expect(manifest.files.length).toBeGreaterThan(0);expect(manifest.files.some((file:any)=>file.url.includes('[[...path]]'))).toBeTruthy();
+ for(const file of manifest.files.slice(0,3)){expect(file.url).toMatch(/^\/_next\/static\/.*\.(js|css)$/);const asset=await page.request.get(file.url);expect(asset.ok()).toBeTruthy();expect((await asset.body()).length).toBe(file.bytes);}
 });

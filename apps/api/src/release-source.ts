@@ -23,3 +23,18 @@ export function createReleaseSource({fetcher=(url:string,options:RequestInit)=>f
  };
 }
 export const latestRelease=createReleaseSource();
+
+export type ReleaseProgress={version:string;stage:'verifying'|'deploying'|'ready'|'retrying';checkedAt:string};
+export function createReleaseProgressSource({fetcher=(url:string,options:RequestInit)=>fetch(url,options),now=()=>Date.now()}={}){
+ let at=0,cached:ReleaseProgress|null=null,pending:Promise<ReleaseProgress|null>|undefined;
+ return function progress():Promise<ReleaseProgress|null>{
+  if(now()-at<10000)return Promise.resolve(cached);if(pending)return pending;
+  pending=(async()=>{try{
+   const r=await fetcher(feed.replace('latest.json','progress.json')+'?checked='+Math.floor(now()/10000),{cache:'no-store',signal:AbortSignal.timeout(5000)});
+   if(!r.ok)return null;const p=await r.json();
+   if(!p||! /^[a-f0-9]{40}$/.test(p.version)||!['verifying','deploying','ready','retrying'].includes(p.stage)||!Number.isFinite(Date.parse(p.checkedAt))||now()-Date.parse(p.checkedAt)>120000||Date.parse(p.checkedAt)>now()+30000)return null;
+   return {version:p.version,stage:p.stage,checkedAt:p.checkedAt} as ReleaseProgress;
+  }catch{return null;}})().then(p=>{cached=p;at=now();return p;}).finally(()=>{pending=undefined;});return pending;
+ };
+}
+export const releaseProgress=createReleaseProgressSource();
