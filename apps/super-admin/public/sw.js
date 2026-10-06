@@ -1,7 +1,7 @@
 const CACHE='tcw-shell-v1.12.3-notifications';
 const STATIC=['/offline.html','/tcw-logo.png','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(
-  caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting())
+  caches.open(CACHE).then(cache=>cache.addAll(STATIC))
 ));
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
@@ -30,19 +30,22 @@ self.addEventListener('fetch',event=>{
 });
 
 
+// Serializes delivery across push and foreground fallback, and persists event IDs.
+let notificationQueue=Promise.resolve();
+function showOnce(data){
+ const deliver=async()=>{
+  const tag=String(data.tag??'tcw-notification');
+  const eventKey=tag==='tcw-notification'?null:new Request(self.location.origin+'/__tcw_notice/'+encodeURIComponent(tag));
+  const cache=await caches.open('tcw-notification-events-v1');
+  if(eventKey&&await cache.match(eventKey))return;
+  await self.registration.showNotification(String(data.title??'TCW HR Software'),{body:String(data.body??data.message??'You have a new notification.'),icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag,data:{url:String(data.url??'/notifications')},renotify:false});
+  if(eventKey){await cache.put(eventKey,new Response('delivered'));const keys=await cache.keys();if(keys.length>200)await Promise.all(keys.slice(0,keys.length-200).map(key=>cache.delete(key)));}
+ };
+ notificationQueue=notificationQueue.then(deliver,deliver);return notificationQueue;
+}
 self.addEventListener('push',event=>{
-  let data={};
-  try{data=event.data?event.data.json():{}}catch{data={body:event.data?.text?.()??''}}
-  const title=String(data.title??'TCW HR Software');
-  const options={
-    body:String(data.body??data.message??'You have a new notification.'),
-    icon:'/icons/icon-192.png',
-    badge:'/icons/icon-192.png',
-    tag:String(data.tag??'tcw-notification'),
-    data:{url:String(data.url??'/notifications')},
-    renotify:true
-  };
-  event.waitUntil(self.registration.showNotification(title,options));
+ let data={};try{data=event.data?event.data.json():{}}catch{data={body:event.data?.text?.()??''}}
+ event.waitUntil(showOnce(data));
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
@@ -55,13 +58,6 @@ self.addEventListener('notificationclick',event=>{
   }));
 });
 self.addEventListener('message',event=>{
-  if(event.data?.type!=='TCW_SHOW_NOTIFICATION')return;
-  const data=event.data;
-  event.waitUntil(self.registration.showNotification(String(data.title??'TCW HR Software'),{
-    body:String(data.body??''),
-    icon:'/icons/icon-192.png',
-    badge:'/icons/icon-192.png',
-    tag:String(data.tag??'tcw-notification'),
-    data:{url:String(data.url??'/notifications')}
-  }));
+ if(event.data?.type==='TCW_ACTIVATE_APPROVED_WORKER'){event.waitUntil(self.skipWaiting());return;}
+ if(event.data?.type==='TCW_SHOW_NOTIFICATION')event.waitUntil(showOnce(event.data));
 });
