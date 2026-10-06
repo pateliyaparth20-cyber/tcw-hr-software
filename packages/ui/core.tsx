@@ -188,7 +188,7 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
     if(typeof window==='undefined'||process.env.NEXT_PUBLIC_REALTIME_ENABLED==='false')return;
     let refreshTimer:ReturnType<typeof setTimeout>|null=null;
     const localSessionToken=getLocalSessionToken();
-    const socket=io({path:'/socket.io',withCredentials:true,transports:['websocket','polling'],...(localSessionToken?{auth:{localSessionToken}}:{})});
+    const socket=io({path:'/socket.io',withCredentials:true,...(localSessionToken?{auth:{localSessionToken}}:{})});
     const scheduleRefresh=(payload?:{resource?:string})=>{
       if(refreshTimer)clearTimeout(refreshTimer);
       refreshTimer=setTimeout(()=>{refreshTimer=null;void client.invalidateQueries({predicate:query=>shouldRefreshForServerChange(String(query.queryKey[0]??''),payload?.resource),refetchType:'active'})},250);
