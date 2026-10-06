@@ -90,7 +90,8 @@ export class Api {
     }
     const ctx=await authenticate(this.db,req);
     if(resource==='releases'&&key==='status'&&method==='GET')return this.releases.status(ctx);
-    if(resource==='releases'&&key==='approve'&&method==='POST')return this.releases.approve(ctx,z.object({version:z.string().regex(/^[a-f0-9]{40}$/)}).strict().parse(req.body).version);
+    if(resource==='releases'&&key==='update'&&method==='POST')return this.releases.update(ctx,z.object({version:z.string().regex(/^[a-f0-9]{40}$/)}).strict().parse(req.body).version);
+    if(resource==='releases')throw new NotFoundException('Software update route not found.');
     const body=req.body;
     if(ctx.tenantId){
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
@@ -444,7 +445,7 @@ export class Api {
       else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?(employeeSelf?'You have '+payrollReview+' locked payslip(s) available. Open Payslips to view your own finalized salary records.':'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.'):'Your role does not have payroll access.';
       else if(q.includes('leave'))answer=canLeave?(employeeSelf?'You have '+pendingLeave+' pending leave request(s). Open Time off to view or submit your own request.':'There are '+pendingLeave+' pending leave request(s). Review dates and attendance impact before approval.'):'Your role does not have leave access.';
       else if(q.includes('login')||q.includes('password')||q.includes('forgot'))answer='For login issues, confirm Company Code + User ID/email. Remember me keeps a valid session on this device. Forgot Password sends a one-time link that expires in 10 minutes.';
-      else if(q.includes('update')||q.includes('version'))answer=employeeSelf?'Software releases are managed by your company administrator. Your employee workspace will use the approved production release.':'TCW HR can notify you when a newer production build is available. Updates are manual: open Software Update and choose Install update when you are ready. The software will not auto-install or auto-reload.';
+      else if(q.includes('update')||q.includes('version'))answer=employeeSelf?'Software releases are managed by your company administrator. Your employee workspace will use the current production release.':'TCW HR can notify you when a newer production build is available. Updates are manual: open Software Update and choose Update software when you are ready. The software will not auto-install or auto-reload.';
       else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=employeeSelf?'Your employee workspace is connected. If a page or request fails, tell me what you were trying to do and I’ll guide you without exposing administrator-only diagnostics.':((failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.');
       else answer='I’m Meghna. Ask me anything naturally. I can chat with you or help with TCW HR Software, and I’ll use the available workspace facts when your question is about HR data.';
       try{const cfg=await effectiveAIConfig(this.db);if(cfg.enabled){const enhanced=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,{conversationHistory:history,company:{name:company?.name,status:company?.status,plan:company?.plan},failedMessages,failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview,emailConfigured,smsConfigured});if(enhanced)answer=enhanced;}}catch{}
@@ -571,7 +572,7 @@ export async function createApp(db:Database,releaseSource?:()=>Promise<ReleaseCa
       setTimeout(async()=>{
         try{
           if(!await claimReleaseNotice(db,deployment))return;
-          await sendPush(db,{userIds:await releaseRecipients(db),title:'TCW HR Software updated',body:'The approved company release is now live.',url:'/software-update',tag:'tcw-software-release-'+deployment});
+          await sendPush(db,{userIds:await releaseRecipients(db),title:'TCW HR Software updated',body:'The requested software update is now live.',url:'/software-update',tag:'tcw-software-release-'+deployment});
         }catch{}
       },8000);
     }

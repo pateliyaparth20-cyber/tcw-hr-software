@@ -39,14 +39,23 @@ test('reports maintenance shows a blurred static layout without fetching report 
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(requests).toEqual([]);
 });
 
-test('software release center approves only after confirmation and never reloads automatically',async({page})=>{
- await login(page);const version='b'.repeat(40);let approved=false,approvalCalls=0;
- await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:{version,title:'Synthetic payroll and attendance improvements'},available:true,approved,ready:false,canApprove:true,waitingForCompanies:true,checkedAt:new Date().toISOString()}}));
- await page.route('**/api/releases/approve',route=>{expect(route.request().postDataJSON()).toEqual({version});approvalCalls++;approved=true;return route.fulfill({json:{approved:true}})});
- await page.goto('/software-update');await expect(page.getByRole('heading',{name:'A new company release is ready'})).toBeVisible();expect(approvalCalls).toBe(0);
- await page.getByRole('button',{name:'Approve company update'}).click();await expect(page.getByRole('dialog')).toBeVisible();expect(approvalCalls).toBe(0);await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Your company has approved this release'})).toBeVisible();expect(approvalCalls).toBe(1);await expect(page).toHaveURL(/software-update$/);await expect(page.getByRole('button',{name:'Approve company update'})).toHaveCount(0);
- await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Your company has approved this release'})).toBeVisible();
+test('software update starts directly with one click and never reloads automatically',async({page})=>{
+ await login(page);const version='b'.repeat(40);let requested=false,updateCalls=0;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:{version,title:'Synthetic payroll and attendance improvements'},available:true,updateRequested:requested,ready:requested,canUpdate:true,checkedAt:new Date().toISOString()}}));
+ await page.route('**/api/releases/update',route=>{expect(route.request().postDataJSON()).toEqual({version});updateCalls++;requested=true;return route.fulfill({json:{updateRequested:true}})});
+ await page.goto('/software-update');await expect(page.getByRole('heading',{name:'A software update is available'})).toBeVisible();expect(updateCalls).toBe(0);
+ await expect(page.getByRole('button',{name:'Approve company update'})).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(0);
+ await page.getByRole('button',{name:'Update software',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();expect(updateCalls).toBe(1);
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page).toHaveURL(/software-update$/);await expect(page.getByRole('button',{name:'Update software',exact:true})).toHaveCount(0);
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();}
+});
+
+test('software update errors allow a retry and restricted users cannot start an update',async({page})=>{
+ await login(page);const version='b'.repeat(40);let canUpdate=true;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:{version,title:'Synthetic update'},available:true,updateRequested:false,ready:false,canUpdate,checkedAt:new Date().toISOString()}}));
+ await page.route('**/api/releases/update',route=>route.fulfill({status:409,json:{message:'The available release changed. Check for updates again before updating.'}}));
+ await page.goto('/software-update');await page.getByRole('button',{name:'Update software',exact:true}).click();await expect(page.getByText('The available release changed. Check for updates again before updating.',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Update software',exact:true})).toBeEnabled();await expect(page).toHaveURL(/software-update$/);
+ canUpdate=false;await page.reload();await expect(page.getByRole('button',{name:'Update software',exact:true})).toHaveCount(0);await expect(page.getByText('Your HR/Admin can start software updates.',{exact:true})).toBeVisible();
 });
 
 test('new login and signup design supports password visibility, consent and mobile forms',async({page})=>{
