@@ -15508,3 +15508,214 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover{opacity:1}
  .reports-v2-preview-downloads{width:100%}
  .reports-v2-preview-downloads .btn{flex:1;justify-content:center}
 }
+
+
+/* v1.10.3 app-wide live motion — consistent premium movement across workspaces */
+:root{
+  --live-enter:460ms;
+  --live-hover:190ms;
+  --live-ease:cubic-bezier(.2,.82,.2,1);
+  --live-shadow:0 16px 38px rgba(35,62,104,.075);
+}
+:is(
+  .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+  .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+  .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard,
+  .company-profile,.my-profile-layout,.platform-profile-grid,.employee-home,
+  .employee-self,.employee-more,.employee-work,.employee-profile
+){
+  animation:tcw-live-page var(--live-enter) var(--live-ease) both;
+  transform-origin:50% 0;
+}
+:is(
+  .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+  .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+  .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard
+)>:is(header,section,main,aside,.panel,.toolbar,.stats,.page-title,.workspace-kicker){
+  animation:tcw-live-rise .46s var(--live-ease) both;
+}
+:is(
+  .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+  .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+  .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard
+)>:nth-child(2){animation-delay:.035s}
+:is(
+  .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+  .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+  .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard
+)>:nth-child(3){animation-delay:.07s}
+:is(
+  .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+  .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+  .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard
+)>:nth-child(4){animation-delay:.105s}
+
+:is(
+  .shift-v5-shift-list,.shift-v5-form-panel,.shift-v5-preview-panel,
+  .device-v3-list-panel,.device-v3-editor,
+  .recruit-v3-panel,.timeoff-v3-panel,.subscription-v3-panel,
+  .reports-v2-card,.payroll-v4-card,.attendance-v4-card,
+  .leave-policy-card,.leave-dashboard-card,.company-profile-panel,
+  .software-update-card,.mobile-quick-action,.mobile-update-row,
+  .digital-kpi,.trial-card,.machine-catalog-card
+){
+  transition:
+    transform var(--live-hover) var(--live-ease),
+    box-shadow var(--live-hover) ease,
+    border-color var(--live-hover) ease,
+    background-color var(--live-hover) ease;
+}
+
+@media(hover:hover){
+  :is(
+    .shift-v5-shift-list,.shift-v5-form-panel,.shift-v5-preview-panel,
+    .device-v3-list-panel,.device-v3-editor,
+    .recruit-v3-panel,.timeoff-v3-panel,.subscription-v3-panel,
+    .reports-v2-card,.payroll-v4-card,.attendance-v4-card,
+    .leave-policy-card,.leave-dashboard-card,.company-profile-panel,
+    .software-update-card,.mobile-quick-action,.mobile-update-row,
+    .digital-kpi,.trial-card,.machine-catalog-card
+  ):hover{
+    transform:translateY(-2px);
+    box-shadow:var(--live-shadow);
+  }
+}
+
+:is(
+  .shift-v5-list-item,.shift-v3-card,.recruit-v3-card,.timeoff-v3-row,
+  .device-v3-list-item,.trial-card,.mobile-quick-action,.mobile-update-row,
+  .notification-row,.support-ticket,.attendance-session-row,.leave-status-card
+){
+  transition:
+    transform var(--live-hover) var(--live-ease),
+    box-shadow var(--live-hover) ease,
+    border-color var(--live-hover) ease,
+    background-color var(--live-hover) ease;
+}
+@media(hover:hover){
+  :is(
+    .shift-v5-list-item,.shift-v3-card,.recruit-v3-card,.timeoff-v3-row,
+    .device-v3-list-item,.trial-card,.mobile-quick-action,.mobile-update-row,
+    .notification-row,.support-ticket,.attendance-session-row,.leave-status-card
+  ):hover{
+    transform:translateY(-2px);
+  }
+}
+
+:is(
+  .shift-v5-days button,.shift-v3-tabs button,.recruit-v3-tabs button,
+  .timeoff-v3-tabs button,.device-v3-tabs button,.tabs button,
+  .attendance-status-menu button,.status-menu button,.menu-panel button
+){
+  transition:
+    transform var(--live-hover) var(--live-ease),
+    background-color var(--live-hover) ease,
+    border-color var(--live-hover) ease,
+    color var(--live-hover) ease,
+    box-shadow var(--live-hover) ease;
+}
+:is(
+  .shift-v5-days button,.shift-v3-tabs button,.recruit-v3-tabs button,
+  .timeoff-v3-tabs button,.device-v3-tabs button,.tabs button
+):active{
+  transform:scale(.975);
+}
+
+:is(
+  .shift-v5-preview-metrics>div,.attendance-view-meta>div,.digital-kpi,
+  .attendance-trend-card,.workforce-chart,.leave-dashboard-card
+){
+  animation:tcw-live-metric .5s var(--live-ease) both;
+}
+:is(
+  .shift-v5-preview-metrics>div,.attendance-view-meta>div
+):nth-child(2){animation-delay:.045s}
+:is(
+  .shift-v5-preview-metrics>div,.attendance-view-meta>div
+):nth-child(3){animation-delay:.09s}
+:is(
+  .shift-v5-preview-metrics>div,.attendance-view-meta>div
+):nth-child(4){animation-delay:.135s}
+:is(
+  .shift-v5-preview-metrics>div,.attendance-view-meta>div
+):nth-child(5){animation-delay:.18s}
+:is(
+  .shift-v5-preview-metrics>div,.attendance-view-meta>div
+):nth-child(6){animation-delay:.225s}
+
+.shift-v5-bar i,
+.workforce-chart svg path,
+.attendance-trend svg path,
+.attendance-trend svg polyline{
+  transition:all .55s var(--live-ease);
+}
+.shift-v5-bar .work,.shift-v5-bar .break{
+  animation:tcw-live-grow-x .7s .12s var(--live-ease) both;
+  transform-origin:left center;
+}
+.badge,
+.shift-v5-active-chip,
+.workforce-status,
+.attendance-status{
+  transition:transform var(--live-hover) var(--live-ease),filter var(--live-hover) ease;
+}
+@media(hover:hover){
+  :is(.badge,.shift-v5-active-chip,.workforce-status,.attendance-status):hover{
+    transform:translateY(-1px) scale(1.02);
+    filter:saturate(1.06);
+  }
+}
+
+:is(.modal[open],.tcw-agent.open .tcw-agent-panel,.command-results,.dropdown-menu,.popover,.menu-panel,.status-menu){
+  transform-origin:top center;
+}
+:is(.dropdown-menu,.popover,.menu-panel,.status-menu){
+  animation:tcw-live-pop .2s var(--live-ease) both;
+}
+
+@keyframes tcw-live-page{
+  from{opacity:0;transform:translateY(7px) scale(.998)}
+  to{opacity:1;transform:none}
+}
+@keyframes tcw-live-rise{
+  from{opacity:0;transform:translateY(11px)}
+  to{opacity:1;transform:none}
+}
+@keyframes tcw-live-metric{
+  from{opacity:0;transform:translateY(8px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+@keyframes tcw-live-grow-x{
+  from{transform:scaleX(.12);opacity:.55}
+  to{transform:scaleX(1);opacity:1}
+}
+@keyframes tcw-live-pop{
+  from{opacity:0;transform:translateY(-5px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+
+@media(max-width:950px){
+  :is(
+    .shift-v5-shift-list,.shift-v5-form-panel,.shift-v5-preview-panel,
+    .device-v3-list-panel,.device-v3-editor,.trial-card,.mobile-quick-action,.mobile-update-row
+  ):hover{transform:none}
+}
+
+@media(prefers-reduced-motion:reduce){
+  :is(
+    .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+    .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+    .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard,
+    .company-profile,.my-profile-layout,.platform-profile-grid,.employee-home,
+    .employee-self,.employee-more,.employee-work,.employee-profile
+  ),
+  :is(
+    .recruit-v3,.shift-v3,.shift-v5-page,.timeoff-v3,.subscription-v3,.device-v3,
+    .reports-v2,.payroll-v4,.attendance-v4,.organization-v2,.calendar-v2,
+    .attendance-v2,.attendance-v3,.workforce-v2,.leave-v2,.leave-dashboard
+  )>*,
+  .shift-v5-bar .work,.shift-v5-bar .break,
+  :is(.dropdown-menu,.popover,.menu-panel,.status-menu){
+    animation:none!important;
+  }
+}
