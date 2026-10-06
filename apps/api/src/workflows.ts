@@ -1,3 +1,4 @@
+import {updateManualSalary} from './manual-payroll';
 import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
 import {z} from 'zod';
@@ -320,7 +321,7 @@ export class Workflows {
   }
   async payroll(ctx:Context,method:string,recordId?:string,action?:string,body:any={}){
     const tid=tenant(ctx);
-    const permission=method==='GET'?'VIEW':action==='finalize'||action==='lock'||action==='approve'||action==='reopen'||action==='unlock'?'APPROVE':'CREATE';
+    const permission=method==='GET'?'VIEW':action==='manual-salary'?'MANAGE':action==='finalize'||action==='lock'||action==='approve'||action==='reopen'||action==='unlock'?'APPROVE':'CREATE';
     requirePermission(ctx,'payroll',permission);
     const scope=await employeeScope(this.db,ctx);
 
@@ -372,6 +373,8 @@ export class Workflows {
       await this.db.notification.deleteMany({where:{tenantId:tid,title:{in:['Automatic payroll could not be prepared','Automatic payroll needs attendance review']},message:{contains:input.month}}}).catch(()=>{});
       return after;
     }
+
+    if(action==='manual-salary'&&method==='POST')return updateManualSalary(this.db,ctx,id.parse(recordId),body);
 
     if(action==='calculate'||action==='prepare'){
       const before=await this.db.payrollRun.findFirst({where:{id:id.parse(recordId),tenantId:tid}});
