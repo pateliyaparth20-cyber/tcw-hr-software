@@ -65,7 +65,7 @@ export class DataService {
       hasPermission(ctx.user.role.permissions,'leave','VIEW')?this.db.leaveRequest.findMany({where:owned,orderBy:{createdAt:'desc'},take:200}):[],
       hasPermission(ctx.user.role.permissions,'recruitment','VIEW')?this.db.job.count({where:{tenantId:tid,status:'OPEN'}}):0,
       this.db.department.findMany({where:{tenantId:tid}}),
-      this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true,startMinute:true,endMinute:true,workingDays:true,timezone:true},orderBy:{name:'asc'}}),
+      !employeeSelf&&hasPermission(ctx.user.role.permissions,'shifts','VIEW')?this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true,startMinute:true,endMinute:true,workingDays:true,timezone:true},orderBy:{name:'asc'}}):[],
       this.db.calendarEvent.findMany({where:{tenantId:tid,OR:[{date:{gte:new Date(new Date().toISOString().slice(0,10))}},{endDate:{gte:new Date(new Date().toISOString().slice(0,10))}}]},orderBy:{date:'asc'},take:5}),
       hasPermission(ctx.user.role.permissions,'audit','VIEW')?this.db.auditLog.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:6}):[],
       hasPermission(ctx.user.role.permissions,'payroll','VIEW')?(employeeSelf&&ctx.user.employeeId?this.db.payrollItem.findFirst({where:{tenantId:tid,employeeId:ctx.user.employeeId,run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true}}},orderBy:{createdAt:'desc'}}):this.db.payrollRun.findFirst({where:{tenantId:tid},orderBy:{month:'desc'}})):null,
