@@ -22,3 +22,9 @@ test('Next catch-all route chunks are valid assets rather than traversal paths',
  const file='/_next/static/chunks/app/[[...path]]/page-123.js';
  const result=await downloadRelease(version,()=>{},{fetcher:(async(path:string)=>path.startsWith('/api/')?Response.json({version,files:[{url:file,bytes:2}]}):new Response('hi')) as any});assert.equal(result.received,2);
 });
+
+
+test('a version changed during download cannot be marked ready to install',async()=>{
+ let manifests=0;
+ await assert.rejects(downloadRelease(version,()=>{},{fetcher:(async(path:string)=>path.startsWith('/api/')?Response.json({version:++manifests===1?version:'c'.repeat(40),files:[{url,bytes:2}]}):new Response('hi')) as any}),/Another version/);
+});

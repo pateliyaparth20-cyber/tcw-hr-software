@@ -19,5 +19,8 @@ export async function downloadRelease(version:string,onProgress:(p:DownloadProgr
   else{const data=await r.arrayBuffer();count=data.byteLength;received+=count;report();}
   if(count!==file.bytes)throw new Error('A downloaded file was incomplete. Retry Update.');completed++;report();
  }}
- await Promise.all(Array.from({length:Math.min(3,files.length)},worker));return {received,total,completed,files:files.length};
+ await Promise.all(Array.from({length:Math.min(3,files.length)},worker));
+ const confirmation=await fetcher('/api/releases/assets',{cache:'no-store',signal});
+ if(!confirmation.ok||(await confirmation.json()).version!==version)throw new Error('Another version became available during download. Check for updates and retry Update.');
+ return {received,total,completed,files:files.length};
 }
