@@ -374,3 +374,13 @@ test('production download manifest contains readable build assets with exact dec
  const response=await page.request.get('/api/releases/assets');expect(response.ok()).toBeTruthy();const manifest=await response.json();expect(manifest.files.length).toBeGreaterThan(0);expect(manifest.files.some((file:any)=>file.url.includes('[[...path]]'))).toBeTruthy();
  for(const file of manifest.files.slice(0,3)){expect(file.url).toMatch(/^\/_next\/static\/.*\.(js|css)$/);const asset=await page.request.get(file.url);expect(asset.ok()).toBeTruthy();expect((await asset.body()).length).toBe(file.bytes);expect(asset.headers()['cache-control']).toContain('immutable');}
 });
+
+
+test('Update selects the latest release when both the opened device and server are behind it',async({page})=>{
+ await login(page);let currentVersion='a'.repeat(40),requested=false,calls=0;const version='c'.repeat(40);
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion,candidate:{version,title:'Newest release'},available:true,canUpdate:true,updateRequested:requested}}));
+ await page.route('**/api/releases/update',route=>{expect(route.request().postDataJSON()).toEqual({version});calls++;requested=true;return route.fulfill({json:{updateRequested:true}})});
+ let manifests=0;await page.route('**/api/releases/assets',route=>{manifests++;return route.fulfill({status:503})});
+ await page.goto('/software-update');currentVersion='b'.repeat(40);await page.getByRole('button',{name:'Check for updates',exact:true}).click();await page.getByRole('button',{name:'Update',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Your software update is starting'})).toBeVisible();expect(calls).toBe(1);expect(manifests).toBe(0);await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);
+});
