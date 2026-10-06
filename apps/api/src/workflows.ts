@@ -166,7 +166,7 @@ export class Workflows {
         await lockPayrollPeriod(tx,tid,located.date.toISOString().slice(0,7));
         const before=await tx.attendanceDaily.findFirst({where:{tenantId:tid,id:recordId}});if(!before)throw new NotFoundException();
         await assertAttendanceUnlocked(tx,tid,before.date);
-        const shift=before.shiftId?await tx.shift.findFirst({where:{tenantId:tid,id:before.shiftId}}):null,correctedWork=input.workMinutes??before.workMinutes,normalizedStatus=['HALF_DAY','SHORT_HOURS'].includes(input.status)?'INSUFFICIENT_HOURS':input.status;
+        const shift=before.shiftId?await tx.shift.findFirst({where:{tenantId:tid,id:before.shiftId}}):null,correctedWork=input.workMinutes??before.workMinutes,normalizedStatus=input.status==='SHORT_HOURS'?'INSUFFICIENT_HOURS':input.status;
         const payableUnits=attendancePayableUnits(normalizedStatus,correctedWork,shift?.halfDayMinutes??0);
         const overtimeThreshold=shift?Math.max(Number(shift.fullDayMinutes)||0,Number(shift.overtimeAfterMinutes)||0):0;
         const after=await tx.attendanceDaily.update({where:{id:before.id},data:{status:normalizedStatus,workMinutes:correctedWork,overtimeMinutes:shift?Math.max(0,correctedWork-overtimeThreshold):before.overtimeMinutes,payableUnits,exceptionCode:'',correctionNote:input.note}});

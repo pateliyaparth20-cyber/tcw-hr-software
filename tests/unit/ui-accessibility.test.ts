@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Modal,RecordForm,notificationTarget} from '../../packages/ui/core';
+import {Badge,Modal,RecordForm,notificationTarget} from '../../packages/ui/core';
 
 test('notification links stay inside the HR application',()=>{
   assert.equal(notificationTarget({url:'/payroll?month=2026-08'}),'/payroll?month=2026-08');
@@ -19,4 +19,10 @@ test('time and duration inputs retain their distinct field labels',()=>{
   const html=renderToStaticMarkup(React.createElement(RecordForm,{fields:[{key:'start',label:'Shift start',type:'time'},{key:'duration',label:'Working time',type:'duration'}],onSave:async()=>{},onCancel:()=>{}}));
   assert.match(html,/<input id="field-start"/);assert.match(html,/for="field-start"/);
   assert.match(html,/<input id="field-duration"/);assert(!html.includes('aria-label="Time"'));
+});
+
+test('attendance badges distinguish Half Day from Insufficient Time',()=>{
+ const half=renderToStaticMarkup(React.createElement(Badge,{value:'HALF_DAY'}));
+ const insufficient=renderToStaticMarkup(React.createElement(Badge,{value:'INSUFFICIENT_HOURS'}));
+ assert.match(half,/>Half Day</);assert.doesNotMatch(half,/Insufficient/);assert.match(insufficient,/>Insufficient Time</);
 });

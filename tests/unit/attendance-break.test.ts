@@ -66,7 +66,7 @@ test('automatic mode excludes the whole configured break window from worked sess
     overtimeAfterMinutes:480
   });
   assert.equal(result.workMinutes,240);
-  assert.equal(result.status,'INSUFFICIENT_HOURS');
+  assert.equal(result.status,'HALF_DAY');
 });
 
 
