@@ -9,7 +9,7 @@ import {embeddedDatabase} from '../helpers/database';
 async function run(){
  Object.assign(process.env,{NODE_ENV:'test',APP_ORIGINS:'http://localhost:3000,http://localhost:3001',COOKIE_SECURE:'false',
   ADMIN_EMAIL:'platform@example.test',OWNER_EMAIL:'owner@example.test',ADMIN_PASSWORD:randomBytes(24).toString('hex'),
-  OWNER_PASSWORD:randomBytes(24).toString('hex'),DEMO_COMPANY_CODE:'E2E-ONLY',PEOPLEOS_E2E_ISOLATED:'true'});
+  OWNER_PASSWORD:randomBytes(24).toString('hex'),CONFIG_ENCRYPTION_KEY:randomBytes(32).toString('hex'),DEMO_COMPANY_CODE:'E2E-ONLY',PEOPLEOS_E2E_ISOLATED:'true'});
  const fixture=await embeddedDatabase();
  const children:ChildProcess[]=[];
  let api:Awaited<ReturnType<typeof createApp>>|undefined;
@@ -21,6 +21,8 @@ async function run(){
   const leader=await fixture.db.employee.create({data:{tenantId:tenant.id,employeeCode:'CHART-LEAD',firstName:'Team',lastName:'Lead',email:'lead@example.test',joiningDate:new Date('2025-01-01'),departmentId:department.id}});
   await fixture.db.employee.create({data:{tenantId:tenant.id,employeeCode:'CHART-MEMBER',firstName:'QA',lastName:'Member',email:'member@example.test',joiningDate:new Date('2025-01-01'),managerId:leader.id,departmentId:department.id}});
   for(const [name,code] of [['QA Engineer','QA'],['Senior QA','SQA']])await fixture.db.designation.create({data:{tenantId:tenant.id,name,code}});
+  await fixture.db.course.create({data:{tenantId:tenant.id,title:'E2E Operations Training',description:'Synthetic training fixture',trainer:'QA Trainer',date:new Date('2026-01-01'),capacity:3}});
+  await fixture.db.asset.create({data:{tenantId:tenant.id,name:'E2E Operations Laptop',assetTag:'OPS-LAPTOP',category:'Laptop'}});
   api=await createApp(fixture.db);await api.app.listen(4000,'127.0.0.1');
   for(const [index,name] of ['web','super-admin'].entries()){
    const child=spawn(process.execPath,['../../node_modules/next/dist/bin/next','start','-p',String(3000+index),'-H','127.0.0.1'],{cwd:'apps/'+name,stdio:'inherit',env:{...process.env,NODE_ENV:'production',API_INTERNAL_URL:'http://127.0.0.1:4000'}});

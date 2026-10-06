@@ -22,6 +22,12 @@ import {Workflows} from './workflows';
 import {FilesService} from './files';
 import {BiometricService} from './biometric';
 import {PayoutService} from './payouts';
+import {reportRows} from './report-data';
+import {twoFactor} from './two-factor';
+import {SalaryOperations} from './salary-operations';
+import {PeopleOperations} from './people-operations';
+import {approvalPolicies} from './approvals';
+import {employeeImport,importColumns} from './employee-import';
 import {authenticate,audit,employeeScope,platform,requirePermission,tenant,Context} from './context';
 const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*1024,files:1,fields:5}}).single('file');
 function localLanOrigin(origin:string){
@@ -148,6 +154,7 @@ export class Api {
       return {ok:true,status:'AWAITING_VERIFICATION',message:'Payment reference submitted. Access will unlock after payment verification.'};
     }
     if(resource==='auth'){
+      if(key==='two-factor')return twoFactor(this.db,ctx,method,action,body);
       if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
       if(key==='profile'&&method==='GET'){
         let profileUser:any=ctx.user;
@@ -201,6 +208,26 @@ export class Api {
       return {id:company.id,name:company.name,code:company.code,logo:company.logo,status:company.status,expiresAt:company.expiresAt,timezone:company.timezone,primaryColor:String(profile.primaryColor??'#3474ef')};
     }
     if(resource==='company'&&['GET','PATCH'].includes(method))return this.data.company(ctx,method==='PATCH'?body:undefined);
+    if(resource==='salary-employees'&&method==='GET'){const tid=tenant(ctx);requirePermission(ctx,'payroll','MANAGE');const scope=await employeeScope(this.db,ctx);if(scope)throw new ForbiddenException();const search=String(req.query.q??'').trim().slice(0,100);return {items:await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,...(search?{OR:[{firstName:{contains:search,mode:'insensitive'}},{lastName:{contains:search,mode:'insensitive'}},{employeeCode:{contains:search,mode:'insensitive'}}]}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,monthlySalary:true,updatedAt:true,joiningDate:true},orderBy:{employeeCode:'asc'},take:100})};}
+    if(resource==='salary-versions'&&key)return new SalaryOperations(this.db).versions(ctx,key,method,body);
+    if(resource==='payroll-loans')return new SalaryOperations(this.db).loans(ctx,method,body,key);
+    if(resource==='approval-policies')return approvalPolicies(this.db,ctx,method,body);
+    if(resource==='operations'&&key==='summary'&&method==='GET')return new PeopleOperations(this.db).summary(ctx);
+    if(resource==='employees'&&key==='import-template'&&method==='GET'){
+      requirePermission(ctx,'employees','IMPORT');const format=z.enum(['csv','xlsx']).parse(String(req.query.format??'xlsx'));
+      const sample=Object.fromEntries(importColumns.map(k=>[k,({employeeCode:'EMP-001',firstName:'First',lastName:'Last',email:'employee@example.test',phone:'9000000000',joiningDate:'2026-01-01',employmentType:'FULL_TIME',status:'ACTIVE',monthlySalary:'25000.00'} as any)[k]??'']));
+      res.setHeader('Content-Type',format==='xlsx'?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'text/csv; charset=utf-8');res.setHeader('Content-Disposition',`attachment; filename="employee-import-template.${format}"`);res.setHeader('Cache-Control','private, no-store');res.end(format==='xlsx'?toXlsx([sample],'Employees'):toCsv([sample]));return;
+    }
+    if(resource==='employees'&&key==='import'&&method==='POST')return employeeImport(this.db,ctx,body,action==='commit');
+    if(resource==='employees'&&key&&action==='tasks')return new PeopleOperations(this.db).tasks(ctx,key,method,body);
+    if(resource==='employees'&&key&&action==='letter'&&method==='GET'){
+      const bytes=await new PeopleOperations(this.db).letter(ctx,key,String(req.query.kind??'appointment'));res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition','attachment; filename="employee-letter.pdf"');res.setHeader('Cache-Control','private, no-store');res.end(bytes);return;
+    }
+    if(resource==='assets'&&key&&action==='history'&&method==='GET')return new PeopleOperations(this.db).assetHistory(ctx,key);
+    if(resource==='courses'&&key&&action==='enrollments')return new PeopleOperations(this.db).enrollments(ctx,key,method,body);
+    if(resource==='training-certificates'&&key&&method==='GET'){
+      const bytes=await new PeopleOperations(this.db).certificate(ctx,key);res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition','attachment; filename="training-certificate.pdf"');res.setHeader('Cache-Control','private, no-store');res.end(bytes);return;
+    }
     if(resource==='employees'&&key&&action==='app-access')return this.data.employeeAppAccess(ctx,key,method,body);
     if(resource==='organization-chart'&&method==='GET')return this.data.organizationChart(ctx);
     if(resource==='employees')return this.data.employees(ctx,method,key,body,req.query);
@@ -212,6 +239,7 @@ export class Api {
     if(resource==='leave'&&key&&action==='cancel'&&method==='POST')return this.flows.cancelLeave(ctx,key,body);
     if(resource==='leave')return this.flows.leave(ctx,method,body);
     if(resource==='payroll-adjustments'&&method==='POST')return this.flows.adjustment(ctx,body);
+    if(resource==='payout-reconciliation'&&method==='GET')return this.payouts.reconciliation(ctx);
     if(resource==='payroll'&&key&&action==='payouts'&&method==='GET')return this.payouts.list(ctx,id.parse(key));
     if(resource==='payroll'&&key&&action==='payout'&&method==='POST')return this.payouts.pay(ctx,id.parse(key),body);
     if(resource==='payroll'&&key&&action==='payout-sync'&&method==='POST')return this.payouts.sync(ctx,id.parse(key));
@@ -437,36 +465,17 @@ export class Api {
   async report(ctx:Context,type:string,req:Request,res:Response){
     requirePermission(ctx,'reports','EXPORT');
     let rows:any[]=[];
-    if(type==='employees'){
-      requirePermission(ctx,'employees','EXPORT');
-      // Export every matching page; the directory page size is not a report limit.
-      for(let page=1;;page++){
-        const result=await this.data.employees(ctx,'GET',undefined,undefined,{...req.query,page,pageSize:500});
-        rows.push(...result.items);
-        if(!result.items.length||rows.length>=result.total)break;
-      }
-    }
-    else if(type==='attendance'){requirePermission(ctx,'attendance','EXPORT');rows=((await this.flows.attendance(ctx,'GET',undefined,req.query)) as any).items;}
-    else if(type==='attendance-summary'){requirePermission(ctx,'attendance','EXPORT');const tid=tenant(ctx);const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(String(req.query.month??''));rows=(await (await import('./attendance-automation')).attendanceMonthSummary(this.db,tid,month)).items;}
-    else if(type==='leave'){requirePermission(ctx,'leave','EXPORT');rows=((await this.flows.leave(ctx,'GET',undefined)) as any).items;}
-    else if(type==='payroll'){requirePermission(ctx,'payroll','EXPORT');rows=((await this.flows.payroll(ctx,'GET')) as any).items;}
-    else if(type==='bank-payout'){
+    if(type==='bank-payout'){
       requirePermission(ctx,'payroll','EXPORT');const tid=tenant(ctx);const runId=id.parse(String(req.query.runId??''));const run=await this.db.payrollRun.findFirst({where:{id:runId,tenantId:tid,status:{in:['APPROVED','LOCKED']}},include:{items:true}});if(!run)throw new BadRequestException('Approve payroll before generating a bank payout file.');
       const employees=await this.db.employee.findMany({where:{tenantId:tid,id:{in:run.items.map(i=>i.employeeId)}}});const byId=new Map(employees.map(e=>[e.id,e]));
       rows=run.items.map(item=>{const employee=byId.get(item.employeeId),personal=(employee?.personal&&typeof employee.personal==='object'&&!Array.isArray(employee.personal)?employee.personal:{}) as any;return {employeeCode:item.employeeCode,employeeName:item.employeeName,accountHolder:personal.accountHolder??item.employeeName,bankName:personal.bankName??'',accountNumber:personal.accountNumber??'',ifsc:personal.ifsc??'',netAmount:(item.net/100).toFixed(2),reference:`SAL-${run.month}-${item.employeeCode}`};});
       if(rows.some(r=>!r.accountNumber||!r.ifsc))throw new BadRequestException('Complete bank account number and IFSC for every employee before exporting payout data.');
     }
-    else if(['expenses','assets','goals','candidates'].includes(type)){
-      const resource=type==='goals'?'performance':type==='candidates'?'recruitment':type;requirePermission(ctx,resource,'EXPORT');
-      for(let page=1;;page++){
-        const result=await this.data.resource(ctx,type,'GET',undefined,undefined,{...req.query,page,pageSize:500});
-        rows.push(...result.items);
-        if(!result.items.length||rows.length>=result.total)break;
-      }
-    }
-    else throw new NotFoundException('Report not found.');
+    else if(type==='attendance-summary'){requirePermission(ctx,'attendance','EXPORT');const tid=tenant(ctx);const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(String(req.query.month??''));rows=(await (await import('./attendance-automation')).attendanceMonthSummary(this.db,tid,month)).items;}
+    else rows=await reportRows(this.db,ctx,type,req.query);
+    if(req.query.preview==='true')return {items:rows.slice(0,500),total:rows.length,limited:rows.length>500};
     const clean=rows.map(({tenantId,personal,passwordHash,items,...r})=>r),format=z.enum(['csv','xlsx','pdf']).parse(String(req.query.format??'csv').toLowerCase());
-    const reportNames:Record<string,string>={employees:'Employee Directory',attendance:'Attendance Records','attendance-summary':'Attendance Summary',leave:'Time Off & Leave',payroll:'Payroll Runs','bank-payout':'Bank Payout',expenses:'Expense Claims',assets:'Asset Inventory',goals:'Performance Goals',candidates:'Recruitment Pipeline'};
+    const reportNames:Record<string,string>={employees:'Employee Directory',attendance:'Attendance Records','attendance-summary':'Attendance Summary',leave:'Time Off & Leave',payroll:'Payroll Runs','payroll-items':'Employee Payroll','bank-payout':'Bank Payout',expenses:'Expense Claims',assets:'Asset Inventory',goals:'Performance Goals',candidates:'Recruitment Pipeline'};
     const reportTitle='TCW HR - '+(reportNames[type]??type),stamp=new Date().toISOString().slice(0,10),baseName=('tcw-hr-'+type+'-'+stamp).replace(/[^a-z0-9._-]/gi,'-');
     const sendFile=(bytes:Buffer|string,mime:string,extension:string)=>{
       const length=Buffer.isBuffer(bytes)?bytes.length:Buffer.byteLength(bytes,'utf8');
@@ -537,10 +546,12 @@ export async function createApp(db:Database){
   app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb'}));
   // Edge Nginx adds an independent shared limit. This cap protects a local instance.
   const windows=new Map<string,{start:number;count:number}>();
+  // The isolated browser suite shares one loopback IP across every synthetic user.
+  const requestLimit=process.env.NODE_ENV==='test'&&process.env.PEOPLEOS_E2E_ISOLATED==='true'?3000:300;
   app.use((req:Request,res:Response,next:()=>void)=>{
     const now=Date.now(),key=req.ip??'unknown',row=windows.get(key);
     if(!row||now-row.start>60000){windows.set(key,{start:now,count:1});if(windows.size>10000)for(const[k,v]of windows)if(now-v.start>60000)windows.delete(k);}
-    else if(++row.count>300){res.status(429).json({message:'Too many requests. Try again in a minute.'});return;}
+    else if(++row.count>requestLimit){res.status(429).json({message:'Too many requests. Try again in a minute.'});return;}
     res.setHeader('Cache-Control','no-store');next();
   });
   await app.init();

@@ -1,3 +1,4 @@
+import {approvalEnabled,approvalRows,createApproval,reviewApproval} from './approvals';
 import {updateManualSalary} from './manual-payroll';
 import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
@@ -224,9 +225,9 @@ export class Workflows {
   async leave(ctx:Context,method:string,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'leave',method==='GET'?'VIEW':'CREATE');
     const scope=await employeeScope(this.db,ctx);
-    if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500})};}
+    if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await approvalRows(this.db,tid,'leave',await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500}))};}
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
-    const autoApprove=['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(ctx.user.role.code)&&input.employeeId!==ctx.user.employeeId;
+    let autoApprove=false;
     const after=await this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing)return existing;}
@@ -246,7 +247,9 @@ export class Workflows {
       const used=await tx.leaveRequest.aggregate({where:{tenantId:tid,employeeId:input.employeeId,leaveTypeId:input.leaveTypeId,status:{in:['PENDING','APPROVED']},startDate:{gte:new Date(`${year}-01-01`),lt:new Date(`${year+1}-01-01`)}},_sum:{days:true}});
       if(Number(used._sum.days??0)+days>Number(leaveType.annualDays))throw new BadRequestException('The request exceeds the annual leave allowance.');
       const {halfDay,...values}=input;
+      autoApprove=!await approvalEnabled(tx,tid,'leave')&&['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(ctx.user.role.code)&&input.employeeId!==ctx.user.employeeId;
       const created=await tx.leaveRequest.create({data:{tenantId:tid,...values,days,...(autoApprove?{status:'APPROVED',reviewerId:ctx.user.id,reviewNote:'Assigned by HR'}:{})}});
+      if(!autoApprove)await createApproval(tx,tid,'leave',created);
       await audit(tx,ctx,autoApprove?'LEAVE_ASSIGNED':'LEAVE_REQUESTED','leave',created.id,undefined,created);return created;
     });
     await this.notifyLeaveReporting(ctx,after,autoApprove);
@@ -309,11 +312,15 @@ export class Workflows {
       const table=(tx as any)[model];const before=await table.findFirst({where:{id:id.parse(recordId),tenantId:tid}});if(!before)throw new NotFoundException();await assertEmployee(tx,ctx,before.employeeId);
       if(before.employeeId===ctx.user.employeeId)throw new ForbiddenException('You cannot approve your own request.');
       if(type==='leave'){affectedMonths=monthsCovered(before.startDate,before.endDate);for(const month of affectedMonths)await lockPayrollPeriod(tx,tid,month);const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:affectedMonths},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before reviewing this leave.`);}
-      const data=type==='leave'?{status:input.decision,reviewerId:ctx.user.id,reviewNote:input.note}:{status:input.decision,reviewedBy:ctx.user.id};
+      const tableName={leave:'leave_requests',expenses:'expense_claims',travel:'travel_requests'}[type]!;
+      await tx.$queryRawUnsafe(`SELECT id FROM ${tableName} WHERE id = $1::uuid AND tenant_id = $2::uuid FOR UPDATE`,recordId,tid);
+      const current=await table.findFirst({where:{id:recordId,tenantId:tid}});if(current.status!=='PENDING')throw new ConflictException('This request has already been reviewed.');
+      const decision=await reviewApproval(tx,ctx,type,current,input);
+      const data=type==='leave'?{status:decision.status,reviewerId:ctx.user.id,reviewNote:input.note}:{status:decision.status,reviewedBy:ctx.user.id};
       const result=await table.updateMany({where:{id:recordId,tenantId:tid,status:'PENDING'},data});if(result.count!==1)throw new ConflictException('This request has already been reviewed.');
-      await audit(tx,ctx,`${type.toUpperCase()}_${input.decision}`,type,recordId,before,data);const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:before.employeeId}});if(user){const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:`${type} ${input.decision.toLowerCase()}`,message:'Your request has been reviewed.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:type==='leave'?'/leave':'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});}return table.findUnique({where:{id:recordId}});
+      await audit(tx,ctx,`${type.toUpperCase()}_${decision.status==='PENDING'?'MANAGER_APPROVED':input.decision}`,type,recordId,before,data);const user=await tx.user.findFirst({where:{tenantId:tid,employeeId:before.employeeId}});if(user){const notice=await tx.notification.create({data:{tenantId:tid,userId:user.id,title:`${type} ${decision.status==='PENDING'?'manager approved':input.decision.toLowerCase()}`,message:decision.status==='PENDING'?'Reporting manager approved. Final HR review is pending.':'Your request has been reviewed.'}});sendPush(this.db,{tenantId:tid,userId:user.id,title:notice.title,body:notice.message,url:type==='leave'?'/leave':'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});}return table.findUnique({where:{id:recordId}});
     });
-    if(type==='leave'&&input.decision==='APPROVED'){
+    if(type==='leave'&&reviewed.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,reviewed);
       await this.reconcileLeaveAttendance(ctx,reviewed);
     }
@@ -350,6 +357,7 @@ export class Workflows {
         if(await tx.payrollPayout.count({where:{tenantId:tid,runId:recordId}}))throw new ConflictException('Payroll with payout records cannot be deleted.');
         if(!['DRAFT','REVIEW'].includes(run.status)||run.approvedBy||run.lockedAt)throw new ConflictException('Only an unfinalized payroll can be deleted. Reopen finalized payroll first.');
         await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
+        await tx.loanInstallment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
         await tx.payrollItem.deleteMany({where:{tenantId:tid,runId:recordId}});
         const period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:tid,month:run.month}}});
         if(period?.status==='LOCKED'){

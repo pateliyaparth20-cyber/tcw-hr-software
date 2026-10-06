@@ -3,7 +3,7 @@ import {S3Client,PutObjectCommand,GetObjectCommand,DeleteObjectCommand} from '@a
 import {randomUUID} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
-import {id} from '../../../packages/validation';
+import {id,date} from '../../../packages/validation';
 export class FilesService {
   constructor(private db:Database){}
   private client(){if(!process.env.S3_ENDPOINT||!process.env.S3_BUCKET||!process.env.S3_ACCESS_KEY||!process.env.S3_SECRET_KEY)throw new ServiceUnavailableException('Document storage is not configured.');return new S3Client({endpoint:process.env.S3_ENDPOINT,region:process.env.S3_REGION??'us-east-1',forcePathStyle:true,credentials:{accessKeyId:process.env.S3_ACCESS_KEY,secretAccessKey:process.env.S3_SECRET_KEY}});}
@@ -16,9 +16,10 @@ export class FilesService {
     if(!allowed[file.mimetype])throw new BadRequestException('Upload a valid PDF, PNG, or JPEG file.');
     const employeeId=body.employeeId?id.parse(body.employeeId):null;if(employeeId)await assertEmployee(this.db,ctx,employeeId);
     const title=String(body.title??file.originalname).trim().slice(0,200);if(!title)throw new BadRequestException('A title is required.');
+    const expiresAt=body.expiresAt?date.parse(body.expiresAt):null;
     const key=`${tid}/${randomUUID()}`;const client=this.client();
     await client.send(new PutObjectCommand({Bucket:process.env.S3_BUCKET,Key:key,Body:b,ContentType:file.mimetype}));
-    try{return await this.db.$transaction(async tx=>{const after=await tx.document.create({data:{tenantId:tid,employeeId,title,category:String(body.category??'General').slice(0,100),objectKey:key,fileName:file.originalname.replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,150),mimeType:file.mimetype,size:file.size}});await audit(tx,ctx,'DOCUMENT_UPLOADED','documents',after.id,undefined,after);return after;});}
+    try{return await this.db.$transaction(async tx=>{const after=await tx.document.create({data:{tenantId:tid,employeeId,title,category:String(body.category??'General').slice(0,100),objectKey:key,fileName:file.originalname.replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,150),mimeType:file.mimetype,size:file.size,expiresAt}});await audit(tx,ctx,'DOCUMENT_UPLOADED','documents',after.id,undefined,after);return after;});}
     catch(e){await client.send(new DeleteObjectCommand({Bucket:process.env.S3_BUCKET,Key:key})).catch(()=>{});throw e;}
   }
   async download(ctx:Context,recordId:string){
