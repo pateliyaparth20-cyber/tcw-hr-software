@@ -91,6 +91,11 @@ export function attendanceWorkdayDate(instant:Date,shiftStartMinute:number,shift
   const boundary=zonedMinute(day,shiftStartMinute-earlyWindowMinutes,timezone);
   return instant<boundary?new Date(Date.parse(day)-86400000).toISOString().slice(0,10):day;
 }
+// A day opened by a manual IN uses actual OUT/IN breaks, even on an automatic shift.
+export function attendancePunchDrivenBreaks(shift:{punchDrivenBreaks?:boolean|null},punches:readonly {punchTime:Date;punchType:string;verificationType?:string|null}[]){
+ const firstIn=punches.filter(p=>p.punchType==='IN').reduce<(typeof punches)[number]|null>((first,p)=>!first||p.punchTime<first.punchTime?p:first,null);
+ return !!shift.punchDrivenBreaks||firstIn?.verificationType==='MANUAL';
+}
 export function isScheduledBreakOut(out:Date,breakStart:Date,breakEnd:Date){
   return out.getTime()>=breakStart.getTime()&&out.getTime()<breakEnd.getTime();
 }
