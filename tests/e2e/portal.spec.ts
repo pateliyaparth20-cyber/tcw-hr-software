@@ -1,6 +1,21 @@
 import {test,expect} from '@playwright/test';
 import {totp} from '../../packages/auth/totp';
 
+test('new login and signup design supports password visibility, consent and mobile forms',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});await page.goto('/login');
+ const signIn=page.getByRole('form',{name:'Account sign in'});await expect(signIn).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Great teams start with better HR.'})).toBeVisible();
+ await signIn.locator('input[name=password]').fill('SyntheticVisibility!2026');await signIn.getByRole('button',{name:'Show password'}).click();await expect(signIn.locator('input[name=password]')).toHaveAttribute('type','text');await signIn.getByRole('button',{name:'Hide password'}).click();await expect(signIn.locator('input[name=password]')).toHaveAttribute('type','password');
+ await page.getByRole('link',{name:'Start a 3-day trial'}).click();await expect(page).toHaveURL(/signup/);
+ const signup=page.getByRole('form',{name:'Company signup'});await signup.getByLabel('Company name',{exact:true}).fill('Synthetic Design Company');await signup.getByLabel('HR admin name',{exact:true}).fill('Synthetic Owner');await signup.getByLabel('Email address',{exact:true}).fill('design@example.test');await signup.getByLabel('Mobile number',{exact:true}).fill('9000000000');await signup.getByLabel('Trial plan',{exact:true}).selectOption('GROWTH');
+ let submitted:any=null;await page.route('**/api/auth/signup',async route=>{submitted=route.request().postDataJSON();await route.fulfill({json:{ok:true}})});
+ await signup.getByRole('button',{name:'Create trial workspace'}).click();await expect(signup.getByRole('alert')).toContainText('Accept the Terms');expect(submitted).toBeNull();
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(signup.getByLabel('Company name',{exact:true})).toBeVisible();expect(await signup.getByLabel('Company name',{exact:true}).evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);}
+ await signup.getByRole('checkbox',{name:'I agree to the Terms and Privacy notice.'}).check();await signup.getByRole('checkbox',{name:/may contact me/}).check();await signup.getByRole('button',{name:'Create trial workspace'}).click();
+ await expect(page.getByRole('heading',{name:'Check your email for login details'})).toBeVisible();expect(submitted).toMatchObject({companyName:'Synthetic Design Company',ownerEmail:'design@example.test',plan:'GROWTH',acceptTerms:true,contactConsent:true});
+ await page.getByRole('button',{name:'Continue to sign in'}).click();await expect(page.getByRole('form',{name:'Account sign in'})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
+
 test('attendance rules create and edit a night shift with mobile preview',async({page})=>{
  await login(page);await page.goto('/attendance');await page.getByRole('button',{name:'Attendance rules',exact:true}).click();
  await page.getByRole('button',{name:'Add Shift',exact:true}).first().click();
