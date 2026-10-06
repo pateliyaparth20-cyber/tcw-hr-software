@@ -45,8 +45,8 @@ test('software update starts directly with one click and never reloads automatic
  await page.route('**/api/releases/update',route=>{expect(route.request().postDataJSON()).toEqual({version});updateCalls++;requested=true;return route.fulfill({json:{updateRequested:true}})});
  await page.goto('/software-update');await expect(page.getByRole('heading',{name:'A software update is available'})).toBeVisible();expect(updateCalls).toBe(0);
  await expect(page.getByRole('button',{name:'Approve company update'})).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(0);
- await page.getByRole('button',{name:'Update software',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();expect(updateCalls).toBe(1);
- await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page).toHaveURL(/software-update$/);await expect(page.getByRole('button',{name:'Update software',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();expect(updateCalls).toBe(1);
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page).toHaveURL(/software-update$/);await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);
  for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Your software update is queued'})).toBeVisible();}
 });
 
@@ -54,8 +54,33 @@ test('software update errors allow a retry and restricted users cannot start an 
  await login(page);const version='b'.repeat(40);let canUpdate=true;
  await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:{version,title:'Synthetic update'},available:true,updateRequested:false,ready:false,canUpdate,checkedAt:new Date().toISOString()}}));
  await page.route('**/api/releases/update',route=>route.fulfill({status:409,json:{message:'The available release changed. Check for updates again before updating.'}}));
- await page.goto('/software-update');await page.getByRole('button',{name:'Update software',exact:true}).click();await expect(page.getByText('The available release changed. Check for updates again before updating.',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Update software',exact:true})).toBeEnabled();await expect(page).toHaveURL(/software-update$/);
- canUpdate=false;await page.reload();await expect(page.getByRole('button',{name:'Update software',exact:true})).toHaveCount(0);await expect(page.getByText('Your HR/Admin can start software updates.',{exact:true})).toBeVisible();
+ await page.goto('/software-update');await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByText('The available release changed. Check for updates again before updating.',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Update',exact:true})).toBeEnabled();await expect(page).toHaveURL(/software-update$/);
+ canUpdate=false;await page.reload();await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);await expect(page.getByText('Your HR/Admin can start software updates.',{exact:true})).toBeVisible();
+});
+
+test('update action is hidden when current and appears only after a new version is available to this device',async({page})=>{
+ await login(page);let currentVersion='a'.repeat(40),navigations=0;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion,available:false,updateRequested:false,canUpdate:true,checkedAt:new Date().toISOString()}}));
+ await page.goto('/software-update');await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Refresh this device',exact:true})).toHaveCount(0);
+ page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigations++});currentVersion='b'.repeat(40);
+ await page.getByRole('button',{name:'Check for updates',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software update is live'})).toBeVisible();await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(1);expect(navigations).toBe(0);
+ await Promise.all([page.waitForEvent('framenavigated',frame=>frame===page.mainFrame()),page.getByRole('button',{name:'Update',exact:true}).click()]);
+ await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);
+});
+
+for(const master of [{key:'departments',label:'Departments',singular:'department',field:'Department name',code:'Department code'},{key:'branches',label:'Branches',singular:'branch',field:'Branch name',code:'Branch code'},{key:'designations',label:'Designations',singular:'designation',field:'Designation name',code:'Designation code'},{key:'teams',label:'Teams',singular:'team',field:'Team name',code:'Team code'},{key:'locations',label:'Locations',singular:'location',field:'Location name',code:'Code'},{key:'cost-centers',label:'Cost centers',singular:'cost center',field:'Cost center',code:'Code'}])test('organization '+master.key+' supports create edit search list and protected directory actions',async({page})=>{
+ await login(page);await page.goto('/organization?tab='+master.key);await expect(page.getByRole('heading',{name:master.label,exact:true})).toBeVisible();
+ const unique=Date.now().toString(),name='Browser '+master.singular+' '+unique;await page.getByRole('button',{name:'Add '+master.singular,exact:true}).click();const dialog=page.getByRole('dialog');
+ await dialog.getByLabel(master.field,{exact:true}).fill(name);await dialog.getByLabel(master.code,{exact:true}).fill('ORG-'+unique);await dialog.getByLabel('Description',{exact:true}).fill('Synthetic directory record');
+ if(master.key==='branches'){await dialog.getByLabel('Location / area',{exact:true}).fill('Test area');await dialog.getByLabel('City',{exact:true}).fill('Test city')}
+ await dialog.getByRole('button',{name:'Create '+master.singular,exact:true}).click();await expect(dialog).not.toBeVisible();await page.getByRole('textbox',{name:'Search '+master.label.toLowerCase(),exact:true}).fill(name);await expect(page.locator('.org-card').filter({hasText:name})).toHaveCount(1);
+ await page.getByRole('button',{name:'Edit '+name,exact:true}).click();await dialog.getByLabel(master.field,{exact:true}).fill(name+' edited');await dialog.getByRole('button',{name:'Save changes',exact:true}).click();await expect(dialog).not.toBeVisible();await expect(page.getByRole('heading',{name:name+' edited',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'List view',exact:true}).click();await expect(page.locator('.org-list')).toContainText(name+' edited');await page.getByRole('button',{name:'Card view',exact:true}).click();
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy()}
+ if(master.key==='branches')await page.screenshot({path:'test-results/organization-mobile.png',fullPage:true,animations:'disabled'});
+ await page.setViewportSize({width:1440,height:1000});if(master.key==='departments')await page.screenshot({path:'test-results/organization-desktop.png',fullPage:true,animations:'disabled'});
+ await page.getByRole('button',{name:'Delete '+name+' edited',exact:true}).click();await dialog.getByRole('button',{name:'Confirm',exact:true}).click();await expect(dialog).not.toBeVisible();await expect(page.getByRole('heading',{name:'No matching records',exact:true})).toBeVisible();
 });
 
 test('new login and signup design supports password visibility, consent and mobile forms',async({page})=>{

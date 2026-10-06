@@ -1,0 +1,27 @@
+/* Shared accessible sky-blue theme for HR, employee and platform portals. */
+:root{--primary:#38bdf8;--primary-soft:#e0f2fe;--sky-ink:#075985;--sky-border:#bae6fd}
+html body .btn.primary,html body .tenant-shell .btn.primary,html body .employee-app-shell .btn.primary,html body .platform-shell .btn.primary{background:#38bdf8!important;border-color:#38bdf8!important;color:#082f49!important;box-shadow:0 3px 10px #38bdf81a!important}
+html body .btn.primary:hover{background:#7dd3fc!important;border-color:#7dd3fc!important;color:#082f49!important}
+html body .nav-item.active,html body .mobile-bottom-nav a.active,html body .mobile-bottom-nav button.active{background:#e0f2fe!important;color:#075985!important;border-color:#bae6fd!important}
+html body .tabs button.active{color:#075985!important;border-color:#38bdf8!important;background:#e0f2fe!important}
+html body input:focus,html body select:focus,html body textarea:focus{border-color:#38bdf8!important;box-shadow:0 0 0 3px #38bdf820!important}
+html body a:not(.btn):focus-visible,html body button:focus-visible{outline-color:#38bdf8}
+html body .update-hero{background:linear-gradient(115deg,#e0f2fe,#bae6fd 65%,#7dd3fc);border:1px solid #bae6fd;color:#082f49;box-shadow:0 8px 28px #0c4a6e0a}
+html body .update-hero h2{color:#082f49}html body .update-hero p{color:#33647c}html body .update-eyebrow{color:#0369a1}html body .update-hero-mark{color:#0369a1;background:#ffffff70;border-color:#fff}html body .update-status{background:#ffffff80;border-color:#fff;color:#075985}
+html body .update-small-icon,html body .update-next-build,html body .update-process span{background:#e0f2fe;color:#075985;border-color:#bae6fd}
+html body .reporting-company{color:#075985;background:#e0f2fe;border-color:#bae6fd}
+html body .reporting-person.search-match{border-color:#7dd3fc;background:#f0f9ff}
+html body .auth-refresh .entry-side{background:linear-gradient(150deg,#e0f2fe,#bae6fd 65%,#7dd3fc);color:#082f49}
+html body .auth-refresh .entry-copy h1{color:#082f49}html body .auth-refresh .entry-copy h1 em{color:#0369a1}
+html body .auth-refresh .entry-side :is(.entry-kicker,.entry-preview-mark,.entry-preview-title,.entry-preview-header>span,.entry-preview-modules>div){color:#0369a1}
+html body .auth-refresh .entry-side :is(.entry-copy>p,.entry-brand small,.entry-preview-header>small,.entry-preview-title>span,.entry-preview-modules span,.entry-preview-row strong,.entry-preview-row small,.entry-benefits span,.entry-side-foot){color:#33647c}
+html body .auth-refresh .entry-preview{background:#ffffff90;border-color:#ffffff;box-shadow:0 16px 40px #0c4a6e0a}
+html body .auth-refresh .entry-preview-modules>div{background:#f0f9ff;border-color:#bae6fd}
+html body .auth-refresh .entry-preview-avatar{background:#e0f2fe;color:#075985}
+html body .auth-refresh .entry-submit{background:#38bdf8;color:#082f49}
+html body .auth-refresh :is(.entry-forgot-link,.entry-signup-link a,.entry-terms-check a){color:#0369a1}
+html body .rc-hero{background:linear-gradient(115deg,#e0f2fe,#bae6fd 65%,#7dd3fc);color:#082f49;border:1px solid #bae6fd}
+html body .rc-hero :is(.rc-eyebrow,p,.rc-hero-note,.rc-hero-stats span){color:#33647c}html body .rc-hero h2{color:#082f49}
+html body .rc-hero-stats article{background:#ffffff80;border-color:#fff}
+html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform){background:linear-gradient(115deg,#e0f2fe,#bae6fd 65%,#7dd3fc)!important;color:#082f49!important;border-color:#bae6fd!important}
+html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform) :is(h1,h2,h3,h4,p,small,strong){color:#17364a!important}

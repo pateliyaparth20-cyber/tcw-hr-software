@@ -27,7 +27,10 @@ jobs:
         if: always()
         with:
           name: reports-design-previews
-          path: test-results/reports-*.png
+          path: |
+            test-results/reports-*.png
+            test-results/organization-*.png
+            test-results/update-*.png
           if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@v4
