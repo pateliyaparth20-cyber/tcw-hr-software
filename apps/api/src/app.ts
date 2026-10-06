@@ -244,6 +244,7 @@ export class Api {
     if(resource==='attendance')return this.flows.attendance(ctx,method,body,req.query,key,action);
     if(['leave','expenses','travel'].includes(resource)&&key&&action==='review'&&method==='POST')return this.flows.review(ctx,resource,key,body);
     if(resource==='leave'&&key&&action==='cancel'&&method==='POST')return this.flows.cancelLeave(ctx,key,body);
+    if(resource==='leave'&&key==='balances'&&method==='GET')return this.flows.leaveBalances(ctx,req.query);
     if(resource==='leave')return this.flows.leave(ctx,method,body);
     if(resource==='payroll-adjustments'&&method==='POST')return this.flows.adjustment(ctx,body);
     if(resource==='payout-reconciliation'&&method==='GET')return this.payouts.reconciliation(ctx);

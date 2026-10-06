@@ -222,22 +222,34 @@ export class Workflows {
       if(recipient.email)await this.db.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{type:'LEAVE_REPORTING',to:recipient.email,subject:title+' - '+employeeName,text:message}}});
     }
   }
+  async leaveBalances(ctx:Context,query:any){
+    const tid=tenant(ctx);requirePermission(ctx,'leave','VIEW');
+    const input=z.object({employeeId:id,year:z.coerce.number().int().min(1970).max(2100)}).parse(query);
+    await assertEmployee(this.db,ctx,input.employeeId);
+    const [types,usage]=await Promise.all([
+      this.db.leaveType.findMany({where:{tenantId:tid},orderBy:{name:'asc'}}),
+      this.db.leaveRequest.groupBy({by:['leaveTypeId','status'],where:{tenantId:tid,employeeId:input.employeeId,status:{in:['PENDING','APPROVED']},startDate:{gte:new Date(Date.UTC(input.year,0,1)),lt:new Date(Date.UTC(input.year+1,0,1))}},_sum:{days:true}})
+    ]);
+    const items=types.map(type=>{const approved=Number(usage.find(r=>r.leaveTypeId===type.id&&r.status==='APPROVED')?._sum.days??0),pending=Number(usage.find(r=>r.leaveTypeId===type.id&&r.status==='PENDING')?._sum.days??0),annual=Number(type.annualDays);return {id:type.id,name:type.name,paid:type.paid,annual,approved,pending,remaining:Math.max(0,annual-approved-pending)};});
+    return {employeeId:input.employeeId,year:input.year,items,paidTaken:items.filter(r=>r.paid).reduce((sum,r)=>sum+r.approved,0),unpaidTaken:items.filter(r=>!r.paid).reduce((sum,r)=>sum+r.approved,0)};
+  }
   async leave(ctx:Context,method:string,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'leave',method==='GET'?'VIEW':'CREATE');
     const scope=await employeeScope(this.db,ctx);
-    if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id);return {items:await approvalRows(this.db,tid,'leave',await this.db.leaveRequest.findMany({where:{tenantId:tid,employeeId:{in:visibleEmployeeIds}},orderBy:{createdAt:'desc'},take:500}))};}
+    if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id),where={tenantId:tid,employeeId:{in:visibleEmployeeIds}};const [list,summary]=await Promise.all([this.db.leaveRequest.findMany({where,orderBy:{createdAt:'desc'},take:500}),this.db.leaveRequest.groupBy({by:['status'],where,_count:{_all:true}})]);const people=await this.db.employee.findMany({where:{tenantId:tid,id:{in:[...new Set(list.map(r=>r.employeeId))]}},select:{id:true,firstName:true,lastName:true,employeeCode:true,designation:true,photo:true}});return {items:(await approvalRows(this.db,tid,'leave',list)).map(row=>({...row,employee:people.find(p=>p.id===row.employeeId)??null})),summary:Object.fromEntries(summary.map(r=>[r.status,r._count._all])),total:summary.reduce((sum,r)=>sum+r._count._all,0)};}
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
-    let autoApprove=false;
+    let autoApprove=false,duplicate=false;
     const after=await this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
-      if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing)return existing;}
+      if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing){if(existing.employeeId!==input.employeeId||existing.leaveTypeId!==input.leaveTypeId||+existing.startDate!==+input.startDate||+existing.endDate!==+input.endDate||existing.reason!==input.reason||(Number(existing.days)===0.5)!==input.halfDay)throw new ConflictException('Request key already belongs to a different leave request.');duplicate=true;return existing;}}
       const leaveType=await tx.leaveType.findFirst({where:{id:input.leaveTypeId,tenantId:tid}});if(!leaveType)throw new BadRequestException('Leave type not found.');
       for(const month of monthsCovered(input.startDate,input.endDate))await lockPayrollPeriod(tx,tid,month);
       const locked=await tx.attendancePeriodLock.findFirst({where:{tenantId:tid,month:{in:monthsCovered(input.startDate,input.endDate)},status:'LOCKED'}});if(locked)throw new ConflictException(`Attendance for ${locked.month} is locked. Unlock it before creating leave that changes payroll.`);
       const overlap=await tx.leaveRequest.count({where:{tenantId:tid,employeeId:input.employeeId,status:{in:['PENDING','APPROVED']},startDate:{lte:input.endDate},endDate:{gte:input.startDate}}});
       if(overlap)throw new ConflictException('This employee already has leave requested for these dates.');
-      const employee=await tx.employee.findFirst({where:{tenantId:tid,id:input.employeeId},select:{shiftId:true}}),shift=employee?.shiftId?await tx.shift.findFirst({where:{tenantId:tid,id:employee.shiftId}}):await tx.shift.findFirst({where:{tenantId:tid},orderBy:{createdAt:'asc'}});
+      const employee=await tx.employee.findFirst({where:{tenantId:tid,id:input.employeeId},select:{shiftId:true,joiningDate:true}}),shift=employee?.shiftId?await tx.shift.findFirst({where:{tenantId:tid,id:employee.shiftId}}):await tx.shift.findFirst({where:{tenantId:tid},orderBy:{createdAt:'asc'}});
       if(!shift)throw new BadRequestException('Create a shift before requesting leave.');
+      if(employee&&input.startDate.toISOString().slice(0,10)<employee.joiningDate.toISOString().slice(0,10))throw new BadRequestException('Leave cannot start before the employee joining date.');
       const calendarOffs=await tx.calendarEvent.findMany({where:{tenantId:tid,kind:{in:['HOLIDAY','ROSTER_OFF']},date:{lte:input.endDate},OR:[{endDate:null},{endDate:{gte:input.startDate}}]}});const excluded=new Set<string>();
       for(const h of calendarOffs){if(h.kind==='ROSTER_OFF'){if(h.shiftId===shift.id)excluded.add(h.date.toISOString().slice(0,10));continue;}const end=h.endDate??h.date;for(let t=Math.max(+input.startDate,+h.date);t<=Math.min(+input.endDate,+end);t+=86400000)excluded.add(new Date(t).toISOString().slice(0,10));}let days=0;
       for(let t=+input.startDate;t<=+input.endDate;t+=86400000){const day=new Date(t);if(isScheduledWorkDay(day,shift)&&!excluded.has(day.toISOString().slice(0,10)))days++;}
@@ -252,6 +264,7 @@ export class Workflows {
       if(!autoApprove)await createApproval(tx,tid,'leave',created);
       await audit(tx,ctx,autoApprove?'LEAVE_ASSIGNED':'LEAVE_REQUESTED','leave',created.id,undefined,created);return created;
     });
+    if(duplicate)return after;
     await this.notifyLeaveReporting(ctx,after,autoApprove);
     if(autoApprove&&after.status==='APPROVED'){
       await this.closeOpenWorkForApprovedFullDayLeave(ctx,after);

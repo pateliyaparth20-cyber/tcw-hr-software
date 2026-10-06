@@ -147,6 +147,43 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    await db.payrollAdjustment.delete({where:{id:pendingAdjustment.id}});await db.employee.delete({where:{id:excluded.id}});
    const slips=await call('payroll','GET',undefined,self);assert.equal(slips.data.items.length,1);assert.equal(slips.data.items[0].employeeId,a.data.id);
   });
+
+  await t.test('Time Off A-to-Z validation, reservations, replay safety and exact balances',async()=>{
+   const previousShift=(await db.employee.findUniqueOrThrow({where:{id:a.data.id}})).shiftId;
+   const shift=await db.shift.create({data:{tenantId:alphaTenant,name:'Time Off QA weekdays',startMinute:540,endMinute:1080,workWeekMode:'CUSTOM_WEEKLY',workingDays:'1,2,3,4,5'}});
+   const type=await db.leaveType.create({data:{tenantId:alphaTenant,name:'QA allowance',annualDays:2,paid:true}});
+   const foreignType=await db.leaveType.create({data:{tenantId:betaTenant!,name:'Foreign QA allowance',annualDays:2,paid:true}});
+   await db.employee.update({where:{id:a.data.id},data:{shiftId:shift.id}});
+   const request={employeeId:a.data.id,leaveTypeId:type.id,startDate:'2027-01-04',endDate:'2027-01-04',reason:'QA time off'};
+   try{
+    for(const changed of [{endDate:'2027-01-03'},{endDate:'2027-01-05',halfDay:true},{startDate:'2026-12-31',endDate:'2027-01-01'},{startDate:'2027-02-30',endDate:'2027-02-30'},{reason:' '},{startDate:'2024-01-02',endDate:'2024-01-02'},{leaveTypeId:foreignType.id}])assert.equal((await call('leave','POST',{...request,...changed},self)).status,400,JSON.stringify(changed));
+    assert.equal((await call('leave','POST',{...request,startDate:'2027-01-09',endDate:'2027-01-10'},self)).status,400,'weekend-only leave must not consume allowance');
+    await db.calendarEvent.create({data:{tenantId:alphaTenant,title:'QA holiday',kind:'HOLIDAY',date:new Date('2027-01-06')}});
+    assert.equal((await call('leave','POST',{...request,startDate:'2027-01-06',endDate:'2027-01-06'},self)).status,400,'holiday-only leave must not consume allowance');
+    const key=randomUUID(),first=await call('leave','POST',{...request,halfDay:true,requestKey:key},self);assert.equal(first.status,200,JSON.stringify(first.data));assert.equal(Number(first.data.days),0.5);
+    const notices=await db.notification.count({where:{tenantId:alphaTenant}}),count=await db.leaveRequest.count({where:{tenantId:alphaTenant,requestKey:key}});
+    const replay=await call('leave','POST',{...request,halfDay:true,requestKey:key},self);assert.equal(replay.status,200);assert.equal(replay.data.id,first.data.id);assert.equal(await db.leaveRequest.count({where:{tenantId:alphaTenant,requestKey:key}}),count);assert.equal(await db.notification.count({where:{tenantId:alphaTenant}}),notices,'duplicate requests must not resend notices');
+    for(const changed of [{reason:'Changed reason'},{halfDay:false},{startDate:'2027-01-07',endDate:'2027-01-07'}])assert.equal((await call('leave','POST',{...request,halfDay:true,requestKey:key,...changed},self)).status,409,'request keys must not alias changed payloads');
+    assert.equal((await call('leave','POST',request,self)).status,409,'overlapping half/full requests must be blocked');
+    const second=await call('leave','POST',{...request,startDate:'2027-01-07',endDate:'2027-01-07',requestKey:randomUUID()},self);assert.equal(second.status,200,JSON.stringify(second.data));assert.equal(Number(second.data.days),1);
+    assert.equal((await call('leave','POST',{...request,startDate:'2027-01-08',endDate:'2027-01-08'},self)).status,400,'pending reservations must prevent overdraw');
+    const final=await call('leave','POST',{...request,startDate:'2027-01-08',endDate:'2027-01-08',halfDay:true,requestKey:randomUUID()},self);assert.equal(final.status,200,JSON.stringify(final.data));
+    let balance=await call('leave/balances?employeeId='+a.data.id+'&year=2027','GET',undefined,self);assert.equal(balance.status,200);let own=balance.data.items.find((r:any)=>r.id===type.id);assert.equal(own.pending,2);assert.equal(own.remaining,0);
+    assert.equal((await call('leave/balances?employeeId='+a.data.id+'&year=bad','GET',undefined,self)).status,400);
+    assert.equal((await call('leave/balances?employeeId='+a.data.id+'&year=2027','GET',undefined,beta)).status,404);
+    assert.equal((await call('leave/'+second.data.id+'/cancel','POST',{note:'Release balance'},self)).status,200);
+    balance=await call('leave/balances?employeeId='+a.data.id+'&year=2027','GET',undefined,self);own=balance.data.items.find((r:any)=>r.id===type.id);assert.equal(own.pending,1);assert.equal(own.remaining,1,'cancellation must restore allowance');
+    const list=await call('leave','GET',undefined,self);assert.equal(list.status,200);assert(list.data.summary.PENDING>=2);assert(list.data.items.find((r:any)=>r.id===first.data.id)?.employee?.firstName,'self-service requests must include safe employee identity');
+   }finally{await db.employee.update({where:{id:a.data.id},data:{shiftId:previousShift}});}
+  });
+  await t.test('leave balances and summary include records beyond the latest 500 display limit',async()=>{
+   const employee=await db.employee.create({data:{tenantId:alphaTenant,employeeCode:'BALANCE-QA',firstName:'Balance',lastName:'Fixture',email:'balance-fixture@example.test',joiningDate:new Date('2020-01-01')}});
+   const type=await db.leaveType.create({data:{tenantId:alphaTenant,name:'Large balance fixture',annualDays:1000,paid:true}});
+   // Synthetic historical import rows deliberately exceed the display limit.
+   await db.leaveRequest.createMany({data:Array.from({length:501},(_,i)=>({tenantId:alphaTenant,employeeId:employee.id,leaveTypeId:type.id,startDate:new Date(Date.UTC(2027,0,1+i%300)),endDate:new Date(Date.UTC(2027,0,1+i%300+Math.floor(i/300))),days:.5,status:i===0?'APPROVED' as const:'PENDING' as const,reason:'Synthetic historical aggregation fixture '+i}))});
+   const balance=await call(`leave/balances?employeeId=${employee.id}&year=2027`,'GET',undefined,alpha);assert.equal(balance.status,200);const item=balance.data.items.find((r:any)=>r.id===type.id);assert.equal(item.approved,.5);assert.equal(item.pending,250);assert.equal(item.remaining,749.5);assert.equal(balance.data.paidTaken,.5);
+   const list=await call('leave','GET',undefined,alpha);assert.equal(list.status,200);assert.equal(list.data.items.length,500);assert(list.data.total>500);assert.equal(Object.values(list.data.summary).reduce((sum:any,n:any)=>sum+n,0),list.data.total);
+  });
   await t.test('leave overlap, approval, cancellation, and self-approval controls',async()=>{
    const type=await db.leaveType.findFirstOrThrow({where:{tenantId:alphaTenant,paid:true}});
    const input={employeeId:a.data.id,leaveTypeId:type.id,startDate:'2026-10-05',endDate:'2026-10-06',reason:'Test leave'};

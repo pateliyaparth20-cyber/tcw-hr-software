@@ -1,6 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
-import {CalendarDays,Clock3,CheckCircle2,XCircle,Download,Plus,Search,MoreHorizontal,X,Check,ChevronLeft,ChevronRight,Settings2} from 'lucide-react';
+import {CalendarDays,Clock3,CheckCircle2,XCircle,Download,Plus,Search,MoreHorizontal,X,Check,ChevronLeft,ChevronRight,Settings2,RefreshCw,Plane} from 'lucide-react';
+import './time-off-design.css';
 import {modules,Row,readable} from './config';
 import {useApp,useData,Avatar,Badge,Modal,RecordForm,Loading,Failure,Empty,displayDate} from './core';
 
@@ -28,6 +29,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const [status,setStatus]=useState('ALL');
   const [search,setSearch]=useState('');
   const [page,setPage]=useState(1);
+  const [leaveTypeFilter,setLeaveTypeFilter]=useState(''),[yearFilter,setYearFilter]=useState(''),[sort,setSort]=useState('RECENT');
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const [detailClosed,setDetailClosed]=useState(false);
   const [requestOpen,setRequestOpen]=useState(false);
@@ -39,11 +41,13 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const rows:Row[]=requests.data?.items??[];
   const people:Row[]=employees.data?.items??[];
   const types:Row[]=leaveTypes.data?.items??[];
-  const employeeFor=(employeeId:any)=>people.find(r=>r.id===employeeId);
+  const employeeFor=(employeeId:any)=>people.find(r=>r.id===employeeId)??rows.find(r=>r.employeeId===employeeId)?.employee;
   const leaveTypeFor=(leaveTypeId:any)=>types.find(r=>r.id===leaveTypeId);
 
   const filtered=rows.filter(row=>{
     if(status!=='ALL'&&String(row.status??'').toUpperCase()!==status)return false;
+    if(leaveTypeFilter&&row.leaveTypeId!==leaveTypeFilter)return false;
+    if(yearFilter&&String(row.startDate).slice(0,4)!==yearFilter)return false;
     if(!search.trim())return true;
     const employee=employeeFor(row.employeeId);
     const type=leaveTypeFor(row.leaveTypeId);
@@ -56,14 +60,17 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
       row.status
     ].join(' ').toLowerCase();
     return haystack.includes(search.trim().toLowerCase());
-  });
+  }).sort((a,b)=>sort==='START'?+new Date(a.startDate)-+new Date(b.startDate):+new Date(b.createdAt)-+new Date(a.createdAt));
 
   const pageCount=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
   const safePage=Math.min(page,pageCount);
   const visible=filtered.slice((safePage-1)*PAGE_SIZE,safePage*PAGE_SIZE);
   const selected=selectedId?rows.find(r=>r.id===selectedId)??null:null;
 
-  useEffect(()=>{setPage(1)},[status,search]);
+  const balanceYear=selected?new Date(selected.startDate).getUTCFullYear():new Date().getUTCFullYear();
+  const balanceQuery=useData('leave/balances?employeeId='+encodeURIComponent(selected?.employeeId??'')+'&year='+balanceYear,!!selected&&can('leave'));
+  const resetFilters=()=>{setStatus('ALL');setSearch('');setLeaveTypeFilter('');setYearFilter('');setSort('RECENT');setPage(1)};
+  useEffect(()=>{setPage(1)},[status,search,leaveTypeFilter,yearFilter,sort]);
   useEffect(()=>{
     if(!actionMenu)return;
     const menuId=`timeoff-actions-menu-${actionMenu.id}`,triggerId=`timeoff-actions-trigger-${actionMenu.id}`;
@@ -97,13 +104,13 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   useEffect(()=>{
     if(detailClosed||!visible.length)return;
     if(!selectedId||!visible.some(r=>r.id===selectedId))setSelectedId(visible[0].id);
-  },[detailClosed,visible.length,safePage,status,search,selectedId]);
+  },[detailClosed,visible.length,safePage,status,search,leaveTypeFilter,yearFilter,sort,selectedId]);
 
-  const total=rows.length;
-  const pending=rows.filter(r=>r.status==='PENDING').length;
-  const approved=rows.filter(r=>r.status==='APPROVED').length;
-  const rejected=rows.filter(r=>r.status==='REJECTED').length;
-  const cancelled=rows.filter(r=>r.status==='CANCELLED').length;
+  const total=Number(requests.data?.total??rows.length);
+  const pending=Number(requests.data?.summary?.PENDING??rows.filter(r=>r.status==='PENDING').length);
+  const approved=Number(requests.data?.summary?.APPROVED??rows.filter(r=>r.status==='APPROVED').length);
+  const rejected=Number(requests.data?.summary?.REJECTED??rows.filter(r=>r.status==='REJECTED').length);
+  const cancelled=Number(requests.data?.summary?.CANCELLED??rows.filter(r=>r.status==='CANCELLED').length);
   const tabs=[
     ['ALL',`All Requests (${total})`],
     ['PENDING',`Pending (${pending})`],
@@ -139,36 +146,24 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
   const selectedLeaveType=selected?leaveTypeFor(selected.leaveTypeId):undefined;
   const selectedName=selected?personName(selectedEmployee,session.user.employeeId===selected.employeeId?session.user.name:'Employee'):'';
   const selectedYear=selected?new Date(selected.startDate).getUTCFullYear():new Date().getUTCFullYear();
-  const balances=selected?types.map(type=>{
-    const used=rows.filter(r=>
-      r.employeeId===selected.employeeId&&
-      r.leaveTypeId===type.id&&
-      ['PENDING','APPROVED'].includes(String(r.status))&&
-      new Date(r.startDate).getUTCFullYear()===selectedYear
-    ).reduce((n,r)=>n+Number(r.days??0),0);
-    return {id:type.id,name:type.name,annual:Number(type.annualDays??0),remaining:Math.max(0,Number(type.annualDays??0)-used)};
-  }):[];
-  const approvedSelectedYear=selected?rows.filter(r=>
-    r.employeeId===selected.employeeId&&
-    String(r.status)==='APPROVED'&&
-    new Date(r.startDate).getUTCFullYear()===selectedYear
-  ):[];
-  const paidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid===true).reduce((n,r)=>n+Number(r.days??0),0);
-  const unpaidLeaveTaken=approvedSelectedYear.filter(r=>leaveTypeFor(r.leaveTypeId)?.paid===false).reduce((n,r)=>n+Number(r.days??0),0);
-  const totalLeaveBalance=balances.reduce((n,b)=>n+Number(b.remaining??0),0);
+  const balances:Row[]=balanceQuery.data?.items??[];
+  const balanceReady=!!balanceQuery.data&&!balanceQuery.error;
+  const paidLeaveTaken=balanceReady?Number(balanceQuery.data?.paidTaken??0):'—';
+  const unpaidLeaveTaken=balanceReady?Number(balanceQuery.data?.unpaidTaken??0):'—';
+  const totalLeaveBalance=balanceReady?balances.reduce((n,b)=>n+Number(b.remaining??0),0):'—';
 
   const selectedIsSelf=!!selected&&selected.employeeId===session.user.employeeId;
   const canApproveSelected=!!selected&&selected.status==='PENDING'&&!selectedIsSelf&&can('leave','APPROVE');
   const canRejectSelected=!!selected&&selected.status==='PENDING'&&!selectedIsSelf&&can('leave','REJECT');
   const canCancelSelected=!!selected&&['PENDING','APPROVED'].includes(String(selected.status))&&(selectedIsSelf?can('leave','CREATE'):can('leave','EDIT'));
 
-  return <div className="timeoff-v3">
+  return <div className="timeoff-v3 timeoff-v4">
     <div className="timeoff-v3-head">
       <div>
-        <h1>Time Off</h1>
-        <p>Manage employee time off requests and leave balances</p>
+        <span className="timeoff-v4-eyebrow"><Plane size={15}/>TEAM · TIME OFF</span><h1>Time Off</h1>
+        <p>Plan time away. Keep every request, approval and balance clear.</p>
       </div>
-      <div className="timeoff-v3-head-actions">
+      <div className="timeoff-v3-head-actions"><button className="btn secondary timeoff-v3-button" disabled={requests.isFetching} onClick={()=>{void requests.refetch();if(selected)void balanceQuery.refetch()}}><RefreshCw size={16}/>Refresh</button>
         {onOpenPolicies&&can('leave','MANAGE')&&<button className="btn secondary timeoff-v3-button" onClick={onOpenPolicies}><Settings2 size={18}/>Leave Policies</button>}
         {can('leave','EXPORT')&&can('reports','EXPORT')&&<a className="btn secondary timeoff-v3-button" href="/api/reports/leave?format=xlsx"><Download size={18}/>Export</a>}
         {can('leave','CREATE')&&<button className="btn primary timeoff-v3-button" onClick={openRequest}><Plus size={20}/>Request Time Off</button>}
@@ -191,10 +186,12 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
             </div>
             <label className="timeoff-v3-search">
               <Search size={18}/>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name, leave type..."/>
+              <input aria-label="Search time off requests" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name, leave type..."/>
             </label>
           </div>
 
+          <div className="timeoff-v4-filter-row"><label><span>Leave type</span><select aria-label="Filter leave type" value={leaveTypeFilter} onChange={e=>setLeaveTypeFilter(e.target.value)}><option value="">All leave types</option>{types.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><label><span>Year</span><select aria-label="Filter leave year" value={yearFilter} onChange={e=>setYearFilter(e.target.value)}><option value="">All years</option>{[...new Set(rows.map(r=>String(r.startDate).slice(0,4)))].sort().reverse().map(y=><option key={y}>{y}</option>)}</select></label><label><span>Sort by</span><select aria-label="Sort time off requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="RECENT">Newest requests</option><option value="START">Upcoming dates</option></select></label><button type="button" className="text-button" onClick={resetFilters}>Reset filters</button></div>
+          {rows.length<total&&<p className="timeoff-v4-list-note">Showing the latest {rows.length} requests. Leave balances include all requests for the selected year.</p>}
           {!filtered.length?<Empty title={search||status!=='ALL'?'No matching time off requests':'No time off requests yet'} description={search||status!=='ALL'?'Try another status or search term.':'New requests will appear here.'} action={can('leave','CREATE')?<button className="btn primary" onClick={openRequest}><Plus size={18}/>Request Time Off</button>:undefined}/>:<>
             <div className="timeoff-v3-table-wrap">
               <table className="timeoff-v3-table">
@@ -203,7 +200,7 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
                   const employee=employeeFor(row.employeeId);
                   const name=personName(employee,session.user.employeeId===row.employeeId?session.user.name:'Employee');
                   const type=leaveTypeFor(row.leaveTypeId);
-                  return <tr key={row.id} className={selectedId===row.id?'selected':''} onClick={()=>selectRequest(row)}>
+                  return <tr key={row.id} tabIndex={0} aria-label={'View time off request for '+personName(employeeFor(row.employeeId),'Employee')} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' ')){e.preventDefault();selectRequest(row)}}} className={selectedId===row.id?'selected':''} onClick={()=>selectRequest(row)}>
                     <td><span className="timeoff-v3-person"><Avatar name={name} src={employee?.photo}/><span><strong>{name}</strong><small>{employee?.designation??employee?.employeeCode??''}</small></span></span></td>
                     <td>{type?.name??'Leave'}</td>
                     <td><span className="timeoff-v3-date-range">{displayDate(row.startDate)}{String(row.startDate).slice(0,10)!==String(row.endDate).slice(0,10)&&<><br/>{displayDate(row.endDate)}</>}</span></td>
@@ -285,9 +282,10 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
             <dt>Requested On</dt><dd>{selected.createdAt?new Date(selected.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</dd>
           </dl>
 
+          {balanceQuery.isLoading&&<p className="timeoff-v4-balance-note">Loading current leave balances…</p>}{balanceQuery.error&&<Failure error={balanceQuery.error as Error} retry={()=>balanceQuery.refetch()}/>}
           {!!balances.length&&<section className="timeoff-v3-detail-section">
-            <h4>Leave Balance</h4>
-            <div className="timeoff-v3-balances">{balances.map((b,index)=><div key={b.id} className={'tone-'+(index%3)}><span>{b.name}</span><strong>{b.remaining} days remaining</strong></div>)}</div>
+            <h4>Leave Balance · {selectedYear}</h4><p className="timeoff-v4-balance-note">Pending requests reserve your allowance until reviewed or cancelled.</p>
+            <div className="timeoff-v3-balances">{balances.map((b,index)=><div key={b.id} className={'tone-'+(index%3)}><span>{b.name}</span><strong>{b.remaining} days remaining</strong><small>{b.approved} approved · {b.pending} pending / {b.annual} annual</small></div>)}</div>
           </section>}
 
           <section className="timeoff-v3-detail-section">
@@ -313,20 +311,21 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
         fields={leaveRequestFields}
         initial={session.user.employeeId?{employeeId:session.user.employeeId}:undefined}
         formClassName="leave-request-form timeoff-v3-request-form"
+        sections={[{title:'Employee & leave type',description:'Choose who needs time away and the applicable policy.',keys:['employeeId','leaveTypeId']},{title:'Dates & duration',description:'Half-day requests use one working date. Holidays and roster offs do not consume leave.',keys:['startDate','endDate','halfDay']},{title:'Reason',description:'A short explanation helps the reviewer understand your request.',keys:['reason']}]}
         fieldFilter={field=>!(session.user.role==='EMPLOYEE'&&field.key==='employeeId')}
         onCancel={()=>setRequestOpen(false)}
         onSave={async body=>{
           const payload={...body,...(session.user.role==='EMPLOYEE'&&session.user.employeeId?{employeeId:session.user.employeeId}:{}),requestKey:requestKey||crypto.randomUUID()};
-          await mutate('leave','POST',payload);
-          setRequestOpen(false);
+          const created=await mutate('leave','POST',payload);
+          setDetailClosed(false);setSelectedId(created.id);setRequestOpen(false);
         }}
         submit="Submit Request"
       />
     </Modal>}
 
     {review&&<Modal title={(review.decision==='APPROVED'?'Approve':'Reject')+' request'} onClose={()=>setReview(null)}>
-      <RecordForm
-        fields={[{key:'note',label:'Review note',type:'textarea',required:false}]}
+      <div className="timeoff-v4-confirm-summary"><strong>{review.decision==='APPROVED'?'Approve this time away?':'Decline this request?'}</strong><p>{personName(employeeFor(review.row.employeeId))} · {displayDate(review.row.startDate)} – {displayDate(review.row.endDate)} · {Number(review.row.days)} days</p></div><RecordForm
+        formClassName="timeoff-v4-action-form" fields={[{key:'note',label:'Review note',type:'textarea',required:false}]}
         onCancel={()=>setReview(null)}
         onSave={async body=>{await mutate(`leave/${review.row.id}/review`,'POST',{...body,decision:review.decision});setReview(null)}}
         submit={review.decision==='APPROVED'?'Approve Request':'Reject Request'}
@@ -334,8 +333,8 @@ export function TimeOffDashboard({onOpenPolicies}:{onOpenPolicies?:()=>void}){
     </Modal>}
 
     {cancelLeave&&<Modal title={cancelLeave.status==='APPROVED'?'Cancel approved leave':'Cancel time off request'} onClose={()=>setCancelLeave(null)}>
-      <RecordForm
-        fields={[{key:'note',label:'Cancellation note',type:'textarea',required:false,hint:'Optional note explaining why this time off is being cancelled.'}]}
+      <div className="timeoff-v4-confirm-summary"><strong>Cancel this time-off request?</strong><p>{displayDate(cancelLeave.startDate)} – {displayDate(cancelLeave.endDate)} · {Number(cancelLeave.days)} days</p><small>Cancellation releases the reserved allowance. Locked attendance must be unlocked first.</small></div><RecordForm
+        formClassName="timeoff-v4-action-form" fields={[{key:'note',label:'Cancellation note',type:'textarea',required:false,hint:'Optional note explaining why this time off is being cancelled.'}]}
         onCancel={()=>setCancelLeave(null)}
         onSave={async body=>{await mutate(`leave/${cancelLeave.id}/cancel`,'POST',body);setCancelLeave(null)}}
         submit={cancelLeave.status==='APPROVED'?'Cancel Leave':'Cancel Request'}
