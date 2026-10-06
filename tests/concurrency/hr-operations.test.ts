@@ -44,6 +44,21 @@ test('HR operations serialize concurrent salary, enrollment, approval and authen
       assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal((await db.expenseClaim.findUniqueOrThrow({where:{id:row.id}})).status,'PENDING');assert.equal((await db.approvalRequest.findFirstOrThrow({where:{requestId:row.id}})).stage,'HR');
       assert.equal((await flows.review(ctx,'expenses',row.id,{decision:'APPROVED',note:'Separate final reviewer'})).status,'APPROVED');
     });
+    await t.test('concurrent leave requests cannot over-reserve the annual allowance',async()=>{
+      const type=await db.leaveType.create({data:{tenantId:tid,name:'One-day concurrent leave',annualDays:1,paid:true}});
+      const self:Context={...ctx,user:{id:randomUUID(),employeeId:employee.id,role:roleDefinitions.find(r=>r.code==='EMPLOYEE')!}},flows=new Workflows(db);
+      const payload={employeeId:employee.id,leaveTypeId:type.id,reason:'Concurrent allowance test'};
+      const results=await Promise.allSettled(['2027-01-04','2027-01-05'].map(date=>flows.leave(self,'POST',{...payload,startDate:date,endDate:date,requestKey:randomUUID()})));
+      assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+      const usage=await db.leaveRequest.aggregate({where:{tenantId:tid,employeeId:employee.id,leaveTypeId:type.id},_sum:{days:true}});assert.equal(Number(usage._sum.days),1);
+    });
+    await t.test('simultaneous exact leave retries create one request and one approval',async()=>{
+      const type=await db.leaveType.create({data:{tenantId:tid,name:'Retry-safe leave',annualDays:12,paid:true}});
+      const self:Context={...ctx,user:{id:randomUUID(),employeeId:second.id,role:roleDefinitions.find(r=>r.code==='EMPLOYEE')!}},flows=new Workflows(db);
+      const payload={employeeId:second.id,leaveTypeId:type.id,startDate:'2027-01-06',endDate:'2027-01-06',reason:'Exact concurrent retry',requestKey:randomUUID()};
+      const results:any[]=await Promise.all([flows.leave(self,'POST',payload),flows.leave(self,'POST',payload)]);
+      assert.equal(results[0].id,results[1].id);assert.equal(await db.leaveRequest.count({where:{tenantId:tid,requestKey:payload.requestKey}}),1);assert.equal(await db.approvalRequest.count({where:{tenantId:tid,requestId:results[0].id}}),1);
+    });
     await t.test('a recovery code cannot establish two concurrent authenticator verifications',async()=>{
       const roleRow=await db.role.upsert({where:{code:'OPS_TEST_MFA'},create:{code:'OPS_TEST_MFA',name:'Synthetic MFA role',scope:'TENANT',permissions:[]},update:{}});
       const user=await db.user.create({data:{tenantId:tid,name:'Synthetic MFA',email:'mfa-concurrency@example.test',passwordHash:await hashPassword('SyntheticMfa!2026'),roleId:roleRow.id}}),authCtx:Context={...ctx,user:{...user,role},session:{id:randomUUID()}};

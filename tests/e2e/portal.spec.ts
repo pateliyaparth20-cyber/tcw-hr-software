@@ -403,3 +403,25 @@ test('support workspace filters tickets, opens replies and fits mobile',async({p
  await page.locator('dialog').getByRole('button',{name:/Close/}).click();
  for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByLabel('Search support tickets',{exact:true})).toBeVisible();}
 });
+
+test('Time Off filters, exact server balances, retry-safe forms and mobile scrolling',async({page})=>{
+ await login(page);
+ const employee={id:'00000000-0000-4000-8000-000000000101',firstName:'Leave',lastName:'Tester',employeeCode:'QA-LEAVE',designation:'QA Engineer'};
+ const type={id:'00000000-0000-4000-8000-000000000102',name:'Annual leave',annualDays:12,paid:true};
+ let rows:any[]=[{id:'leave-qa-pending',employeeId:employee.id,employee,leaveTypeId:type.id,startDate:'2027-01-04',endDate:'2027-01-04',days:.5,status:'PENDING',reason:'Family appointment',createdAt:'2026-10-06T10:00:00Z'},{id:'leave-qa-approved',employeeId:employee.id,employee,leaveTypeId:type.id,startDate:'2026-09-07',endDate:'2026-09-07',days:1,status:'APPROVED',reason:'Personal leave',createdAt:'2026-09-01T10:00:00Z'}];
+ await page.route('**/api/employees?**',r=>r.fulfill({json:{items:[employee],total:1}}));
+ await page.route('**/api/leave-types**',r=>r.fulfill({json:{items:[type]}}));
+ await page.route('**/api/leave/balances?**',r=>r.fulfill({json:{items:[{id:type.id,name:type.name,paid:true,annual:12,approved:2,pending:.5,remaining:9.5}],paidTaken:2,unpaidTaken:0}}));
+ let attempts=0;const payloads:any[]=[];
+ await page.route('**/api/leave',r=>{if(r.request().method()==='GET')return r.fulfill({json:{items:rows,total:rows.length,summary:{PENDING:rows.filter(x=>x.status==='PENDING').length,APPROVED:1}}});const body=r.request().postDataJSON();payloads.push(body);attempts++;if(attempts===1)return r.fulfill({status:500,json:{message:'Synthetic request failure'}});const created={id:'new-leave-qa',...body,employee,days:1,status:'PENDING',createdAt:'2026-10-07T10:00:00Z'};rows=[created,...rows];return r.fulfill({json:created})});
+ await page.goto('/leave');await expect(page.getByRole('heading',{name:'Time Off',exact:true})).toBeVisible();
+ await expect(page.locator('.timeoff-v3-balances')).toContainText('9.5 days remaining');await expect(page.locator('.timeoff-v3-employee-summary')).toContainText('9.5');
+ await page.getByLabel('Filter leave year',{exact:true}).selectOption('2026');await expect(page.locator('.timeoff-v3-table tbody tr')).toHaveCount(1);
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.getByRole('tab',{name:'Pending (1)',exact:true}).click();await expect(page.locator('.timeoff-v3-table tbody tr')).toHaveCount(1);
+ await page.getByLabel('Search time off requests',{exact:true}).fill('unmatched-qa');await expect(page.getByText('No matching time off requests',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ await page.locator('.timeoff-v3-table tbody tr').first().focus();await page.keyboard.press('Enter');await expect(page.locator('.timeoff-v3-detail')).toContainText('Family appointment');
+ await page.getByRole('button',{name:'Request Time Off',exact:true}).first().click();const dialog=page.getByRole('dialog');
+ await expect(dialog.locator('.record-form-section')).toHaveCount(3);await dialog.getByLabel('Employee',{exact:true}).selectOption(employee.id);await dialog.getByLabel('Leave type',{exact:true}).selectOption(type.id);await dialog.getByLabel('From',{exact:true}).fill('2027-01-07');await dialog.getByLabel('To',{exact:true}).fill('2027-01-07');await dialog.getByLabel('Reason',{exact:true}).fill('Request retained after failure');
+ await dialog.getByRole('button',{name:'Submit Request',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('Synthetic request failure');await expect(dialog.getByLabel('Reason',{exact:true})).toHaveValue('Request retained after failure');await dialog.getByRole('button',{name:'Submit Request',exact:true}).click();await expect(dialog).not.toBeVisible();expect(payloads[0].requestKey).toBeTruthy();expect(payloads[1].requestKey).toBe(payloads[0].requestKey);
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.getByRole('button',{name:'Request Time Off',exact:true}).first().click();await page.getByRole('dialog').getByLabel('Reason',{exact:true}).fill('Mobile scroll test');await expect(page.getByRole('dialog').getByRole('button',{name:'Submit Request',exact:true})).toBeVisible();await page.getByRole('dialog').getByRole('button',{name:'Close dialog',exact:true}).click();}
+});
