@@ -1,14 +1,17 @@
 'use client';
 import './hr-operations.css';
-import React,{useState} from 'react';
+import React,{useEffect,useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import {Upload,History,ClipboardCheck,GraduationCap,Wallet,ArrowRight,ShieldCheck} from 'lucide-react';
 import {Row} from './config';
 import {api,useApp,useData,PageTitle,Modal,RecordForm,Table,Loading,Failure,Empty,Badge,Confirm,currencyValue,displayDate} from './core';
 
 export function SalaryWorkspace(){
   const {currency,mutate,session}=useApp();
-  const [search,setSearch]=useState(''),[person,setPerson]=useState<Row|null>(null),[revision,setRevision]=useState(false),[loan,setLoan]=useState(false),[cancel,setCancel]=useState<Row|null>(null);
+  const params=useSearchParams(),requestedCode=params.get('employeeCode')??'';
+  const [search,setSearch]=useState(requestedCode),[person,setPerson]=useState<Row|null>(null),[revision,setRevision]=useState(false),[loan,setLoan]=useState(false),[cancel,setCancel]=useState<Row|null>(null);
   const people=useData('salary-employees?q='+encodeURIComponent(search)),versions=useData(person?'salary-versions/'+person.id:'',!!person),loans=useData('payroll-loans');
+  useEffect(()=>{if(!person&&requestedCode){const match=people.data?.items?.find((p:Row)=>p.employeeCode===requestedCode);if(match)setPerson(match)}},[people.data,requestedCode,person]);
   const employee=versions.data?.employee??person,history:Row[]=versions.data?.items??[],current=history[0];
   const month=new Date().toLocaleDateString('en-CA',{timeZone:session.company?.timezone??'Asia/Kolkata',year:'numeric',month:'2-digit'});
   return <div className="hr-operations">

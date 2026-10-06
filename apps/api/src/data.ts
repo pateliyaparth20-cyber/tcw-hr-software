@@ -116,15 +116,37 @@ export class DataService {
     const canSalary=hasPermission(ctx.user.role.permissions,'payroll','VIEW');
     const clean=(row:any)=>{if(canSalary)return row;const{monthlySalary,...rest}=row;const personal=this.object(rest.personal);for(const key of ['bankName','accountHolder','accountNumber','ifsc','bankBranch'])delete personal[key];return {...rest,personal};};
     if(method==='GET'){
-      if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();let designation=row.designation;if(/^[0-9a-f-]{36}$/i.test(designation)){const master=await this.db.designation.findFirst({where:{id:designation,tenantId:tid},select:{name:true}});if(master)designation=master.name;}return clean({...row,designation});}
+      if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();let designation=row.designation;if(/^[0-9a-f-]{36}$/i.test(designation)){const master=await this.db.designation.findFirst({where:{id:designation,tenantId:tid},select:{name:true}});if(master)designation=master.name;}const [department,branch,shift,manager]=await Promise.all([
+        row.departmentId?this.db.department.findFirst({where:{tenantId:tid,id:row.departmentId},select:{name:true}}):null,
+        row.branchId?this.db.branch.findFirst({where:{tenantId:tid,id:row.branchId},select:{name:true}}):null,
+        row.shiftId?this.db.shift.findFirst({where:{tenantId:tid,id:row.shiftId},select:{name:true}}):null,
+        row.managerId?this.db.employee.findFirst({where:{tenantId:tid,id:row.managerId,deletedAt:null},select:{firstName:true,lastName:true}}):null
+      ]);return clean({...row,designation,departmentName:department?.name??null,branchName:branch?.name??null,shiftName:shift?.name??null,managerName:manager?`${manager.firstName} ${manager.lastName}`:null});}
+      const scopeWhere={...where};
       if(query.q){const q=String(query.q).trim().slice(0,100),parts=q.split(/\s+/).filter(Boolean);where.OR=[{firstName:{contains:q,mode:'insensitive'}},{lastName:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{employeeCode:{contains:q,mode:'insensitive'}},...(parts.length>1?[{AND:[{firstName:{contains:parts[0],mode:'insensitive'}},{lastName:{contains:parts.slice(1).join(' '),mode:'insensitive'}}]}]:[])];}
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       if(query.branchId)where.branchId=id.parse(query.branchId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
-      const [items,total,departments,branches,designations,shifts]=await Promise.all([this.db.employee.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
+      if(query.shiftId)where.shiftId=id.parse(query.shiftId);
+      const sort=String(query.sort??'recent');
+      const orderBy:any=sort==='name'?[{firstName:'asc'},{lastName:'asc'},{id:'asc'}]:sort==='joined'?[{joiningDate:'desc'},{id:'desc'}]:[{createdAt:'desc'},{id:'desc'}];
+      const summaryPromise=query.includeSummary==='true'?(async()=>{
+        const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid},select:{timezone:true}});
+        const parts=new Intl.DateTimeFormat('en-CA',{timeZone:company.timezone,year:'numeric',month:'2-digit'}).formatToParts(new Date());
+        const year=Number(parts.find(p=>p.type==='year')!.value),monthNumber=Number(parts.find(p=>p.type==='month')!.value);
+        const [statuses,departmentGroups,branchGroups,shiftGroups,joining]=await Promise.all([
+          this.db.employee.groupBy({by:['status'],where:scopeWhere,_count:{_all:true}}),
+          this.db.employee.groupBy({by:['departmentId'],where:scopeWhere,_count:{_all:true}}),
+          this.db.employee.groupBy({by:['branchId'],where:scopeWhere,_count:{_all:true}}),
+          this.db.employee.groupBy({by:['shiftId'],where:scopeWhere,_count:{_all:true}}),
+          this.db.employee.count({where:{...scopeWhere,joiningDate:{gte:new Date(Date.UTC(year,monthNumber-1,1)),lt:new Date(Date.UTC(year,monthNumber,1))}}})
+        ]);
+        return {total:statuses.reduce((n,r)=>n+r._count._all,0),active:statuses.find(r=>r.status==='ACTIVE')?._count._all??0,probation:statuses.find(r=>r.status==='PROBATION')?._count._all??0,notice:statuses.find(r=>r.status==='NOTICE')?._count._all??0,inactive:statuses.find(r=>r.status==='INACTIVE')?._count._all??0,joining,departments:departmentGroups.filter(r=>r.departmentId).length,departmentIds:departmentGroups.map(r=>r.departmentId),branchIds:branchGroups.map(r=>r.branchId),shiftIds:shiftGroups.map(r=>r.shiftId)};
+      })():Promise.resolve(null);
+      const [items,total,departments,branches,designations,shifts,summary]=await Promise.all([this.db.employee.findMany({where,orderBy,take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true}}),summaryPromise]);
       const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name])),designationNames=new Map(designations.map(r=>[r.id,r.name])),shiftNames=new Map(shifts.map(r=>[r.id,r.name]));
-      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null,shiftName:row.shiftId?shiftNames.get(row.shiftId)??'':null,designation:designationNames.get(row.designation)??row.designation})),total,page,pageSize:take};
+      return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null,shiftName:row.shiftId?shiftNames.get(row.shiftId)??'':null,designation:designationNames.get(row.designation)??row.designation})),total,page,pageSize:take,...(summary?{summary:{total:summary.total,active:summary.active,probation:summary.probation,notice:summary.notice,inactive:summary.inactive,joining:summary.joining,departments:summary.departments},filters:{departments:departments.filter(r=>summary.departmentIds.includes(r.id)),branches:branches.filter(r=>summary.branchIds.includes(r.id)),shifts:shifts.filter(r=>summary.shiftIds.includes(r.id))}}:{})};
     }
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Employee records are managed by HR.');
     return this.db.$transaction(async tx=>{
@@ -166,7 +188,9 @@ export class DataService {
         await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{operationalDataCleared:true,rawPunchesRetained,historicalPayrollRetained:true,linkedUsers:userIds.length});
         return {ok:true,deleted:true,rawPunchesRetained};
       }
-      const input=employeeSchema.parse(body);
+      const {expectedUpdatedAt,...employeeBody}=z.object({expectedUpdatedAt:z.iso.datetime().optional()}).passthrough().parse(body);
+      if(before&&expectedUpdatedAt&&before.updatedAt.toISOString()!==expectedUpdatedAt)throw new ConflictException('Employee profile changed. Close and reopen the profile before saving.');
+      const input=employeeSchema.parse(employeeBody);
       if(input.photo){
         if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.photo))throw new BadRequestException('Use a PNG or JPEG employee photo up to 5 MB.');
         const raw=Buffer.from(input.photo.split(',')[1],'base64');
