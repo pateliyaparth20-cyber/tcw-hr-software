@@ -232,7 +232,7 @@ export function ShiftManagement(){
         </div>
         <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Type values manually in HH:MM clock format. Exact minutes are saved in the backend.</span></div>
         <div className="shift-v5-duration-grid">
-         <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="Worked time for Half Day. Other durations below Full working time are Insufficient Time." onChange={halfDayMinutes=>update({halfDayMinutes})}/>
+         <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="At checkout, this exact worked time is Half Day. Other durations below Full working time are Insufficient Time." onChange={halfDayMinutes=>update({halfDayMinutes})}/>
          <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
          <DurationField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} help="Worked-time threshold used for overtime" onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
         </div>

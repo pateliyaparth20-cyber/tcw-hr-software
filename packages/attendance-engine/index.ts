@@ -28,7 +28,9 @@ export function noPunchAttendanceStatus(now:Date,shiftStart:Date,shiftEnd:Date,g
   return 'ABSENT' as const;
 }
 export function punchedAttendanceStatusAtMoment(calculatedStatus:string,now:Date,shiftEnd:Date,hasPunch:boolean){
-  if(hasPunch&&now.getTime()<shiftEnd.getTime())return 'PRESENT' as const;
+  // Closed sessions already have a worked-duration result, even before shift end.
+  // An open or unmatched punch remains provisional until the shift finishes.
+  if(hasPunch&&now.getTime()<shiftEnd.getTime()&&['MISSING_PUNCH','ABSENT'].includes(calculatedStatus))return 'PRESENT' as const;
   return calculatedStatus;
 }
 export function attendanceBusinessMinutes(milliseconds:number){return Math.max(0,Math.round((Number(milliseconds)||0)/60000));}
