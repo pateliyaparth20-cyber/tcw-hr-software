@@ -384,3 +384,19 @@ test('Update selects the latest release when both the opened device and server a
  await page.goto('/software-update');await expect(page.getByRole('heading',{name:'A software update is available'})).toBeVisible();currentVersion='b'.repeat(40);await page.getByRole('button',{name:'Check for updates',exact:true}).click();await page.getByRole('button',{name:'Update',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Your software update is starting'})).toBeVisible();expect(calls).toBe(1);expect(manifests).toBe(0);await expect(page.getByRole('button',{name:'Update',exact:true})).toHaveCount(0);
 });
+
+
+test('support workspace filters tickets, opens replies and fits mobile',async({page})=>{
+ await login(page);
+ const tickets=Array.from({length:14},(_,i)=>({id:'support-'+i,ticketNumber:'TCW-'+i,subject:'Help request '+i,message:'Issue details '+i,category:i%2?'GENERAL':'ATTENDANCE',priority:i===0?'URGENT':'NORMAL',status:i===0?'RESOLVED':'OPEN',createdAt:'2026-10-06T08:00:00Z',updatedAt:'2026-10-06T09:00:00Z'}));
+ await page.route('**/api/support?**',route=>route.fulfill({json:{items:tickets}}));
+ await page.route('**/api/support/*/messages',route=>route.request().method()==='POST'?route.fulfill({status:500,json:{message:'Unable to send right now'}}):route.fulfill({json:{items:[{id:'message-1',authorName:'TCW Support',authorScope:'PLATFORM',message:'We are checking this request.',createdAt:'2026-10-06T09:00:00Z'}]}}));
+ await page.goto('/support');await expect(page.getByRole('heading',{name:'We’re here to help your team.',exact:true})).toBeVisible();
+ await expect(page.locator('.support-ticket')).toHaveCount(12);await page.getByRole('button',{name:'Next',exact:true}).click();await expect(page.locator('.support-ticket')).toHaveCount(1);
+ await page.getByLabel('Search support tickets',{exact:true}).fill('Help request 2');await expect(page.locator('.support-ticket')).toHaveCount(1);
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.getByLabel('Ticket category',{exact:true}).selectOption('ATTENDANCE');await expect(page.locator('.support-ticket')).toHaveCount(6);
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.getByLabel('Ticket status',{exact:true}).selectOption('RESOLVED');await page.getByRole('button',{name:'Open ticket TCW-0: Help request 0',exact:true}).press('Enter');
+ await expect(page.getByText('Sending a reply reopens this ticket.',{exact:true})).toBeVisible();await page.getByLabel('Ticket reply',{exact:true}).fill('The issue is still happening');await page.getByRole('button',{name:'Send reply',exact:true}).click();await expect(page.locator('.support-reply-error')).toContainText('Unable to send right now');await expect(page.getByLabel('Ticket reply',{exact:true})).toHaveValue('The issue is still happening');
+ await page.locator('dialog').getByRole('button',{name:/Close/}).click();
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByLabel('Search support tickets',{exact:true})).toBeVisible();}
+});
