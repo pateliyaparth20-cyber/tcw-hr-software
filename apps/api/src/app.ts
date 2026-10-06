@@ -13,6 +13,7 @@ import {id,password} from '../../../packages/validation';
 import {toCsv,toXlsx,toPdf} from '../../../packages/reporting-engine';
 import {hasPermission} from '../../../packages/permissions';
 import {CompatibleProvider} from '../../../packages/ai';
+import {sessionExpiryTimerDelay} from '../../../packages/session-timer';
 import {effectiveAIConfig,publicAIConfig,saveAIConfig,testAIConnection} from './ai-config';
 import {AuthService} from './auth';
 import {pushConfig,savePushSubscription,deletePushSubscription,sendPush} from './push';
@@ -565,6 +566,6 @@ export async function createApp(db:Database){
     const ctx=await authenticate(db,{cookies,headers,method:'GET',ip:socket.handshake.address} as Request);
     socket.data.ctx=ctx;next();
   }catch{next(new Error('Authentication required.'));}});
-  io.on('connection',socket=>{const ctx:Context=socket.data.ctx;socket.join(ctx.tenantId??'PLATFORM');const timer=setTimeout(()=>socket.disconnect(true),Math.max(0,+ctx.session.expiresAt-Date.now()));timer.unref();socket.on('disconnect',()=>clearTimeout(timer));});
+  io.on('connection',socket=>{const ctx:Context=socket.data.ctx;socket.join(ctx.tenantId??'PLATFORM');let timer:ReturnType<typeof setTimeout>|undefined;const scheduleExpiry=()=>{const delay=sessionExpiryTimerDelay(ctx.session.expiresAt);if(delay<=0){socket.disconnect(true);return;}timer=setTimeout(scheduleExpiry,delay);timer.unref();};scheduleExpiry();socket.on('disconnect',()=>{if(timer)clearTimeout(timer)});});
   return {app,api,io};
 }
