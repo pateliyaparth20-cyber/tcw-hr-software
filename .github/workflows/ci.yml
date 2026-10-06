@@ -31,3 +31,33 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  payroll-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: tcw_payroll_test
+          POSTGRES_USER: payroll_test
+          POSTGRES_PASSWORD: synthetic-local-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U payroll_test -d tcw_payroll_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://payroll_test:synthetic-local-test-password@127.0.0.1:5432/tcw_payroll_test
+      PAYROLL_TEST_DATABASE_URL: postgresql://payroll_test:synthetic-local-test-password@127.0.0.1:5432/tcw_payroll_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run test:concurrency

@@ -1,3 +1,4 @@
+import {lockPayrollPeriod} from './payroll-lock';
 import type {Database} from '../../../packages/database';
 import {employeeShift,reconcileAttendanceMonth} from './attendance-automation';
 import {localDate,monthBounds,zonedMinute} from '../../../packages/attendance-engine';
@@ -16,16 +17,17 @@ export async function repairPrematureCurrentMonthPayrollLocks(db:Database){
  let repaired=0;
  for(const company of companies){
   const currentMonth=localDate(now,company.timezone||'Asia/Kolkata').slice(0,7);
-  const lock=await db.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:company.id,month:currentMonth}}});
-  if(!lock||lock.status!=='LOCKED'||lock.lockedBy!=='SYSTEM_AUTOMATION')continue;
-  const run=await db.payrollRun.findUnique({where:{tenantId_month:{tenantId:company.id,month:currentMonth}}});
+  const fixed=await db.$transaction(async tx=>{
+   await lockPayrollPeriod(tx,company.id,currentMonth);
+  const lock=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:company.id,month:currentMonth}}});
+  if(!lock||lock.status!=='LOCKED'||lock.lockedBy!=='SYSTEM_AUTOMATION')return false;
+  const run=await tx.payrollRun.findUnique({where:{tenantId_month:{tenantId:company.id,month:currentMonth}}});
   if(run){
-   const autoAudit=await db.auditLog.findFirst({where:{tenantId:company.id,action:'PAYROLL_AUTO_PREPARED',entity:'payroll',entityId:run.id}});
-   const payouts=await db.payrollPayout.count({where:{tenantId:company.id,runId:run.id}});
-   if(!autoAudit||payouts||!['DRAFT','REVIEW'].includes(run.status)||run.approvedBy||run.lockedAt)continue;
+   const autoAudit=await tx.auditLog.findFirst({where:{tenantId:company.id,action:'PAYROLL_AUTO_PREPARED',entity:'payroll',entityId:run.id}});
+   const payouts=await tx.payrollPayout.count({where:{tenantId:company.id,runId:run.id}});
+   if(!autoAudit||payouts||!['DRAFT','REVIEW'].includes(run.status)||run.approvedBy||run.lockedAt)return false;
   }
-  const {first,next}=monthBounds(currentMonth);
-  await db.$transaction(async tx=>{
+   const {first,next}=monthBounds(currentMonth);
    if(run){
     await tx.payrollAdjustment.updateMany({where:{tenantId:company.id,appliedRunId:run.id},data:{appliedRunId:null}});
     await tx.payrollItem.deleteMany({where:{tenantId:company.id,runId:run.id}});
@@ -35,8 +37,9 @@ export async function repairPrematureCurrentMonthPayrollLocks(db:Database){
    await tx.attendancePeriodLock.update({where:{id:lock.id},data:{status:'UNLOCKED',unlockedBy:'SYSTEM_CORRECTION',unlockedAt:now}});
    await tx.auditLog.create({data:{tenantId:company.id,action:'AUTO_PAYROLL_CURRENT_MONTH_REPAIRED',entity:'attendance',entityId:lock.id,before:{month:currentMonth,lockedBy:lock.lockedBy,payrollRunId:run?.id??null},after:{month:currentMonth,status:'UNLOCKED',reason:'Current month must remain open for attendance'}}});
    await tx.notification.create({data:{tenantId:company.id,title:'Current attendance reopened',message:`${currentMonth} was locked early by automatic payroll and has been reopened. Automatic payroll now processes the previous completed month.`}});
-  });
-  repaired++;
+   return true;
+  },{timeout:30000});
+  if(fixed)repaired++;
  }
  return {repaired};
 }
