@@ -48,3 +48,16 @@ test('command search and mobile navigation',async({page})=>{
 test('platform company and sales pages',async({page})=>{
  await login(page,true);await expect(page.getByRole('heading',{name:/Welcome back/})).toBeVisible();await page.getByRole('link',{name:'Companies',exact:true}).click();await expect(page.getByRole('heading',{name:'Companies',exact:true})).toBeVisible();await page.getByRole('link',{name:'Sales pipeline',exact:true}).click();await expect(page.getByRole('heading',{name:'Sales pipeline',exact:true})).toBeVisible();
 });
+
+test('organization reporting chart searches and collapses manager relationships',async({page})=>{
+ await login(page);await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Organization',exact:true}).click();
+ await page.getByRole('button',{name:'Reporting chart',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Reporting chart',exact:true})).toBeVisible();
+ const chart=page.locator('.organization-chart-tree');await expect(chart.getByRole('link',{name:'QA Member',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Collapse reports for Team Lead',exact:true}).click();await expect(chart.getByRole('link',{name:'QA Member',exact:true})).not.toBeVisible();
+ await page.getByRole('button',{name:'Expand reports for Team Lead',exact:true}).click();await expect(chart.getByRole('link',{name:'QA Member',exact:true})).toBeVisible();
+ await page.getByRole('textbox',{name:'Search reporting chart'}).fill('CHART-MEMBER');await expect(chart.getByRole('link',{name:'Team Lead',exact:true})).toBeVisible();await expect(chart.getByRole('link',{name:'QA Member',exact:true})).toBeVisible();
+ await page.getByRole('textbox',{name:'Search reporting chart'}).fill('no-such-person');await expect(page.getByRole('heading',{name:'No matching employees',exact:true})).toBeVisible();
+ await page.getByRole('textbox',{name:'Search reporting chart'}).fill('');await page.setViewportSize({width:390,height:844});await expect(chart.getByRole('link',{name:'QA Member',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+});

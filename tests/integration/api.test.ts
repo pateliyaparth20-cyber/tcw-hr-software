@@ -46,6 +46,17 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await db.user.create({data:{tenantId:alphaTenant,name:'Test Employee',email:'employee-login@example.test',passwordHash:await hashPassword('test-employee-password'),employeeId:a.data.id,roleId:employeeRole.id}});
   const self=await login('employee-login@example.test','test-employee-password','ALPHA');
   await t.test('employee permissions and personal scope are enforced',async()=>{assert.equal((await call('employees','POST',employeeInput,self)).status,403);assert.equal((await call('payroll','POST',{month:'2026-08'},self)).status,403);const rows=await call('employees','GET',undefined,self);assert.equal(rows.data.items.length,1);assert.equal(rows.data.items[0].id,a.data.id);assert.equal((await call('users','GET',undefined,self)).status,403)});
+  await t.test('organization chart is tenant-scoped and excludes confidential fields',async()=>{
+   const child=await db.employee.create({data:{tenantId:alphaTenant,employeeCode:'CHART-CHILD',firstName:'Chart',lastName:'Child',email:'chart@example.test',joiningDate:new Date('2099-01-01'),managerId:a.data.id,departmentId:depA.data.id}});
+   const chart=await call('organization-chart','GET',undefined,alpha);assert.equal(chart.status,200);
+   assert.equal(chart.data.items.length,2);assert(!chart.data.items.some((p:any)=>p.id===b.data.id));
+   const item=chart.data.items.find((p:any)=>p.id===child.id);assert.equal(item.managerId,a.data.id);assert.equal(item.departmentName,'Engineering');
+   for(const item of chart.data.items)for(const key of ['email','phone','monthlySalary','personal','photo'])assert(!Object.hasOwn(item,key));
+   assert.equal((await call('organization-chart','GET',undefined,self)).status,403);
+   await db.employee.update({where:{id:child.id},data:{deletedAt:new Date()}});
+   assert.equal((await call('organization-chart','GET',undefined,alpha)).data.items.length,1);
+   await db.employee.delete({where:{id:child.id}});
+  });
   await t.test('HR profile edits preserve hidden bank details and cannot overwrite them',async()=>{
    const bank={bankName:'Test Bank',accountHolder:'Test Employee',accountNumber:'1234567890',ifsc:'TEST0000001',bankBranch:'Test Branch'};
    await db.employee.update({where:{id:a.data.id},data:{personal:{...bank,city:'Old city'}}});
@@ -70,6 +81,7 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   });
   await t.test('employee reports include every matching page and preserve filters',async()=>{
    await db.employee.createMany({data:Array.from({length:501},(_,i)=>({tenantId:alphaTenant,employeeCode:'EXPORT-'+i,firstName:'Export',lastName:String(i),email:`export-${i}@example.test`,joiningDate:new Date('2099-01-01')}))});
+   assert.equal((await call('organization-chart','GET',undefined,alpha)).data.items.length,502);
    const exported=await call('reports/employees?q=EXPORT-&format=csv','GET',undefined,alpha);
    assert.equal(exported.status,200);assert.equal(exported.data.split('\r\n').length,502);assert.equal(new Set(exported.data.match(/EXPORT-\d+/g)).size,501);assert(!exported.data.includes('employee@example.test'));
    const filtered=await call('reports/employees?q=EXPORT-&status=INACTIVE&format=csv','GET',undefined,alpha);

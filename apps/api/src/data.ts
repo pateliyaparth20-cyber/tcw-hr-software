@@ -95,6 +95,16 @@ export class DataService {
       if(!await tx[model].findFirst({where:{tenantId:tenant(ctx),id:values[field]}}))throw new BadRequestException(`Invalid ${field}.`);
     }
   }
+  async organizationChart(ctx:Context){
+    const tid=tenant(ctx);requirePermission(ctx,'organization','VIEW');requirePermission(ctx,'employees','VIEW');
+    const scope=await employeeScope(this.db,ctx);
+    const [items,departments]=await Promise.all([
+      this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,...(scope?{id:{in:scope}}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,designation:true,status:true,managerId:true,departmentId:true},orderBy:[{firstName:'asc'},{id:'asc'}]}),
+      this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}})
+    ]);
+    const names=new Map(departments.map(d=>[d.id,d.name]));
+    return {items:items.map(p=>({...p,departmentName:p.departmentId?names.get(p.departmentId)??'':''}))};
+  }
   async employees(ctx:Context,method:string,recordId?:string,body?:unknown,query:any={}){
     const tid=tenant(ctx), action=method==='GET'?'VIEW':method==='POST'?'CREATE':method==='DELETE'?'DELETE':'EDIT';requirePermission(ctx,'employees',action);
     const scope=await employeeScope(this.db,ctx);
