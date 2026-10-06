@@ -2,7 +2,7 @@
 :root{--primary:#0369a1;--sky:#38bdf8;--primary-soft:#e0f2fe;--sky-ink:#075985;--sky-border:#bae6fd}
 html body .btn.primary,html body .tenant-shell .btn.primary,html body .employee-app-shell .btn.primary,html body .platform-shell .btn.primary{background:#38bdf8!important;border-color:#38bdf8!important;color:#082f49!important;box-shadow:0 3px 10px #38bdf81a!important}
 html body .btn.primary:hover{background:#7dd3fc!important;border-color:#7dd3fc!important;color:#082f49!important}
-html body .nav-item.active,html body .mobile-bottom-nav a.active,html body .mobile-bottom-nav button.active{background:#e0f2fe!important;color:#075985!important;border-color:#bae6fd!important}
+html body .nav-item.active,html body .nav-item.selected,html body .mobile-bottom-nav a.active,html body .mobile-bottom-nav button.active{background:#e0f2fe!important;color:#075985!important;border-color:#bae6fd!important}
 html body .tabs button.active{color:#075985!important;border-color:#38bdf8!important;background:#e0f2fe!important}
 html body input:focus,html body select:focus,html body textarea:focus{border-color:#38bdf8!important;box-shadow:0 0 0 3px #38bdf820!important}
 html body a:not(.btn):focus-visible,html body button:focus-visible{outline-color:#38bdf8}
