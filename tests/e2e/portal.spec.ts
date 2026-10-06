@@ -15,9 +15,9 @@ test('report center filters its library, previews all columns and downloads real
  const filePath=await file.path();const bytes=await (await import('node:fs/promises')).readFile(filePath!);expect(bytes.subarray(0,8).toString()).toBe('%PDF-1.4');
  await page.getByRole('textbox',{name:'Search reports'}).fill('no such report');await expect(page.getByRole('heading',{name:'No matching reports',exact:true})).toBeVisible();await page.getByRole('button',{name:'Clear search & category'}).click();await expect(cards).toHaveCount(9);
  await page.getByRole('button',{name:'Close report preview'}).click();await page.getByRole('button',{name:'Reset filters',exact:true}).click();
- await page.screenshot({path:'test-results/reports-library.png',fullPage:true});
+ await page.screenshot({path:'test-results/reports-library.png',fullPage:true,animations:'disabled'});
  await page.getByLabel('From date',{exact:true}).fill('2026-12-31');await page.getByLabel('To date',{exact:true}).fill('2026-01-01');await expect(page.locator('.rc-filter-panel').getByRole('alert')).toContainText('Choose a valid date range');await expect(cards.first().getByRole('button',{name:'Preview report'})).toBeDisabled();
- await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.getByLabel('Branch',{exact:true}).selectOption({index:1});await expect(page.locator('.rc-card').filter({has:page.getByRole('heading',{name:'Recruitment pipeline',exact:true})})).toContainText('Clear the branch filter');
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.getByRole('combobox',{name:'Branch',exact:true}).selectOption({index:1});await expect(page.locator('.rc-card').filter({has:page.getByRole('heading',{name:'Recruitment pipeline',exact:true})})).toContainText('Clear the branch filter');
  await page.getByRole('button',{name:'Reset filters',exact:true}).click();
  for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('textbox',{name:'Search reports'})).toBeVisible();}
 });
@@ -34,7 +34,7 @@ test('reports maintenance shows a blurred static layout without fetching report 
  await page.goto('/reports');await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeVisible();
  await expect(page.getByRole('link',{name:'CSV',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Preview',exact:true})).toHaveCount(0);
  expect(await page.locator('.reports-maintenance-backdrop').evaluate(el=>getComputedStyle(el).filter)).toBe('blur(6px)');
- await page.screenshot({path:'test-results/reports-maintenance.png',fullPage:true});
+ await page.screenshot({path:'test-results/reports-maintenance.png',fullPage:true,animations:'disabled'});
  for(const width of [390,320]){await page.setViewportSize({width,height:844});await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeInViewport();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy()}
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(requests).toEqual([]);
 });
