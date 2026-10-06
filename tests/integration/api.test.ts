@@ -8,7 +8,7 @@ import {hashPassword} from '../../packages/auth';
 import {attendanceWorkdayDate,zonedMinute} from '../../packages/attendance-engine';
 import {refreshTenantCurrentNoPunchAttendance} from '../../apps/api/src/attendance-automation';
 test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
- process.env.NODE_ENV='test';process.env.APP_ORIGINS='http://localhost:3000,http://localhost:3001';
+ process.env.NODE_ENV='test';process.env.REPORTS_MAINTENANCE='false';process.env.APP_ORIGINS='http://localhost:3000,http://localhost:3001';
  const fixture=await embeddedDatabase();const db=fixture.db;
  await seed(db,{adminEmail:'admin@example.test',adminPassword:'test-admin-strong-password',ownerEmail:'owner@example.test',ownerPassword:'test-owner-strong-password',companyCode:'ALPHA'});
  const {app,io}=await createApp(db);await app.listen(0,'127.0.0.1');const address=app.getHttpServer().address();const base=`http://127.0.0.1:${address.port}/api/`;

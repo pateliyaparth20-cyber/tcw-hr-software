@@ -1,6 +1,44 @@
 import {test,expect} from '@playwright/test';
 import {totp} from '../../packages/auth/totp';
 
+test('report center filters its library, previews all columns and downloads real files',async({page})=>{
+ await login(page);await page.setViewportSize({width:1440,height:1000});
+ await page.route('**/api/reports/access',route=>route.fulfill({json:{available:true,maintenance:true}}));
+ let previewQuery='';await page.route('**/api/reports/employees?preview=true&**',route=>{previewQuery=route.request().url();return route.fulfill({json:{total:51,items:[{id:'synthetic',employeeCode:'RPT-001',firstName:'Report',lastName:'Fixture',email:'fixture@example.test',phone:'9000000000',designation:'Designer',employmentType:'FULL_TIME',status:'ACTIVE',joiningDate:'2026-01-01',branchId:null}]}})});
+ await page.goto('/reports');await expect(page.getByRole('heading',{name:'Turn HR records into useful insights.'})).toBeVisible();
+ const cards=page.locator('.rc-card');await expect(cards).toHaveCount(9);
+ await page.getByRole('button',{name:'Finance',exact:true}).click();await expect(cards).toHaveCount(3);await expect(page.getByRole('button',{name:'Finance',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'All reports',exact:true}).click();await page.getByRole('textbox',{name:'Search reports'}).fill('Employee directory');await expect(cards).toHaveCount(1);
+ await page.getByRole('button',{name:'Last 7 days',exact:true}).click();await page.getByRole('button',{name:'Preview report',exact:true}).click();
+ const preview=page.getByRole('region',{name:'Report preview'});await expect(preview).toContainText('Showing 1 of 51 records');await expect(preview.getByRole('columnheader',{name:'Joining Date',exact:true})).toBeVisible();expect(new URL(previewQuery).searchParams.has('from')).toBeTruthy();
+ const filePromise=page.waitForEvent('download');await cards.getByRole('button',{name:'Download Employee directory as PDF',exact:true}).click();const file=await filePromise;expect(file.suggestedFilename()).toMatch(/tcw-hr-employees-.*\.pdf$/);expect(await file.failure()).toBeNull();
+ const filePath=await file.path();const bytes=await (await import('node:fs/promises')).readFile(filePath!);expect(bytes.subarray(0,8).toString()).toBe('%PDF-1.4');
+ await page.getByRole('textbox',{name:'Search reports'}).fill('no such report');await expect(page.getByRole('heading',{name:'No matching reports',exact:true})).toBeVisible();await page.getByRole('button',{name:'Clear search & category'}).click();await expect(cards).toHaveCount(9);
+ await page.getByRole('button',{name:'Close report preview'}).click();await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ await page.screenshot({path:'test-results/reports-library.png',fullPage:true,animations:'disabled'});
+ await page.getByLabel('From date',{exact:true}).fill('2026-12-31');await page.getByLabel('To date',{exact:true}).fill('2026-01-01');await expect(page.locator('.rc-filter-panel').getByRole('alert')).toContainText('Choose a valid date range');await expect(cards.first().getByRole('button',{name:'Preview report'})).toBeDisabled();
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.getByRole('combobox',{name:'Branch',exact:true}).selectOption({index:1});await expect(page.locator('.rc-card').filter({has:page.getByRole('heading',{name:'Recruitment pipeline',exact:true})})).toContainText('Clear the branch filter');
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('textbox',{name:'Search reports'})).toBeVisible();}
+});
+
+test('report downloads show errors and recover instead of navigating away',async({page})=>{
+ await login(page);await page.route('**/api/reports/access',route=>route.fulfill({json:{available:true,maintenance:false}}));await page.route('**/api/reports/employees?**format=csv',route=>route.fulfill({status:403,json:{message:'Reports are Under Maintenance. Please try again later.'}}));
+ await page.goto('/reports');await page.getByRole('button',{name:'Download Employee directory as CSV',exact:true}).click();await expect(page.getByText('Reports are Under Maintenance. Please try again later.',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Download Employee directory as CSV',exact:true})).toBeEnabled();await expect(page).toHaveURL(/reports$/);
+});
+
+test('reports maintenance shows a blurred static layout without fetching report data on desktop and mobile',async({page})=>{
+ await login(page);
+ await page.route('**/api/reports/access',route=>route.fulfill({json:{available:false,maintenance:true}}));
+ const requests:string[]=[];page.on('request',r=>{if(/\/api\/reports\/(?!access(?:\?|$))/.test(r.url()))requests.push(r.url())});
+ await page.goto('/reports');await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'CSV',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Preview',exact:true})).toHaveCount(0);
+ expect(await page.locator('.reports-maintenance-backdrop').evaluate(el=>getComputedStyle(el).filter)).toBe('blur(6px)');
+ await page.screenshot({path:'test-results/reports-maintenance.png',fullPage:true,animations:'disabled'});
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeInViewport();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy()}
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(requests).toEqual([]);
+});
+
 test('software release center approves only after confirmation and never reloads automatically',async({page})=>{
  await login(page);const version='b'.repeat(40);let approved=false,approvalCalls=0;
  await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:{version,title:'Synthetic payroll and attendance improvements'},available:true,approved,ready:false,canApprove:true,waitingForCompanies:true,checkedAt:new Date().toISOString()}}));
