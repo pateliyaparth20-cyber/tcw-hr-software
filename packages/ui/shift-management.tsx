@@ -75,51 +75,27 @@ function NumberField({label,value,onChange,min=0,max=960,suffix='minutes',help}:
  return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input aria-label={label} type="text" inputMode="numeric" value={draft} onChange={e=>apply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
 function DurationField({label,value,onChange,min=1,max=960,help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;help?:string}){
- const safe=Math.max(min,Math.min(max,Number(value)||0));
- const formatted=`${String(Math.floor(safe/60)).padStart(2,'0')}:${String(safe%60).padStart(2,'0')}`;
- const[draft,setDraft]=useState(formatted);
- useEffect(()=>setDraft(formatted),[formatted]);
- const parseAndApply=(raw:string,final=false)=>{
-  const clean=raw.replace(/[^0-9:]/g,'').slice(0,5);setDraft(clean);
-  const match=/^(\d{1,2}):([0-5]\d)$/.exec(clean.trim());
-  if(!match){if(final)setDraft(formatted);return;}
-  const next=Math.max(min,Math.min(max,Number(match[1])*60+Number(match[2])));
-  onChange(next);
-  if(final)setDraft(`${String(Math.floor(next/60)).padStart(2,'0')}:${String(next%60).padStart(2,'0')}`);
- };
- const commit=()=>parseAndApply(draft,true);
- return <label className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className="shift-v5-duration-clock"><Clock3 size={18}/><input aria-label={label+' in HH:MM'} type="text" inputMode="numeric" placeholder="HH:MM" value={draft} onChange={e=>parseAndApply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>HH:MM</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
-}
-function parseClockText(value:string){
- const raw=value.trim().toUpperCase().replace(/\s+/g,' ');
- let match=/^(\d{1,2}):(\d{2})\s*(AM|PM)$/.exec(raw);
- if(match){
-  let hour=Number(match[1]),minute=Number(match[2]);if(hour<1||hour>12||minute<0||minute>59)return null;
-  hour%=12;if(match[3]==='PM')hour+=12;return hour*60+minute;
- }
- match=/^(\d{1,2}):(\d{2})$/.exec(raw);
- if(match){const hour=Number(match[1]),minute=Number(match[2]);if(hour<0||hour>23||minute<0||minute>59)return null;return hour*60+minute;}
- return null;
+ const[open,setOpen]=useState(false),safe=Math.max(min,Math.min(max,Number(value)||0)),hour=Math.floor(safe/60),minute=safe%60;
+ const choose=(h:number,m:number)=>onChange(Math.max(min,Math.min(max,h*60+m)));
+ return <div className="shift-v5-field shift-v5-duration-field"><span>{label}</span><div className={'shift-v5-time-input shift-duration-picker '+(open?'open':'')} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node|null))setOpen(false)}} onKeyDown={e=>{if(e.key==='Escape'&&open){e.preventDefault();e.stopPropagation();setOpen(false)}}}>
+  <Clock3 size={18}/><input aria-label={label+' in HH:MM'} aria-expanded={open} aria-haspopup="dialog" readOnly value={`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`} onClick={()=>setOpen(true)} onKeyDown={e=>{if(['Enter',' ','ArrowDown'].includes(e.key)){e.preventDefault();setOpen(true)}}}/>
+  <button type="button" className="shift-v5-time-dropdown-button" aria-label={'Open '+label.toLowerCase()+' picker'} aria-expanded={open} onClick={()=>setOpen(v=>!v)}><ChevronRight size={16} className="shift-v5-time-chevron"/></button>
+  {open&&<div className="shift-v5-time-popover" role="dialog" aria-label={label+' clock'}><div><span>Hours</span><select aria-label={label+' hours'} value={hour} onChange={e=>choose(Number(e.target.value),minute)}>{Array.from({length:Math.floor(max/60)+1},(_,i)=>i).map(h=><option key={h} value={h}>{String(h).padStart(2,'0')}</option>)}</select></div><div><span>Minutes</span><select aria-label={label+' minutes'} value={minute} onChange={e=>choose(hour,Number(e.target.value))}>{Array.from({length:60},(_,i)=>i).map(m=><option key={m} value={m} disabled={hour*60+m<min||hour*60+m>max}>{String(m).padStart(2,'0')}</option>)}</select></div><button type="button" className="btn secondary small" onClick={()=>setOpen(false)}>Done</button></div>}
+ </div>{help&&<small className="shift-v5-field-help">{help}</small>}</div>;
 }
 function TimeField({label,value,onChange,required=false}:{label:string;value:number|null;onChange:(v:number|null)=>void;required?:boolean}){
- const[open,setOpen]=useState(false),formatted=value==null?'':minuteClock(value),baseMinuteOfDay=value==null?540:Math.max(0,Math.min(1439,Number(value)||0)),baseHour24=Math.floor(baseMinuteOfDay/60),pickerMinute=baseMinuteOfDay%60,pickerHour=((baseHour24+11)%12)+1,pickerPeriod:('AM'|'PM')=baseHour24>=12?'PM':'AM';
- const[draft,setDraft]=useState(formatted);useEffect(()=>setDraft(formatted),[formatted]);
- const apply=(raw:string,final=false)=>{
-  const clean=raw.replace(/[^0-9aApPmM:\s]/g,'').slice(0,11);setDraft(clean);
-  if(clean.trim()===''){if(!required)onChange(null);return;}
-  const parsed=parseClockText(clean);if(parsed==null){if(final)setDraft(formatted);return;}
-  onChange(parsed);if(final)setDraft(minuteClock(parsed));
- };
- const choose=(hour:number,minute:number,period:'AM'|'PM')=>{let h=hour%12;if(period==='PM')h+=12;const next=h*60+minute;onChange(next);setDraft(minuteClock(next));};
- return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className={'shift-v5-time-input '+(open?'open':'')} onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&e.currentTarget.contains(next))return;setOpen(false)}}>
-  <Clock3 size={18}/><input aria-label={label} type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
-  <span className="shift-v5-time-dropdown-button" role="button" tabIndex={0} aria-label={'Open '+label.toLowerCase()+' picker'} aria-expanded={open} onMouseDown={e=>e.preventDefault()} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><ChevronRight size={16} className="shift-v5-time-chevron"/></span>
-  {open&&<div className="shift-v5-time-popover">
-   <div><span>Hour</span><select aria-label={label+' hour'} value={pickerHour} onChange={e=>choose(Number(e.target.value),pickerMinute,pickerPeriod)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
-   <div><span>Minute</span><select aria-label={label+' minute'} value={pickerMinute} onChange={e=>choose(pickerHour,Number(e.target.value),pickerPeriod)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
-   <div><span>AM / PM</span><select aria-label={label+' AM or PM'} value={pickerPeriod} onChange={e=>choose(pickerHour,pickerMinute,e.target.value as 'AM'|'PM')}><option>AM</option><option>PM</option></select></div>
+ const[open,setOpen]=useState(false),formatted=value==null?'':minuteClock(value),base=value??540,h24=Math.floor(base/60),minute=base%60,hour=h24%12||12,period=h24>=12?'PM':'AM';
+ const choose=(h:number,m:number,p:string)=>onChange((h%12+(p==='PM'?12:0))*60+m);
+ return <div className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className={'shift-v5-time-input '+(open?'open':'')} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node|null))setOpen(false)}} onKeyDown={e=>{if(e.key==='Escape'&&open){e.preventDefault();e.stopPropagation();setOpen(false)}}}>
+  <Clock3 size={18}/><input aria-label={label} aria-expanded={open} aria-haspopup="dialog" readOnly placeholder="Choose time" value={formatted} onClick={()=>setOpen(true)} onKeyDown={e=>{if(['Enter',' ','ArrowDown'].includes(e.key)){e.preventDefault();setOpen(true)}}}/>
+  <button type="button" className="shift-v5-time-dropdown-button" aria-label={'Open '+label.toLowerCase()+' picker'} aria-expanded={open} onClick={()=>setOpen(v=>!v)}><ChevronRight size={16} className="shift-v5-time-chevron"/></button>
+  {open&&<div className="shift-v5-time-popover" role="dialog" aria-label={label+' clock'}>
+   <div><span>Hour</span><select aria-label={label+' hour'} value={hour} onChange={e=>choose(Number(e.target.value),minute,period)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+   <div><span>Minute</span><select aria-label={label+' minute'} value={minute} onChange={e=>choose(hour,Number(e.target.value),period)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+   <div><span>AM / PM</span><select aria-label={label+' AM or PM'} value={period} onChange={e=>choose(hour,minute,e.target.value)}><option>AM</option><option>PM</option></select></div>
+   {!required&&<button type="button" className="btn secondary small" onClick={()=>{onChange(null);setOpen(false)}}>Clear</button>}<button type="button" className="btn secondary small" onClick={()=>setOpen(false)}>Done</button>
   </div>}
- </div></label>;
+ </div></div>;
 }
 
 export function ShiftManagement(){
@@ -207,15 +183,15 @@ export function ShiftManagement(){
        <div className="shift-v5-grid two">
         <label className="shift-v5-field"><span>Shift Name <b>*</b></span><input aria-label="Shift Name" value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
         <label className="shift-v5-field"><span>Shift Type <b>*</b></span><select aria-label="Shift Type" value={draft.shiftType} onChange={e=>update({shiftType:e.target.value as ShiftType})}><option value="REGULAR">Regular</option><option value="MORNING">Morning</option><option value="EVENING">Evening</option><option value="NIGHT">Night</option><option value="HALF_DAY">Half Day</option></select></label>
-        <DurationField label="Total Shift Span" value={totalShiftSpan} min={1} max={1440} help="Manual HH:MM. Changing this automatically adjusts End Time." onChange={minutes=>update({endMinute:(draft.startMinute+minutes)%1440})}/>
+        <DurationField label="Total Shift Span" value={totalShiftSpan} min={1} max={1440} help="Choose hours and minutes. Changing this automatically adjusts End Time." onChange={minutes=>update({endMinute:(draft.startMinute+minutes)%1440})}/>
         <label className="shift-v5-field"><span>Timezone <b>*</b></span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{!['Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata (GMT +5:30)</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label>
         <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
         <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
-        </div></section><section className="shift-v5-section"><div className="shift-v5-section-head"><div><h2>02 · Break & grace rules</h2><p>Choose how breaks are recorded and allow a small arrival or departure grace.</p></div><AlarmClock size={20}/></div><div className="shift-v5-grid two"><NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes,...(draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?{breakEndMinute:(draft.breakStartMinute+breakMinutes)%1440}:{})})}/>
+        </div></section><section className="shift-v5-section"><div className="shift-v5-section-head"><div><h2>02 · Break & grace rules</h2><p>Choose how breaks are recorded and allow a small arrival or departure grace.</p></div><AlarmClock size={20}/></div><div className="shift-v5-grid two"><DurationField min={0} label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes,...(draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?{breakEndMinute:(draft.breakStartMinute+breakMinutes)%1440}:{})})}/>
         <label className="shift-v5-field"><span>Break Type</span><select aria-label="Break Type" value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Auto — Fixed scheduled break</option><option value="SCHEDULED_PUNCH">Manual — Scheduled punch break</option><option value="FLEXIBLE_PUNCH">Manual — Flexible punch break</option></select><small className="shift-v5-field-help">{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Auto mode follows the configured break window.':'Manual mode starts from the employee OUT punch; flexible manual break can be taken any time in the shift.'}</small></label>
         {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute,...(breakStartMinute!=null&&draft.breakEndMinute!=null?{breakMinutes:Math.min(180,spanMinutes(breakStartMinute,draft.breakEndMinute))}:{})})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute,...(draft.breakStartMinute!=null&&breakEndMinute!=null?{breakMinutes:Math.min(180,spanMinutes(draft.breakStartMinute,breakEndMinute))}:{})})}/></>}
-        <NumberField label="Late Grace" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
-        <NumberField label="Early-out Grace" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
+        <DurationField min={0} label="Late Grace" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
+        <DurationField min={0} label="Early-out Grace" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
        </div>
       </section>
 
@@ -230,7 +206,7 @@ export function ShiftManagement(){
         <div className="shift-v5-roster-field">
          <NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" help="0 disables flexible roster-off. Example: 4 lets HR mark any 4 dates as roster off in a month." onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/>
         </div>
-        <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Type values manually in HH:MM clock format. Exact minutes are saved in the backend.</span></div>
+        <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Choose hours and minutes from the clock dropdown. Exact minutes are saved.</span></div>
         <div className="shift-v5-duration-grid">
          <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="At checkout, this exact worked time is Half Day. Other durations below Full working time are Insufficient Time." onChange={halfDayMinutes=>update({halfDayMinutes})}/>
          <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
