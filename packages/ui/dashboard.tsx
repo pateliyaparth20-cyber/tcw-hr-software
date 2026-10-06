@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard,Camera,Menu,Home} from 'lucide-react';
 import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,BrandLogo,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
-import {attendanceTrendData} from './dashboard-chart';
+import {HROverview} from './hr-overview';
 import {FaceScanAttendanceModal} from './face';
 function useTimeGreeting(timeZone?:string){
  const[greeting,setGreeting]=useState('GOOD MORNING');
@@ -21,10 +21,6 @@ function useTimeGreeting(timeZone?:string){
  return greeting;
 }
 
-function Trend({attendance,timezone}:{attendance:Row[];timezone:string}){
- const {days,values,max}=attendanceTrendData(attendance.map(r=>({date:String(r.date),status:String(r.status)})),timezone);const points=values.map((v,i)=>`${42+i*88},${170-v/max*125}`).join(' ');
- return <div className="trend-chart"><svg viewBox="0 0 610 215" role="img" aria-label="Present employee count over the last seven days"><defs><linearGradient id="attendance-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3874f6" stopOpacity=".2"/><stop offset="100%" stopColor="#3874f6" stopOpacity="0"/></linearGradient></defs>{[0,.25,.5,.75,1].map(v=><g key={v}><line x1="42" x2="575" y1={170-v*125} y2={170-v*125} stroke="#eaf0f6" strokeDasharray="4 5"/><text x="26" y={175-v*125} textAnchor="end" fill="#8090a7" fontSize="12">{Math.round(max*v)}</text></g>)}<polygon points={`42,170 ${points} 570,170`} fill="url(#attendance-fill)"/><polyline points={points} fill="none" stroke="#3977f4" strokeWidth="3" strokeLinejoin="round"/>{values.map((v,i)=><g key={i}><circle cx={42+i*88} cy={170-v/max*125} r="4" fill="#fff" stroke="#3977f4" strokeWidth="2"/><text x={42+i*88} y="204" textAnchor="middle" fill="#7a879c" fontSize="12">{new Date(days[i]).toLocaleDateString('en',{weekday:'short',timeZone:'UTC'})}</text></g>)}</svg></div>;
-}
 function DashboardAI(){
  const{session,can}=useApp();const status=useData('ai/status',can('ai'));const[answer,setAnswer]=useState(''),[busy,setBusy]=useState(false);
  if(!can('ai'))return null;
@@ -40,50 +36,6 @@ function LiveClock({timezone}:{timezone?:string}){
 }
 function dashboardHolidayEvents(){const year=new Date().getFullYear(),next=year+1,fixed=[['01-01','New Year'],['01-14','Makar Sankranti'],['01-26','Republic Day'],['03-08','International Women’s Day'],['04-14','Dr. Ambedkar Jayanti'],['05-01','Gujarat Foundation Day'],['08-15','Independence Day'],['10-02','Gandhi Jayanti'],['10-31','Sardar Patel Jayanti'],['12-25','Christmas']];return [year,next].flatMap(y=>fixed.map(([md,title])=>({id:`festival-${y}-${md}`,title,date:`${y}-${md}`,kind:'HOLIDAY'})))}
 function mergeUpcomingEvents(events:Row[]=[]){const today=new Date().toISOString().slice(0,10),all=[...events,...dashboardHolidayEvents().filter(f=>!events.some(e=>String(e.date).slice(0,10)===f.date&&String(e.title).toLowerCase()===f.title.toLowerCase()))];return all.filter(e=>String(e.date).slice(0,10)>=today).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
-function DigitalMetric({label,value,detail,icon,tone='blue'}:{label:string;value:React.ReactNode;detail:string;icon:React.ReactNode;tone?:'blue'|'green'|'amber'|'violet'}){
- return <div className={'digital-kpi-card '+tone}><div className="digital-kpi-top"><span>{label}</span><i>{icon}</i></div><strong>{value}</strong><small>{detail}</small></div>;
-}
-
-function MobileTenantDashboard({session,can,currency,d,people,present,onLeave,pending,payroll,attendanceRate}:{session:any;can:(resource:string)=>boolean;currency:string;d:Row;people:Row[];present:number;onLeave:number;pending:Row[];payroll:Row|null;attendanceRate:number}){
- const firstName=String(session.user.name??'User').split(' ')[0];
- const greeting=useTimeGreeting(d.company?.timezone);
- const quick=[
-  ['employees','Employees','Team',<Users size={23}/>,'blue'],
-  ['attendance','Attendance','Today',<Clock3 size={23}/>,'green'],
-  ['leave','Leave','Requests',<CalendarDays size={23}/>,'violet'],
-  ['payroll','Payroll','Salary',<Wallet size={23}/>,'amber'],
-  ['reports','Reports','Insights',<ActivityIcon size={23}/>,'blue'],
-  ['ai','AI Insights','Assistant',<span className="quick-ai-orb"><Sparkles size={20}/></span>,'violet']
- ] as const;
- const latestEmployee=people[0];
- return <section className="hr-mobile-dashboard">
-  <div className="mobile-unified-hero mobile-unified-hero-tenant mobile-hero-profile-only">
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>{session.user.roleName}</span></div><div className="mobile-hero-date"><LiveClock timezone={d.company?.timezone}/><small>{d.company?.city??d.company?.location??'Your workspace'}</small></div></div>
-  </div>
-
-  <div className="mobile-app-welcome"><div><small>WELCOME BACK</small><strong>Let’s make today productive.</strong></div><span><ActivityIcon size={21}/></span></div>
-
-  <div className="mobile-app-stats">
-   <div><span className="mobile-stat-icon blue"><Users size={19}/></span><strong>{people.length}</strong><small>Total Employees</small></div>
-   <div><span className="mobile-stat-icon green"><UserCheck size={19}/></span><strong>{present}</strong><small>Present Today · {attendanceRate}%</small></div>
-   <div><span className="mobile-stat-icon violet"><CalendarDays size={19}/></span><strong>{onLeave}</strong><small>On Leave</small></div>
-   <div><span className="mobile-stat-icon amber"><Wallet size={19}/></span><strong>{payroll?currencyValue(payroll.totalNet,currency):'—'}</strong><small>Payroll Processed</small></div>
-  </div>
-
-  <section className="mobile-app-section">
-   <div className="mobile-app-section-head"><strong>Quick Actions</strong><span>Open</span></div>
-   <div className="mobile-quick-grid">{quick.filter(([key])=>can(key)).map(([key,title,sub,icon,tone])=><Link href={'/'+key} key={key} className="mobile-quick-action"><span className={'mobile-quick-icon '+tone}>{icon}</span><strong>{title}</strong><small>{sub}</small></Link>)}</div>
-  </section>
-
-  <section className="mobile-app-section mobile-updates">
-   <div className="mobile-app-section-head"><strong>Today’s Updates</strong><Link href="/notifications">See All</Link></div>
-   {pending.length>0&&<Link href="/leave" className="mobile-update-row"><span className="mobile-update-icon violet"><CalendarDays size={18}/></span><div><strong>{pending.length} leave request{pending.length===1?'':'s'} pending</strong><small>Review approval requests</small></div><ChevronRight size={17}/></Link>}
-   {payroll&&<Link href="/payroll" className="mobile-update-row"><span className="mobile-update-icon amber"><Wallet size={18}/></span><div><strong>{payroll.month} payroll</strong><small>{readable(String(payroll.status??'review').toLowerCase())}</small></div><ChevronRight size={17}/></Link>}
-   {latestEmployee&&<Link href="/employees" className="mobile-update-row"><span className="mobile-update-icon blue"><Users size={18}/></span><div><strong>{latestEmployee.firstName} {latestEmployee.lastName}</strong><small>{latestEmployee.departmentName??latestEmployee.employeeCode??'Employee directory'}</small></div><ChevronRight size={17}/></Link>}
-   {!pending.length&&!payroll&&!latestEmployee&&<div className="mobile-update-empty">No updates yet. Your HR activity will appear here.</div>}
-  </section>
- </section>;
-}
 function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,outstanding,openTickets,currency,support}:{session:any;companies:Row[];trials:number;trialSummary:Row;paid:number;outstanding:number;openTickets:number;currency:string;support:Row[]}){
  const active=companies.filter(c=>c.status==='ACTIVE').length;
  const firstName=String(session.user.name??'Admin').split(' ')[0];
@@ -199,39 +151,6 @@ export function Dashboard(){
   </>;
  }
  if(session.user.role==='EMPLOYEE')return <EmployeeDashboard session={session} currency={currency} d={d} calendarEvents={calendarQ.data?.items} onRefresh={()=>q.refetch()}/>;
-  const people:Row[]=d.employees??[],attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],devices:Row[]=d.devices??[],support:Row[]=d.support??[];
- const today=new Intl.DateTimeFormat('en-CA',{timeZone:d.company?.timezone??'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const records=attendance.filter(r=>r.date.slice(0,10)===today),present=records.filter(r=>r.status==='PRESENT').length;
- const pending=leave.filter(r=>r.status==='PENDING'),onLeave=leave.filter(r=>r.status==='APPROVED'&&r.startDate.slice(0,10)<=today&&r.endDate.slice(0,10)>=today).length;
- const late=records.filter(r=>(r.lateMinutes??0)>0).length,exceptions=records.filter(r=>r.exceptionCode).length,deviceOffline=devices.filter(r=>!['ONLINE','CONNECTED'].includes(r.status)).length;
- const salaryBase=people.reduce((n,p)=>n+(p.monthlySalary??0),0),payroll=d.payroll??null;
- const absent=records.filter(r=>r.status==='ABSENT').length,otMinutes=records.reduce((n,r)=>n+(r.overtimeMinutes??0),0);
- const attendanceRate=people.length?Math.min(100,Math.round((present/people.length)*100)):0;
- const deviceOnline=Math.max(0,devices.length-deviceOffline),deviceRate=devices.length?Math.round((deviceOnline/devices.length)*100):100;
- const timezone=d.company?.timezone??'Asia/Kolkata';
- return <>
-  <MobileTenantDashboard session={session} can={can} currency={currency} d={d} people={people} present={present} onLeave={onLeave} pending={pending} payroll={payroll} attendanceRate={attendanceRate}/>
-  <div className="hr-desktop-dashboard">
-  <section className="hr-welcome-card approved-hero">
-   <div className="approved-hero-person"><Avatar name={session.user.name} src={session.user.avatar}/><div><span className="hr-welcome-kicker">{dashboardGreeting} 👋</span><h1>{session.user.name.split(' ')[0]}!</h1><p>{session.user.roleName} <b>·</b> TCW HR Software</p></div></div>
-   <div className="approved-hero-message"><strong>Let’s make<br/>today productive.</strong></div>
-   <div className="approved-hero-clock"><LiveClock timezone={timezone}/><small>{d.company?.name??'Your workspace'}</small></div>
-  </section>
-
-  <div className="digital-kpi-grid">
-   <DigitalMetric label="Total employees" value={people.length} detail={`${present} present today · ${attendanceRate}% attendance`} icon={<Users size={20}/>} tone="blue"/>
-   <DigitalMetric label="Attendance alerts" value={late+exceptions} detail={`${late} late arrivals · ${exceptions} flagged records`} icon={<AlertTriangle size={20}/>} tone={late+exceptions?'amber':'green'}/>
-   <DigitalMetric label="Leave today" value={onLeave} detail={`${pending.length} request(s) waiting for approval`} icon={<CalendarDays size={20}/>} tone="violet"/>
-   <DigitalMetric label="Latest net payroll" value={payroll?currencyValue(payroll.totalNet,currency):'Not prepared'} detail={payroll?`${payroll.month} · ${readable(payroll.status.toLowerCase())}`:`Salary base ${currencyValue(salaryBase,currency)}`} icon={<Wallet size={20}/>} tone="green"/>
-  </div>
-
-  <div className="digital-dashboard-grid">
-   <section className="panel digital-panel digital-pulse-panel"><div className="panel-heading"><div><span className="digital-section-label">WORKFORCE SIGNAL</span><h2>7-day attendance pulse</h2><p>Present employee count and today’s operating snapshot.</p></div><span className="digital-signal-chip"><ActivityIcon size={14}/> Live data</span></div><Trend attendance={attendance} timezone={timezone}/><div className="digital-signal-strip"><div><span>Attendance</span><strong>{attendanceRate}%</strong></div><div><span>Present</span><strong>{present}</strong></div><div><span>Late</span><strong>{late}</strong></div><div><span>Absent</span><strong>{absent}</strong></div><div><span>OT minutes</span><strong>{otMinutes}</strong></div></div></section>
-   <section className="panel digital-panel"><div className="panel-heading"><div><span className="digital-section-label">SYSTEM STATUS</span><h2>Operational health</h2><p>Fast signals from devices, notifications and payroll.</p></div><Server size={19}/></div><div className="digital-health-list"><Link href="/devices"><span className="digital-health-icon"><Server size={18}/></span><div><strong>Attendance devices</strong><small>{deviceOnline} online · {deviceOffline} attention</small></div><b>{deviceRate}%</b></Link><Link href="/notifications"><span className="digital-health-icon"><Bell size={18}/></span><div><strong>Notifications</strong><small>Unread workspace updates</small></div><b>{d.unreadNotifications??0}</b></Link><Link href="/support"><span className="digital-health-icon"><Headphones size={18}/></span><div><strong>Support queue</strong><small>Open support tickets</small></div><b>{support.length}</b></Link><Link href="/payroll"><span className="digital-health-icon"><CircleDollarSign size={18}/></span><div><strong>Payroll status</strong><small>{payroll?`${payroll.month} payroll run`:'No payroll run prepared'}</small></div><Badge value={payroll?.status??'REVIEW'}/></Link></div></section>
-  </div>
-
-  <div className="dashboard-grid three digital-lower-grid"><section className="panel"><div className="panel-heading"><div><span className="digital-section-label">ACTION CENTER</span><h2>Pending approvals <span className="count-label">{pending.length}</span></h2></div>{can('leave')&&<Link href="/leave"><ArrowUpRight size={17}/><span className="sr-only">Open leave</span></Link>}</div>{pending.length?pending.slice(0,4).map(r=>{const e=people.find(p=>p.id===r.employeeId);const name=e?e.firstName+' '+e.lastName:'Employee';return <div className="list-row" key={r.id}><Avatar name={name} src={e?.photo}/><div className="grow"><strong>{name}</strong><small>{displayDate(r.startDate)} · {r.days} day(s)</small></div><Badge value="PENDING"/></div>}):<Empty title="No approvals waiting" description="New leave requests will appear here."/>}</section><section className="panel"><div className="panel-heading"><div><span className="digital-section-label">NEXT UP</span><h2>Upcoming calendar</h2></div><CalendarDays size={18}/></div><div className="dashboard-calendar-scroll">{mergeUpcomingEvents(calendarQ.data?.items??d.events??[]).length?mergeUpcomingEvents(calendarQ.data?.items??d.events??[]).map((e:Row)=><div className="list-row" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><div className="grow"><strong>{e.title}</strong><small>{readable(e.kind.toLowerCase())}</small></div></div>):<Empty title="Calendar is clear" description="Holidays, interviews, training and payroll dates will appear here."/>}</div><Link href="/calendar" className="panel-bottom-link">Open full calendar <ChevronRight size={16}/></Link></section><section className="panel quick-panel digital-quick-panel"><div className="panel-heading"><div><span className="digital-section-label">SHORTCUTS</span><h2>Quick actions</h2></div></div>{[['employees','People directory','Manage employee records'],['attendance','Attendance','Review daily attendance'],['payroll','Payroll','Review salary calculations'],['reports','Reports','Export HR information']].filter(([r])=>can(r)).map(([href,title,sub])=><Link href={'/'+href} className="quick-link" key={href}><span><strong>{title}</strong><small>{sub}</small></span><ArrowUpRight size={18}/></Link>)}</section></div>
-  </div>
- </>;
+ return <HROverview session={session} data={d} events={calendarQ.data?.items??d.events??[]} currency={currency} can={can} greeting={dashboardGreeting} clock={<LiveClock timezone={dashboardTimezone}/>} onRefresh={async()=>{await Promise.all([q.refetch(),...(can('calendar')?[calendarQ.refetch()]:[])])}}/>;
 }
 function Activity({rows}:{rows:Row[]}){return <section className="panel activity-panel"><div className="panel-heading"><h2>Recent activity</h2><span className="muted">Latest recorded changes</span></div>{rows.length?<div className="activity-list">{rows.slice(0,6).map(r=><div key={r.id}><span className="activity-marker"/><div><strong>{readable(r.action.toLowerCase())}</strong><small>{readable(r.entity)} · {new Date(r.createdAt).toLocaleString('en-IN')}</small></div></div>)}</div>:<p className="quiet-empty">Workspace changes will appear here as your team gets started.</p>}</section>}
