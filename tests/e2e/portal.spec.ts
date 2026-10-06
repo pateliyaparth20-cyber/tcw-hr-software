@@ -319,3 +319,25 @@ test('read-only people permissions hide mutations app access and salary data',as
  await page.goto('/employees');const workspace=page.locator('.people-workspace');await expect(workspace.getByRole('heading',{name:'Employee Directory',exact:true})).toBeVisible();for(const name of ['Add Employee','Edit employee','Delete employee','Import employees'])await expect(workspace.getByRole('button',{name,exact:true})).toHaveCount(0);await expect(workspace.getByRole('button',{name:/Employee App Access/})).toHaveCount(0);
  await workspace.getByRole('button',{name:'View profile of Read Only',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('button',{name:'Salary & bank',exact:true})).toHaveCount(0);await expect(dialog).not.toContainText('Hidden bank fixture');await expect(dialog).not.toContainText('secret-bank-fixture');await expect(dialog.getByRole('button',{name:'Edit profile'})).toHaveCount(0);
 });
+
+
+test('Add Employee sections scroll with wheel input and keep actions reachable',async({page})=>{
+ await login(page);await page.goto('/employees');
+ for(const viewport of [{width:1440,height:900},{width:390,height:844},{width:320,height:568}]){
+  await page.setViewportSize(viewport);
+  await page.getByRole('button',{name:'Add Employee',exact:true}).first().click();
+  const dialog=page.getByRole('dialog'),scroll=dialog.locator('.record-form-fields');
+  await expect(scroll).toBeVisible();
+  await expect.poll(()=>scroll.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+  await scroll.evaluate(el=>{el.scrollTop=0});
+  await scroll.hover();await page.mouse.wheel(0,350);
+  await expect.poll(()=>scroll.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+  await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight});
+  const notes=dialog.getByLabel('HR notes');await expect(notes).toBeInViewport();
+  await notes.fill('Last section remains reachable');
+  await expect(dialog.getByRole('button',{name:'Create employee',exact:true})).toBeInViewport();
+  await expect(dialog.getByRole('button',{name:'Close dialog'})).toBeInViewport();
+  await expect.poll(()=>dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+  await dialog.getByRole('button',{name:'Cancel',exact:true}).click();await expect(dialog).not.toBeVisible();
+ }
+});

@@ -8,3 +8,14 @@
 /* Global form controls use full width; reserve space for directory search. */
 .people-workspace .pd-toolbar>select{width:180px;flex:0 0 180px}.people-workspace .pd-search{flex:1 1 0;min-width:120px}.people-workspace .pd-search>svg{flex-shrink:0}.people-workspace .pd-view{flex-shrink:0}
 @media(max-width:600px){.people-workspace .pd-search{flex:1 0 100%;min-width:0}.people-workspace .pd-toolbar>select{width:auto;flex:1 1 0}}
+
+/* Sectioned employee forms scroll as one body with visible header and actions. */
+.modal:has(> .pd-employee-form)>.pd-form-intro{flex:0 0 auto}
+.modal:has(> .pd-employee-form)>.pd-employee-form>.record-form-fields{
+ display:block!important;flex:1 1 auto!important;min-height:0!important;width:100%!important;
+ overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;scrollbar-gutter:stable;padding:24px!important;
+}
+@media(max-width:950px){
+ .modal:has(> .pd-employee-form)>.pd-employee-form>.record-form-fields{padding:18px 16px 28px!important}
+}
