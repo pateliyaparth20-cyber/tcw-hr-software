@@ -372,5 +372,5 @@ test('download failures retain the app and allow an explicit retry',async({page}
 
 test('production download manifest contains readable build assets with exact decoded sizes',async({page})=>{
  const response=await page.request.get('/api/releases/assets');expect(response.ok()).toBeTruthy();const manifest=await response.json();expect(manifest.files.length).toBeGreaterThan(0);expect(manifest.files.some((file:any)=>file.url.includes('[[...path]]'))).toBeTruthy();
- for(const file of manifest.files.slice(0,3)){expect(file.url).toMatch(/^\/_next\/static\/.*\.(js|css)$/);const asset=await page.request.get(file.url);expect(asset.ok()).toBeTruthy();expect((await asset.body()).length).toBe(file.bytes);}
+ for(const file of manifest.files.slice(0,3)){expect(file.url).toMatch(/^\/_next\/static\/.*\.(js|css)$/);const asset=await page.request.get(file.url);expect(asset.ok()).toBeTruthy();expect((await asset.body()).length).toBe(file.bytes);expect(asset.headers()['cache-control']).toContain('immutable');}
 });
