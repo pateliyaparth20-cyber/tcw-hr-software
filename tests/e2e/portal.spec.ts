@@ -35,7 +35,7 @@ test('reports maintenance shows a blurred static layout without fetching report 
  await expect(page.getByRole('link',{name:'CSV',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Preview',exact:true})).toHaveCount(0);
  expect(await page.locator('.reports-maintenance-backdrop').evaluate(el=>getComputedStyle(el).filter)).toBe('blur(6px)');
  await page.screenshot({path:'test-results/reports-maintenance.png',fullPage:true});
- await page.setViewportSize({width:390,height:844});await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeVisible();
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeInViewport();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy()}
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(requests).toEqual([]);
 });
 
