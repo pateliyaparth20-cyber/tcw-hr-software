@@ -1,7 +1,7 @@
 import {MANUAL_SALARY,manualSalary,manualSalaryValues} from '../../../packages/payroll-engine/manual';
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Prisma} from '@prisma/client';
-import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
+import {lockPayrollPeriod,lockPayrollRun,lockSalaryInputs} from './payroll-lock';
 import type {Database} from '../../../packages/database';
 import {localDate,monthBounds} from '../../../packages/attendance-engine';
 import {calculatePay} from '../../../packages/payroll-engine';
@@ -21,6 +21,7 @@ async function completedMonthGuard(db:Prisma.TransactionClient,tenantId:string,m
 
 export async function preparePayrollMonth(db:Database,tenantId:string,month:string,actorId:string){
   return db.$transaction(async tx=>{
+    await lockSalaryInputs(tx,tenantId);
     await lockPayrollPeriod(tx,tenantId,month);
     await completedMonthGuard(tx,tenantId,month);
     let run=await tx.payrollRun.findUnique({where:{tenantId_month:{tenantId,month}}});
@@ -38,32 +39,46 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
     if(!employeeIds.length)throw new BadRequestException('No attendance records are available for this payroll month.');
     if(!run)run=await tx.payrollRun.create({data:{tenantId,month,attendanceLockId:period!.id}});
     await tx.payrollAdjustment.updateMany({where:{tenantId,appliedRunId:run.id},data:{appliedRunId:null}});
+    await tx.loanInstallment.updateMany({where:{tenantId,appliedRunId:run.id},data:{appliedRunId:null}});
     const previousItems=await tx.payrollItem.findMany({where:{tenantId,runId:run.id},select:{employeeId:true,components:true}});
     const manualByEmployee=new Map(previousItems.map(i=>[i.employeeId,manualSalary(i.components)]));
     await tx.payrollItem.deleteMany({where:{tenantId,runId:run.id}});
 
-    const [employees,rules,adjustments]=await Promise.all([
+    const [employees,rules,adjustments,versions,loans,installments]=await Promise.all([
       tx.employee.findMany({where:{tenantId,id:{in:employeeIds},joiningDate:{lt:nextMonthStart(month)}}}),
       tx.salaryRule.findMany({where:{tenantId,active:true}}),
-      tx.payrollAdjustment.findMany({where:{tenantId,targetMonth:month,appliedRunId:null}})
+      tx.payrollAdjustment.findMany({where:{tenantId,targetMonth:month,appliedRunId:null}}),
+      tx.salaryVersion.findMany({where:{tenantId,employeeId:{in:employeeIds},effectiveMonth:{lte:month}},orderBy:[{effectiveMonth:'desc'},{createdAt:'desc'},{id:'desc'}]}),
+      tx.payrollLoan.findMany({where:{tenantId,employeeId:{in:employeeIds}}}),
+      tx.loanInstallment.findMany({where:{tenantId,month,appliedRunId:null,cancelled:false}})
     ]);
     if(!employees.length)throw new BadRequestException('No employees are eligible for this payroll month.');
 
     let totalGross=0,totalDeductions=0,totalNet=0,itemCount=0;
     const appliedAdjustmentIds:string[]=[];
+    const appliedInstallmentIds:string[]=[];
     for(const employee of employees){
       const attendance:any=attendanceByEmployee.get(employee.id);
       if(!attendance)continue;
       const eligibleDays=Math.max(0,Number(attendance.scheduledDays||0));
       const denominator=Math.max(100,eligibleDays*100);
       const payableUnits=Math.min(Number(attendance.payableUnits||0),denominator);
-      const attendanceGross=eligibleDays?Math.round(employee.monthlySalary*payableUnits/denominator):0;
+      const salary=versions.find(v=>v.employeeId===employee.id);
+      const monthlySalary=salary?salary.basic+salary.hra+salary.allowances:employee.monthlySalary;
+      const attendanceGross=eligibleDays?Math.round(monthlySalary*payableUnits/denominator):0;
+      const overtime=salary?Math.round(Number(attendance.overtimeMinutes||0)*salary.overtimeHourly/60):0;
+      const earnings=salary?(()=>{const basic=eligibleDays?Math.round(salary.basic*payableUnits/denominator):0,hra=eligibleDays?Math.round((salary.basic+salary.hra)*payableUnits/denominator)-basic:0;return [{type:'EARNING',name:'Basic',amount:basic},{type:'EARNING',name:'HRA',amount:hra},{type:'EARNING',name:'Allowances',amount:attendanceGross-basic-hra}];})():[{type:'EARNING',name:'Salary',amount:attendanceGross}];
+      const employeeLoanIds=new Set(loans.filter(l=>l.employeeId===employee.id).map(l=>l.id)),recoveries=installments.filter(i=>employeeLoanIds.has(i.loanId));
+      const recovery=recoveries.reduce((n,i)=>n+i.amount,0);
       const employeeAdjustments=adjustments.filter(a=>a.employeeId===employee.id);
       const adjustment=employeeAdjustments.reduce((sum,a)=>sum+a.amount,0);
-      const result=calculatePay(attendanceGross,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
+      const calculated=calculatePay(attendanceGross+overtime,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
+      const result={...calculated,deductions:calculated.deductions+recovery,net:calculated.net-recovery};
+      if(result.net<0)throw new BadRequestException(`Loan deductions exceed pay for ${employee.employeeCode}. Adjust the recovery schedule before preparing.`);
+      if(result.gross>1e9||result.deductions>1e9)throw new BadRequestException(`Salary exceeds the supported amount for ${employee.employeeCode}.`);
       const override=manualByEmployee.get(employee.id);
       const values=override?manualSalaryValues(override.net,result.deductions):result;
-      const components=[...result.components,{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:employee.monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
+      const components=[...earnings,...(overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...result.components.map(c=>({...c,type:c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
         gross:values.gross,deductions:values.deductions,net:values.net,
@@ -74,9 +89,11 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       }});
       totalGross+=values.gross;totalDeductions+=values.deductions;totalNet+=values.net;itemCount++;
       appliedAdjustmentIds.push(...employeeAdjustments.map(a=>a.id));
+      appliedInstallmentIds.push(...recoveries.map(i=>i.id));
     }
     if(!itemCount)throw new BadRequestException('No payable employees are available for this payroll month.');
     if(appliedAdjustmentIds.length)await tx.payrollAdjustment.updateMany({where:{tenantId,id:{in:appliedAdjustmentIds}},data:{appliedRunId:run.id}});
+    if(appliedInstallmentIds.length)await tx.loanInstallment.updateMany({where:{tenantId,id:{in:appliedInstallmentIds}},data:{appliedRunId:run.id}});
     return tx.payrollRun.update({where:{id:run.id},data:{status:'REVIEW',totalGross,totalDeductions,totalNet,approvedBy:null,lockedAt:null,attendanceLockId:period!.id},include:{items:true}});
   },{timeout:60000});
 }
@@ -91,6 +108,7 @@ export async function reopenPayrollMonth(db:Database,tenantId:string,runId:strin
 
     await tx.payrollRun.update({where:{id:runId},data:{status:'DRAFT',lockedAt:null,approvedBy:null,attendanceLockId:null}});
     await tx.payrollAdjustment.updateMany({where:{tenantId,appliedRunId:runId},data:{appliedRunId:null}});
+    await tx.loanInstallment.updateMany({where:{tenantId,appliedRunId:runId},data:{appliedRunId:null}});
     await tx.payrollItem.deleteMany({where:{tenantId,runId}});
     await tx.payrollRun.update({where:{id:runId},data:{totalGross:0,totalDeductions:0,totalNet:0}});
 

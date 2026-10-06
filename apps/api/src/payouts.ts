@@ -45,6 +45,13 @@ export interface PayoutProvider{
 const defaultProvider:PayoutProvider={validateConfiguration:requirePayoutCredentials,send:razorpayPayout,status:razorpayPayoutStatus};
 export class PayoutService{
   constructor(private db:Database,private provider:PayoutProvider=defaultProvider){}
+  async reconciliation(ctx:Context){
+    const tid=tenant(ctx);requirePermission(ctx,'payroll','VIEW');
+    if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Salary payouts are managed by your payroll team.');
+    const rows=await this.db.payrollPayout.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'}});
+    const runs=await this.db.payrollRun.findMany({where:{tenantId:tid,id:{in:rows.map(r=>r.runId)}},select:{id:true,month:true}}),months=new Map(runs.map(r=>[r.id,r.month]));
+    return {items:rows.map(r=>({id:r.id,runId:r.runId,month:months.get(r.runId)??'',employeeCode:r.employeeCode,employeeName:r.employeeName,amount:r.amount,provider:r.provider,providerRef:r.providerRef,reference:r.reference,status:r.status,utr:r.utr,error:r.error,updatedAt:r.updatedAt}))};
+  }
   async list(ctx:Context,runId:string){
     const tid=tenant(ctx);requirePermission(ctx,'payroll','VIEW');
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Salary payouts are managed by your payroll team.');

@@ -1,3 +1,4 @@
+import {verifySecondFactor} from './two-factor';
 import { BadRequestException, ForbiddenException, UnauthorizedException, HttpException, ConflictException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -62,6 +63,8 @@ export class AuthService {
         await this.db.auditLog.create({data:{tenantId:user.tenantId,actorId:user.id,action:'LEGACY_SIGNUP_ROLE_MIGRATED',entity:'users',entityId:user.id,before:{role:beforeRole},after:{role:'HR_ADMIN'},ip:req.ip}});
       }
     }
+    const security=await this.db.userSecurity.findUnique({where:{userId:user.id},select:{enabled:true}});
+    if(security?.enabled){if(!input.twoFactorCode)return {twoFactorRequired:true};await verifySecondFactor(this.db,user.id,input.twoFactorCode);}
     await this.db.loginAttempt.deleteMany({where:{key}});
     await this.db.auditLog.create({data:{tenantId:user.tenantId,actorId:user.id,action:'LOGIN_SUCCEEDED',entity:'auth',ip:req.ip}});
     return this.setSession(user,req,res,input.remember);

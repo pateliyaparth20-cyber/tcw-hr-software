@@ -1,0 +1,38 @@
+/* HR operations: shared responsive layouts for salary, imports and lifecycle tools. */
+.hr-operations{display:grid;gap:20px;min-width:0}
+.hr-operation-intro{display:flex;gap:16px;align-items:flex-start;padding:22px;background:linear-gradient(120deg,#f4f8ff,#fff);border:1px solid #dce8fb;border-radius:16px}
+.hr-operation-intro>svg{flex-shrink:0;color:#2966dc;margin-top:3px}
+.hr-operation-intro p,.hr-loan-panel p,.hr-approval-settings p{color:#64748b;font-size:13px;line-height:1.6;margin:6px 0 0}
+.hr-operation-grid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px}
+.hr-operation-picker,.hr-salary-detail,.hr-loan-panel{padding:22px;min-width:0}
+.hr-operation-picker h2,.hr-salary-detail h2,.hr-loan-panel h2{font-size:19px;margin:0 0 16px}
+.hr-employee-options{display:grid;gap:5px;max-height:420px;overflow:auto;margin-top:14px}
+.hr-employee-options button{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:1px solid transparent;border-radius:10px;background:transparent;padding:11px;color:#334155;cursor:pointer}
+.hr-employee-options button.active{background:#edf4ff;border-color:#bcd4fc;color:#225dcd}
+.hr-employee-options button:hover{background:#f3f6fb}
+.hr-employee-options strong,.hr-employee-options small{display:block}
+.hr-employee-options small{margin-top:4px;color:#64748b;font-size:11px}
+.hr-salary-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px;margin:22px 0}
+.hr-salary-facts div{padding:16px;background:#f8fafc;border:1px solid #e5ebf3;border-radius:12px}
+.hr-salary-facts span,.hr-salary-facts strong{display:block}
+.hr-salary-facts span{font-size:12px;color:#64748b}.hr-salary-facts strong{font-size:18px;margin-top:8px;color:#183456}
+.hr-loan-panel>.row-between{gap:16px;margin-bottom:18px}
+.hr-import,.hr-checklist{display:grid;gap:18px;min-width:0}
+.hr-import-tools{display:flex;flex-wrap:wrap;gap:10px}
+.hr-error{color:#b42318;font-size:12px;line-height:1.5}
+.hr-approval-settings{margin-top:24px;overflow:hidden}
+.hr-policy-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 24px;border-top:1px solid #edf1f7}
+.hr-policy-row select{max-width:390px;width:100%}
+.hr-review-stage{display:block;color:#64748b;font-size:11px;margin-top:5px;white-space:nowrap}
+.hr-task-list{display:grid;gap:10px}
+.hr-task-list label{display:flex;align-items:flex-start;gap:13px;padding:15px;background:#f8fafc;border:1px solid #e4ebf4;border-radius:12px;cursor:pointer}
+.hr-task-list input{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#2563eb}
+.hr-task-list small{display:block;margin-top:5px;color:#64748b;font-size:12px}
+.hr-letter-links{display:flex;flex-wrap:wrap;gap:10px;padding-top:18px;border-top:1px solid #e4ebf4}
+.hr-letter-links small{display:block;width:100%;color:#64748b}
+.hr-operation-alerts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.hr-operation-alerts a{display:flex;align-items:center;gap:9px;padding:12px 15px;border:1px solid #f5dba7;background:#fffbef;border-radius:12px;color:#805a15;text-decoration:none;font-size:12px}
+.hr-operation-alerts strong{font-size:17px}
+@media(max-width:900px){.hr-operation-grid{grid-template-columns:1fr}.hr-employee-options{max-height:220px}.hr-salary-detail>.row-between,.hr-loan-panel>.row-between,.hr-checklist>.row-between{align-items:flex-start;flex-direction:column}}
+@media(max-width:560px){.hr-policy-row{align-items:flex-start;flex-direction:column;padding:16px}.hr-operation-picker,.hr-salary-detail,.hr-loan-panel,.hr-operation-intro{padding:16px}.hr-salary-facts{grid-template-columns:1fr 1fr}.hr-operation-alerts a{width:100%;justify-content:space-between}}
+.hr-two-factor{margin-bottom:24px}.hr-auth-key{display:block;background:#f1f6ff;padding:18px;border-radius:12px;color:#234b87;overflow-wrap:anywhere;font-size:18px;letter-spacing:2px}.hr-recovery-codes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.hr-recovery-codes code{background:#f5f7fa;padding:12px;border-radius:8px;overflow-wrap:anywhere}.reports-v2-range-fields{flex-wrap:wrap}.reports-v2-range-fields select{min-width:150px;max-width:240px}@media(max-width:560px){.hr-recovery-codes{grid-template-columns:1fr}.reports-v2-range-fields select{width:100%;max-width:100%}}

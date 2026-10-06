@@ -61,3 +61,7 @@ jobs:
       - run: npm ci
       - run: npm run db:migrate
       - run: npm run test:concurrency
+      - name: Verify backup restoration on a separate test database
+        run: bash scripts/test-restore.sh
+        env:
+          RESTORE_TEST_CONTAINER: ${{ job.services.postgres.id }}

@@ -1,3 +1,7 @@
+import {recordProfileSalaryChange} from './salary-operations';
+import {approvalRows,createApproval} from './approvals';
+import {recordAssetEvent} from './people-operations';
+import {lockSalaryInputs} from './payroll-lock';
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
@@ -116,6 +120,7 @@ export class DataService {
       if(query.q){const q=String(query.q).trim().slice(0,100),parts=q.split(/\s+/).filter(Boolean);where.OR=[{firstName:{contains:q,mode:'insensitive'}},{lastName:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{employeeCode:{contains:q,mode:'insensitive'}},...(parts.length>1?[{AND:[{firstName:{contains:parts[0],mode:'insensitive'}},{lastName:{contains:parts.slice(1).join(' '),mode:'insensitive'}}]}]:[])];}
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
+      if(query.branchId)where.branchId=id.parse(query.branchId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
       const [items,total,departments,branches,designations,shifts]=await Promise.all([this.db.employee.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
       const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name])),designationNames=new Map(designations.map(r=>[r.id,r.name])),shiftNames=new Map(shifts.map(r=>[r.id,r.name]));
@@ -123,6 +128,7 @@ export class DataService {
     }
     if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Employee records are managed by HR.');
     return this.db.$transaction(async tx=>{
+      await lockSalaryInputs(tx,tid);
       const before=recordId?await tx.employee.findFirst({where:{...where,id:id.parse(recordId)}}):null;
       if(recordId&&!before)throw new NotFoundException('Employee not found.');
       if(method==='DELETE'){
@@ -140,7 +146,9 @@ export class DataService {
         await tx.employeeExit.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.document.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.activityEvent.deleteMany({where:{tenantId:tid,employeeId}});
+        const assignedAssets=await tx.asset.findMany({where:{tenantId:tid,employeeId}});for(const asset of assignedAssets){await recordAssetEvent(tx,ctx,asset,{...asset,employeeId:null,status:'AVAILABLE'});}
         await tx.asset.updateMany({where:{tenantId:tid,employeeId},data:{employeeId:null,status:'AVAILABLE'}});
+        await tx.employeeTask.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.employee.updateMany({where:{tenantId:tid,managerId:employeeId},data:{managerId:null}});
 
         if(userIds.length){
@@ -149,6 +157,7 @@ export class DataService {
           await tx.notification.deleteMany({where:{tenantId:tid,userId:{in:userIds}}});
           await tx.meghnaConversation.deleteMany({where:{tenantId:tid,userId:{in:userIds}}});
           await tx.session.deleteMany({where:{userId:{in:userIds}}});
+          await tx.userSecurity.deleteMany({where:{userId:{in:userIds}}});
           await tx.user.deleteMany({where:{id:{in:userIds},tenantId:tid}});
         }
 
@@ -187,6 +196,8 @@ export class DataService {
         const company=await tx.tenant.findUniqueOrThrow({where:{id:tid}});
         if(await tx.employee.count({where:{tenantId:tid,deletedAt:null}})>=company.employeeLimit)throw new ConflictException('Your plan employee limit has been reached.');
       }
+      if(before&&input.monthlySalary!==before.monthlySalary&&await tx.salaryVersion.count({where:{tenantId:tid,employeeId:before.id}}))throw new ConflictException('Use Salary structure to record an effective salary revision.');
+      await recordProfileSalaryChange(tx,ctx,before,input);
       const after=before?await tx.employee.update({where:{id:before.id},data:input}):await tx.employee.create({data:{tenantId:tid,...input}});
       await audit(tx,ctx,before?'EMPLOYEE_UPDATED':'EMPLOYEE_CREATED','employees',after.id,before,after);
       if(!before){const notice=await tx.notification.create({data:{tenantId:tid,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. Complete user access, documents and attendance mapping as needed.`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/employees',tag:'tcw-'+notice.id}).catch(()=>{});}
@@ -210,6 +221,7 @@ export class DataService {
     const scope=cfg.employeeScoped?await employeeScope(this.db,ctx):null;
     const where:any={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
     if(query.q){const q=String(query.q).trim().slice(0,100);if(q){const searchable=['name','title','code','location','email','subject','company','description','serialNumber','model'];const schemaShape=(cfg.schema as any).shape??{};const fields=searchable.filter(field=>field in schemaShape);if(fields.length)where.OR=fields.map(field=>({[field]:{contains:q,mode:'insensitive'}}));}}
+    if(query.status){const key=type==='candidates'?'stage':'status';if(key in ((cfg.schema as any).shape??{})||['expenses','travel','exit'].includes(type))where[key]=String(query.status).slice(0,60);}
     if(type==='support'&&restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Contact your HR administrator for company support tickets.');
     if(recordId)where.id=id.parse(recordId);
     const model=(this.db as any)[cfg.model];
@@ -217,13 +229,15 @@ export class DataService {
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||100)),page=Math.max(1,Number(query.page)||1);
       const [items,total]=await Promise.all([model.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),model.count({where})]);
       if(type==='devices')return {items:items.map((row:any)=>{const{apiSecretHash,...safe}=row;return safe;}),total,page,pageSize:take};
-      return {items,total,page,pageSize:take};
+      return {items:['expenses','travel'].includes(type)?await approvalRows(this.db,tid,type,items):items,total,page,pageSize:take};
     }
     return this.db.$transaction(async tx=>{
+      if(recordId&&['assets','courses'].includes(type)){const tableName=type==='assets'?'assets':'courses';await tx.$queryRawUnsafe(`SELECT id FROM ${tableName} WHERE id = $1::uuid AND tenant_id = $2::uuid FOR UPDATE`,recordId,tid);}
       const table=(tx as any)[cfg.model];const before=recordId?await table.findFirst({where}):null;
       if(recordId&&!before)throw new NotFoundException('Record not found.');
-      if(method==='DELETE'){await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
+      if(method==='DELETE'){if(type==='assets')await recordAssetEvent(tx,ctx,before,null);if(type==='courses'&&await tx.courseEnrollment.count({where:{tenantId:tid,courseId:recordId}}))throw new ConflictException('A course with enrollments cannot be deleted. Cancel it instead.');await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
       const input=cfg.schema.parse(body) as any;
+      if(type==='assets'&&input.employeeId===undefined)input.employeeId=null;
       await this.references(tx,ctx,input,{...(cfg.employeeScoped?{employeeId:'employee'}:{}),...cfg.references});
       if(type==='calendar'&&input.kind==='ROSTER_OFF'){
         const shift=await tx.shift.findFirst({where:{tenantId:tid,id:input.shiftId}});
@@ -237,6 +251,7 @@ export class DataService {
         if(used>=quota)throw new BadRequestException(`This shift allows ${quota} flexible roster-off day(s) per month. Remove another roster off or increase the shift allowance.`);
       }
       if(ctx.user.role.code==='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId)throw new ForbiddenException();
+      if(type==='courses'&&before&&input.capacity<await tx.courseEnrollment.count({where:{tenantId:tid,courseId:before.id,status:{not:'CANCELLED'}}}))throw new ConflictException('Capacity cannot be lower than active enrollments.');
       if(type==='goals'&&input.progress>input.target)throw new BadRequestException('Progress cannot exceed the target.');
       if(type==='devices'&&!before){
         if(input.connectionMode==='EMPLOYEE_APP'||input.vendor==='TCW_MOBILE'){
@@ -262,6 +277,8 @@ export class DataService {
         await audit(tx,ctx,'SUPPORT_TICKET_CREATED','support',after.id,before,after);return after;
       }
       const after=before?await table.update({where:{id:recordId},data:input}):await table.create({data:{tenantId:tid,...input}});
+      if(type==='assets')await recordAssetEvent(tx,ctx,before,after);
+      if(!before&&['expenses','travel'].includes(type))await createApproval(tx,tid,type,after);
       await audit(tx,ctx,before?'UPDATED':'CREATED',type,after.id,before,after);if(type==='devices'){const{apiSecretHash,...safe}=after;return safe;}return after;
     });
   }
@@ -432,7 +449,9 @@ export class DataService {
         const before=await tx.tenant.findUnique({where:{id:companyId}});if(!before)throw new NotFoundException('Company not found.');
         const owner=await tx.user.findFirst({where:{tenantId:companyId},orderBy:{createdAt:'asc'},select:{email:true}});
         await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${companyId}, true), set_config('app.allow_raw_punch_delete', 'on', true), set_config('app.audit_delete_tenant', ${companyId}, true), set_config('app.allow_audit_delete', 'on', true)`;
+        const securityUsers=await tx.user.findMany({where:{tenantId:companyId},select:{id:true}});await tx.userSecurity.deleteMany({where:{userId:{in:securityUsers.map(u=>u.id)}}});
         // Permanent tenant purge: billing state does not block deletion. Children first, then every company-scoped master.
+        for(const model of ['salaryVersion','payrollLoan','loanInstallment','approvalPolicy','approvalRequest','courseEnrollment','assetEvent','employeeTask'] as const)await (tx as any)[model].deleteMany({where:{tenantId:companyId}});
         await tx.supportTicketMessage.deleteMany({where:{tenantId:companyId}});
         await tx.payrollPayout.deleteMany({where:{tenantId:companyId}});
         await tx.payrollItem.deleteMany({where:{tenantId:companyId}});

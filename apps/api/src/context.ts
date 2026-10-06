@@ -87,7 +87,7 @@ export async function assertEmployee(db:any,ctx:Context,employeeId:string){
   if(!row)throw new NotFoundException('Employee not found.');
   return row;
 }
-const sensitive=new Set(['password','passwordHash','ownerPassword','tokenHash','csrf','rawPayload','logo','personal','apiSecretHash']);
+const sensitive=new Set(['password','passwordHash','ownerPassword','tokenHash','csrf','rawPayload','logo','personal','apiSecretHash','secret','pendingSecret','recoveryHashes','recoveryCodes']);
 function sanitize(value:any):any{
   if(value==null)return null;
   if(value instanceof Date)return value.toISOString();

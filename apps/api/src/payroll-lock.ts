@@ -12,3 +12,7 @@ export async function lockPayrollRun(tx:Prisma.TransactionClient,tenantId:string
   await lockPayrollPeriod(tx,tenantId,run.month);
   // Callers read the run again after obtaining the lock: another action may have deleted it.
 }
+export async function lockSalaryInputs(tx:any,tenantId:string){
+  const key=tenantId+':salary-inputs';
+  await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext(${key}))) AS advisory_lock`;
+}

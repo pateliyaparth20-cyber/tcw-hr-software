@@ -1,4 +1,6 @@
-# Release 1.2.9 implementation status
+# HR implementation status
+
+The 6 October 2026 operations expansion is documented in [HR-OPERATIONS-2026-10-06.md](HR-OPERATIONS-2026-10-06.md). The original roadmap below predates those additions; use that release document for current salary structures, imports, approvals, checklists, training, asset history, reports and 2FA.
 
 This project provides working core applications and a source base for the seven-phase brief. “Working” below means implemented UI/API/data behavior, not a claim of production certification. The original specification remains the target product roadmap.
 

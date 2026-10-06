@@ -598,6 +598,142 @@ model PayrollAdjustment {
   @@map("payroll_adjustments")
 }
 
+model UserSecurity {
+  userId String @id @map("user_id") @db.Uuid
+  secret String? @db.Text
+  pendingSecret String? @map("pending_secret") @db.Text
+  pendingExpiresAt DateTime? @map("pending_expires_at")
+  enabled Boolean @default(false)
+  lastCounter Int @default(-1) @map("last_counter")
+  recoveryHashes Json @default("[]") @map("recovery_hashes")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("user_security")
+}
+
+model SalaryVersion {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  effectiveMonth String @map("effective_month")
+  basic Int
+  hra Int @default(0)
+  allowances Int @default(0)
+  overtimeHourly Int @default(0) @map("overtime_hourly")
+  reason String
+  actorId String @map("actor_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([tenantId, employeeId, effectiveMonth])
+  @@index([tenantId, employeeId])
+  @@map("salary_versions")
+}
+
+model PayrollLoan {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  principal Int
+  installment Int
+  startMonth String @map("start_month")
+  reason String
+  status String @default("ACTIVE")
+  actorId String @map("actor_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([tenantId, employeeId])
+  @@map("payroll_loans")
+}
+
+model LoanInstallment {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  loanId String @map("loan_id") @db.Uuid
+  month String
+  amount Int
+  appliedRunId String? @map("applied_run_id") @db.Uuid
+  cancelled Boolean @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([tenantId, loanId, month])
+  @@index([tenantId, month])
+  @@map("loan_installments")
+}
+
+model ApprovalPolicy {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  resource String
+  mode String @default("SINGLE")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([tenantId, resource])
+  @@map("approval_policies")
+}
+
+model ApprovalRequest {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  resource String
+  requestId String @map("request_id") @db.Uuid
+  managerEmployeeId String? @map("manager_employee_id") @db.Uuid
+  stage String @default("MANAGER")
+  managerReviewerId String? @map("manager_reviewer_id") @db.Uuid
+  managerNote String @default("") @map("manager_note")
+  managerReviewedAt DateTime? @map("manager_reviewed_at")
+  finalReviewerId String? @map("final_reviewer_id") @db.Uuid
+  finalNote String @default("") @map("final_note")
+  finalReviewedAt DateTime? @map("final_reviewed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([tenantId, resource, requestId])
+  @@index([tenantId, stage])
+  @@map("approval_requests")
+}
+
+model CourseEnrollment {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  courseId String @map("course_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  status String @default("ENROLLED")
+  score Int?
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([tenantId, courseId, employeeId])
+  @@index([tenantId, employeeId])
+  @@map("course_enrollments")
+}
+
+model AssetEvent {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  assetId String @map("asset_id") @db.Uuid
+  assetTag String @map("asset_tag")
+  employeeId String? @map("employee_id") @db.Uuid
+  employeeName String @default("") @map("employee_name")
+  kind String
+  note String @default("")
+  actorId String @map("actor_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([tenantId, assetId, createdAt])
+  @@map("asset_events")
+}
+
+model EmployeeTask {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  kind String @default("JOINING")
+  title String
+  completed Boolean @default(false)
+  completedBy String? @map("completed_by") @db.Uuid
+  completedAt DateTime? @map("completed_at")
+  dueDate DateTime? @map("due_date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([tenantId, employeeId, kind, title])
+  @@index([tenantId, employeeId])
+  @@map("employee_tasks")
+}
+
 model SalaryRule {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
@@ -963,4 +1099,3 @@ model MeghnaConversation {
   @@index([tenantId, userId, updatedAt])
   @@map("meghna_conversations")
 }
-
