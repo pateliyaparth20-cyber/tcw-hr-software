@@ -152,7 +152,7 @@ export function ShiftManagement(){
  };
  const openRow=(row:Row)=>{setSaveError('');setEditor({id:String(row.id),draft:toDraft(row)})};
  const add=()=>{setSaveError('');setEditor({id:null,draft:{...defaultDraft(),timezone:session.company?.timezone??'Asia/Kolkata'}})};
- const preset=(kind:ShiftType)=>{const timing=kind==='NIGHT'?{startMinute:1320,endMinute:420,breakStartMinute:120,breakEndMinute:150}:kind==='HALF_DAY'?{startMinute:540,endMinute:810,breakStartMinute:660,breakEndMinute:690,fullDayMinutes:240,halfDayMinutes:120,overtimeAfterMinutes:240}:{startMinute:540,endMinute:1080,breakStartMinute:780,breakEndMinute:810};update({...defaultDraft(),...timing,name:draft?.name??'',timezone:draft?.timezone??session.company?.timezone??'Asia/Kolkata',shiftType:kind});setSaveError('')};
+ const preset=(kind:ShiftType)=>{const timing=kind==='NIGHT'?{startMinute:1320,endMinute:420,breakStartMinute:120,breakEndMinute:150}:kind==='EVENING'?{startMinute:840,endMinute:1380,breakStartMinute:1080,breakEndMinute:1110}:kind==='HALF_DAY'?{startMinute:540,endMinute:810,breakStartMinute:660,breakEndMinute:690}:{startMinute:540,endMinute:1080,breakStartMinute:780,breakEndMinute:810};update({...timing,breakMinutes:30,fullDayMinutes:kind==='HALF_DAY'?240:480,halfDayMinutes:kind==='HALF_DAY'?120:240,overtimeAfterMinutes:kind==='HALF_DAY'?240:480,shiftType:kind});setSaveError('')};
  const resetFilters=()=>{setSearch('');setKindFilter('');setAssignmentFilter('')};
  async function save(){
   if(!editor||!draft||saving)return;
@@ -190,7 +190,7 @@ export function ShiftManagement(){
      <div className="shift-v5-list-scroll">
       {rows.map(row=>{const rowDraft=toDraft(row),active=editor.id===String(row.id);return <button type="button" key={row.id} className={'shift-v5-list-item '+(active?'active':'')} onClick={()=>openRow(row)}>
        <span className="shift-v5-list-dot"/>
-       <span className="shift-v5-list-copy"><strong>{row.name}</strong><small>{minuteClock(rowDraft.startMinute)} - {minuteClock(rowDraft.endMinute)}</small><em>{duration(spanMinutes(rowDraft.startMinute,rowDraft.endMinute))} · {workWeekLabel(rowDraft)}</em></span>
+       <span className="shift-v5-list-copy"><strong title={row.name}>{row.name}</strong><span className="shift-design-kind">{shiftTypeLabel(rowDraft.shiftType)}</span><small>{minuteClock(rowDraft.startMinute)} - {minuteClock(rowDraft.endMinute)}</small><em>{duration(spanMinutes(rowDraft.startMinute,rowDraft.endMinute))} · {workWeekLabel(rowDraft)}</em></span>
        <MoreVertical size={17}/>
       </button>})}
       {!rows.length&&<div className="shift-v5-list-empty">No shifts created yet.</div>}
@@ -200,7 +200,7 @@ export function ShiftManagement(){
     <form aria-label="Shift configuration" className="shift-v5-form-panel" onSubmit={e=>{e.preventDefault();void save()}}>
      <header className="shift-v5-form-head"><div><span className="shift-design-eyebrow">ATTENDANCE RULES</span><h1>{editor.id?'Edit shift':'Add shift'}</h1><p>{editor.id?'Configure this shift schedule and attendance rules.':'Create a complete shift schedule and attendance rules.'}</p></div><span className="shift-v5-active-chip">{editor.id?'Existing shift':'New shift'}</span></header>
 
-     <div className="shift-design-presets"><span>Start with a schedule</span>{(['REGULAR','MORNING','NIGHT','HALF_DAY'] as ShiftType[]).map(type=><button type="button" key={type} aria-label={shiftTypeLabel(type)+' shift preset'} aria-pressed={draft.shiftType===type} onClick={()=>preset(type)}>{type==='NIGHT'?<Moon size={15}/>:<Clock3 size={15}/>} {shiftTypeLabel(type)}</button>)}</div>
+     <div className="shift-design-presets"><div className="shift-design-preset-heading"><strong>Choose a shift schedule</strong><span>Templates set timings, break allowance and duration thresholds. Your weekly pattern and grace rules stay as configured.</span></div><div className="shift-design-preset-grid">{(['REGULAR','MORNING','EVENING','NIGHT','HALF_DAY'] as ShiftType[]).map(type=><button type="button" key={type} aria-label={shiftTypeLabel(type)+' shift preset'} aria-pressed={draft.shiftType===type} onClick={()=>preset(type)}>{type==='NIGHT'?<Moon size={20}/>:type==='EVENING'?<SunMedium size={20}/>:<Clock3 size={20}/>}<span><strong>{shiftTypeLabel(type)}</strong><small>{type==='NIGHT'?'10 PM – 7 AM':type==='EVENING'?'2 PM – 11 PM':type==='HALF_DAY'?'9 AM – 1:30 PM':'9 AM – 6 PM'}</small>{type==='NIGHT'&&<em>Ends next day</em>}</span>{draft.shiftType===type&&<Check size={15}/>}</button>)}</div></div>
      <div className="shift-v5-form-body">
       <section className="shift-v5-section">
        <div className="shift-v5-section-head"><div><h2>01 · Shift details & timing</h2><p>Name your shift and set its local start and finish times.</p></div><Clock3 size={20}/></div>
@@ -232,7 +232,7 @@ export function ShiftManagement(){
         </div>
         <div className="shift-v5-duration-heading"><strong>Attendance Duration Rules</strong><span>Type values manually in HH:MM clock format. Exact minutes are saved in the backend.</span></div>
         <div className="shift-v5-duration-grid">
-         <DurationField label="Insufficient Hours Threshold" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time for a payable partial day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
+         <DurationField label="Half Day Time" value={draft.halfDayMinutes} min={1} max={600} help="Minimum worked time to qualify for a half day" onChange={halfDayMinutes=>update({halfDayMinutes})}/>
          <DurationField label="Full Day Time" value={draft.fullDayMinutes} min={1} max={960} help="Minimum worked time for Full Day" onChange={fullDayMinutes=>update({fullDayMinutes})}/>
          <DurationField label="Overtime After" value={draft.overtimeAfterMinutes} min={1} max={960} help="Worked-time threshold used for overtime" onChange={overtimeAfterMinutes=>update({overtimeAfterMinutes})}/>
         </div>
@@ -278,7 +278,7 @@ export function ShiftManagement(){
       <div><Clock3 size={18}/><span>Early-out Grace</span><strong>{draft.earlyOutGraceMinutes} minute{draft.earlyOutGraceMinutes===1?'':'s'}</strong></div>
       <div><Layers3 size={18}/><span>Break Type</span><strong>{breakModeLabel(draft.breakMode)}</strong></div>
       <div><CalendarIcon/><span>Roster-off / Month</span><strong>{draft.monthlyFlexibleOffDays} day{draft.monthlyFlexibleOffDays===1?'':'s'}</strong></div>
-      <div><Clock3 size={18}/><span>Insufficient Hours Threshold</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
+      <div><Clock3 size={18}/><span>Half Day Time</span><strong>{duration(draft.halfDayMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Full Day</span><strong>{duration(draft.fullDayMinutes)}</strong></div>
       <div><AlarmClock size={18}/><span>Overtime After</span><strong>{duration(draft.overtimeAfterMinutes)}</strong></div>
       <div><Clock3 size={18}/><span>Timezone</span><strong>{draft.timezone}</strong></div>
