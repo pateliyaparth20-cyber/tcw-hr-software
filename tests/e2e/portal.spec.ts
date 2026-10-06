@@ -1,5 +1,19 @@
 import {test,expect} from '@playwright/test';
 import {totp} from '../../packages/auth/totp';
+
+test('attendance rules create and edit a night shift with mobile preview',async({page})=>{
+ await login(page);await page.goto('/attendance');await page.getByRole('button',{name:'Attendance rules',exact:true}).click();
+ await page.getByRole('button',{name:'Add Shift',exact:true}).first().click();
+ const form=page.getByRole('form',{name:'Shift configuration'});await form.getByRole('button',{name:'Night shift preset',exact:true}).click();
+ await form.getByRole('button',{name:'Create Shift',exact:true}).click();await expect(form.getByRole('alert')).toContainText('Enter a shift name');
+ const name='Night browser '+Date.now();await form.getByLabel('Shift Name',{exact:true}).fill(name);await expect(form.getByLabel('Start Time',{exact:true})).toHaveValue('10:00 PM');await expect(form.getByLabel('End Time',{exact:true})).toHaveValue('07:00 AM');
+ await form.getByLabel('Working Week Pattern',{exact:true}).selectOption('MON_FRI');await form.getByLabel('Overtime After in HH:MM',{exact:true}).fill('08:30');await form.getByLabel('Overtime After in HH:MM',{exact:true}).blur();
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Shift Preview',exact:true})).toBeVisible();
+ await form.getByRole('button',{name:'Create Shift',exact:true}).click();await expect(form).not.toBeVisible();
+ await page.locator('.shift-v3-card').filter({hasText:name}).click();await expect(form.getByLabel('Working Week Pattern',{exact:true})).toHaveValue('MON_FRI');await expect(form.getByLabel('Overtime After in HH:MM',{exact:true})).toHaveValue('08:30');
+ await form.getByLabel('Break Type',{exact:true}).selectOption('FLEXIBLE_PUNCH');await expect(form.getByLabel('Break Window Start',{exact:true})).not.toBeVisible();await form.getByRole('button',{name:'Save Changes',exact:true}).click();await expect(form).not.toBeVisible();
+ await page.reload();await page.getByRole('button',{name:'Attendance rules',exact:true}).click();await page.locator('.shift-v3-card').filter({hasText:name}).click();await expect(form.getByLabel('Break Type',{exact:true})).toHaveValue('FLEXIBLE_PUNCH');
+});
 // Mutating browser tests are allowed only against the isolated local fixture.
 test.beforeEach(async({baseURL,page})=>{
  expect(process.env.PEOPLEOS_E2E_ISOLATED).toBe('true');expect(baseURL).toBe('http://localhost:3000');

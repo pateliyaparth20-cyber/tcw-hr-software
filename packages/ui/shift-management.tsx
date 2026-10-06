@@ -1,5 +1,6 @@
 'use client';
 import React,{useEffect,useMemo,useState} from 'react';
+import './shift-design.css';
 import {AlarmClock,Check,ChevronLeft,ChevronRight,Clock3,Filter,Info,Layers3,Moon,MoreVertical,Plus,RotateCcw,Search,SunMedium,Trash2,Users} from 'lucide-react';
 import {Confirm,Empty,Failure,Loading,useApp,useData} from './core';
 import {Row} from './config';
@@ -62,7 +63,7 @@ const shiftPayload=(draft:ShiftDraft)=>({
  name:draft.name.trim(),shiftType:draft.shiftType,startMinute:draft.startMinute,endMinute:draft.endMinute,graceMinutes:draft.graceMinutes,earlyOutGraceMinutes:draft.earlyOutGraceMinutes,
  workWeekMode:draft.workWeekMode,workingDays:draft.workingDays,alternateSaturdayMode:draft.alternateSaturdayMode,monthlyFlexibleOffDays:draft.monthlyFlexibleOffDays,
  breakMinutes:draft.breakMinutes,punchDrivenBreaks:draft.breakMode!=='AUTOMATIC_SCHEDULED',flexibleBreakAnytime:draft.breakMode==='FLEXIBLE_PUNCH',
- breakStartMinute:draft.breakMode==='FLEXIBLE_PUNCH'?null:draft.breakStartMinute,breakEndMinute:draft.breakMode==='FLEXIBLE_PUNCH'?null:draft.breakEndMinute,
+ breakStartMinute:draft.breakMode==='FLEXIBLE_PUNCH'||!draft.breakMinutes?null:draft.breakStartMinute,breakEndMinute:draft.breakMode==='FLEXIBLE_PUNCH'||!draft.breakMinutes?null:draft.breakEndMinute,
  fullDayMinutes:draft.fullDayMinutes,halfDayMinutes:draft.halfDayMinutes,overtimeAfterMinutes:draft.overtimeAfterMinutes,timezone:draft.timezone
 });
 
@@ -71,7 +72,7 @@ function NumberField({label,value,onChange,min=0,max=960,suffix='minutes',help}:
  useEffect(()=>setDraft(String(value)),[value]);
  const apply=(raw:string)=>{const clean=raw.replace(/[^0-9]/g,'');setDraft(clean);if(clean==='')return;const parsed=Number(clean);if(Number.isFinite(parsed))onChange(Math.max(min,Math.min(max,parsed)))};
  const commit=()=>{const parsed=Number(draft);const next=Math.max(min,Math.min(max,Number.isFinite(parsed)&&draft!==''?parsed:min));onChange(next);setDraft(String(next))};
- return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input type="text" inputMode="numeric" value={draft} onChange={e=>apply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
+ return <label className="shift-v5-field"><span>{label}</span><div className="shift-v5-number-input"><input aria-label={label} type="text" inputMode="numeric" value={draft} onChange={e=>apply(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();e.currentTarget.blur()}}}/><strong>{suffix}</strong></div>{help&&<small className="shift-v5-field-help">{help}</small>}</label>;
 }
 function DurationField({label,value,onChange,min=1,max=960,help}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number;help?:string}){
  const safe=Math.max(min,Math.min(max,Number(value)||0));
@@ -111,24 +112,24 @@ function TimeField({label,value,onChange,required=false}:{label:string;value:num
  };
  const choose=(hour:number,minute:number,period:'AM'|'PM')=>{let h=hour%12;if(period==='PM')h+=12;const next=h*60+minute;onChange(next);setDraft(minuteClock(next));};
  return <label className="shift-v5-field"><span>{label}{required&&<b>*</b>}</span><div className={'shift-v5-time-input '+(open?'open':'')} onBlur={e=>{const next=e.relatedTarget as Node|null;if(next&&e.currentTarget.contains(next))return;setOpen(false)}}>
-  <Clock3 size={18}/><input type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
+  <Clock3 size={18}/><input aria-label={label} type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="08:30 AM" value={draft} onChange={e=>apply(e.target.value)} onBlur={()=>apply(draft,true)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply(draft,true);e.currentTarget.blur()}}}/>
   <span className="shift-v5-time-dropdown-button" role="button" tabIndex={0} aria-label={'Open '+label.toLowerCase()+' picker'} aria-expanded={open} onMouseDown={e=>e.preventDefault()} onClick={()=>setOpen(v=>!v)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(v=>!v)}}}><ChevronRight size={16} className="shift-v5-time-chevron"/></span>
   {open&&<div className="shift-v5-time-popover">
-   <div><span>Hour</span><select value={pickerHour} onChange={e=>choose(Number(e.target.value),pickerMinute,pickerPeriod)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
-   <div><span>Minute</span><select value={pickerMinute} onChange={e=>choose(pickerHour,Number(e.target.value),pickerPeriod)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
-   <div><span>AM / PM</span><select value={pickerPeriod} onChange={e=>choose(pickerHour,pickerMinute,e.target.value as 'AM'|'PM')}><option>AM</option><option>PM</option></select></div>
+   <div><span>Hour</span><select aria-label={label+' hour'} value={pickerHour} onChange={e=>choose(Number(e.target.value),pickerMinute,pickerPeriod)}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+   <div><span>Minute</span><select aria-label={label+' minute'} value={pickerMinute} onChange={e=>choose(pickerHour,Number(e.target.value),pickerPeriod)}>{Array.from({length:60},(_,i)=>i).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}</select></div>
+   <div><span>AM / PM</span><select aria-label={label+' AM or PM'} value={pickerPeriod} onChange={e=>choose(pickerHour,pickerMinute,e.target.value as 'AM'|'PM')}><option>AM</option><option>PM</option></select></div>
   </div>}
  </div></label>;
 }
 
 export function ShiftManagement(){
- const {can,mutate}=useApp();
+ const {can,mutate,session}=useApp();
  const query=useData('shifts?pageSize=500');
  const employeesQuery=useData('employees?pageSize=500',can('employees'));
  const rows:Row[]=query.data?.items??[],employees:Row[]=employeesQuery.data?.items??[];
  const canCreate=can('shifts','CREATE'),canEdit=can('shifts','EDIT'),canDelete=can('shifts','DELETE');
  const [search,setSearch]=useState(''),[kindFilter,setKindFilter]=useState(''),[assignmentFilter,setAssignmentFilter]=useState('');
- const [editor,setEditor]=useState<{id:string|null;draft:ShiftDraft}|null>(null),[remove,setRemove]=useState<Row|null>(null),[saving,setSaving]=useState(false);
+ const [editor,setEditor]=useState<{id:string|null;draft:ShiftDraft}|null>(null),[remove,setRemove]=useState<Row|null>(null),[saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
  useEffect(()=>{if(!editor)return;const onKeyDown=(event:KeyboardEvent)=>{if(event.key!=='Escape')return;if(remove)return;event.preventDefault();setEditor(null)};window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown)},[editor,remove]);
  const employeeCount=(shiftId:any)=>employees.filter(row=>String(row.shiftId??'')===String(shiftId)).length;
  const departmentCount=(shiftId:any)=>new Set(employees.filter(row=>String(row.shiftId??'')===String(shiftId)).map(row=>String(row.departmentId??'')).filter(Boolean)).size;
@@ -149,12 +150,22 @@ export function ShiftManagement(){
   const order=['0','1','2','3','4','5','6'];next=order.filter(day=>next.includes(day));
   update({workWeekMode:'CUSTOM_WEEKLY',workingDays:next.join(',')});
  };
- const openRow=(row:Row)=>setEditor({id:String(row.id),draft:toDraft(row)});
- const add=()=>setEditor({id:null,draft:defaultDraft()});
+ const openRow=(row:Row)=>{setSaveError('');setEditor({id:String(row.id),draft:toDraft(row)})};
+ const add=()=>{setSaveError('');setEditor({id:null,draft:{...defaultDraft(),timezone:session.company?.timezone??'Asia/Kolkata'}})};
+ const preset=(kind:ShiftType)=>{const timing=kind==='NIGHT'?{startMinute:1320,endMinute:420,breakStartMinute:120,breakEndMinute:150}:kind==='HALF_DAY'?{startMinute:540,endMinute:810,breakStartMinute:660,breakEndMinute:690,fullDayMinutes:240,halfDayMinutes:120,overtimeAfterMinutes:240}:{startMinute:540,endMinute:1080,breakStartMinute:780,breakEndMinute:810};update({...defaultDraft(),...timing,name:draft?.name??'',timezone:draft?.timezone??session.company?.timezone??'Asia/Kolkata',shiftType:kind});setSaveError('')};
  const resetFilters=()=>{setSearch('');setKindFilter('');setAssignmentFilter('')};
  async function save(){
-  if(!editor||!draft||!draft.name.trim())return;
-  setSaving(true);try{await mutate('shifts'+(editor.id?'/'+editor.id:''),editor.id?'PATCH':'POST',shiftPayload(draft));if(!editor.id)setEditor(null)}finally{setSaving(false)}
+  if(!editor||!draft||saving)return;
+  const span=spanMinutes(draft.startMinute,draft.endMinute);
+  let error='';
+  if(!draft.name.trim())error='Enter a shift name.';
+  else if(draft.halfDayMinutes>draft.fullDayMinutes)error='The partial-day threshold must not exceed the full-day threshold.';
+  else if(draft.breakMinutes>=span)error='Break duration must be shorter than the shift.';
+  else if(draft.breakMode!=='FLEXIBLE_PUNCH'&&((draft.breakStartMinute==null)!==(draft.breakEndMinute==null)))error='Set both break window times, or leave both blank.';
+  else if(draft.breakMinutes>0&&draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null&&draft.breakEndMinute!=null){const start=minuteOffset(draft.startMinute,draft.breakStartMinute),length=spanMinutes(draft.breakStartMinute,draft.breakEndMinute);if(length>180||start+length>span)error='The break window must fit inside the shift and be no longer than 3 hours.';}
+  if(error){setSaveError(error);return;}
+  setSaveError('');setSaving(true);
+  try{await mutate('shifts'+(editor.id?'/'+editor.id:''),editor.id?'PATCH':'POST',shiftPayload(draft));setEditor(null)}catch(e:any){setSaveError(e.message??'Unable to save this shift. Try again.')}finally{setSaving(false)}
  }
  if(query.isLoading)return <Loading/>;
  if(query.error)return <Failure error={query.error} retry={()=>query.refetch()}/>;
@@ -162,8 +173,8 @@ export function ShiftManagement(){
  if(editor&&draft){
   const totalShiftSpan=spanMinutes(draft.startMinute,draft.endMinute);
   const previewWorkingMinutes=Math.max(0,totalShiftSpan-Math.min(Math.max(0,draft.breakMinutes),totalShiftSpan));
-  const previewBreakStart=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?draft.breakStartMinute:null;
-  const previewBreakEnd=draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakEndMinute!=null?draft.breakEndMinute:null;
+  const previewBreakStart=draft.breakMinutes>0&&draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?draft.breakStartMinute:null;
+  const previewBreakEnd=draft.breakMinutes>0&&draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakEndMinute!=null?draft.breakEndMinute:null;
   const previewBreakMinutes=Math.min(Math.max(0,draft.breakMinutes),totalShiftSpan);
   const scheduledBreakOffset=previewBreakStart==null?null:Math.min(minuteOffset(draft.startMinute,previewBreakStart),Math.max(0,totalShiftSpan-previewBreakMinutes));
   const previewBreakOffset=scheduledBreakOffset==null?Math.max(0,(totalShiftSpan-previewBreakMinutes)/2):scheduledBreakOffset;
@@ -186,20 +197,22 @@ export function ShiftManagement(){
      </div>
     </aside>
 
-    <main className="shift-v5-form-panel">
-     <header className="shift-v5-form-head"><div><h1>Shift Details</h1><p>{editor.id?'Configure this shift schedule and attendance rules.':'Create a complete shift schedule and attendance rules.'}</p></div><span className="shift-v5-active-chip">Active</span></header>
+    <form aria-label="Shift configuration" className="shift-v5-form-panel" onSubmit={e=>{e.preventDefault();void save()}}>
+     <header className="shift-v5-form-head"><div><span className="shift-design-eyebrow">ATTENDANCE RULES</span><h1>{editor.id?'Edit shift':'Add shift'}</h1><p>{editor.id?'Configure this shift schedule and attendance rules.':'Create a complete shift schedule and attendance rules.'}</p></div><span className="shift-v5-active-chip">{editor.id?'Existing shift':'New shift'}</span></header>
 
+     <div className="shift-design-presets"><span>Start with a schedule</span>{(['REGULAR','MORNING','NIGHT','HALF_DAY'] as ShiftType[]).map(type=><button type="button" key={type} aria-label={shiftTypeLabel(type)+' shift preset'} aria-pressed={draft.shiftType===type} onClick={()=>preset(type)}>{type==='NIGHT'?<Moon size={15}/>:<Clock3 size={15}/>} {shiftTypeLabel(type)}</button>)}</div>
      <div className="shift-v5-form-body">
       <section className="shift-v5-section">
+       <div className="shift-v5-section-head"><div><h2>01 · Shift details & timing</h2><p>Name your shift and set its local start and finish times.</p></div><Clock3 size={20}/></div>
        <div className="shift-v5-grid two">
-        <label className="shift-v5-field"><span>Shift Name <b>*</b></span><input value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
-        <label className="shift-v5-field"><span>Shift Type <b>*</b></span><select value={draft.shiftType} onChange={e=>update({shiftType:e.target.value as ShiftType})}><option value="REGULAR">Regular</option><option value="MORNING">Morning</option><option value="EVENING">Evening</option><option value="NIGHT">Night</option><option value="HALF_DAY">Half Day</option></select></label>
+        <label className="shift-v5-field"><span>Shift Name <b>*</b></span><input aria-label="Shift Name" value={draft.name} maxLength={100} onChange={e=>update({name:e.target.value})} placeholder="e.g. General Shift"/></label>
+        <label className="shift-v5-field"><span>Shift Type <b>*</b></span><select aria-label="Shift Type" value={draft.shiftType} onChange={e=>update({shiftType:e.target.value as ShiftType})}><option value="REGULAR">Regular</option><option value="MORNING">Morning</option><option value="EVENING">Evening</option><option value="NIGHT">Night</option><option value="HALF_DAY">Half Day</option></select></label>
         <DurationField label="Total Shift Span" value={totalShiftSpan} min={1} max={1440} help="Manual HH:MM. Changing this automatically adjusts End Time." onChange={minutes=>update({endMinute:(draft.startMinute+minutes)%1440})}/>
         <label className="shift-v5-field"><span>Timezone <b>*</b></span><select value={draft.timezone} onChange={e=>update({timezone:e.target.value})}>{!['Asia/Kolkata','UTC','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York'].includes(draft.timezone)&&<option value={draft.timezone}>{draft.timezone}</option>}<option value="Asia/Kolkata">Asia/Kolkata (GMT +5:30)</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></label>
         <TimeField label="Start Time" required value={draft.startMinute} onChange={value=>update({startMinute:value??0})}/>
         <TimeField label="End Time" required value={draft.endMinute} onChange={value=>update({endMinute:value??0})}/>
-        <NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes,...(draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?{breakEndMinute:(draft.breakStartMinute+breakMinutes)%1440}:{})})}/>
-        <label className="shift-v5-field"><span>Break Type</span><select value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Auto — Fixed scheduled break</option><option value="SCHEDULED_PUNCH">Manual — Scheduled punch break</option><option value="FLEXIBLE_PUNCH">Manual — Flexible punch break</option></select><small className="shift-v5-field-help">{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Auto mode follows the configured break window.':'Manual mode starts from the employee OUT punch; flexible manual break can be taken any time in the shift.'}</small></label>
+        </div></section><section className="shift-v5-section"><div className="shift-v5-section-head"><div><h2>02 · Break & grace rules</h2><p>Choose how breaks are recorded and allow a small arrival or departure grace.</p></div><AlarmClock size={20}/></div><div className="shift-v5-grid two"><NumberField label="Break Duration" value={draft.breakMinutes} max={180} onChange={breakMinutes=>update({breakMinutes,...(draft.breakMode!=='FLEXIBLE_PUNCH'&&draft.breakStartMinute!=null?{breakEndMinute:(draft.breakStartMinute+breakMinutes)%1440}:{})})}/>
+        <label className="shift-v5-field"><span>Break Type</span><select aria-label="Break Type" value={draft.breakMode} onChange={e=>update({breakMode:e.target.value as ShiftDraft['breakMode']})}><option value="AUTOMATIC_SCHEDULED">Auto — Fixed scheduled break</option><option value="SCHEDULED_PUNCH">Manual — Scheduled punch break</option><option value="FLEXIBLE_PUNCH">Manual — Flexible punch break</option></select><small className="shift-v5-field-help">{draft.breakMode==='AUTOMATIC_SCHEDULED'?'Auto mode follows the configured break window.':'Manual mode starts from the employee OUT punch; flexible manual break can be taken any time in the shift.'}</small></label>
         {draft.breakMode!=='FLEXIBLE_PUNCH'&&<><TimeField label="Break Window Start" value={draft.breakStartMinute} onChange={breakStartMinute=>update({breakStartMinute,...(breakStartMinute!=null&&draft.breakEndMinute!=null?{breakMinutes:Math.min(180,spanMinutes(breakStartMinute,draft.breakEndMinute))}:{})})}/><TimeField label="Break Window End" value={draft.breakEndMinute} onChange={breakEndMinute=>update({breakEndMinute,...(draft.breakStartMinute!=null&&breakEndMinute!=null?{breakMinutes:Math.min(180,spanMinutes(draft.breakStartMinute,breakEndMinute))}:{})})}/></>}
         <NumberField label="Late Grace" value={draft.graceMinutes} max={120} onChange={graceMinutes=>update({graceMinutes})}/>
         <NumberField label="Early-out Grace" value={draft.earlyOutGraceMinutes} max={120} onChange={earlyOutGraceMinutes=>update({earlyOutGraceMinutes})}/>
@@ -207,12 +220,12 @@ export function ShiftManagement(){
       </section>
 
       <section className="shift-v5-section">
-       <div className="shift-v5-section-head"><div><h2>Working Week Pattern</h2><p>Select the days this shift is active.</p></div><CalendarIcon/></div>
+       <div className="shift-v5-section-head"><div><h2>03 · Working week & attendance</h2><p>Select the days this shift is active.</p></div><CalendarIcon/></div>
        <div className="shift-v5-grid two">
-        <label className="shift-v5-field span-2"><span>Working Week Pattern</span><select value={draft.workWeekMode} onChange={e=>update({workWeekMode:e.target.value})}><option value="MON_FRI">Mon - Fri</option><option value="MON_SAT">Mon - Sat</option><option value="ALTERNATE_SATURDAY">Alternate Saturday</option><option value="ALL_DAYS">All Days</option><option value="CUSTOM_WEEKLY">Custom Weekly</option></select></label>
+        <label className="shift-v5-field span-2"><span>Working Week Pattern</span><select aria-label="Working Week Pattern" value={draft.workWeekMode} onChange={e=>update({workWeekMode:e.target.value})}><option value="MON_FRI">Mon - Fri</option><option value="MON_SAT">Mon - Sat</option><option value="ALTERNATE_SATURDAY">Alternate Saturday</option><option value="ALL_DAYS">All Days</option><option value="CUSTOM_WEEKLY">Custom Weekly</option></select></label>
         {draft.workWeekMode==='ALTERNATE_SATURDAY'&&<label className="shift-v5-field span-2"><span>Alternate Saturday Rule</span><select value={draft.alternateSaturdayMode} onChange={e=>update({alternateSaturdayMode:e.target.value})}><option value="SECOND_FOURTH_OFF">2nd & 4th Saturday Off</option><option value="ODD_OFF">Odd Saturdays Off</option><option value="EVEN_OFF">Even Saturdays Off</option></select></label>}
        </div>
-       <div className="shift-v5-days">{week.map(([key,label])=><button type="button" key={key} className={selectedDays.includes(key)?'active':''} onClick={()=>toggleDay(key)}><span>{selectedDays.includes(key)&&<Check size={14}/>}</span><strong>{label}</strong></button>)}</div>
+       <div className="shift-v5-days">{week.map(([key,label])=><button type="button" key={key} aria-pressed={selectedDays.includes(key)} className={selectedDays.includes(key)?'active':''} onClick={()=>toggleDay(key)}><span>{selectedDays.includes(key)&&<Check size={14}/>}</span><strong>{label}</strong></button>)}</div>
        <div className="shift-v5-thresholds">
         <div className="shift-v5-roster-field">
          <NumberField label="Flexible Roster-off Days / Month" value={draft.monthlyFlexibleOffDays} max={15} suffix="days" help="0 disables flexible roster-off. Example: 4 lets HR mark any 4 dates as roster off in a month." onChange={monthlyFlexibleOffDays=>update({monthlyFlexibleOffDays})}/>
@@ -227,14 +240,15 @@ export function ShiftManagement(){
       </section>
      </div>
 
+     {saveError&&<div className="shift-design-error" role="alert"><Info size={18}/><span>{saveError}</span></div>}
      <footer className="shift-v5-form-footer">
-      <div>{editor.id&&canDelete&&<button className="btn danger" disabled={employeeCount(editor.id)>0} title={employeeCount(editor.id)>0?'Reassign employees before deleting this shift.':'Delete shift'} onClick={()=>editingRow&&setRemove(editingRow)}><Trash2 size={16}/>Delete Shift</button>}</div>
-      <div><button className="btn secondary" onClick={()=>setEditor(null)}>Cancel</button>{(editor.id?canEdit:canCreate)&&<button className="btn primary" disabled={saving||!draft.name.trim()} onClick={save}>{saving?'Saving…':editor.id?'Save Changes':'Create Shift'}</button>}</div>
+      <div>{editor.id&&canDelete&&<button type="button" className="btn danger" disabled={employeeCount(editor.id)>0} title={employeeCount(editor.id)>0?'Reassign employees before deleting this shift.':'Delete shift'} onClick={()=>editingRow&&setRemove(editingRow)}><Trash2 size={16}/>Delete Shift</button>}</div>
+      <div><button type="button" className="btn secondary" disabled={saving} onClick={()=>setEditor(null)}>Cancel</button>{(editor.id?canEdit:canCreate)&&<button type="submit" className="btn primary" disabled={saving}>{saving?'Saving…':editor.id?'Save Changes':'Create Shift'}</button>}</div>
      </footer>
-    </main>
+    </form>
 
     <aside className="shift-v5-preview-panel">
-     <header className="shift-v5-preview-head"><div><h2>Shift Preview</h2><p>Preview of this shift schedule and break flow.</p></div><span className="shift-v5-active-chip">Active</span></header>
+     <header className="shift-v5-preview-head"><div><h2>Shift Preview</h2><p>Preview of this shift schedule and break flow.</p></div><span className="shift-v5-active-chip">Live preview</span></header>
      <div className="shift-v5-preview-timeline">
       <div className="shift-v5-preview-points">
        <span><strong>{minuteClock(draft.startMinute)}</strong><small>IN</small></span>
@@ -281,23 +295,24 @@ export function ShiftManagement(){
  return <div className="shift-v3 shift-v3-dashboard">
   <main className="shift-v3-main">
    <div className="shift-v3-breadcrumb"><span>Attendance</span><ChevronRight size={13}/><strong>Shifts</strong></div>
-   <header className="shift-v3-head"><div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>Workspace</h1><p>Create and manage work shifts for your organization.</p></div>{canCreate&&<button className="btn primary" onClick={add}><Plus size={17}/>Add Shift</button>}</header>
+   <header className="shift-v3-head"><div><span className="shift-v3-eyebrow">SHIFT MANAGEMENT</span><h1>Attendance rules</h1><p>Build clear schedules, breaks, weekly offs and overtime rules for every team.</p></div>{canCreate&&<button className="btn primary" onClick={add}><Plus size={17}/>Add Shift</button>}</header>
+   <div className="shift-design-stats"><article><Clock3 size={21}/><div><span>Total shifts</span><strong>{rows.length}</strong></div></article><article><Users size={21}/><div><span>Assigned shifts</span><strong>{assignedTotal}</strong></div></article><article><Moon size={21}/><div><span>Night schedules</span><strong>{rows.filter(r=>Number(r.endMinute)<=Number(r.startMinute)).length}</strong></div></article></div>
    <div className="shift-v3-tabs">
     <button className={!assignmentFilter?'active':''} onClick={()=>setAssignmentFilter('')}>All Shifts <span>{rows.length}</span></button>
     <button className={assignmentFilter==='ASSIGNED'?'active':''} onClick={()=>setAssignmentFilter('ASSIGNED')}>Assigned <span>{assignedTotal}</span></button>
     <button className={assignmentFilter==='UNASSIGNED'?'active':''} onClick={()=>setAssignmentFilter('UNASSIGNED')}>Unassigned <span>{unassignedTotal}</span></button>
    </div>
    <section className="shift-v3-toolbar">
-    <label><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shift by name…"/></label>
-    <div className="shift-v3-select"><Filter size={15}/><select value={kindFilter} onChange={e=>setKindFilter(e.target.value)}><option value="">All Types</option>{['Regular','Morning','Evening','Night','Half Day'].map(value=><option key={value}>{value}</option>)}</select></div>
-    <div className="shift-v3-select"><Users size={15}/><select value={assignmentFilter} onChange={e=>setAssignmentFilter(e.target.value)}><option value="">All Assignments</option><option value="ASSIGNED">Assigned</option><option value="UNASSIGNED">Unassigned</option></select></div>
+    <label><Search size={16}/><input aria-label="Search shifts" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shift by name…"/></label>
+    <div className="shift-v3-select"><Filter size={15}/><select aria-label="Filter shift type" value={kindFilter} onChange={e=>setKindFilter(e.target.value)}><option value="">All Types</option>{['Regular','Morning','Evening','Night','Half Day'].map(value=><option key={value}>{value}</option>)}</select></div>
+    <div className="shift-v3-select"><Users size={15}/><select aria-label="Filter shift assignment" value={assignmentFilter} onChange={e=>setAssignmentFilter(e.target.value)}><option value="">All Assignments</option><option value="ASSIGNED">Assigned</option><option value="UNASSIGNED">Unassigned</option></select></div>
     <button className="shift-v3-reset" onClick={resetFilters}><RotateCcw size={15}/>Reset</button>
    </section>
    {!rows.length?<Empty title="No shifts yet" description="Add the first work shift to configure attendance timing and break rules." action={canCreate?<button className="btn primary" onClick={add}><Plus size={16}/>Add Shift</button>:undefined}/>:!filtered.length?<Empty title="No matching shifts" description="Change the search or filters to see other shifts."/>:<section className="shift-v3-grid">
     {filtered.map((row,index)=>{
      const d=toDraft(row),kind=shiftKind(d),count=employeeCount(row.id),deps=departmentCount(row.id),tone=['blue','teal','orange','violet'][index%4];
      return <article key={row.id} className={'shift-v3-card '+tone} onClick={()=>openRow(row)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openRow(row)}}}>
-      <div className="shift-v3-card-top"><span className="shift-v3-card-icon">{kind==='Night'?<Moon/>:kind==='Evening'?<SunMedium/>:<Clock3/>}</span><span className="shift-v3-card-status">Active</span><button className="shift-v3-card-menu" aria-label={'Open '+row.name} onClick={e=>{e.stopPropagation();openRow(row)}}><MoreVertical size={17}/></button></div>
+      <div className="shift-v3-card-top"><span className="shift-v3-card-icon">{kind==='Night'?<Moon/>:kind==='Evening'?<SunMedium/>:<Clock3/>}</span><span className="shift-v3-card-status">Configured</span><button className="shift-v3-card-menu" aria-label={'Open '+row.name} onClick={e=>{e.stopPropagation();openRow(row)}}><MoreVertical size={17}/></button></div>
       <div className="shift-v3-card-title"><h3>{row.name}</h3><strong>{minuteClock(d.startMinute)} - {minuteClock(d.endMinute)}</strong><span>({duration(spanMinutes(d.startMinute,d.endMinute))})</span></div>
       <div className="shift-v3-tags"><span>{kind}</span><span>{workWeekLabel(d)}</span><span>{d.breakMinutes?duration(d.breakMinutes)+' Break':'No Break'}</span></div>
       <div className="shift-v3-card-foot"><span><Users size={14}/><strong>{count}</strong> Employees</span><i/><span><Layers3 size={14}/><strong>{deps}</strong> Departments</span><span className="shift-v3-open-link">Open & Edit <ChevronRight size={13}/></span></div>
