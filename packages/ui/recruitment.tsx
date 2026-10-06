@@ -108,7 +108,7 @@ export function RecruitmentDashboard(){
  const pipelineTotal=Math.max(1,candidates.length);
  let cursor=0;
  const mixSegments=stageCounts.map(({stage,count})=>{const start=cursor,end=cursor+(count/pipelineTotal)*100;cursor=end;return {stage,count,start,end};});
- const mixColors:Record<string,string>={APPLIED:'#2563eb',SCREENING:'#7c3aed',INTERVIEW:'#f59e0b',OFFER:'#10b981',HIRED:'#22c55e',REJECTED:'#ef4444'};
+ const mixColors:Record<string,string>={APPLIED:'#38bdf8',SCREENING:'#7c3aed',INTERVIEW:'#f59e0b',OFFER:'#10b981',HIRED:'#22c55e',REJECTED:'#ef4444'};
  const donut=mixSegments.map(s=>`${mixColors[s.stage.key]} ${s.start}% ${s.end}%`).join(',');
 
  async function moveCandidate(candidate:Row,target:PipelineStage){
@@ -191,11 +191,11 @@ export function RecruitmentDashboard(){
       <div className="recruit-v3-section-head"><div><h2>Applicants Trend</h2><span>Last 6 months</span></div></div>
       <div className="recruit-v3-chart">
        <svg viewBox="0 0 280 112" role="img" aria-label="Applicants trend">
-        <defs><linearGradient id="recruitArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity=".24"/><stop offset="100%" stopColor="#2563eb" stopOpacity=".02"/></linearGradient></defs>
+        <defs><linearGradient id="recruitArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity=".24"/><stop offset="100%" stopColor="#38bdf8" stopOpacity=".02"/></linearGradient></defs>
         <line x1="0" y1="92" x2="280" y2="92" stroke="#dbe4f0" strokeWidth="1"/>
         <polygon points={`0,92 ${trendPoints} 280,92`} fill="url(#recruitArea)"/>
-        <polyline points={trendPoints} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-        {trend.map((value,index)=><g key={months[index].key}><circle cx={index*56} cy={92-(value/trendMax)*72} r="3.5" fill="#fff" stroke="#2563eb" strokeWidth="2"/><text x={index*56} y="108" textAnchor={index===0?'start':index===5?'end':'middle'}>{months[index].label}</text></g>)}
+        <polyline points={trendPoints} fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        {trend.map((value,index)=><g key={months[index].key}><circle cx={index*56} cy={92-(value/trendMax)*72} r="3.5" fill="#fff" stroke="#38bdf8" strokeWidth="2"/><text x={index*56} y="108" textAnchor={index===0?'start':index===5?'end':'middle'}>{months[index].label}</text></g>)}
        </svg>
       </div>
      </section>

@@ -1,5 +1,5 @@
 /* Shared accessible sky-blue theme for HR, employee and platform portals. */
-:root{--primary:#38bdf8;--primary-soft:#e0f2fe;--sky-ink:#075985;--sky-border:#bae6fd}
+:root{--primary:#0369a1;--sky:#38bdf8;--primary-soft:#e0f2fe;--sky-ink:#075985;--sky-border:#bae6fd}
 html body .btn.primary,html body .tenant-shell .btn.primary,html body .employee-app-shell .btn.primary,html body .platform-shell .btn.primary{background:#38bdf8!important;border-color:#38bdf8!important;color:#082f49!important;box-shadow:0 3px 10px #38bdf81a!important}
 html body .btn.primary:hover{background:#7dd3fc!important;border-color:#7dd3fc!important;color:#082f49!important}
 html body .nav-item.active,html body .mobile-bottom-nav a.active,html body .mobile-bottom-nav button.active{background:#e0f2fe!important;color:#075985!important;border-color:#bae6fd!important}
