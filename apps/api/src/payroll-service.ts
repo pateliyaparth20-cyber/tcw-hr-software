@@ -53,6 +53,7 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
     if(!employees.length)throw new BadRequestException('No employees are eligible for this payroll month.');
 
     let totalGross=0,totalDeductions=0,totalNet=0,itemCount=0;
+    const appliedAdjustmentIds:string[]=[];
     for(const employee of employees){
       const attendance:any=attendanceByEmployee.get(employee.id);
       if(!attendance)continue;
@@ -60,7 +61,8 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       const denominator=Math.max(100,eligibleDays*100);
       const payableUnits=Math.min(Number(attendance.payableUnits||0),denominator);
       const attendanceGross=eligibleDays?Math.round(employee.monthlySalary*payableUnits/denominator):0;
-      const adjustment=adjustments.filter(a=>a.employeeId===employee.id).reduce((sum,a)=>sum+a.amount,0);
+      const employeeAdjustments=adjustments.filter(a=>a.employeeId===employee.id);
+      const adjustment=employeeAdjustments.reduce((sum,a)=>sum+a.amount,0);
       const result=calculatePay(attendanceGross,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
@@ -71,9 +73,10 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
         lateMinutes:attendance.lateMinutes,overtimeMinutes:attendance.overtimeMinutes
       }});
       totalGross+=result.gross;totalDeductions+=result.deductions;totalNet+=result.net;itemCount++;
+      appliedAdjustmentIds.push(...employeeAdjustments.map(a=>a.id));
     }
     if(!itemCount)throw new BadRequestException('No payable employees are available for this payroll month.');
-    if(adjustments.length)await tx.payrollAdjustment.updateMany({where:{tenantId,id:{in:adjustments.map(a=>a.id)}},data:{appliedRunId:run.id}});
+    if(appliedAdjustmentIds.length)await tx.payrollAdjustment.updateMany({where:{tenantId,id:{in:appliedAdjustmentIds}},data:{appliedRunId:run.id}});
     return tx.payrollRun.update({where:{id:run.id},data:{status:'REVIEW',totalGross,totalDeductions,totalNet,approvedBy:null,lockedAt:null,attendanceLockId:period!.id},include:{items:true}});
   },{timeout:30000});
 }

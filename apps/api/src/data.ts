@@ -107,7 +107,7 @@ export class DataService {
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
-      const [items,total,departments,branches,designations,shifts]=await Promise.all([this.db.employee.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
+      const [items,total,departments,branches,designations,shifts]=await Promise.all([this.db.employee.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),this.db.employee.count({where}),this.db.department.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.branch.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.designation.findMany({where:{tenantId:tid},select:{id:true,name:true}}),this.db.shift.findMany({where:{tenantId:tid},select:{id:true,name:true}})]);
       const departmentNames=new Map(departments.map(r=>[r.id,r.name])),branchNames=new Map(branches.map(r=>[r.id,r.name])),designationNames=new Map(designations.map(r=>[r.id,r.name])),shiftNames=new Map(shifts.map(r=>[r.id,r.name]));
       return {items:items.map(row=>clean({...row,departmentName:row.departmentId?departmentNames.get(row.departmentId)??'':null,branchName:row.branchId?branchNames.get(row.branchId)??'':null,shiftName:row.shiftId?shiftNames.get(row.shiftId)??'':null,designation:designationNames.get(row.designation)??row.designation})),total,page,pageSize:take};
     }
@@ -159,6 +159,14 @@ export class DataService {
       if(before && !canSalary && !Object.prototype.hasOwnProperty.call(body??{},"monthlySalary"))input.monthlySalary=before.monthlySalary;
       if(!canSalary&&((before&&input.monthlySalary!==before.monthlySalary)||(!before&&input.monthlySalary>0)))throw new ForbiddenException('Payroll permission is required to set salary.');
       if(!canSalary){const submitted=this.object((body as any)?.personal);if(['bankName','accountHolder','accountNumber','ifsc','bankBranch'].some(k=>Object.prototype.hasOwnProperty.call(submitted,k)))throw new ForbiddenException('Payroll permission is required to edit employee bank details.');}
+      // HR forms omit fields their role cannot see. Preserve those bank fields
+      // when replacing the personal JSON with the submitted profile details.
+      if(before&&!canSalary){
+        const previous=this.object(before.personal);
+        for(const key of ['bankName','accountHolder','accountNumber','ifsc','bankBranch'] as const){
+          if(Object.prototype.hasOwnProperty.call(previous,key))input.personal[key]=previous[key];
+        }
+      }
       await this.references(tx,ctx,input,{departmentId:'department',branchId:'branch',shiftId:'shift',managerId:'employee'});
       if(input.managerId){
         let current:string|null|undefined=input.managerId;const seen=new Set<string>(recordId?[recordId]:[]);
@@ -197,7 +205,7 @@ export class DataService {
     const model=(this.db as any)[cfg.model];
     if(method==='GET'){
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||100)),page=Math.max(1,Number(query.page)||1);
-      const [items,total]=await Promise.all([model.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),model.count({where})]);
+      const [items,total]=await Promise.all([model.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),model.count({where})]);
       if(type==='devices')return {items:items.map((row:any)=>{const{apiSecretHash,...safe}=row;return safe;}),total,page,pageSize:take};
       return {items,total,page,pageSize:take};
     }

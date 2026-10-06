@@ -2,6 +2,7 @@ import {BadRequestException,ForbiddenException,ServiceUnavailableException} from
 import type {Database} from '../../../packages/database';
 import type {Context} from './context';
 import {audit,requirePermission,tenant} from './context';
+import {restrictedRoles} from '../../../packages/permissions';
 
 function object(value:any){return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}
 function payoutConfig(company:any){
@@ -35,12 +36,14 @@ export class PayoutService{
   constructor(private db:Database){}
   async list(ctx:Context,runId:string){
     const tid=tenant(ctx);requirePermission(ctx,'payroll','VIEW');
+    if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Salary payouts are managed by your payroll team.');
     const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}}),config=payoutConfig(company);
     const items=await this.db.payrollPayout.findMany({where:{tenantId:tid,runId},orderBy:{employeeCode:'asc'}});
     return {items,config:{provider:config.provider,enabled:config.enabled,mode:config.mode,accountLabel:config.accountLabel}};
   }
   async sync(ctx:Context,runId:string){
-    const tid=tenant(ctx);requirePermission(ctx,'payroll','VIEW');
+    const tid=tenant(ctx);requirePermission(ctx,'payroll','APPROVE');
+    if(restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Salary payouts are managed by your payroll team.');
     const company=await this.db.tenant.findUnique({where:{id:tid}});if(!company)throw new BadRequestException('Company was not found.');
     const config=payoutConfig(company);if(!config.enabled)throw new ForbiddenException('Live payout status sync is not enabled for this company.');
     const rows=await this.db.payrollPayout.findMany({where:{tenantId:tid,runId,provider:'RAZORPAYX',providerRef:{not:null}}});const results=[] as any[];

@@ -24,6 +24,7 @@
     "test": "node --import tsx --test tests/unit/*.test.ts",
     "test:integration": "node --import tsx --test tests/integration/*.test.ts",
     "test:e2e": "playwright test",
+    "test:browser": "node --import tsx tests/e2e/run.ts",
     "build": "npm run build:backend && npm run build:frontends",
     "start:api": "node dist/apps/api/src/main.js",
     "start:worker": "node dist/apps/worker/src/main.js",
