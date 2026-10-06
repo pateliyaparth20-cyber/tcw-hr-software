@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {allocateBreakUsageSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,calculateAttendance,flexibleBreakLiveState,isScheduledBreakOut,punchDrivenBreakUsageSeconds} from '../../packages/attendance-engine';
+import {attendancePunchDrivenBreaks,allocateBreakUsageSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,calculateAttendance,flexibleBreakLiveState,isScheduledBreakOut,punchDrivenBreakUsageSeconds} from '../../packages/attendance-engine';
 
 test('only an OUT that starts inside the configured window is a scheduled break',()=>{
   const start=new Date('2026-10-03T07:30:00.000Z');
@@ -154,4 +154,16 @@ test('completed work below the insufficient-hours threshold is insufficient hour
   ],rule);
   assert.equal(result.workMinutes,90);
   assert.equal(result.status,'INSUFFICIENT_HOURS');
+});
+
+test('manual IN requires actual break punches without changing device automatic policy',()=>{
+ const at=(minute:number)=>new Date(Date.UTC(2026,9,6,9,minute));
+ const manual={punchTime:at(0),punchType:'IN',verificationType:'MANUAL'};
+ const device={punchTime:at(0),punchType:'IN',verificationType:'FINGERPRINT_DEVICE'};
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[manual]),true);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[device]),false);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:true},[device]),true);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[]),false);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[device,{...manual,punchTime:at(30),punchType:'OUT'}]),false);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[{...manual,punchTime:at(30)},device]),false);
 });

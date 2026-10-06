@@ -3,7 +3,7 @@ import {createHash,randomBytes,timingSafeEqual} from 'node:crypto';
 import {createConnection} from 'node:net';
 import {z} from 'zod';
 import type {Database} from '../../../packages/database';
-import {attendancePayableUnits,attendanceWorkdayDate,calculateAttendance,zonedMinute} from '../../../packages/attendance-engine';
+import {attendancePayableUnits,attendancePunchDrivenBreaks,attendanceWorkdayDate,calculateAttendance,zonedMinute} from '../../../packages/attendance-engine';
 import {normalizeZkAttLog,zkPushOptions} from '../../../packages/device-connectors/biomax';
 import {audit,requirePermission,tenant,Context} from './context';
 import {employeeShift} from './attendance-automation';
@@ -260,7 +260,7 @@ export class BiometricService{
         return {duplicate:false,locked:true};
       }
       const punches=[...recent,row].sort((a,b)=>+a.punchTime-+b.punchTime),shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
-      const calculated=calculateAttendance(punches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:shift.punchDrivenBreaks?undefined:breakWindow?.start,breakEnd:shift.punchDrivenBreaks?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
+      const calculated=calculateAttendance(punches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,punches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,punches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
       const payableUnits=attendancePayableUnits(calculated.status);
       await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:reportDate}},create:{tenantId:tid,employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...calculated},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:calculated.status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...calculated}});
       await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});return {duplicate:false};
