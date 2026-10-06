@@ -38,6 +38,14 @@ export async function payrollRegressions(db:Database,t:TestContext,concurrent=fa
       await assert.rejects(()=>preparePayrollMonth(db,empty.id,'2024-01',actorId));
       assert.equal(await db.attendanceDaily.count({where:{employeeId:future.id}}),0);
       assert.equal(await db.attendancePeriodLock.count({where:{tenantId:empty.id}}),0);
+      // This failure occurs after reconciliation, attendance locking and run creation.
+      // It represents legacy invalid rule data, rather than an early input rejection.
+      const active=await db.employee.create({data:{tenantId:empty.id,employeeCode:'ACTIVE',firstName:'Active',lastName:'Employee',email:'active@example.test',joiningDate:new Date('2020-01-01'),monthlySalary:100000}});
+      await db.salaryRule.create({data:{tenantId:empty.id,name:'Invalid legacy rule',kind:'DEDUCTION',percent:101}});
+      await assert.rejects(()=>preparePayrollMonth(db,empty.id,'2024-01',actorId),/Invalid deduction percentage/);
+      assert.equal(await db.attendanceDaily.count({where:{employeeId:active.id}}),0);
+      assert.equal(await db.attendancePeriodLock.count({where:{tenantId:empty.id}}),0);
+      assert.equal(await db.payrollRun.count({where:{tenantId:empty.id}}),0);
     });
     await t.test('finalize is idempotent and reopening resets payroll and attendance together',async()=>{
       const r=await run('2024-02');
@@ -57,6 +65,8 @@ export async function payrollRegressions(db:Database,t:TestContext,concurrent=fa
       assert.equal(first.unknown,1);assert.equal(first.items[0].status,'UNKNOWN');
       const repeat=await service.pay(ctx,r.id,{confirm:true,mode:'NEFT'});
       assert.equal(sent,1);assert.equal(repeat.initiated,0);assert.equal(repeat.skipped,1);assert.equal(repeat.items[0].mode,'IMPS');
+      await db.payrollPayout.update({where:{id:first.items[0].id},data:{status:'FAILED'}});
+      assert.equal((await service.pay(ctx,r.id,{confirm:true})).initiated,0);assert.equal(sent,1);
       await assert.rejects(()=>reopenPayrollMonth(db,tid,r.id,actorId));
       await assert.rejects(()=>workflow.payroll(ctx,'DELETE',r.id));
     });
