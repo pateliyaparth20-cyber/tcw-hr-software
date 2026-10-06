@@ -364,7 +364,7 @@ test('download failures retain the app and allow an explicit retry',async({page}
  await page.route('**/api/releases/assets',route=>route.fulfill({json:{version:'b'.repeat(40),files:[{url:'/_next/static/chunks/retry-update.js',bytes:2048}]}}));
  await page.route('**/_next/static/chunks/retry-update.js',route=>fail?route.fulfill({status:503,body:'Unavailable'}):route.fulfill({body:Buffer.alloc(2048,32),contentType:'application/javascript'}));
  await page.goto('/software-update');await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();currentVersion='b'.repeat(40);await page.getByRole('button',{name:'Check for updates',exact:true}).click();await page.getByRole('button',{name:'Update',exact:true}).click();
- await expect(page.getByRole('alert')).toContainText('A software file could not download');await expect(page.getByRole('button',{name:'Update',exact:true})).toBeEnabled();await expect(page).toHaveURL(/software-update$/);
+ await expect(page.locator('.update-center').getByRole('alert')).toContainText('A software file could not download');await expect(page.getByRole('button',{name:'Update',exact:true})).toBeEnabled();await expect(page).toHaveURL(/software-update$/);
  for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();}
  fail=false;await page.getByRole('button',{name:'Update',exact:true}).click();await expect(page.getByRole('heading',{name:'Your software is up to date'})).toBeVisible();
 });
