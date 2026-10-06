@@ -11,6 +11,6 @@ export default {
     }
     return config;
   },
-  async headers() {return [{source:'/:path*',headers:[{key:'Cache-Control',value:'no-store, max-age=0, must-revalidate'},{key:'Pragma',value:'no-cache'}]}];},
+  async headers() {return [{source:'/:path*',headers:[{key:'Cache-Control',value:'no-store, max-age=0, must-revalidate'},{key:'Pragma',value:'no-cache'}]},{source:'/_next/static/:path*',headers:[{key:'Cache-Control',value:'public, max-age=31536000, immutable'}]}];},
   async rewrites() {return [{source:'/socket.io/:path*',destination:`${process.env.API_INTERNAL_URL || 'http://127.0.0.1:4000'}/socket.io/:path*`}];}
 };

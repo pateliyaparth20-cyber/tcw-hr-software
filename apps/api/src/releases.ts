@@ -2,20 +2,21 @@ import {ConflictException,ServiceUnavailableException} from '@nestjs/common';
 import type {Database} from '../../../packages/database';
 import {hasPermission} from '../../../packages/permissions';
 import {audit,Context,platform,requirePermission,tenant} from './context';
-import {latestRelease,type ReleaseCandidate} from './release-source';
+import {latestRelease,releaseProgress,type ReleaseCandidate,type ReleaseProgress} from './release-source';
 export {latestRelease,type ReleaseCandidate} from './release-source';
 export const runningRelease=()=>process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GIT_COMMIT_SHA??process.env.npm_package_version??'local';
 const requestKey=(version:string)=>'software-release-request:'+version;
 export class Releases{
- constructor(private db:Database,private source:()=>Promise<ReleaseCandidate>=latestRelease){}
- async state(){
+ constructor(private db:Database,private source:()=>Promise<ReleaseCandidate>=latestRelease,private progressSource:()=>Promise<ReleaseProgress|null>=source===latestRelease?releaseProgress:async()=>null){}
+ async state(includeProgress=false){
   const enabled=process.env.RELEASE_CONTROL_ENABLED==='true',currentVersion=runningRelease();
   if(!enabled)return {enabled,currentVersion,candidate:null,available:false,ready:false,updateRequested:false};
   let candidate:ReleaseCandidate;try{candidate=await this.source();}catch{return {enabled,currentVersion,candidate:null,available:false,ready:false,updateRequested:false,checkUnavailable:true};}
   const available=candidate.version!==currentVersion,checkUnavailable=!!candidate.lookupUnavailable;
   const request=await this.db.platformSetting.findUnique({where:{key:requestKey(candidate.version)}});
   const updateRequested=available&&(request?.value as any)?.version===candidate.version;
-  return {enabled,currentVersion,candidate,available,updateRequested,ready:updateRequested&&!checkUnavailable,checkUnavailable};
+  const progress=includeProgress&&updateRequested?await this.progressSource():null;
+  return {enabled,currentVersion,candidate,available,updateRequested,requestedAt:updateRequested?(request?.value as any)?.requestedAt:null,deployment:progress?.version===candidate.version?progress:null,ready:updateRequested&&!checkUnavailable,checkUnavailable};
  }
  async canUpdate(ctx:Context){
   if(ctx.user.role.scope==='PLATFORM')return hasPermission(ctx.user.role.permissions,'system','MANAGE');
@@ -23,7 +24,7 @@ export class Releases{
   return !!await this.db.tenant.findFirst({where:{id:ctx.tenantId,status:{in:['ACTIVE','TRIAL']},OR:[{expiresAt:null},{expiresAt:{gt:new Date()}}]},select:{id:true}});
  }
  async status(ctx:Context){
-  const s=await this.state();return {...s,canUpdate:s.enabled&&await this.canUpdate(ctx),checkedAt:new Date().toISOString()};
+  const s=await this.state(true);return {...s,canUpdate:s.enabled&&await this.canUpdate(ctx),checkedAt:new Date().toISOString()};
  }
  async update(ctx:Context,version:string){
   if(ctx.user.role.scope==='PLATFORM'){platform(ctx);requirePermission(ctx,'system','MANAGE');}else{tenant(ctx);requirePermission(ctx,'company','EDIT');}
