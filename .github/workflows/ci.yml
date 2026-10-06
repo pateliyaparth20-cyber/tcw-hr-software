@@ -31,6 +31,7 @@ jobs:
             test-results/reports-*.png
             test-results/organization-*.png
             test-results/update-*.png
+            test-results/dashboard-*.png
           if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@v4
