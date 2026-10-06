@@ -60,7 +60,7 @@ export function calculateAttendance(punches: Punch[], rule: AttendanceRule) {
   const status = open || (completedPairs===0 && (unmatched||sorted.length>0))
     ? 'MISSING_PUNCH'
     : completedPairs>0
-      ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : 'INSUFFICIENT_HOURS')
+      ? (workMinutes >= rule.fullDayMinutes ? 'PRESENT' : workMinutes === rule.halfDayMinutes ? 'HALF_DAY' : 'INSUFFICIENT_HOURS')
       : 'ABSENT';
   const overtimeThresholdMinutes=Math.max(Math.max(0,Number(rule.fullDayMinutes)||0),Math.max(0,Number(rule.overtimeAfterMinutes)||0));
   const overtimeMinutes=Math.max(0,workMinutes-overtimeThresholdMinutes);

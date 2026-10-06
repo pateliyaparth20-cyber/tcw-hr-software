@@ -198,8 +198,8 @@ export async function attendanceMonthSummary(db:Prisma.TransactionClient,tenantI
     if(row.scheduledMinutes>0)g.scheduledDays++;
     g.payableUnits+=row.payableUnits;
     if(row.status==='PRESENT')g.presentDays++;
-    if(['INSUFFICIENT_HOURS','SHORT_HOURS','HALF_DAY'].includes(row.status))g.insufficientHoursDays++;
-    if((row.status==='INSUFFICIENT_HOURS'&&Number(row.payableUnits)===50)||['SHORT_HOURS','HALF_DAY'].includes(row.status))g.halfDays++;
+    if(['INSUFFICIENT_HOURS','SHORT_HOURS'].includes(row.status))g.insufficientHoursDays++;
+    if(['SHORT_HOURS','HALF_DAY'].includes(row.status))g.halfDays++;
     if(row.dayType==='PAID_LEAVE')g.paidLeaveUnits+=row.leaveUnits;
     if(row.dayType==='UNPAID_LEAVE')g.unpaidLeaveUnits+=row.leaveUnits;
     const fullDayLeave=['PAID_LEAVE','UNPAID_LEAVE'].includes(row.dayType)&&row.leaveUnits>=100;
