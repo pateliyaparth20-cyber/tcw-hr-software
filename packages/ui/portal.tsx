@@ -9,6 +9,7 @@ import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,Cal
 import {adminNavigation,navigation,employeeNavigation,modules,Row,readable} from './config';
 import {api,Providers,useApp,useData,Avatar,Modal,Confirm,Session,Empty,Loading,Failure,Badge,BrandLogo,TCW_PRODUCT_LOGO,notificationTarget,currencyValue,displayDate,getLocalSessionToken,getLocalSessionSnapshot,saveLocalSessionSnapshot,clearLocalSessionState,isLocalBrowser} from './core';
 import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
+import {PeopleDirectory} from './people';
 import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
@@ -300,6 +301,7 @@ function Shell({page}:{page:string}){
  else if(page==='system')content=<SystemPage/>;
  else if(page==='notifications')content=<NotificationsPage/>;
  else if(page==='support')content=<SupportPage/>;
+ else if(page==='employees')content=<PeopleDirectory/>;
  else if(modules[page])content=<ModulePage key={page} name={page}/>;
  else content=<Empty title="Page not found" description="Choose a workspace from the sidebar."/>;
  const isAllowed=page==='notifications'?session.user.scope==='TENANT':!!current;

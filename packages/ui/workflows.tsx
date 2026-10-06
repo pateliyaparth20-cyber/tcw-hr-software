@@ -2,6 +2,7 @@
 import {SalaryWorkspace,PayoutReconciliation} from './hr-operations';
 import {manualSalary} from '../payroll-engine/manual';
 import React,{useEffect,useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import {Plus,Download,FileText,Sheet,FileDown,ChevronLeft,ChevronRight,CalendarDays,Clock3,UserCheck,Monitor,LockKeyhole,Play,Check,Printer,Activity,ArrowUpRight,Send,Trash2,Camera,RotateCcw,Users,Search,BarChart3,PieChart,Timer,RefreshCw,X,Eye} from 'lucide-react';
 import {useApp,useData,api,PageTitle,Stat,Table,Modal,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,currencyValue,displayDate} from './core';
 import {Row,Field,readable} from './config';
@@ -102,13 +103,14 @@ export function AttendancePage(){
  </>;
 }
 export function PayrollPage(){
+ const params=useSearchParams();
  const{can,mutate,currency,session}=useApp();
  const q=useData('payroll'),rows:Row[]=q.data?.items??[];
  const restricted=['EMPLOYEE','MANAGER','TEAM_LEADER'].includes(session.user.role);
  const timezone=session.company?.timezone??'Asia/Kolkata';
  const currentMonth=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit'}).format(new Date());
  const previousMonth=(()=>{const[y,m]=currentMonth.split('-').map(Number),d=new Date(Date.UTC(y,m-2,1));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})();
- const[tab,setTab]=useState('runs'),[month,setMonth]=useState(previousMonth),[detail,setDetail]=useState<Row|null>(null),[confirm,setConfirm]=useState<{row:Row;action:string}|null>(null),[removeRun,setRemoveRun]=useState<Row|null>(null),[adjust,setAdjust]=useState<Row|null>(null),[payout,setPayout]=useState<Row|null>(null),[payoutMode,setPayoutMode]=useState('IMPS'),[payoutConfirmed,setPayoutConfirmed]=useState(false),[paying,setPaying]=useState(false),[manualEdit,setManualEdit]=useState<Row|null>(null),[manualReset,setManualReset]=useState<Row|null>(null);
+ const[tab,setTab]=useState(()=>params.get('tab')==='structures'&&can('payroll','MANAGE')&&!restricted?'structures':'runs'),[month,setMonth]=useState(previousMonth),[detail,setDetail]=useState<Row|null>(null),[confirm,setConfirm]=useState<{row:Row;action:string}|null>(null),[removeRun,setRemoveRun]=useState<Row|null>(null),[adjust,setAdjust]=useState<Row|null>(null),[payout,setPayout]=useState<Row|null>(null),[payoutMode,setPayoutMode]=useState('IMPS'),[payoutConfirmed,setPayoutConfirmed]=useState(false),[paying,setPaying]=useState(false),[manualEdit,setManualEdit]=useState<Row|null>(null),[manualReset,setManualReset]=useState<Row|null>(null);
  const selected=restricted?null:rows.find(r=>r.month===month)??null;
  const selectedStatus=String(selected?.status??'NOT_PREPARED');
  const payoutTarget=payout??(selectedStatus==='LOCKED'?selected:null);

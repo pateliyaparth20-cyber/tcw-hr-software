@@ -46,6 +46,28 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await db.user.create({data:{tenantId:alphaTenant,name:'Test Employee',email:'employee-login@example.test',passwordHash:await hashPassword('test-employee-password'),employeeId:a.data.id,roleId:employeeRole.id}});
   const self=await login('employee-login@example.test','test-employee-password','ALPHA');
   await t.test('employee permissions and personal scope are enforced',async()=>{assert.equal((await call('employees','POST',employeeInput,self)).status,403);assert.equal((await call('payroll','POST',{month:'2026-08'},self)).status,403);const rows=await call('employees','GET',undefined,self);assert.equal(rows.data.items.length,1);assert.equal(rows.data.items[0].id,a.data.id);assert.equal((await call('users','GET',undefined,self)).status,403)});
+  await t.test('people summaries span all pages and filters while facets and profiles stay tenant scoped',async()=>{
+   const branch=await db.branch.create({data:{tenantId:alphaTenant,name:'Directory branch',code:'DIR'}});
+   const shift=await db.shift.create({data:{tenantId:alphaTenant,name:'Directory shift',startMinute:540,endMinute:1020}});
+   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'}).formatToParts(new Date()),year=parts.find(p=>p.type==='year')!.value,month=parts.find(p=>p.type==='month')!.value;
+   const people=await Promise.all(['Zulu','Aaron','Mira'].map((name,i)=>db.employee.create({data:{tenantId:alphaTenant,employeeCode:'DIRECTORY-'+i,firstName:name,lastName:'Directory',email:'directory-'+i+'@example.test',joiningDate:new Date(`${year}-${month}-01`),status:i===1?'PROBATION':'ACTIVE',departmentId:depA.data.id,branchId:branch.id,shiftId:shift.id,managerId:a.data.id}})));
+   try{
+    const first=await call('employees?includeSummary=true&sort=name&pageSize=1&page=1&q=Directory','GET',undefined,alpha);
+    assert.equal(first.status,200,JSON.stringify(first.data));assert.equal(first.data.items[0].firstName,'Aaron');assert.equal(first.data.total,3);assert.equal(first.data.summary.total,4);assert.equal(first.data.summary.active,3);assert.equal(first.data.summary.probation,1);assert.equal(first.data.summary.joining,3);assert.equal(first.data.filters.branches[0].name,branch.name);
+    const second=await call('employees?includeSummary=true&sort=name&pageSize=1&page=2&q=Directory','GET',undefined,alpha);assert.equal(second.data.items[0].firstName,'Mira');assert.deepEqual(first.data.summary,second.data.summary);
+    const filtered=await call(`employees?includeSummary=true&status=PROBATION&departmentId=${depA.data.id}&branchId=${branch.id}&shiftId=${shift.id}`,'GET',undefined,alpha);assert.equal(filtered.data.total,1);assert.equal(filtered.data.summary.total,4);
+    const scoped=await call('employees?includeSummary=true','GET',undefined,self);assert.equal(scoped.data.summary.total,1);assert.equal(scoped.data.filters.branches.length,0);assert.equal(scoped.data.items[0].id,a.data.id);
+    const foreign=await call('employees?includeSummary=true','GET',undefined,beta);assert.equal(foreign.data.summary.total,1);assert(!foreign.data.filters.departments.some((d:any)=>d.id===depA.data.id));
+    const detail=await call('employees/'+people[0].id,'GET',undefined,alpha);assert.equal(detail.data.managerName,'Test Employee');assert.equal(detail.data.shiftName,shift.name);assert.equal(detail.data.branchName,branch.name);assert.equal(detail.data.departmentName,'Engineering');
+   }finally{await db.employee.deleteMany({where:{id:{in:people.map(p=>p.id)}}});await db.shift.delete({where:{id:shift.id}});await db.branch.delete({where:{id:branch.id}});}
+  });
+  await t.test('employee profile saves reject stale snapshots without overwriting newer details',async()=>{
+   const profile=(await call('employees/'+a.data.id,'GET',undefined,alpha)).data;
+   await db.employee.update({where:{id:a.data.id},data:{personal:{city:'Newer city'},updatedAt:new Date(Date.now()+1000)}});
+   const stale=await call('employees/'+a.data.id,'PATCH',{...employeeInput,personal:{city:'Stale city'},expectedUpdatedAt:profile.updatedAt},alpha);assert.equal(stale.status,409);assert.equal(((await db.employee.findUniqueOrThrow({where:{id:a.data.id}})).personal as any).city,'Newer city');
+   const current=(await call('employees/'+a.data.id,'GET',undefined,alpha)).data;
+   const saved=await call('employees/'+a.data.id,'PATCH',{...employeeInput,personal:{city:'Confirmed city'},expectedUpdatedAt:current.updatedAt},alpha);assert.equal(saved.status,200,JSON.stringify(saved.data));assert.equal(saved.data.personal.city,'Confirmed city');
+  });
   await t.test('organization sorting is stable across pages and branch descriptions persist within the tenant',async()=>{
    const b1=await call('branches','POST',{name:'Zulu office',code:'SORT-Z',location:'Test area',description:'Synthetic branch notes'},alpha);assert.equal(b1.status,200);assert.equal(b1.data.description,'Synthetic branch notes');
    const b2=await call('branches','POST',{name:'Alpha office',code:'SORT-A',location:'Test area'},alpha);assert.equal(b2.status,200);

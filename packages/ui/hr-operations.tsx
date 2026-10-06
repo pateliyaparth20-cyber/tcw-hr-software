@@ -1,14 +1,17 @@
 'use client';
 import './hr-operations.css';
-import React,{useState} from 'react';
+import React,{useEffect,useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import {Upload,History,ClipboardCheck,GraduationCap,Wallet,ArrowRight,ShieldCheck} from 'lucide-react';
 import {Row} from './config';
 import {api,useApp,useData,PageTitle,Modal,RecordForm,Table,Loading,Failure,Empty,Badge,Confirm,currencyValue,displayDate} from './core';
 
 export function SalaryWorkspace(){
   const {currency,mutate,session}=useApp();
-  const [search,setSearch]=useState(''),[person,setPerson]=useState<Row|null>(null),[revision,setRevision]=useState(false),[loan,setLoan]=useState(false),[cancel,setCancel]=useState<Row|null>(null);
+  const params=useSearchParams(),requestedCode=params.get('employeeCode')??'';
+  const [search,setSearch]=useState(requestedCode),[person,setPerson]=useState<Row|null>(null),[revision,setRevision]=useState(false),[loan,setLoan]=useState(false),[cancel,setCancel]=useState<Row|null>(null);
   const people=useData('salary-employees?q='+encodeURIComponent(search)),versions=useData(person?'salary-versions/'+person.id:'',!!person),loans=useData('payroll-loans');
+  useEffect(()=>{if(!person&&requestedCode){const match=people.data?.items?.find((p:Row)=>p.employeeCode===requestedCode);if(match)setPerson(match)}},[people.data,requestedCode,person]);
   const employee=versions.data?.employee??person,history:Row[]=versions.data?.items??[],current=history[0];
   const month=new Date().toLocaleDateString('en-CA',{timeZone:session.company?.timezone??'Asia/Kolkata',year:'numeric',month:'2-digit'});
   return <div className="hr-operations">
@@ -47,13 +50,13 @@ export function PayoutReconciliation(){
 }
 
 export function EmployeeImportModal({onClose}:{onClose:()=>void}){
-  const {session,mutate}=useApp();const [mode,setMode]=useState('CREATE'),[file,setFile]=useState<File|null>(null),[preview,setPreview]=useState<Row|null>(null),[payload,setPayload]=useState<Row|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const {session,mutate,can}=useApp();const [mode,setMode]=useState(can('employees','CREATE')?'CREATE':'UPDATE'),[file,setFile]=useState<File|null>(null),[preview,setPreview]=useState<Row|null>(null),[payload,setPayload]=useState<Row|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function check(){if(!file)return;setBusy(true);setError('');setPreview(null);try{if(file.size>2_000_000)throw new Error('Maximum import size is 2 MB.');const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(const b of bytes)binary+=String.fromCharCode(b);const body={fileName:file.name,content:btoa(binary),mode};const result=await api('employees/import/preview','POST',body,session.csrf);setPayload(body);setPreview(result)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
   async function save(){if(!payload||!preview)return;setBusy(true);setError('');try{await mutate('employees/import/commit','POST',{...payload,expectedDigest:preview.digest});onClose()}catch(e:any){setError(e.message);setPreview(null)}finally{setBusy(false)}}
   return <Modal title="Import employees" onClose={onClose} wide><div className="modal-body hr-import">
     <div className="hr-operation-intro"><Upload size={23}/><div><strong>Preview before importing</strong><p>CSV or XLSX · 200 employees per batch · 2 MB. Use YYYY-MM-DD text dates and company currency amounts. Existing profile and bank details are retained during updates.</p></div></div>
     <div className="hr-import-tools"><a className="btn secondary" href="/api/employees/import-template?format=xlsx">Excel template</a><a className="btn secondary" href="/api/employees/import-template?format=csv">CSV template</a></div>
-    <label className="field"><span>Import mode</span><select disabled={busy} value={mode} onChange={e=>{setMode(e.target.value);setPreview(null);setPayload(null)}}><option value="CREATE">Create new employees</option><option value="UPDATE">Update existing employee codes</option></select></label>
+    <label className="field"><span>Import mode</span><select disabled={busy} value={mode} onChange={e=>{setMode(e.target.value);setPreview(null);setPayload(null)}}>{can('employees','CREATE')&&<option value="CREATE">Create new employees</option>}{can('employees','EDIT')&&<option value="UPDATE">Update existing employee codes</option>}</select></label>
     <label className="field"><span>Employee file</span><input type="file" disabled={busy} accept=".csv,.xlsx" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setPayload(null)}}/></label>
     {error&&<div role="alert" className="notice">{error}</div>}
     {preview&&<><p><strong>{preview.total} employees</strong> · {preview.valid?'Ready to import':'Fix the errors and preview again'}</p><Table columns={['row','employeeCode','name','action','errors']} rows={preview.items.map((r:Row)=>({...r,id:String(r.row)}))} cell={(r,k)=>k==='errors'?r.errors.length?<span className="hr-error">{r.errors.join('; ')}</span>:<Badge value="VALID"/>:undefined}/></>}

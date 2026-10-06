@@ -122,7 +122,7 @@ export function ModulePage({name}:{name:string}){
  {photoView&&<PhotoViewer src={photoView.src} name={photoView.name} onClose={()=>setPhotoView(null)}/>}
  </>;
 }
-function EmployeeAppAccessModal({employee,onClose}:{employee:Row;onClose:()=>void}){
+export function EmployeeAppAccessModal({employee,onClose}:{employee:Row;onClose:()=>void}){
  const access=useData(`employees/${employee.id}/app-access`);const{mutate,notify}=useApp();
  const[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[credentials,setCredentials]=useState<Row|null>(null);
  const row=access.data,user=row?.user;
