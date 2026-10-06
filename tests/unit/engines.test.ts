@@ -66,10 +66,14 @@ test('XLSX export is a real Office Open XML zip workbook',()=>{
 });
 test('BioMax wall clock conversion respects configured timezone',()=>{assert.equal(biomaxLocalTimestamp('2026-07-01 09:00:00','America/New_York').toISOString(),'2026-07-01T13:00:00.000Z')});
 
-test('punched attendance stays present until shift end and finalizes afterwards',()=>{
+test('closed checkout shows duration status immediately while open punches stay provisional',()=>{
  const end=t('17:00');
+ for(const [out,status] of [['12:59','INSUFFICIENT_HOURS'],['13:00','HALF_DAY'],['13:01','INSUFFICIENT_HOURS'],['15:00','INSUFFICIENT_HOURS'],['17:00','PRESENT']] as const){
+  const calculated=calculateAttendance([{time:t('09:00'),type:'IN'},{time:t(out),type:'OUT'}],rule);
+  assert.equal(punchedAttendanceStatusAtMoment(calculated.status,t(out),end,true),status);
+ }
  assert.equal(punchedAttendanceStatusAtMoment('ABSENT',t('10:00'),end,true),'PRESENT');
- assert.equal(punchedAttendanceStatusAtMoment('INSUFFICIENT_HOURS',t('16:59'),end,true),'PRESENT');
+ assert.equal(punchedAttendanceStatusAtMoment('INSUFFICIENT_HOURS',t('16:59'),end,true),'INSUFFICIENT_HOURS');
  assert.equal(punchedAttendanceStatusAtMoment('MISSING_PUNCH',t('12:00'),end,true),'PRESENT');
  assert.equal(punchedAttendanceStatusAtMoment('INSUFFICIENT_HOURS',end,end,true),'INSUFFICIENT_HOURS');
  assert.equal(punchedAttendanceStatusAtMoment('ABSENT',t('18:00'),end,true),'ABSENT');
