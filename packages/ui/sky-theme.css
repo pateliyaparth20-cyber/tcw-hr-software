@@ -25,3 +25,8 @@ html body .rc-hero :is(.rc-eyebrow,p,.rc-hero-note,.rc-hero-stats span){color:#3
 html body .rc-hero-stats article{background:#ffffff80;border-color:#fff}
 html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform){background:linear-gradient(115deg,#e0f2fe,#bae6fd 65%,#7dd3fc)!important;color:#082f49!important;border-color:#bae6fd!important}
 html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform) :is(h1,h2,h3,h4,p,small,strong){color:#17364a!important}
+
+/* Keep the pull indicator absent until a real pull gesture requests it. */
+html body .tcw-pull-refresh:not(.show){visibility:hidden;opacity:0}
+html body .tcw-pull-refresh.show{visibility:visible;opacity:1}
+html body .org-search input:focus{outline:none!important;box-shadow:none!important;border:0!important}

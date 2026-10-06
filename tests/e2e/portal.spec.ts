@@ -79,8 +79,9 @@ for(const master of [{key:'departments',label:'Departments',singular:'department
  await page.getByRole('button',{name:'List view',exact:true}).click();await expect(page.locator('.org-list')).toContainText(name+' edited');await page.getByRole('button',{name:'Card view',exact:true}).click();
  await page.getByRole('textbox',{name:'Search '+master.label.toLowerCase(),exact:true}).fill('');await expect(page.locator('.org-results')).not.toContainText('Results for');
  for(const width of [390,320]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy()}
+ if(await page.getByRole('button',{name:'Dismiss notification',exact:true}).count())await page.getByRole('button',{name:'Dismiss notification',exact:true}).click();await page.evaluate(()=>{window.scrollTo(0,0);(document.activeElement as HTMLElement)?.blur?.()});
  if(master.key==='branches')await page.screenshot({path:'test-results/organization-mobile.png',fullPage:true,animations:'disabled'});
- await page.setViewportSize({width:1440,height:1000});if(master.key==='departments')await page.screenshot({path:'test-results/organization-desktop.png',fullPage:true,animations:'disabled'});
+ await page.setViewportSize({width:1440,height:1000});await page.evaluate(()=>window.scrollTo(0,0));if(master.key==='departments')await page.screenshot({path:'test-results/organization-desktop.png',fullPage:true,animations:'disabled'});
  await page.getByRole('button',{name:'Delete '+name+' edited',exact:true}).click();await dialog.getByRole('button',{name:'Confirm',exact:true}).click();await expect(dialog).not.toBeVisible();await expect(page.getByRole('heading',{name:name+' edited',exact:true})).not.toBeVisible();await page.getByRole('textbox',{name:'Search '+master.label.toLowerCase(),exact:true}).fill(name);await expect(page.getByRole('heading',{name:'No matching records',exact:true})).toBeVisible();
 });
 
