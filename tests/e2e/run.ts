@@ -7,7 +7,7 @@ import {embeddedDatabase} from '../helpers/database';
 
 // No external database or live portal is used by this runner.
 async function run(){
- Object.assign(process.env,{NODE_ENV:'test',APP_ORIGINS:'http://localhost:3000,http://localhost:3001',COOKIE_SECURE:'false',
+ Object.assign(process.env,{NODE_ENV:'test',REPORTS_MAINTENANCE:'false',APP_ORIGINS:'http://localhost:3000,http://localhost:3001',COOKIE_SECURE:'false',
   ADMIN_EMAIL:'platform@example.test',OWNER_EMAIL:'owner@example.test',ADMIN_PASSWORD:randomBytes(24).toString('hex'),
   OWNER_PASSWORD:randomBytes(24).toString('hex'),CONFIG_ENCRYPTION_KEY:randomBytes(32).toString('hex'),DEMO_COMPANY_CODE:'E2E-ONLY',PEOPLEOS_E2E_ISOLATED:'true'});
  const fixture=await embeddedDatabase();
@@ -17,6 +17,7 @@ async function run(){
   await seed(fixture.db,{adminEmail:process.env.ADMIN_EMAIL!,adminPassword:process.env.ADMIN_PASSWORD!,ownerEmail:process.env.OWNER_EMAIL!,ownerPassword:process.env.OWNER_PASSWORD!,companyCode:process.env.DEMO_COMPANY_CODE,demo:false});
   await fixture.db.user.updateMany({data:{mustChangePassword:false}});
   const tenant=await fixture.db.tenant.findUniqueOrThrow({where:{code:'E2E-ONLY'}});
+  await fixture.db.branch.create({data:{tenantId:tenant.id,name:'E2E Office',code:'E2E'}});
   const department=await fixture.db.department.create({data:{tenantId:tenant.id,name:'E2E Engineering',code:'E2E'}});
   const leader=await fixture.db.employee.create({data:{tenantId:tenant.id,employeeCode:'CHART-LEAD',firstName:'Team',lastName:'Lead',email:'lead@example.test',joiningDate:new Date('2025-01-01'),departmentId:department.id}});
   await fixture.db.employee.create({data:{tenantId:tenant.id,employeeCode:'CHART-MEMBER',firstName:'QA',lastName:'Member',email:'member@example.test',joiningDate:new Date('2025-01-01'),managerId:leader.id,departmentId:department.id}});

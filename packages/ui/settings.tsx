@@ -172,78 +172,7 @@ export function DocumentsPage(){
  const q=useData('documents');const{can,mutate}=useApp();const[open,setOpen]=useState(false),[file,setFile]=useState<File|null>(null);
  return <><PageTitle title="Document center" subtitle="Secure company and employee documents in one place.">{can('documents','CREATE')&&<button className="btn primary" onClick={()=>setOpen(true)}><Upload size={17}/>Upload document</button>}</PageTitle><div className="panel">{q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<Table columns={['title','category','fileName','size','expiresAt','createdAt']} rows={q.data.items} cell={(r,k)=>k==='size'?`${(r.size/1024).toFixed(1)} KB`:k==='createdAt'?displayDate(r.createdAt):k==='expiresAt'?r.expiresAt?<span className={new Date(r.expiresAt)<new Date()?'hr-error':''}>{displayDate(r.expiresAt)}</span>:'No expiry':undefined} actions={r=><a className="icon-button" href={'/api/documents/'+r.id} aria-label={'Download '+r.title}><Download size={17}/></a>}/>:<Empty title="A home for your documents" description="Upload PDF, PNG, or JPEG files up to 10 MB."/>}</div>{open&&<Modal title="Upload document" onClose={()=>setOpen(false)}><div className="modal-body upload-zone"><FileText size={28}/><label>Choose PDF, PNG, or JPEG<input type="file" accept="application/pdf,image/png,image/jpeg" onChange={e=>setFile(e.target.files?.[0]??null)}/></label></div><RecordForm fields={[{key:'title',label:'Document title',required:true},{key:'category',label:'Category',required:true},{key:'expiresAt',label:'Expiry date (optional)',type:'date'},{key:'employeeId',label:'Employee (optional)',type:'select',source:'employees',required:false}]} onCancel={()=>setOpen(false)} onSave={async body=>{if(!file)throw new Error('Choose a file to upload.');const form=new FormData();form.append('file',file);Object.entries(body).forEach(([k,v])=>{if(v)form.append(k,String(v))});await mutate('documents','POST',form);setOpen(false);setFile(null)}} submit="Upload document"/></Modal>}</>;
 }
-export function ReportsPage(){
- const{can}=useApp();const[departmentId,setDepartmentId]=useState(''),[branchId,setBranchId]=useState('');const departments=useData('departments',can('organization')),branches=useData('branches',can('organization'));const[preview,setPreview]=useState<string|null>(null),[from,setFrom]=useState(new Date(Date.now()-30*86400000).toISOString().slice(0,10)),[to,setTo]=useState(new Date().toISOString().slice(0,10));
- const reports=[
-  {name:'employees',label:'Employee directory',resource:'employees',description:'Employee codes, contact and employment records.'},
-  {name:'attendance',label:'Attendance records',resource:'attendance',description:'Attendance status, work time, overtime and exceptions.'},
-  {name:'leave',label:'Time off & leave',resource:'leave',description:'Leave requests, dates, days and approval status.'},
-  {name:'payroll-items',label:'Employee payroll',resource:'payroll',description:'Per-employee gross, deductions, net and overtime by payroll month.'},
-  {name:'payroll',label:'Payroll runs',resource:'payroll',description:'Payroll run status, month and payroll totals.'},
-  {name:'expenses',label:'Expense claims',resource:'expenses',description:'Employee expense claims and approval status.'},
-  {name:'assets',label:'Asset inventory',resource:'assets',description:'Assigned assets, serials, ownership and status.'},
-  {name:'goals',label:'Performance goals',resource:'performance',description:'Goals, targets, progress and completion status.'},
-  {name:'candidates',label:'Recruitment pipeline',resource:'recruitment',description:'Candidate pipeline and current recruitment stage.'}
- ];
- const allowed=reports.filter(r=>can(r.resource,'EXPORT'));
- const filters=new URLSearchParams({from,to,departmentId,branchId});
- const q=useData(preview===null?'':`reports/${preview}?preview=true&${filters}`,!!preview);
- const href=(name:string,format:'csv'|'xlsx'|'pdf')=>{
-  const params=new URLSearchParams({format});
-  for(const [key,value] of filters)if(value)params.set(key,value);
-  return `/api/reports/${name}?${params.toString()}`;
- };
- const active=reports.find(r=>r.name===preview);
- return <div className="reports-v2">
-  <PageTitle title="Reports & analytics" subtitle="Preview authorized HR data and download real PDF, Excel or CSV files."/>
-  <section className="reports-v2-summary">
-   <article><span className="reports-v2-summary-icon"><BarChart3 size={21}/></span><div><small>Available reports</small><strong>{allowed.length}</strong><p>Based on your export permissions</p></div></article>
-   <article><span className="reports-v2-summary-icon"><FileDown size={21}/></span><div><small>Export formats</small><strong>3</strong><p>PDF · Excel · CSV</p></div></article>
-   <article><span className="reports-v2-summary-icon"><ShieldCheck size={21}/></span><div><small>File integrity</small><strong>Native</strong><p>Correct file type and extension</p></div></article>
-  </section>
-
-  <section className="panel reports-v2-range">
-   <div className="reports-v2-range-copy"><span><CalendarDays size={20}/></span><div><h2>Report filters</h2><p>Dates filter attendance, leave overlap, expenses, goal due dates, recruitment creation and payroll months. Employee directory and asset inventory show current assignments.</p></div></div>
-   <div className="reports-v2-range-fields">
-    <label><span>From</span><input type="date" value={from} max={to} onChange={e=>setFrom(e.target.value)}/></label>
-    <label><span>To</span><input type="date" value={to} min={from} onChange={e=>setTo(e.target.value)}/></label><label><span>Department</span><select value={departmentId} onChange={e=>setDepartmentId(e.target.value)}><option value="">All departments</option>{departments.data?.items?.map((r:Row)=><option key={r.id} value={r.id}>{r.name}</option>)}</select></label><label><span>Branch</span><select value={branchId} onChange={e=>setBranchId(e.target.value)}><option value="">All branches</option>{branches.data?.items?.map((r:Row)=><option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
-   </div>
-  </section>
-
-  <div className="reports-v2-grid">
-   {allowed.map(report=><section className="panel reports-v2-card" key={report.name}>
-    <div className="reports-v2-card-head"><span className="reports-v2-card-icon"><FileText size={22}/></span><span className="reports-v2-ready">READY</span></div>
-    <h2>{report.label}</h2>
-    <p>{report.description}</p>
-    <div className="reports-v2-meta"><span>{report.name==='attendance'?from+' → '+to:'Current authorized records'}</span></div>
-    <div className="reports-v2-card-actions">
-     <button type="button" className="btn secondary reports-v2-preview" onClick={()=>setPreview(report.name)}><Eye size={17}/>Preview</button>
-     <div className="reports-v2-export-actions">
-      <a className="reports-v2-format csv" href={href(report.name,'csv')} download><FileText size={16}/><span><strong>CSV</strong><small>.csv</small></span></a>
-      <a className="reports-v2-format excel" href={href(report.name,'xlsx')} download><Sheet size={16}/><span><strong>Excel</strong><small>.xlsx</small></span></a>
-      <a className="reports-v2-format pdf" href={href(report.name,'pdf')} download><FileDown size={16}/><span><strong>PDF</strong><small>.pdf</small></span></a>
-     </div>
-    </div>
-   </section>)}
-  </div>
-
-  {!allowed.length&&<Empty title="No report exports available" description="Your current role does not have export permission for these reports."/>}
-
-  {preview&&<Modal title={(active?.label??readable(preview))+' preview'} onClose={()=>setPreview(null)} wide>
-   <div className="modal-body reports-v2-preview-modal">
-    <div className="reports-v2-preview-top">
-     <div><strong>Report preview</strong><p>Showing up to the first 25 records. Downloads include the full authorized export result.</p></div>
-     <div className="reports-v2-preview-downloads">
-      <a className="btn secondary small" href={href(preview,'csv')} download><FileText size={16}/>CSV</a>
-      <a className="btn secondary small" href={href(preview,'xlsx')} download><Sheet size={16}/>Excel</a>
-      <a className="btn primary small" href={href(preview,'pdf')} download><FileDown size={16}/>PDF</a>
-     </div>
-    </div>
-    {q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<div className="reports-v2-preview-table"><Table rows={q.data.items.slice(0,25)} columns={Object.keys(q.data.items[0]).filter(k=>!['tenantId','personal','items','passwordHash','updatedAt'].includes(k)).slice(0,8)} cell={(r,k)=>typeof r[k]==='object'?JSON.stringify(r[k]):String(r[k]??'—')}/></div>:<Empty title="No report data" description="There are no authorized records for the current report selection."/>}
-   </div>
-  </Modal>}
- </div>;
-}
+export {ReportsPage} from './reports-center';
 export function AuditPage(){const q=useData('audit');return <><PageTitle title="Audit trail" subtitle="A record of important changes and sign-in events. Latest 200 events."/><div className="panel">{q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<Table columns={['action','entity','actorId','ip','createdAt']} rows={q.data.items} cell={(r,k)=>k==='action'?readable(r.action.toLowerCase()):k==='createdAt'?new Date(r.createdAt).toLocaleString('en-IN'):undefined}/>:<Empty title="No events recorded"/>}</div></>}
 export function SystemPage(){
  const q=useData('system'),companies=useData('platform/companies');const{session,notify}=useApp();
@@ -266,4 +195,3 @@ export function AIPage(){
  async function send(e:React.FormEvent){e.preventDefault();await ask(question)}
  return <><PageTitle title="TCW HR AI assistant" subtitle="Ask questions about the HR information available to your role."><span className={'ai-ready-chip '+(status.data?.configured?'ready':'')}>{status.data?.configured?'Available':'Unavailable'}</span></PageTitle><div className="ai-workspace"><aside className="panel ai-prompt-panel"><div className="ai-orb"><Sparkles size={28}/></div><h2>Start with a useful question</h2><p>The assistant can summarize attendance, leave and workforce signals visible to your role.</p><div className="ai-suggestions">{suggestions.map(v=><button key={v} disabled={!status.data?.configured||busy} onClick={()=>ask(v)}>{v}</button>)}</div><small>{status.data?.configured?'Ready to help with your HR workspace.':'The AI assistant is currently unavailable.'}</small></aside><div className="panel chat-panel ai-chat-panel"><div className="ai-chat-head"><span className="ai-chat-avatar"><Sparkles size={18}/></span><div><strong>TCW HR Copilot</strong><small>{status.data?.configured?'Available':'Unavailable'}</small></div>{messages.length>0&&<button type="button" className="btn secondary small" onClick={()=>setMessages([])}>New chat</button>}</div><div className="chat-messages">{!messages.length&&<div className="ai-empty-state"><span className="ai-empty-orb"><Sparkles size={25}/></span><h3>{status.data?.configured?'How can I help HR today?':'AI is currently unavailable'}</h3><p>{status.data?.configured?'Ask a specific question. Follow-up questions keep the recent conversation context.':'The assistant becomes available after the Super Admin saves and tests an AI provider.'}</p>{status.data?.configured&&<div className="ai-inline-suggestions">{suggestions.slice(0,3).map(v=><button type="button" key={v} onClick={()=>ask(v)}>{v}</button>)}</div>}</div>} {messages.map((m,i)=><div className={'chat-message '+m.role} key={i}><div className="chat-message-head"><span>{m.role==='user'?'You':m.role==='error'?'!':'AI'}</span><strong>{m.role==='user'?'You':m.role==='error'?'Service status':'TCW HR Copilot'}</strong></div><p>{m.text}</p>{m.model&&<small>{m.model}</small>}</div>)}{busy&&<div className="ai-thinking"><span/><span/><span/><small>Reviewing authorized HR data…</small></div>}</div><form className="chat-compose" onSubmit={send}><input aria-label="Ask the assistant" value={question} maxLength={1000} onChange={e=>setQuestion(e.target.value)} placeholder="Ask about attendance, leave, payroll, workforce…" required disabled={!status.data?.configured}/><button className="btn primary" disabled={busy||!status.data?.configured||!question.trim()}><Send size={18}/><span>Send</span></button></form><small className="chat-note">AI assists with summaries and analysis. Hiring, pay and disciplinary decisions remain with your team.</small></div></div></>;
 }
-

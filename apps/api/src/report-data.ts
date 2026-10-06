@@ -3,6 +3,7 @@ import {z} from 'zod';
 import type {Database} from '../../../packages/database';
 import {id,date} from '../../../packages/validation';
 import {Context,employeeScope,requirePermission,tenant} from './context';
+import {requireReportsAccess} from './reports-access';
 const configurations:Record<string,{model:string;resource:string;fields:string[];date?:string;employee?:boolean}>={
   employees:{model:'employee',resource:'employees',fields:['id','employeeCode','firstName','lastName','email','phone','designation','employmentType','status','joiningDate','departmentId','branchId']},
   attendance:{model:'attendanceDaily',resource:'attendance',fields:['id','employeeId','date','status','firstIn','lastOut','workMinutes','lateMinutes','overtimeMinutes','payableUnits','dayType','exceptionCode'],date:'date',employee:true},
@@ -13,6 +14,7 @@ const configurations:Record<string,{model:string;resource:string;fields:string[]
   candidates:{model:'candidate',resource:'recruitment',fields:['id','name','email','jobId','stage','interviewAt','createdAt'],date:'createdAt'},
 };
 export async function reportRows(db:Database,ctx:Context,type:string,query:any){
+  await requireReportsAccess(db,ctx);
   const tid=tenant(ctx);requirePermission(ctx,'reports','EXPORT');
   const from=query.from?date.parse(String(query.from)):null,to=query.to?date.parse(String(query.to)):null;if(from&&to&&from>to)throw new BadRequestException('From date must precede To date.');
   const departmentId=query.departmentId?id.parse(String(query.departmentId)):null,branchId=query.branchId?id.parse(String(query.branchId)):null,status=query.status?z.string().max(60).parse(String(query.status)):null;
