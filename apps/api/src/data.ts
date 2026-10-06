@@ -205,7 +205,7 @@ export class DataService {
     const model=(this.db as any)[cfg.model];
     if(method==='GET'){
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||100)),page=Math.max(1,Number(query.page)||1);
-      const [items,total]=await Promise.all([model.findMany({where,orderBy:{createdAt:'desc'},take,skip:(page-1)*take}),model.count({where})]);
+      const [items,total]=await Promise.all([model.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),model.count({where})]);
       if(type==='devices')return {items:items.map((row:any)=>{const{apiSecretHash,...safe}=row;return safe;}),total,page,pageSize:take};
       return {items,total,page,pageSize:take};
     }

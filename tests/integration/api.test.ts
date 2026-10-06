@@ -76,6 +76,16 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    assert.equal(filtered.status,200);assert(!filtered.data.includes('EXPORT-'));
    await db.employee.deleteMany({where:{tenantId:alphaTenant,employeeCode:{startsWith:'EXPORT-'}}});
   });
+  await t.test('asset reports export all pages with filters and tenant isolation',async()=>{
+   await db.asset.createMany({data:Array.from({length:501},(_,i)=>({tenantId:alphaTenant,name:'Export laptop '+i,assetTag:'EXPORT-ASSET-'+i,category:'Laptop'}))});
+   const foreign=await db.asset.create({data:{tenantId:betaTenant!,name:'Export foreign laptop',assetTag:'FOREIGN',category:'Laptop'}});
+   const exported=await call('reports/assets?q=Export&format=csv','GET',undefined,alpha);
+   assert.equal(exported.status,200);assert.equal(exported.data.split('\r\n').length,502);
+   assert.equal(new Set(exported.data.match(/EXPORT-ASSET-\d+/g)).size,501);assert(!exported.data.includes('foreign'));
+   const filtered=await call('reports/assets?q=Export%20laptop%20500&format=csv','GET',undefined,alpha);
+   assert.equal(filtered.status,200);assert.equal(filtered.data.split('\r\n').length,2);assert(filtered.data.includes('EXPORT-ASSET-500'));
+   await db.asset.deleteMany({where:{tenantId:alphaTenant,assetTag:{startsWith:'EXPORT-ASSET-'}}});await db.asset.delete({where:{id:foreign.id}});
+  });
   await t.test('payroll prepare, reopen and finalization use one safe workflow',async()=>{
    assert.equal((await call('payroll','POST',{month:'2026-10'},alpha)).status,400);
    const prior=await db.payrollRun.create({data:{tenantId:alphaTenant,month:'2026-07',status:'LOCKED'}});
