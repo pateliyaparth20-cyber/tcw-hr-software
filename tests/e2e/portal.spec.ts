@@ -1,6 +1,16 @@
 import {test,expect} from '@playwright/test';
 import {totp} from '../../packages/auth/totp';
 
+test('software release center approves only after confirmation and never reloads automatically',async({page})=>{
+ await login(page);const version='b'.repeat(40);let approved=false,approvalCalls=0;
+ await page.route('**/api/releases/status',route=>route.fulfill({json:{enabled:true,currentVersion:'a'.repeat(40),candidate:{version,title:'Synthetic payroll and attendance improvements'},available:true,approved,ready:false,canApprove:true,waitingForCompanies:true,checkedAt:new Date().toISOString()}}));
+ await page.route('**/api/releases/approve',route=>{expect(route.request().postDataJSON()).toEqual({version});approvalCalls++;approved=true;return route.fulfill({json:{approved:true}})});
+ await page.goto('/software-update');await expect(page.getByRole('heading',{name:'A new company release is ready'})).toBeVisible();expect(approvalCalls).toBe(0);
+ await page.getByRole('button',{name:'Approve company update'}).click();await expect(page.getByRole('dialog')).toBeVisible();expect(approvalCalls).toBe(0);await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Your company has approved this release'})).toBeVisible();expect(approvalCalls).toBe(1);await expect(page).toHaveURL(/software-update$/);await expect(page.getByRole('button',{name:'Approve company update'})).toHaveCount(0);
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('heading',{name:'Your company has approved this release'})).toBeVisible();
+});
+
 test('new login and signup design supports password visibility, consent and mobile forms',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/login');
  const signIn=page.getByRole('form',{name:'Account sign in'});await expect(signIn).toBeVisible();

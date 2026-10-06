@@ -4,6 +4,7 @@ import {useEffect} from 'react';
 declare global {
   interface Window {
     __tcwInstallPrompt?: any;
+    __tcwPushActive?: boolean;
     __tcwSystemNotify?: (title:string,body?:string,url?:string,tag?:string)=>Promise<void>;
     __tcwEnableNotifications?: ()=>Promise<boolean>;
     TCWNative?: {showNotification:(title:string,body:string,url:string,tag:string)=>void};
@@ -24,7 +25,7 @@ async function tcwSystemNotify(title:string,body='',url='/notifications',tag='tc
     if(window.TCWNative?.showNotification){window.TCWNative.showNotification(title,body,url,tag);return;}
     if(!('Notification' in window)||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
     const registration=await navigator.serviceWorker.ready;
-    await registration.showNotification(title,{body,icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag,data:{url}});
+    registration.active?.postMessage({type:'TCW_SHOW_NOTIFICATION',title,body,url,tag});
   }catch{}
 }
 function urlBase64ToUint8Array(value:string){
@@ -49,7 +50,7 @@ async function syncPushSubscription(){
     const body=subscription.toJSON();
     if(!body.endpoint||!body.keys?.p256dh||!body.keys?.auth)return false;
     const save=await fetch('/api/push/subscription',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','x-csrf-token':String(me.csrf??'')},body:JSON.stringify({endpoint:body.endpoint,keys:{p256dh:body.keys.p256dh,auth:body.keys.auth}})});
-    return save.ok;
+    window.__tcwPushActive=save.ok;return save.ok;
   }catch{return false}
 }
 async function enableNotifications(){
@@ -114,7 +115,7 @@ export function PwaClient(){
           .catch(()=>{});
       }else{
         navigator.serviceWorker.register('/sw.js').then(registration=>{
-          if(Notification.permission==='granted')syncPushSubscription().catch(()=>{});
+          if('Notification' in window&&Notification.permission==='granted')syncPushSubscription().catch(()=>{});
           registration.update().catch(()=>{});
 
         }).catch(()=>{});

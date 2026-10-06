@@ -23,6 +23,7 @@ import {FilesService} from './files';
 import {BiometricService} from './biometric';
 import {PayoutService} from './payouts';
 import {reportRows} from './report-data';
+import {Releases,ReleaseCandidate,runningRelease,claimReleaseNotice,releaseRecipients} from './releases';
 import {twoFactor} from './two-factor';
 import {SalaryOperations} from './salary-operations';
 import {PeopleOperations} from './people-operations';
@@ -53,12 +54,14 @@ function allowedAppOrigin(origin:string|undefined){
 }
 export class Api {
   auth:AuthService;data:DataService;flows:Workflows;files:FilesService;biometric:BiometricService;payouts:PayoutService;io?:Server;
-  constructor(public db:Database){this.auth=new AuthService(db);this.data=new DataService(db);this.flows=new Workflows(db);this.files=new FilesService(db);this.biometric=new BiometricService(db);this.payouts=new PayoutService(db);}
+  releases:Releases;
+  constructor(public db:Database,releaseSource?:()=>Promise<ReleaseCandidate>){this.auth=new AuthService(db);this.data=new DataService(db);this.flows=new Workflows(db);this.files=new FilesService(db);this.biometric=new BiometricService(db);this.payouts=new PayoutService(db);this.releases=new Releases(db,releaseSource);}
   async handle(req:Request,res:Response){
     const parts=req.path.replace(/^\/api\/?/,'').split('/').filter(Boolean),[resource,key,action]=parts;
     const method=req.method;
     if(resource==='health'&&method==='GET')return {status:'ok',service:'tcw-hr-api'};
-    if(resource==='version'&&method==='GET')return {version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GIT_COMMIT_SHA??process.env.npm_package_version??'local',release:process.env.APP_VERSION??process.env.npm_package_version??'1.3.0',channel:process.env.APP_RELEASE_CHANNEL??'Production'};
+    if(resource==='version'&&method==='GET')return {version:runningRelease(),release:process.env.APP_VERSION??process.env.npm_package_version??'1.3.0',channel:process.env.APP_RELEASE_CHANNEL??'Production'};
+    if(resource==='releases'&&key==='deployable'&&method==='GET')return this.releases.deployable();
     if(resource==='branding'&&method==='GET'){
       const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});
       const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};
@@ -85,6 +88,8 @@ export class Api {
       if(key==='reset-password'&&!action&&method==='POST')return this.auth.reset(req.body,req,res);
     }
     const ctx=await authenticate(this.db,req);
+    if(resource==='releases'&&key==='status'&&method==='GET')return this.releases.status(ctx);
+    if(resource==='releases'&&key==='approve'&&method==='POST')return this.releases.approve(ctx,z.object({version:z.string().regex(/^[a-f0-9]{40}$/)}).strict().parse(req.body).version);
     const body=req.body;
     if(ctx.tenantId){
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
@@ -539,8 +544,8 @@ class BiomaxPushController {
     }
   }
 }
-export async function createApp(db:Database){
-  const api=new Api(db);
+export async function createApp(db:Database,releaseSource?:()=>Promise<ReleaseCandidate>){
+  const api=new Api(db,releaseSource);
   @Module({controllers:[RootController,BiomaxPushController],providers:[{provide:'API',useValue:api}]})class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:process.env.NODE_ENV==='test'?false:['error','warn','log'],bodyParser:false});
   app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb'}));
@@ -556,16 +561,12 @@ export async function createApp(db:Database){
   });
   await app.init();
   if(process.env.NODE_ENV==='production'&&process.env.RELEASE_UPDATES_ENABLED==='true'&&String(process.env.RAILWAY_SERVICE_NAME??'')==='tcw-hr-software'){
-    const deployment=String(process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??'').trim();
+    const deployment=runningRelease();
     if(deployment){
       setTimeout(async()=>{
         try{
-          const key='last-web-push-software-release';
-          const previous=await db.platformSetting.findUnique({where:{key}});
-          const last=previous?.value&&typeof previous.value==='object'&&!Array.isArray(previous.value)?String((previous.value as any).deployment??''):'';
-          if(last===deployment)return;
-          await db.platformSetting.upsert({where:{key},create:{key,value:{deployment,at:new Date().toISOString()}},update:{value:{deployment,at:new Date().toISOString()}}});
-          await sendPush(db,{title:'TCW HR Software update available',body:'A new version is ready. Open Software update when you want to install it.',url:'/software-update',tag:'tcw-software-update'});
+          if(!await claimReleaseNotice(db,deployment))return;
+          await sendPush(db,{userIds:await releaseRecipients(db),title:'TCW HR Software updated',body:'The approved company release is now live.',url:'/software-update',tag:'tcw-software-release-'+deployment});
         }catch{}
       },8000);
     }

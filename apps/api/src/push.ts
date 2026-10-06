@@ -26,9 +26,9 @@ export async function deletePushSubscription(db:Database,userId:string,endpoint:
   return {ok:true};
 }
 
-export async function sendPush(db:Database,args:{tenantId?:string|null;userId?:string|null;title:string;body:string;url?:string;tag?:string}){
+export async function sendPush(db:Database,args:{tenantId?:string|null;userId?:string|null;userIds?:string[];title:string;body:string;url?:string;tag?:string}){
   if(!publicKey||!privateKey)return;
-  const rows=await db.pushSubscription.findMany({where:{...(args.tenantId!==undefined?{tenantId:args.tenantId}:{}) ,...(args.userId?{userId:args.userId}:{})}});
+  const rows=await db.pushSubscription.findMany({where:{...(args.tenantId!==undefined?{tenantId:args.tenantId}:{}) ,...(args.userId?{userId:args.userId}:args.userIds?{userId:{in:args.userIds}}:{})}});
   const payload=JSON.stringify({title:args.title,body:args.body,url:args.url??'/notifications',tag:args.tag??'tcw-notification'});
   await Promise.allSettled(rows.map(async row=>{
     try{
