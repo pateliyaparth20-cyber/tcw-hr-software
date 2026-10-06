@@ -227,7 +227,8 @@ export class DataService {
     const model=(this.db as any)[cfg.model];
     if(method==='GET'){
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||100)),page=Math.max(1,Number(query.page)||1);
-      const [items,total]=await Promise.all([model.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],take,skip:(page-1)*take}),model.count({where})]);
+      const orderBy=cfg.resource==='organization'&&query.sort==='name'?[{name:'asc'},{id:'asc'}]:[{createdAt:'desc'},{id:'desc'}];
+      const [items,total]=await Promise.all([model.findMany({where,orderBy,take,skip:(page-1)*take}),model.count({where})]);
       if(type==='devices')return {items:items.map((row:any)=>{const{apiSecretHash,...safe}=row;return safe;}),total,page,pageSize:take};
       return {items:['expenses','travel'].includes(type)?await approvalRows(this.db,tid,type,items):items,total,page,pageSize:take};
     }

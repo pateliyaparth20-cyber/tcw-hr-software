@@ -46,6 +46,13 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await db.user.create({data:{tenantId:alphaTenant,name:'Test Employee',email:'employee-login@example.test',passwordHash:await hashPassword('test-employee-password'),employeeId:a.data.id,roleId:employeeRole.id}});
   const self=await login('employee-login@example.test','test-employee-password','ALPHA');
   await t.test('employee permissions and personal scope are enforced',async()=>{assert.equal((await call('employees','POST',employeeInput,self)).status,403);assert.equal((await call('payroll','POST',{month:'2026-08'},self)).status,403);const rows=await call('employees','GET',undefined,self);assert.equal(rows.data.items.length,1);assert.equal(rows.data.items[0].id,a.data.id);assert.equal((await call('users','GET',undefined,self)).status,403)});
+  await t.test('organization sorting is stable across pages and branch descriptions persist within the tenant',async()=>{
+   const b1=await call('branches','POST',{name:'Zulu office',code:'SORT-Z',location:'Test area',description:'Synthetic branch notes'},alpha);assert.equal(b1.status,200);assert.equal(b1.data.description,'Synthetic branch notes');
+   const b2=await call('branches','POST',{name:'Alpha office',code:'SORT-A',location:'Test area'},alpha);assert.equal(b2.status,200);
+   const first=await call('branches?sort=name&pageSize=1&page=1','GET',undefined,alpha),second=await call('branches?sort=name&pageSize=1&page=2','GET',undefined,alpha);assert.equal(first.data.items[0].name,'Alpha office');assert.equal(second.data.items[0].name,'Zulu office');assert.equal(first.data.total,2);
+   assert.equal((await call('branches?sort=name','GET',undefined,beta)).data.total,0);
+   await call('branches/'+b1.data.id,'DELETE',undefined,alpha);await call('branches/'+b2.data.id,'DELETE',undefined,alpha);
+  });
   await t.test('organization chart is tenant-scoped and excludes confidential fields',async()=>{
    const child=await db.employee.create({data:{tenantId:alphaTenant,employeeCode:'CHART-CHILD',firstName:'Chart',lastName:'Child',email:'chart@example.test',joiningDate:new Date('2099-01-01'),managerId:a.data.id,departmentId:depA.data.id}});
    const chart=await call('organization-chart','GET',undefined,alpha);assert.equal(chart.status,200);
