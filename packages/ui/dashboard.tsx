@@ -229,8 +229,9 @@ export function Dashboard(){
  const activePeople=people.filter(p=>String(p.status??'ACTIVE')!=='INACTIVE'),departments:Row[]=d.departments??[],shifts:Row[]=d.shifts??[];
  const peopleById=new Map(people.map(p=>[p.id,p])),shiftById=new Map(shifts.map(s=>[s.id,s])),todayByEmployee=new Map(records.map(r=>[r.employeeId,r]));
  const approvedLeaveToday=new Set(leave.filter(r=>r.status==='APPROVED'&&String(r.startDate).slice(0,10)<=today&&String(r.endDate).slice(0,10)>=today).map(r=>r.employeeId));
+ const approvedFullLeaveToday=new Set(leave.filter(r=>r.status==='APPROVED'&&Number(r.days??0)>=1&&String(r.startDate).slice(0,10)<=today&&String(r.endDate).slice(0,10)>=today).map(r=>r.employeeId));
  const fullLeaveToday=new Set(records.filter(r=>['PAID_LEAVE','UNPAID_LEAVE'].includes(String(r.dayType))).map(r=>r.employeeId));
- const leaveTodayIds=new Set([...approvedLeaveToday,...fullLeaveToday]),notChecked=records.filter(r=>r.status==='NOT_CLOCKED_IN'&&!leaveTodayIds.has(r.employeeId)).length;
+ const leaveTodayIds=new Set([...approvedFullLeaveToday,...fullLeaveToday]),notChecked=records.filter(r=>r.status==='NOT_CLOCKED_IN'&&!leaveTodayIds.has(r.employeeId)).length;
  const physicalAbsent=records.filter(r=>r.status==='ABSENT'&&!leaveTodayIds.has(r.employeeId)).length,overtimePeople=records.filter(r=>Number(r.overtimeMinutes??0)>0).length;
  const approvedCount=leave.filter(r=>r.status==='APPROVED').length,cancelledCount=leave.filter(r=>r.status==='CANCELLED').length;
  const departmentRows=departments.map(dep=>({id:dep.id,name:dep.name,count:activePeople.filter(p=>p.departmentId===dep.id).length})).filter(r=>r.count>0).sort((a,b)=>b.count-a.count),maxDepartment=Math.max(1,...departmentRows.map(r=>r.count));
@@ -246,7 +247,7 @@ export function Dashboard(){
    <div className="main-dash-kpis">
     <MainDashboardKpi label="Present Today" value={present} detail={`of ${activePeople.length} employees`} icon={<UserCheck size={22}/>} tone="green"/>
     <MainDashboardKpi label="Not Checked In" value={notChecked} detail="Shift active, no punch yet" icon={<Clock3 size={22}/>} tone="orange"/>
-    <MainDashboardKpi label="On Leave" value={leaveTodayIds.size} detail="Approved leave today" icon={<CalendarDays size={22}/>} tone="blue"/>
+    <MainDashboardKpi label="On Leave" value={approvedLeaveToday.size} detail="Approved leave today" icon={<CalendarDays size={22}/>} tone="blue"/>
     <MainDashboardKpi label="Absent" value={physicalAbsent} detail="No punch after shift end" icon={<AlertTriangle size={22}/>} tone="red"/>
     <MainDashboardKpi label="Overtime Today" value={overtimePeople} detail={`${otMinutes} total minutes`} icon={<Clock3 size={22}/>} tone="violet"/>
     <MainDashboardKpi label="Open Requests" value={pending.length} detail="Leave requests awaiting review" icon={<Briefcase size={22}/>} tone="amber"/>
@@ -268,4 +269,4 @@ export function Dashboard(){
   </div>
  </>;
 }
-function Activityfunction Activity({rows}:{rows:Row[]}){return <section className="panel activity-panel"><div className="panel-heading"><h2>Recent activity</h2><span className="muted">Latest recorded changes</span></div>{rows.length?<div className="activity-list">{rows.slice(0,6).map(r=><div key={r.id}><span className="activity-marker"/><div><strong>{readable(r.action.toLowerCase())}</strong><small>{readable(r.entity)} · {new Date(r.createdAt).toLocaleString('en-IN')}</small></div></div>)}</div>:<p className="quiet-empty">Workspace changes will appear here as your team gets started.</p>}</section>}
+function Activity({rows}:{rows:Row[]}){return <section className="panel activity-panel"><div className="panel-heading"><h2>Recent activity</h2><span className="muted">Latest recorded changes</span></div>{rows.length?<div className="activity-list">{rows.slice(0,6).map(r=><div key={r.id}><span className="activity-marker"/><div><strong>{readable(r.action.toLowerCase())}</strong><small>{readable(r.entity)} · {new Date(r.createdAt).toLocaleString('en-IN')}</small></div></div>)}</div>:<p className="quiet-empty">Workspace changes will appear here as your team gets started.</p>}</section>}
