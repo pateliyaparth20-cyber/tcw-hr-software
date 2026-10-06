@@ -1,0 +1,7 @@
+# Reports maintenance
+
+Set `REPORTS_MAINTENANCE=true` on each production application service to activate maintenance. All authenticated accounts are blocked from report previews and CSV, Excel, PDF, attendance summary and bank payout report downloads unless explicitly excepted. Existing resource permissions and tenant scope still apply to excepted accounts. The UI checks `/api/reports/access` before mounting report queries; blocked users see a blurred static layout containing no company data and an Under Maintenance message. Account exception configuration is never returned to browsers.
+
+Prefer `REPORTS_PREVIEW_USER_IDS` containing the one approved existing user UUID. If only login details are available, configure all three values: `REPORTS_PREVIEW_COMPANY_CODE`, `REPORTS_PREVIEW_LOGIN` (exact login ID or login email), and `REPORTS_PREVIEW_CREATED_BEFORE` (ISO timestamp captured before activation). Company code isolates matching logins in different companies. The timestamp prevents accounts created after configuration from inheriting this exception. An empty or incomplete exception denies everyone while maintenance is enabled; role changes alone never grant access.
+
+Before activation, verify the approved account identity. Leave maintenance unconfigured until that identity is confirmed to avoid locking the requested preview account out. Removing or setting `REPORTS_MAINTENANCE=false` restores normal permission-based reports. No database migration is needed.

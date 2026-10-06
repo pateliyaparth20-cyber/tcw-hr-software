@@ -1,6 +1,17 @@
 import {test,expect} from '@playwright/test';
 import {totp} from '../../packages/auth/totp';
 
+test('reports maintenance shows a blurred static layout without fetching report data on desktop and mobile',async({page})=>{
+ await login(page);
+ await page.route('**/api/reports/access',route=>route.fulfill({json:{available:false,maintenance:true}}));
+ const requests:string[]=[];page.on('request',r=>{if(/\/api\/reports\/(?!access(?:\?|$))/.test(r.url()))requests.push(r.url())});
+ await page.goto('/reports');await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'CSV',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Preview',exact:true})).toHaveCount(0);
+ expect(await page.locator('.reports-maintenance-backdrop').evaluate(el=>getComputedStyle(el).filter)).toBe('blur(6px)');
+ await page.setViewportSize({width:390,height:844});await expect(page.getByRole('heading',{name:'Under Maintenance',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(requests).toEqual([]);
+});
+
 test('attendance rules create and edit a night shift with mobile preview',async({page})=>{
  await login(page);await page.goto('/attendance');await page.getByRole('button',{name:'Attendance rules',exact:true}).click();
  await page.getByRole('button',{name:'Add Shift',exact:true}).first().click();

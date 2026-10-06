@@ -6,6 +6,7 @@ import {Plus,Upload,Download,FileText,ShieldCheck,LogOut,Send,Printer,Pencil,Eye
 import {useApp,useData,api,PageTitle,Table,Modal,PhotoViewer,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,notificationTarget,displayDate,currencyValue} from './core';
 import {Row,Field,readable} from './config';
 import {avatarInitials} from './avatar';
+import './reports-maintenance.css';
 export function SoftwareUpdatePage(){
  const{notify}=useApp();const[current,setCurrent]=useState<Row|null>(null),[loaded,setLoaded]=useState(''),[checking,setChecking]=useState(false),[installing,setInstalling]=useState(false),[lastChecked,setLastChecked]=useState<Date|null>(null);
  const readLoaded=()=>{try{return localStorage.getItem('tcw_loaded_deployment_version')??localStorage.getItem('tcw_last_deployment_version')??''}catch{return ''}};
@@ -193,6 +194,28 @@ export function DocumentsPage(){
  return <><PageTitle title="Document center" subtitle="Secure company and employee documents in one place.">{can('documents','CREATE')&&<button className="btn primary" onClick={()=>setOpen(true)}><Upload size={17}/>Upload document</button>}</PageTitle><div className="panel">{q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.length?<Table columns={['title','category','fileName','size','expiresAt','createdAt']} rows={q.data.items} cell={(r,k)=>k==='size'?`${(r.size/1024).toFixed(1)} KB`:k==='createdAt'?displayDate(r.createdAt):k==='expiresAt'?r.expiresAt?<span className={new Date(r.expiresAt)<new Date()?'hr-error':''}>{displayDate(r.expiresAt)}</span>:'No expiry':undefined} actions={r=><a className="icon-button" href={'/api/documents/'+r.id} aria-label={'Download '+r.title}><Download size={17}/></a>}/>:<Empty title="A home for your documents" description="Upload PDF, PNG, or JPEG files up to 10 MB."/>}</div>{open&&<Modal title="Upload document" onClose={()=>setOpen(false)}><div className="modal-body upload-zone"><FileText size={28}/><label>Choose PDF, PNG, or JPEG<input type="file" accept="application/pdf,image/png,image/jpeg" onChange={e=>setFile(e.target.files?.[0]??null)}/></label></div><RecordForm fields={[{key:'title',label:'Document title',required:true},{key:'category',label:'Category',required:true},{key:'expiresAt',label:'Expiry date (optional)',type:'date'},{key:'employeeId',label:'Employee (optional)',type:'select',source:'employees',required:false}]} onCancel={()=>setOpen(false)} onSave={async body=>{if(!file)throw new Error('Choose a file to upload.');const form=new FormData();form.append('file',file);Object.entries(body).forEach(([k,v])=>{if(v)form.append(k,String(v))});await mutate('documents','POST',form);setOpen(false);setFile(null)}} submit="Upload document"/></Modal>}</>;
 }
 export function ReportsPage(){
+ const access=useData('reports/access');
+ if(access.isLoading)return <><PageTitle title="Reports & analytics" subtitle="Checking report availability."/><Loading/></>;
+ if(access.error)return <><PageTitle title="Reports & analytics"/><Failure error={access.error}/></>;
+ if(!access.data?.available)return <ReportsMaintenance/>;
+ return <AvailableReportsPage/>;
+}
+function ReportsMaintenance(){
+ return <div className="reports-v2"><PageTitle title="Reports & analytics" subtitle="HR reports and exports."/>
+  <section className="reports-maintenance" aria-labelledby="reports-maintenance-title">
+   <div className="reports-maintenance-backdrop" aria-hidden="true">
+    <div className="reports-maintenance-summary">{['Available reports','Export formats','Report filters'].map(label=><article key={label}><span>{label}</span><i/><i/></article>)}</div>
+    <div className="reports-v2-grid">{['Employee directory','Attendance records','Employee payroll','Time off & leave'].map(label=><div className="panel reports-v2-card" key={label}><FileText size={24}/><h2>{label}</h2><div className="reports-maintenance-lines"><i/><i/><i/></div><div className="reports-maintenance-formats"><span>Preview</span><span>CSV</span><span>Excel</span><span>PDF</span></div></div>)}</div>
+   </div>
+   <div className="reports-maintenance-overlay"><div className="reports-maintenance-message" role="status">
+    <span className="reports-maintenance-icon"><Clock3 size={32}/></span><span className="reports-maintenance-label">REPORTS & ANALYTICS</span>
+    <h2 id="reports-maintenance-title">Under Maintenance</h2><p>We’re improving your reports experience. Reports, previews and downloads are temporarily unavailable for your account.</p>
+    <span className="reports-maintenance-note"><ShieldCheck size={16}/>Your HR data remains secure</span>
+   </div></div>
+  </section>
+ </div>;
+}
+function AvailableReportsPage(){
  const{can}=useApp();const[departmentId,setDepartmentId]=useState(''),[branchId,setBranchId]=useState('');const departments=useData('departments',can('organization')),branches=useData('branches',can('organization'));const[preview,setPreview]=useState<string|null>(null),[from,setFrom]=useState(new Date(Date.now()-30*86400000).toISOString().slice(0,10)),[to,setTo]=useState(new Date().toISOString().slice(0,10));
  const reports=[
   {name:'employees',label:'Employee directory',resource:'employees',description:'Employee codes, contact and employment records.'},
@@ -286,4 +309,3 @@ export function AIPage(){
  async function send(e:React.FormEvent){e.preventDefault();await ask(question)}
  return <><PageTitle title="TCW HR AI assistant" subtitle="Ask questions about the HR information available to your role."><span className={'ai-ready-chip '+(status.data?.configured?'ready':'')}>{status.data?.configured?'Available':'Unavailable'}</span></PageTitle><div className="ai-workspace"><aside className="panel ai-prompt-panel"><div className="ai-orb"><Sparkles size={28}/></div><h2>Start with a useful question</h2><p>The assistant can summarize attendance, leave and workforce signals visible to your role.</p><div className="ai-suggestions">{suggestions.map(v=><button key={v} disabled={!status.data?.configured||busy} onClick={()=>ask(v)}>{v}</button>)}</div><small>{status.data?.configured?'Ready to help with your HR workspace.':'The AI assistant is currently unavailable.'}</small></aside><div className="panel chat-panel ai-chat-panel"><div className="ai-chat-head"><span className="ai-chat-avatar"><Sparkles size={18}/></span><div><strong>TCW HR Copilot</strong><small>{status.data?.configured?'Available':'Unavailable'}</small></div>{messages.length>0&&<button type="button" className="btn secondary small" onClick={()=>setMessages([])}>New chat</button>}</div><div className="chat-messages">{!messages.length&&<div className="ai-empty-state"><span className="ai-empty-orb"><Sparkles size={25}/></span><h3>{status.data?.configured?'How can I help HR today?':'AI is currently unavailable'}</h3><p>{status.data?.configured?'Ask a specific question. Follow-up questions keep the recent conversation context.':'The assistant becomes available after the Super Admin saves and tests an AI provider.'}</p>{status.data?.configured&&<div className="ai-inline-suggestions">{suggestions.slice(0,3).map(v=><button type="button" key={v} onClick={()=>ask(v)}>{v}</button>)}</div>}</div>} {messages.map((m,i)=><div className={'chat-message '+m.role} key={i}><div className="chat-message-head"><span>{m.role==='user'?'You':m.role==='error'?'!':'AI'}</span><strong>{m.role==='user'?'You':m.role==='error'?'Service status':'TCW HR Copilot'}</strong></div><p>{m.text}</p>{m.model&&<small>{m.model}</small>}</div>)}{busy&&<div className="ai-thinking"><span/><span/><span/><small>Reviewing authorized HR data…</small></div>}</div><form className="chat-compose" onSubmit={send}><input aria-label="Ask the assistant" value={question} maxLength={1000} onChange={e=>setQuestion(e.target.value)} placeholder="Ask about attendance, leave, payroll, workforce…" required disabled={!status.data?.configured}/><button className="btn primary" disabled={busy||!status.data?.configured||!question.trim()}><Send size={18}/><span>Send</span></button></form><small className="chat-note">AI assists with summaries and analysis. Hiring, pay and disciplinary decisions remain with your team.</small></div></div></>;
 }
-

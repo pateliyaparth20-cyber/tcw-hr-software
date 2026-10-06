@@ -116,6 +116,28 @@ test('HR operations work through authenticated APIs with tenant isolation',async
       const beta=await db.tenant.create({data:{name:'Foreign',code:'OPS-FOREIGN'}}),foreign=await db.employee.create({data:{tenantId:beta.id,employeeCode:'FOREIGN',firstName:'Foreign',lastName:'Employee',email:'foreign@example.test',joiningDate:new Date('2020-01-01')}});
       assert.equal((await call('salary-versions/'+foreign.id,'GET',undefined,owner)).status,404);assert.equal((await call('employees/'+foreign.id+'/tasks','GET',undefined,owner)).status,404);
     });
+    await t.test('reports maintenance blocks existing and newly created accounts including direct exports',async()=>{
+      const keys=['REPORTS_MAINTENANCE','REPORTS_PREVIEW_USER_IDS','REPORTS_PREVIEW_LOGIN','REPORTS_PREVIEW_COMPANY_CODE','REPORTS_PREVIEW_CREATED_BEFORE'];
+      const previous=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+      try{
+        for(const key of keys)delete process.env[key];
+        process.env.REPORTS_MAINTENANCE='true';process.env.REPORTS_PREVIEW_USER_IDS=user.id;
+        assert.deepEqual((await call('reports/access','GET',undefined,owner)).data,{available:true,maintenance:true});
+        assert.equal((await call('reports/employees?preview=true','GET',undefined,owner)).status,200);
+        assert.deepEqual((await call('reports/access','GET',undefined,manager)).data,{available:false,maintenance:true});
+        const created=await db.user.create({data:{tenantId:tid,name:'New owner',email:'new-owner@example.test',passwordHash:await hashPassword('SyntheticNewOwner!2026'),roleId:user.roleId}});
+        const newOwner=await login(created.email,'SyntheticNewOwner!2026');
+        assert.deepEqual((await call('reports/access','GET',undefined,newOwner)).data,{available:false,maintenance:true});
+        for(const auth of [manager,newOwner])for(const path of ['reports/employees?preview=true','reports/employees?format=csv','reports/payroll-items?format=xlsx','reports/payroll?format=pdf','reports/bank-payout?format=csv','reports/attendance-summary?month=2024-03']){
+          const r=await call(path,'GET',undefined,auth);assert.equal(r.status,403,path);assert.match(r.data.message,/Under Maintenance/);assert.equal(r.data.items,undefined);assert.equal(r.response.headers.get('content-disposition'),null);
+        }
+        delete process.env.REPORTS_PREVIEW_USER_IDS;
+        assert.equal((await call('reports/employees?preview=true','GET',undefined,owner)).status,403);
+        process.env.REPORTS_PREVIEW_LOGIN=user.email;process.env.REPORTS_PREVIEW_COMPANY_CODE='OPS';process.env.REPORTS_PREVIEW_CREATED_BEFORE=user.createdAt.toISOString();
+        assert.equal((await call('reports/employees?preview=true','GET',undefined,owner)).status,200);
+        process.env.REPORTS_PREVIEW_COMPANY_CODE='OTHER';assert.equal((await call('reports/employees?preview=true','GET',undefined,owner)).status,403);
+      }finally{for(const key of keys){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
+    });
     await t.test('2FA blocks password-only sessions, rejects replay, consumes recovery codes once and disables securely',async()=>{
       const setup=await call('auth/two-factor/setup','POST',{currentPassword:'SyntheticOwner!2026'},owner);assert.equal(setup.status,200,JSON.stringify(setup.data));assert.ok(setup.data.uri.startsWith('otpauth://'));
       const stored=await db.userSecurity.findUniqueOrThrow({where:{userId:user.id}});assert.ok(!stored.pendingSecret?.includes(setup.data.secret));

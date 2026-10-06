@@ -23,6 +23,7 @@ import {FilesService} from './files';
 import {BiometricService} from './biometric';
 import {PayoutService} from './payouts';
 import {reportRows} from './report-data';
+import {reportsAccess,requireReportsAccess} from './reports-access';
 import {twoFactor} from './two-factor';
 import {SalaryOperations} from './salary-operations';
 import {PeopleOperations} from './people-operations';
@@ -452,7 +453,10 @@ export class Api {
       await audit(this.db,ctx,'AGENT_HELP','agent');
       return {answer,model:'Meghna',action:agentAction};
     }
-    if(resource==='reports'&&method==='GET')return this.report(ctx,key,req,res);
+    if(resource==='reports'&&method==='GET'){
+      if(key==='access')return reportsAccess(this.db,ctx);
+      return this.report(ctx,key,req,res);
+    }
     if(resource==='ai'&&key==='status'&&method==='GET'){tenant(ctx);requirePermission(ctx,'ai','VIEW');return publicAIConfig(this.db);}
     if(resource==='ai'&&method==='POST'){
       tenant(ctx);requirePermission(ctx,'ai','VIEW');const {question,history=[]}=z.object({question:z.string().min(3).max(1000),history:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().max(1600)}).strict()).max(10).optional()}).strict().parse(body);
@@ -463,6 +467,7 @@ export class Api {
     return this.data.resource(ctx,resource,method,key,body,req.query);
   }
   async report(ctx:Context,type:string,req:Request,res:Response){
+    await requireReportsAccess(this.db,ctx);
     requirePermission(ctx,'reports','EXPORT');
     let rows:any[]=[];
     if(type==='bank-payout'){
