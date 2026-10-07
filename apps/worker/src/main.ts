@@ -1,3 +1,4 @@
+import {cleanFieldWork} from '../../api/src/field-work';
 import 'dotenv/config';
 import {Queue,Worker} from 'bullmq';
 import nodemailer from 'nodemailer';
@@ -141,6 +142,8 @@ async function scan(){if(scanning)return;scanning=true;try{
   await prepareScheduledPayroll(db);
   await monitorAttendanceDevices(db);
 }catch{console.error('Worker scan failed; retrying on next interval.')}finally{scanning=false}}
+let fieldCleaning=false;
+const fieldInterval=setInterval(async()=>{if(fieldCleaning)return;fieldCleaning=true;try{await cleanFieldWork(db)}catch{console.error('Field-work expiry/retention check failed; retrying.')}finally{fieldCleaning=false}},60000);
 const interval=setInterval(scan,10000);scan();void refreshAttendanceAtBoundary();scheduleAttendanceBoundaryRefresh();
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);clearInterval(salaryInterval);clearInterval(salaryReconciliationInterval);if(attendanceTimer)clearTimeout(attendanceTimer);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);clearInterval(fieldInterval);clearInterval(salaryInterval);clearInterval(salaryReconciliationInterval);if(attendanceTimer)clearTimeout(attendanceTimer);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
 console.log('TCW HR Software worker running: email/SMS outbox, subscription expiry, payroll automation, minute-boundary no-punch attendance finalization, attendance-device monitoring, and manual-sync attendance.');

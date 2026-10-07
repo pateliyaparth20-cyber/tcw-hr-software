@@ -30,6 +30,7 @@ import {reportsAccess,requireReportsAccess} from './reports-access';
 import {twoFactor} from './two-factor';
 import {SalaryOperations} from './salary-operations';
 import {salaryPaymentChallan,salaryChallanPdf} from './salary-challan';
+import {FieldWork} from './field-work';
 import {PeopleOperations} from './people-operations';
 import {approvalPolicies} from './approvals';
 import {employeeImport,importColumns} from './employee-import';
@@ -271,6 +272,7 @@ export class Api {
     if(resource==='payroll'&&key&&action==='payment-reference'&&method==='POST')return this.payouts.recoverReference(ctx,id.parse(key),body);
     if(resource==='payroll'&&key&&action==='payout-sync'&&method==='POST')return this.payouts.sync(ctx,id.parse(key));
     if(resource==='payroll')return this.flows.payroll(ctx,method,key,action,body);
+    if(resource==='field-work'){res.setHeader('Cache-Control','private, no-store');return new FieldWork(this.db).handle(ctx,method,body,req.query,key,action);}
     if(resource==='workforce')return this.flows.workforce(ctx,method,body);
     if(resource==='exit'&&key&&action==='review'&&method==='POST')return this.flows.exit(ctx,key,body);
     if(resource==='devices'&&key&&action==='test'&&method==='POST')return this.biometric.test(ctx,id.parse(key));

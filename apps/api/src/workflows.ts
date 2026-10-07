@@ -1,10 +1,10 @@
+import {closeFieldSessions} from './field-work';
 import {challanPaymentStatus} from './salary-challan';
 import {approvalEnabled,approvalRows,createApproval,reviewApproval} from './approvals';
 import {updateManualSalary} from './manual-payroll';
 import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
 import {z} from 'zod';
-import {createHash} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {id,date,leaveSchema} from '../../../packages/validation';
 import {allocateBreakUsageSeconds,attendanceBusinessMinutesFromSeconds,attendanceCalculationPunches,attendanceElapsedSeconds,attendancePayableUnits,attendancePunchDrivenBreaks,attendanceWorkdayDate,calculateAttendance,flexibleBreakLiveState,punchedAttendanceStatusAtMoment,isScheduledBreakOut,isScheduledWorkDay,localDate,monthBounds,punchDrivenBreakUsageSeconds,zonedMinute} from '../../../packages/attendance-engine';
@@ -12,7 +12,7 @@ import {hasPermission} from '../../../packages/permissions';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
 import {assertAttendanceUnlocked,attendanceMonthSummary,employeeShift,lockAttendanceMonth,reconcileAttendanceMonth,refreshTenantCurrentNoPunchAttendance,unlockAttendanceMonth} from './attendance-automation';
 import {sendPush} from './push';
-import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace} from './face-profile';
+import {enrollEmployeeFace,faceProfileStatus,verifyEmployeeFace,createFaceChallenge,reviewEmployeeFace} from './face-profile';
 import {finalizePayrollMonth,preparePayrollMonth,reopenPayrollMonth} from './payroll-service';
 
 const monthsCovered=(start:Date,end:Date)=>{const out:string[]=[];let y=start.getUTCFullYear(),m=start.getUTCMonth();const ey=end.getUTCFullYear(),em=end.getUTCMonth();while(y<ey||(y===ey&&m<=em)){out.push(`${y}-${String(m+1).padStart(2,'0')}`);m++;if(m>11){m=0;y++;}}return out;};
@@ -48,6 +48,8 @@ export class Workflows {
   }
   async attendance(ctx:Context,method:string,body:any,query:any={},recordId?:string,action?:string){
     const tid=tenant(ctx);const scope=await employeeScope(this.db,ctx);
+    if(recordId==='face-challenge'&&method==='POST'){requirePermission(ctx,'attendance','VIEW');return createFaceChallenge(this.db,ctx,body);}
+    if(recordId==='face-review')return reviewEmployeeFace(this.db,ctx,method,body);
     if(recordId==='face-profile'){
       requirePermission(ctx,'attendance','VIEW');
       if(method==='GET')return faceProfileStatus(this.db,ctx);
@@ -94,11 +96,8 @@ export class Workflows {
       requirePermission(ctx,'attendance','VIEW');
       if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Face Scan attendance is available from an Employee account.');
       if(!ctx.user.employeeId)throw new BadRequestException('Link this user account to an employee before using Face Scan attendance.');
-      const input=z.object({frame:z.string().min(1000).max(800000),descriptor:z.array(z.number().min(-5).max(5)).length(128),clientNonce:z.string().min(8).max(64),intent:z.enum(['IN','OUT']).optional()}).strict().parse(body);
-      const matched=input.frame.match(/^data:image\/(jpeg|png);base64,([A-Za-z0-9+/=]+)$/);if(!matched)throw new BadRequestException('Capture a valid camera image.');
-      const bytes=Buffer.from(matched[2],'base64');const png=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
-      if(bytes.length<5000||bytes.length>500000||(!png&&!jpg))throw new BadRequestException('Face Scan image is invalid. Keep your face clearly inside the camera frame and try again.');
-      const match=await verifyEmployeeFace(this.db,ctx,input.descriptor);
+      const input=z.object({challengeId:z.string().uuid(),frames:z.array(z.string().min(1000).max(800000)).length(3),clientNonce:z.string().uuid(),intent:z.enum(['IN','OUT']).optional()}).strict().parse(body);
+      const match=await verifyEmployeeFace(this.db,ctx,{challengeId:input.challengeId,frames:input.frames});
       if(!match.enrolled)throw new ForbiddenException('Add your face before using Face Scan attendance.');
       if(!match.matched){
         await audit(this.db,ctx,'FACE_SCAN_REJECTED','attendance',ctx.user.employeeId,undefined,{reason:'FACE_MISMATCH',distance:match.distance,threshold:match.threshold});
@@ -108,9 +107,11 @@ export class Workflows {
       const punchTime=new Date();await assertAttendanceUnlocked(this.db,tid,punchTime);
       let shift=await employeeShift(this.db,tid,employeeId);let day=attendanceWorkdayDate(punchTime,shift.startMinute,shift.endMinute,shift.timezone);let night=shift.endMinute<=shift.startMinute;
       let start=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone),end=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);start=new Date(Math.min(+start,punchTime.getTime()-300000));end=new Date(Math.max(+end,punchTime.getTime()+300000));
-      const faceHash=createHash('sha256').update(bytes).digest('hex'),sourceId=`face-${ctx.user.id.slice(0,18)}-${input.clientNonce.slice(0,36)}`;
+      const faceHash=match.captureHash,sourceId=`face-${ctx.user.id.slice(0,18)}-${input.clientNonce.slice(0,36)}`;
       return this.db.$transaction(async tx=>{
         await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+        if(!await tx.session.findFirst({where:{id:ctx.session.id,userId:ctx.user.id,expiresAt:{gt:new Date()}}}))throw new ForbiddenException('Your session changed. Sign in again before face attendance.');
+        const approved=await tx.employeeFaceProfile.findFirst({where:{id:match.profileId,tenantId:tid,employeeId,status:'APPROVED',updatedAt:match.profileUpdatedAt}});if(!approved)throw new ForbiddenException('Face approval changed. Start a new face verification.');
         let mobileDevice=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP'}});
         if(!mobileDevice){
           mobileDevice=await tx.attendanceDevice.create({data:{tenantId:tid,name:'TCW Employee Mobile App',vendor:'TCW_MOBILE',model:'TCW Employee Face Scan',serialNumber:'TCW-EMPLOYEE-APP',connectionMode:'EMPLOYEE_APP',host:'',port:443,timezone:shift.timezone,status:'ONLINE',lastSeenAt:punchTime}});
@@ -124,7 +125,8 @@ export class Workflows {
         let punchType:'IN'|'OUT';if(input.intent==='IN'){if(openPunch)throw new ConflictException('You are already checked in. Check out before starting another IN.');punchType='IN';}else if(input.intent==='OUT'){if(!openPunch)throw new ConflictException('You are not currently checked in. Check in before checking out.');punchType='OUT';}else punchType=openPunch?'OUT':'IN';
         await lockPayrollPeriod(tx,tid,day.slice(0,7));await assertAttendanceUnlocked(tx,tid,new Date(day));
       const targetDate=new Date(day),targetAttendance=await tx.attendanceDaily.findUnique({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:targetDate}}});if(targetAttendance?.shiftId===shift.id&&targetAttendance.firstIn)start=new Date(targetAttendance.firstIn.getTime()-60000);else if(punchType==='IN')start=new Date(punchTime.getTime()-60000);
-        const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:mobileDevice.id,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',app:'TCW_EMPLOYEE',intent:punchType,actorId:ctx.user.id,faceCaptureHash:faceHash,captureBytes:bytes.length,rawImageStored:false,faceMatched:true,faceDistance:match.distance,faceThreshold:match.threshold}}});
+        if(punchType==='OUT')await closeFieldSessions(tx,tid,employeeId,'ATTENDANCE_CHECKOUT');
+        const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:mobileDevice.id,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',app:'TCW_EMPLOYEE',intent:punchType,actorId:ctx.user.id,faceCaptureHash:faceHash,rawImageStored:false,faceMatched:true,faceDistance:match.distance,faceThreshold:match.threshold}}});
         const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
         const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
         const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});

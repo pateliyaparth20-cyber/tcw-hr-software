@@ -1,84 +1,29 @@
-import {BadRequestException,ConflictException,ForbiddenException} from '@nestjs/common';
-import {createCipheriv,createDecipheriv,createHash,randomBytes} from 'node:crypto';
+import {BadRequestException,ConflictException,ForbiddenException,NotFoundException} from '@nestjs/common';
+import {createCipheriv,createDecipheriv,createHash,randomBytes,randomInt} from 'node:crypto';
 import {z} from 'zod';
 import type {Database} from '../../../packages/database';
 import type {Context} from './context';
-import {audit,tenant} from './context';
-
-const descriptorSchema=z.array(z.number().min(-5).max(5)).length(128);
-export const FACE_MATCH_THRESHOLD=0.48;
-const TEMPLATE_VERSION='face-api-1.7.15-v2';
-
-function masterKey(){
-  const secret=process.env.CONFIG_ENCRYPTION_KEY?.trim();
-  if(!secret)throw new Error('CONFIG_ENCRYPTION_KEY is required for encrypted face templates.');
-  return createHash('sha256').update(secret).digest();
+import {assertEmployee,audit,requirePermission,tenant} from './context';
+import {analyzeFace,validateHeadMovement} from './face-engine';
+export const FACE_MATCH_THRESHOLD=.42;
+const TEMPLATE_VERSION='server-face-api-1.7.15-v3';
+export const faceCaptureSchema=z.object({challengeId:z.string().uuid(),frames:z.array(z.string().min(1000).max(800000)).length(3)}).strict();
+function masterKey(){const secret=process.env.CONFIG_ENCRYPTION_KEY?.trim();if(!secret||secret.length<32)throw new Error('CONFIG_ENCRYPTION_KEY of at least 32 characters is required for face verification.');return createHash('sha256').update(secret).digest();}
+function normalize(values:number[]){if(values.length!==128||values.some(v=>!Number.isFinite(v)))throw new BadRequestException('Face descriptor is invalid.');const norm=Math.sqrt(values.reduce((n,v)=>n+v*v,0));if(!Number.isFinite(norm)||norm<.1)throw new BadRequestException('Face descriptor is invalid.');return values.map(v=>v/norm);}
+export function faceDistance(a:number[],b:number[]){return Math.sqrt(a.reduce((sum,v,i)=>sum+(v-b[i])**2,0));}
+function average(samples:number[][]){return normalize(Array.from({length:128},(_,i)=>samples.reduce((sum,s)=>sum+s[i],0)/samples.length));}
+function encrypt(value:any,tid:string,eid:string,purpose:string){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',masterKey(),iv);cipher.setAAD(Buffer.from(`${tid}:${eid}:${purpose}:v3`));const bytes=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);return ['v3',iv.toString('base64url'),cipher.getAuthTag().toString('base64url'),bytes.toString('base64url')].join(':');}
+function decrypt(value:string,tid:string,eid:string,purpose:string){const parts=value.split(':');if(parts.length!==4||parts[0]!=='v3')throw new ForbiddenException('Face must be enrolled again with server verification.');const decipher=createDecipheriv('aes-256-gcm',masterKey(),Buffer.from(parts[1],'base64url'));decipher.setAAD(Buffer.from(`${tid}:${eid}:${purpose}:v3`));decipher.setAuthTag(Buffer.from(parts[2],'base64url'));return JSON.parse(Buffer.concat([decipher.update(Buffer.from(parts[3],'base64url')),decipher.final()]).toString('utf8'));}
+function ownEmployee(ctx:Context){if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Use an Employee account for face capture.');if(!ctx.user.employeeId)throw new BadRequestException('This account is not linked to an employee record.');return ctx.user.employeeId as string;}
+export function faceEnrollmentSummary(profile:any){const serverVerified=profile?.templateVersion===TEMPLATE_VERSION,status=profile?.status??'NOT_ENROLLED';return {enrolled:!!profile&&serverVerified&&['APPROVED','PENDING'].includes(status),status,serverVerified,attendanceReady:serverVerified&&status==='APPROVED',...(profile?{enrolledAt:profile.enrolledAt,templateVersion:profile.templateVersion,sampleCount:profile.sampleCount,approvedAt:profile.approvedAt}:{} )};}
+export async function faceProfileStatus(db:Database,ctx:Context){const tid=tenant(ctx),employeeId=ownEmployee(ctx);const profile=await db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}},select:{enrolledAt:true,templateVersion:true,sampleCount:true,status:true,approvedAt:true}});return faceEnrollmentSummary(profile);}
+export async function createFaceChallenge(db:Database,ctx:Context,body:unknown){const tid=tenant(ctx),employeeId=ownEmployee(ctx);await assertEmployee(db,ctx,employeeId);masterKey();const {purpose}=z.object({purpose:z.enum(['ENROLL','PUNCH'])}).strict().parse(body);const profile=await db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}}});if(purpose==='PUNCH'&&(profile?.status!=='APPROVED'||profile.templateVersion!==TEMPLATE_VERSION))throw new ForbiddenException('Complete server face setup and HR approval before face attendance.');if(purpose==='ENROLL'&&profile&&['PENDING','APPROVED'].includes(profile.status))throw new ConflictException(profile.status==='PENDING'?'Your face setup is awaiting HR approval.':'Face is already approved. Ask HR to reset it before enrolling again.');
+ return db.$transaction(async tx=>{await tx.$queryRaw`SELECT id FROM employees WHERE tenant_id=${tid}::uuid AND id=${employeeId}::uuid FOR UPDATE`;if(await tx.faceCaptureChallenge.count({where:{tenantId:tid,employeeId,createdAt:{gt:new Date(Date.now()-60000)}}})>=5)throw new ConflictException('Too many face attempts. Wait one minute and retry.');await tx.faceCaptureChallenge.deleteMany({where:{tenantId:tid,employeeId,createdAt:{lt:new Date(Date.now()-86400000)}}});const row=await tx.faceCaptureChallenge.create({data:{tenantId:tid,employeeId,userId:ctx.user.id,sessionId:ctx.session.id,purpose,turn:randomInt(2)?'LEFT':'RIGHT',expiresAt:new Date(Date.now()+120000)}});return {challengeId:row.id,turn:row.turn,expiresAt:row.expiresAt};});
 }
-function normalize(values:number[]){
-  if(values.length!==128||values.some(v=>!Number.isFinite(v)))throw new BadRequestException('Face descriptor is invalid.');
-  const norm=Math.sqrt(values.reduce((n,v)=>n+v*v,0));
-  if(!Number.isFinite(norm)||norm<0.1)throw new BadRequestException('Face descriptor is invalid.');
-  return values.map(v=>v/norm);
-}
-function distance(a:number[],b:number[]){
-  if(a.length!==b.length)return Number.POSITIVE_INFINITY;
-  return Math.sqrt(a.reduce((sum,v,i)=>sum+(v-b[i])*(v-b[i]),0));
-}
-function average(samples:number[][]){
-  const out=Array(128).fill(0) as number[];
-  for(const sample of samples)for(let i=0;i<128;i++)out[i]+=sample[i]/samples.length;
-  return normalize(out);
-}
-type StoredFaceTemplate={centroid:number[];samples:number[][]};
-function encryptTemplate(value:StoredFaceTemplate){
-  const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',masterKey(),iv);
-  const encrypted=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);
-  const tag=cipher.getAuthTag();
-  return ['v1',iv.toString('base64url'),tag.toString('base64url'),encrypted.toString('base64url')].join(':');
-}
-function decryptTemplate(value:string):StoredFaceTemplate{
-  const parts=value.split(':');
-  if(parts.length!==4||parts[0]!=='v1')throw new Error('Stored employee face template is invalid.');
-  const decipher=createDecipheriv('aes-256-gcm',masterKey(),Buffer.from(parts[1],'base64url'));
-  decipher.setAuthTag(Buffer.from(parts[2],'base64url'));
-  const plain=Buffer.concat([decipher.update(Buffer.from(parts[3],'base64url')),decipher.final()]).toString('utf8');
-  const parsed=JSON.parse(plain);
-  if(Array.isArray(parsed))return {centroid:normalize(parsed),samples:[]};
-  const centroid=normalize(parsed?.centroid??[]);
-  const samples=Array.isArray(parsed?.samples)?parsed.samples.slice(0,5).map((sample:any)=>normalize(sample)):[];
-  return {centroid,samples};
-}
-function ownEmployee(ctx:Context){
-  if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Face enrollment is only available from an Employee account.');
-  if(!ctx.user.employeeId)throw new BadRequestException('This Employee account is not linked to an employee record.');
-  return ctx.user.employeeId;
-}
-export async function faceProfileStatus(db:Database,ctx:Context){
-  const tid=tenant(ctx),employeeId=ownEmployee(ctx);
-  const profile=await db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}},select:{enrolledAt:true,templateVersion:true,sampleCount:true}});
-  return profile?{enrolled:true,enrolledAt:profile.enrolledAt,templateVersion:profile.templateVersion,sampleCount:profile.sampleCount}:{enrolled:false,required:true};
-}
-export async function enrollEmployeeFace(db:Database,ctx:Context,body:unknown){
-  const tid=tenant(ctx),employeeId=ownEmployee(ctx);
-  const input=z.object({samples:z.array(descriptorSchema).length(3),engine:z.string().trim().min(1).max(80).default(TEMPLATE_VERSION)}).strict().parse(body);
-  const current=await db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}}});
-  if(current)throw new ConflictException('Face is already enrolled. Ask HR/Admin to reset the face before enrolling again.');
-  const samples=input.samples.map(normalize);
-  let maxDistance=0;
-  for(let i=0;i<samples.length;i++)for(let j=i+1;j<samples.length;j++)maxDistance=Math.max(maxDistance,distance(samples[i],samples[j]));
-  if(maxDistance>0.58)throw new BadRequestException('The three face captures do not match closely enough. Use the same person, normal front light, and try again.');
-  const centroid=average(samples);
-  const row=await db.employeeFaceProfile.create({data:{tenantId:tid,employeeId,templateCiphertext:encryptTemplate({centroid,samples}),templateVersion:TEMPLATE_VERSION,sampleCount:samples.length}});
-  await audit(db,ctx,'EMPLOYEE_FACE_ENROLLED','employees',employeeId,undefined,{templateVersion:row.templateVersion,sampleCount:row.sampleCount,enrolledAt:row.enrolledAt,maxEnrollmentDistance:Number(maxDistance.toFixed(4)),rawImageStored:false});
-  return {enrolled:true,enrolledAt:row.enrolledAt,templateVersion:row.templateVersion,sampleCount:row.sampleCount};
-}
-export async function verifyEmployeeFace(db:Database,ctx:Context,descriptor:number[]){
-  const tid=tenant(ctx),employeeId=ownEmployee(ctx);
-  const profile=await db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}}});
-  if(!profile)return {enrolled:false,matched:false,distance:null,threshold:FACE_MATCH_THRESHOLD};
-  const current=normalize(descriptorSchema.parse(descriptor));
-  const stored=decryptTemplate(profile.templateCiphertext);
-  const candidates=[stored.centroid,...stored.samples];
-  const d=Math.min(...candidates.map(candidate=>distance(candidate,current)));
-  return {enrolled:true,matched:d<=FACE_MATCH_THRESHOLD,distance:Number(d.toFixed(4)),threshold:FACE_MATCH_THRESHOLD};
+async function verifyCapture(db:Database,ctx:Context,input:z.infer<typeof faceCaptureSchema>,purpose:string){const tid=tenant(ctx),employeeId=ownEmployee(ctx),now=new Date();await assertEmployee(db,ctx,employeeId);const challenge=await db.faceCaptureChallenge.findFirst({where:{id:input.challengeId,tenantId:tid,employeeId,userId:ctx.user.id,sessionId:ctx.session.id,purpose,usedAt:null,expiresAt:{gt:now}}});if(!challenge)throw new ForbiddenException('Face challenge expired or already used. Start a new camera capture.');const claimed=await db.faceCaptureChallenge.updateMany({where:{id:challenge.id,usedAt:null,expiresAt:{gt:now}},data:{usedAt:now}});if(claimed.count!==1)throw new ForbiddenException('Face challenge already used.');const faces=[];for(const frame of input.frames)faces.push(await analyzeFace(frame));validateHeadMovement(faces,challenge.turn);const samples=faces.map(f=>normalize(f.descriptor));for(let i=0;i<samples.length;i++)for(let j=i+1;j<samples.length;j++)if(faceDistance(samples[i],samples[j])>FACE_MATCH_THRESHOLD)throw new ForbiddenException('All captures must show the same employee face.');return {samples,faces,employeeId,tid};}
+export async function enrollEmployeeFace(db:Database,ctx:Context,body:unknown){const input=faceCaptureSchema.parse(body),capture=await verifyCapture(db,ctx,input,'ENROLL'),{tid,employeeId,samples}=capture;return db.$transaction(async tx=>{await tx.$queryRaw`SELECT id FROM employees WHERE tenant_id=${tid}::uuid AND id=${employeeId}::uuid FOR UPDATE`;if(!await tx.session.findFirst({where:{id:ctx.session.id,userId:ctx.user.id,expiresAt:{gt:new Date()}}}))throw new ForbiddenException('Your session changed. Sign in again before face setup.');const current=await tx.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}}});if(current&&['APPROVED','PENDING'].includes(current.status))throw new ConflictException('Face is already set up. Ask HR to review or reset it.');const data={templateCiphertext:encrypt({centroid:average(samples),samples},tid,employeeId,'template'),reviewCiphertext:encrypt(input.frames[0],tid,employeeId,'review'),templateVersion:TEMPLATE_VERSION,sampleCount:3,status:'PENDING',enrolledAt:new Date(),approvedBy:null,approvedAt:null};const row=await tx.employeeFaceProfile.upsert({where:{tenantId_employeeId:{tenantId:tid,employeeId}},create:{tenantId:tid,employeeId,...data},update:data});await audit(tx,ctx,'EMPLOYEE_FACE_PENDING_APPROVAL','employees',employeeId,undefined,{templateVersion:TEMPLATE_VERSION,status:row.status,sampleCount:3});return {enrolled:true,status:'PENDING',enrolledAt:row.enrolledAt,templateVersion:TEMPLATE_VERSION};});}
+export async function verifyEmployeeFace(db:Database,ctx:Context,body:unknown){const input=faceCaptureSchema.parse(body),tid=tenant(ctx),employeeId=ownEmployee(ctx);const profile=await db.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId}}});if(!profile||profile.status!=='APPROVED'||profile.templateVersion!==TEMPLATE_VERSION)throw new ForbiddenException('Your face needs server setup and HR approval before attendance.');const capture=await verifyCapture(db,ctx,input,'PUNCH'),stored=decrypt(profile.templateCiphertext,tid,employeeId,'template');const d=Math.max(...capture.samples.map(sample=>faceDistance(normalize(stored.centroid),sample)));return {enrolled:true,matched:d<=FACE_MATCH_THRESHOLD,distance:Number(d.toFixed(4)),threshold:FACE_MATCH_THRESHOLD,profileId:profile.id,profileUpdatedAt:profile.updatedAt,captureHash:capture.faces[0].hash};}
+export async function reviewEmployeeFace(db:Database,ctx:Context,method:string,body:unknown){const tid=tenant(ctx);requirePermission(ctx,'employees','MANAGE');if(!['COMPANY_OWNER','HR_ADMIN'].includes(ctx.user.role.code))throw new ForbiddenException('Company HR administrators review face identities.');if(method==='GET'){const profiles=await db.employeeFaceProfile.findMany({where:{tenantId:tid,status:'PENDING'},orderBy:{enrolledAt:'asc'},take:100});const items=[];for(const p of profiles){const employee=await db.employee.findFirst({where:{tenantId:tid,id:p.employeeId,deletedAt:null},select:{id:true,employeeCode:true,firstName:true,lastName:true,photo:true}});if(employee)items.push({id:p.id,employee,enrolledAt:p.enrolledAt,updatedAt:p.updatedAt,preview:p.reviewCiphertext?decrypt(p.reviewCiphertext,tid,p.employeeId,'review'):null});}return {items};}
+ if(method==='POST'){const input=z.object({profileId:z.string().uuid(),decision:z.enum(['APPROVE','REJECT']),expectedUpdatedAt:z.string().datetime(),identityConfirmed:z.literal(true)}).strict().parse(body);return db.$transaction(async tx=>{const profile=await tx.employeeFaceProfile.findFirst({where:{id:input.profileId,tenantId:tid}});if(!profile)throw new NotFoundException('Face profile not found.');await tx.$queryRaw`SELECT id FROM employees WHERE tenant_id=${tid}::uuid AND id=${profile.employeeId}::uuid FOR UPDATE`;const result=await tx.employeeFaceProfile.updateMany({where:{id:profile.id,tenantId:tid,status:'PENDING',updatedAt:new Date(input.expectedUpdatedAt),templateVersion:TEMPLATE_VERSION},data:{status:input.decision==='APPROVE'?'APPROVED':'REJECTED',approvedBy:ctx.user.id,approvedAt:new Date(),reviewCiphertext:null}});if(result.count!==1)throw new ConflictException('Face setup changed or was already reviewed. Refresh before reviewing.');await audit(tx,ctx,input.decision==='APPROVE'?'EMPLOYEE_FACE_APPROVED':'EMPLOYEE_FACE_REJECTED','employees',profile.employeeId,undefined,{profileId:profile.id,identityConfirmed:true});return {ok:true};});}
+ throw new BadRequestException('Unsupported face review operation.');
 }
