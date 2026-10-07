@@ -440,7 +440,7 @@ export class DataService {
       await audit(tx,ctx,'USER_UPDATED','users',after.id,before,after);const{passwordHash,...safe}=after;return {...safe,...(!before&&generatedPassword?{temporaryPassword:generatedPassword}:{})};
     });
   }
-  async platformResource(ctx:Context,type:string,method:string,recordId?:string,body?:unknown){
+  async platformResource(ctx:Context,type:string,method:string,recordId?:string,body?:unknown,query:any={}){
     platform(ctx);const resource=type==='companies'||type==='trials'?'tenants':type==='leads'?'sales':type==='invoices'||type==='payments'?'billing':type;
     requirePermission(ctx,resource,method==='GET'?'VIEW':method==='POST'?'CREATE':method==='DELETE'?'DELETE':'EDIT');
     if(type==='trials'){

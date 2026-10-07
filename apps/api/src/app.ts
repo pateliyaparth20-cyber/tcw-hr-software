@@ -258,7 +258,7 @@ export class Api {
     if(resource==='employees')return this.data.employees(ctx,method,key,body,req.query);
     if(resource==='users')return this.data.users(ctx,method,body,key);
     if(resource==='roles'&&method==='GET'){requirePermission(ctx,'users','VIEW');return {items:await this.db.role.findMany({where:{scope:ctx.user.role.scope}})};}
-    if(resource==='platform'){return this.data.platformResource(ctx,key,method,action,body);}
+    if(resource==='platform'){return this.data.platformResource(ctx,key,method,action,body,req.query);}
     if(resource==='attendance')return this.flows.attendance(ctx,method,body,req.query,key,action);
     if(['leave','expenses','travel'].includes(resource)&&key&&action==='review'&&method==='POST')return this.flows.review(ctx,resource,key,body);
     if(resource==='leave'&&key&&action==='cancel'&&method==='POST')return this.flows.cancelLeave(ctx,key,body);
