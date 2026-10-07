@@ -12,7 +12,7 @@ test('Super Admin opens a company through POST proxy handoff and returns with it
  await page.getByRole('button',{name:'Proxy login',exact:true}).first().click();
  await expect(page).toHaveURL(/localhost:3000\/dashboard/);await expect(page.locator('.company-proxy-banner')).toContainText('Super Admin proxy');
  await page.getByRole('link',{name:'People',exact:true}).first().click();await expect(page.getByRole('heading',{name:'Your team, connected.'})).toBeVisible();await expect(page.locator('.company-proxy-banner')).toBeVisible();
- await page.screenshot({path:'test-results/people-company-proxy-desktop.png',fullPage:true});
+ await page.screenshot({path:'test-results/people-company-proxy-desktop.png',fullPage:true,animations:'disabled'});
  await page.locator('.company-proxy-banner').getByRole('button',{name:'End proxy / Super Admin'}).click();await expect(page).toHaveURL(/localhost:3001\/companies/);await expect(page.getByRole('button',{name:'Proxy login',exact:true}).first()).toBeVisible();
 });
 test('Teams connect to employee dropdowns, work locations preserve choices and mobile profiles scroll',async({page})=>{
@@ -26,15 +26,15 @@ test('Teams connect to employee dropdowns, work locations preserve choices and m
  await page.goto('/organization?tab=teams');await page.getByRole('button',{name:'Members (0)',exact:true}).first().click();await expect(page.getByRole('dialog')).toContainText('No employees assigned');await page.getByRole('dialog').getByRole('button',{name:'Close dialog'}).click();
  await page.goto('/employees');await page.setViewportSize({width:390,height:500});await page.getByRole('button',{name:/View profile of/}).first().click();
  const profile=page.locator('.pd-profile-modal'),scroll=profile.locator('.pd-profile');await expect(scroll).toBeVisible();expect(await scroll.evaluate(el=>el.scrollHeight>el.clientHeight)).toBeTruthy();await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight});await expect(profile.getByRole('button',{name:'Close dialog'})).toBeVisible();expect(await profile.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBeTruthy();
- await page.screenshot({path:'test-results/people-profile-scroll-mobile.png',fullPage:true});await profile.getByRole('button',{name:'Close dialog'}).click();
+ await page.screenshot({path:'test-results/people-profile-scroll-mobile.png',fullPage:true,animations:'disabled'});await profile.getByRole('button',{name:'Close dialog'}).click();
 });
 test('Company profile and field workspace use the shared palette without horizontal overflow',async({page})=>{
  await login(page);
  for(const width of [1440,390,320]){
   await page.setViewportSize({width,height:900});await page.goto('/settings');await expect(page.getByRole('heading',{name:'Company Profile',exact:true})).toBeVisible();await expect(page.getByRole('group',{name:'Company identity'})).toBeVisible();
   if(width===1440){await page.getByRole('button',{name:'Save company profile',exact:true}).click();await expect(page.getByText('Company profile saved.',{exact:true})).toBeVisible();}
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-company-profile-${width}.png`,fullPage:true});
-  await page.goto('/field-work');await expect(page.getByRole('heading',{name:'Your team in the field'})).toBeVisible();expect(await page.locator('.field-hero').evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('186, 230, 253');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-field-design-${width}.png`,fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-company-profile-${width}.png`,fullPage:true,animations:'disabled'});
+  await page.goto('/field-work');await expect(page.getByRole('heading',{name:'Your team in the field'})).toBeVisible();expect(await page.locator('.field-hero').evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('186, 230, 253');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-field-design-${width}.png`,fullPage:true,animations:'disabled'});
   await page.getByRole('button',{name:'Company settings',exact:true}).click();await expect(page.getByRole('heading',{name:'Field work settings'})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  }
 });
