@@ -103,7 +103,7 @@ export function PwaClient(){
       document.body.appendChild(iosGuide);
       iosGuideTimer=setTimeout(dismissIosGuide,6000);
     }
-    const askOnFirstInteraction=()=>{if(!isiOS||standalone)enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
+    const askOnFirstInteraction=(event:Event)=>{if((event.target as Element|null)?.closest?.('.face-scan-modal'))return;if(!isiOS||standalone)enableNotifications().catch(()=>{});document.removeEventListener('pointerdown',askOnFirstInteraction,true)};
     if(!window.TCWNative&&'Notification' in window&&Notification.permission==='default')document.addEventListener('pointerdown',askOnFirstInteraction,true);
     // Never let a development service worker cache Next.js bundles. Old cached
     // chunks can produce React hydration mismatches after a UI update.

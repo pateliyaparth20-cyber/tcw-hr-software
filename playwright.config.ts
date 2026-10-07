@@ -3,6 +3,6 @@ import 'dotenv/config';
 export default defineConfig({
  testDir:'tests/e2e',testMatch:'**/*.spec.ts',fullyParallel:false,workers:1,timeout:45000,
  use:{baseURL:'http://localhost:3000',launchOptions:{...(process.env.PEOPLEOS_CHROMIUM_EXECUTABLE?{executablePath:process.env.PEOPLEOS_CHROMIUM_EXECUTABLE}:{}),...(process.env.PEOPLEOS_CHROMIUM_ARGS?{args:JSON.parse(process.env.PEOPLEOS_CHROMIUM_ARGS)}:{})},trace:'retain-on-failure',screenshot:'only-on-failure'},
- projects:[{name:'chromium',use:{...devices['Desktop Chrome']}}],
+ projects:[{name:'chromium',use:{...devices['Desktop Chrome']}},{name:'webkit-camera',testMatch:'**/face-camera.spec.ts',use:{...devices['iPhone 13']}}],
  reporter:[['list'],['html',{open:'never'}]]
 });
