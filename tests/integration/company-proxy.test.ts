@@ -36,6 +36,7 @@ test('Super Admin proxy handoff is single-use, tenant scoped, audited and bound 
   assert.equal((await call('employees/'+employee.data.id,'GET',undefined,proxy)).data.teamName,'Field sales');
   assert.equal((await call('teams','GET',undefined,proxy)).data.items[0].memberCount,1);
   assert.equal((await call('teams/'+team.data.id,'DELETE',undefined,proxy)).status,409);
+  assert.equal((await call('employees/'+employee.data.id,'DELETE',undefined,proxy)).status,200);assert.equal((await call('teams/'+team.data.id,'DELETE',undefined,proxy)).status,200);
   const audit=await db.auditLog.findFirst({where:{tenantId:a.id,entity:'employees',actorId:me.data.user.id}});assert(audit);assert((audit.after as any)?.proxySessionId);
   const expiredGrant=await call('auth/proxy-start','POST',{tenantId:b.id},root);await db.session.updateMany({where:{tenantId:b.id,proxyGrant:true},data:{expiresAt:new Date(0)}});assert.equal((await call('auth/proxy-claim','POST',{grant:expiredGrant.data.grant})).status,401);
   await call('auth/logout','POST',{},proxy);assert.equal((await call('auth/me','GET',undefined,root)).status,200);assert.equal((await call('company','GET',undefined,proxy)).status,401);

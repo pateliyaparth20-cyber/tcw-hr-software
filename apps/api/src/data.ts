@@ -188,7 +188,7 @@ export class DataService {
           await tx.user.deleteMany({where:{id:{in:userIds},tenantId:tid}});
         }
 
-        await tx.employee.update({where:{id:employeeId},data:{deletedAt:new Date(),status:'INACTIVE',managerId:null}});
+        await tx.employee.update({where:{id:employeeId},data:{deletedAt:new Date(),status:'INACTIVE',managerId:null,teamId:null}});
 
         await audit(tx,ctx,'EMPLOYEE_DELETED','employees',employeeId,before,{operationalDataCleared:true,rawPunchesRetained,historicalPayrollRetained:true,linkedUsers:userIds.length});
         return {ok:true,deleted:true,rawPunchesRetained};

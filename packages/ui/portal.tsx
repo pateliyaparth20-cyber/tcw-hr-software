@@ -60,7 +60,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
   }
   if(cached&&isEmployeeNativeApp()&&cached.user?.role!=='EMPLOYEE'){clearLocalSessionState();setSession(null);setChecking(false);setError('TCW Employee APK is only for Employee accounts. Use the TCW HR Software app for HR/Admin access.');return()=>{active=false};}
   if(cached){setSession(cached);setChecking(false)}
-  else if(isLocalBrowser()&&!localToken){setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return()=>{active=false};}
+  else if(isLocalBrowser()&&!localToken&&new URLSearchParams(window.location.search).get('proxy')!=='1'){setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return()=>{active=false};}
   setError('');
   if(!cached){setChecking(true);const local=isLocalBrowser();slowTimer=setTimeout(()=>{if(active){setChecking(false);setError(local?'The local test server did not answer. Keep npm run demo running on the PC, then try again.':'The secure server is taking longer than expected. Please try again.')}},local?7000:18000)}
   (async()=>{try{
