@@ -6,6 +6,7 @@ import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,Bra
 import {Row,readable} from './config';
 import {HROverview} from './hr-overview';
 import {FaceScanAttendanceModal} from './face';
+import {attendanceDurationSeconds,attendanceLiveBreakState,attendanceLiveBreakUsage} from './attendance-format';
 function useTimeGreeting(timeZone?:string){
  const[greeting,setGreeting]=useState('GOOD MORNING');
  useEffect(()=>{
@@ -80,7 +81,10 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  const[faceOpen,setFaceOpen]=useState(false),[faceIntent,setFaceIntent]=useState<'IN'|'OUT'>('IN'),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarEvents??d.events??[]);
  const timezone=d.company?.timezone??'Asia/Kolkata';
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const serverTodayRecord=attendance.find(r=>String(r.date).slice(0,10)===today);
+ const previousDay=new Date(Date.parse(today)-86400000).toISOString().slice(0,10),attendanceQ=useData(`attendance?from=${previousDay}&to=${today}&employeeId=${employee.id??''}`,!!employee.id,15000);
+ const[now,setNow]=useState(Date.now());useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[]);
+ const liveRecord=(attendanceQ.data?.items??[]).find((r:Row)=>r.employeeId===employee.id&&(String(r.date).slice(0,10)===today||new Date(r.shiftEndTime??0).getTime()>now));
+ const serverTodayRecord=liveRecord??attendance.find(r=>String(r.date).slice(0,10)===today);
  const todayRecord=livePunch?{...(serverTodayRecord??{}),...(livePunch.punchType==='IN'?{firstIn:livePunch.firstIn??livePunch.punchTime,lastOut:null,status:livePunch.status??serverTodayRecord?.status??'PRESENT'}:{firstIn:livePunch.firstIn??serverTodayRecord?.firstIn,lastOut:livePunch.lastOut??livePunch.punchTime,status:livePunch.status??serverTodayRecord?.status??'PRESENT',workMinutes:livePunch.workMinutes??serverTodayRecord?.workMinutes??0})}:serverTodayRecord;
  const latestPunch:Row|null=d.latestPunch??null;
  const latestPunchDay=latestPunch?.punchTime?new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(latestPunch.punchTime)):'';
@@ -94,10 +98,11 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  const payslip:Row|null=d.payroll??null;
  const firstName=String(session.user.name??employee.firstName??'Employee').split(' ')[0];
  const greeting=useTimeGreeting(timezone);
- const working=!fullDayLeaveToday&&(currentPunch?.punchType?currentPunch.punchType==='IN':!!todayRecord?.firstIn&&!todayRecord?.lastOut);
- const completed=!fullDayLeaveToday&&!working&&!!todayRecord?.firstIn&&(currentPunch?.punchType==='OUT'||!!todayRecord?.lastOut);
+ const working=!fullDayLeaveToday&&(!livePunch&&typeof liveRecord?.workingNow==='boolean'?liveRecord.workingNow:currentPunch?.punchType?currentPunch.punchType==='IN':!!todayRecord?.firstIn&&!todayRecord?.lastOut);
+ const breakState=!livePunch&&liveRecord?(attendanceLiveBreakState(liveRecord,now)??(['BREAK','OVER_BREAK'].includes(liveRecord.liveState)?liveRecord.liveState:null)):null,onBreak=!!breakState,breakUsage=liveRecord?attendanceLiveBreakUsage(liveRecord,now):null;
+ const completed=!fullDayLeaveToday&&!onBreak&&!working&&!!todayRecord?.firstIn&&(currentPunch?.punchType==='OUT'||!!todayRecord?.lastOut);
  const workingSince=working?(currentPunch?.punchType==='IN'?currentPunch.punchTime:todayRecord?.firstIn):null;
- const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):working?'Working':completed?'Checked out':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
+ const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):onBreak?(breakState==='OVER_BREAK'?'Over Break':'Break'):working?'Working':completed?'Checked out':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
  const quick=[
   {href:'/leave',title:'Time off',sub:fullDayLeaveToday?'On leave today':pending.length?pending.length+' pending':'Apply leave',icon:<CalendarDays size={21}/>},
   {href:'/payroll',title:'Payslips',sub:payslip?.run?.month??'Salary records',icon:<Wallet size={21}/>},
@@ -112,19 +117,19 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
 
   <section className={'employee-work-status '+(fullDayLeaveToday?'leave':working?'working':completed?'complete':'idle')}>
    <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{fullDayLeaveToday?'HR-approved leave is active today.':workingSince?'Started '+new Date(workingSince).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'Scan your face to start work'}</em></div></div>
-   <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:working?<><small>WORKED TODAY · LIVE</small><strong><WorkingTimer since={workingSince} baseMinutes={Number(todayRecord?.workMinutes??0)}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{Math.floor(Number(todayRecord?.workMinutes??0)/60)}h {Number(todayRecord?.workMinutes??0)%60}m</strong></>:<LiveClock timezone={timezone}/>}</div>
+   <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:onBreak?<><small>{breakState==='OVER_BREAK'?'OVER BREAK':'BREAK · LIVE'}</small><strong>{attendanceDurationSeconds(breakState==='OVER_BREAK'?breakUsage?.overBreakSeconds:breakUsage?.breakSeconds)}</strong></>:working?<><small>WORKED TODAY · LIVE</small><strong><WorkingTimer since={workingSince} baseMinutes={Number(todayRecord?.workMinutes??0)}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{Math.floor(Number(todayRecord?.workMinutes??0)/60)}h {Number(todayRecord?.workMinutes??0)%60}m</strong></>:<LiveClock timezone={timezone}/>}</div>
    <button type="button" className="btn primary" disabled={fullDayLeaveToday||working} onClick={()=>{setFaceIntent('IN');setFaceOpen(true)}}><Camera size={18}/>{fullDayLeaveToday?'Leave active':'Check IN'}</button><button type="button" className="btn secondary" disabled={fullDayLeaveToday||!working} onClick={()=>{setFaceIntent('OUT');setFaceOpen(true)}}><Camera size={18}/>Check OUT</button>
   </section>
 
   <div className="employee-home-quick">{quick.map(item=><Link href={item.href} key={item.href}><span>{item.icon}</span><div><strong>{item.title}</strong><small>{item.sub}</small></div><ChevronRight size={17}/></Link>)}</div>
 
   <div className="employee-home-grid">
-   <section className="employee-home-card"><div className="employee-home-card-head"><div><small>ATTENDANCE</small><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=>{const isToday=String(r.date).slice(0,10)===today;return <div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'—'} → {isToday&&fullDayLeaveToday?'On leave':isToday&&working?'Working':r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'—'}</small></span><Badge value={isToday&&fullDayLeaveToday?leaveDayType:isToday&&working?'WORKING':r.firstIn&&!r.lastOut?'WORKING':r.status}/></div>})}</div>:<Empty title="No attendance yet" description="Your attendance will appear here after the first Face Scan."/>}</section>
+   <section className="employee-home-card"><div className="employee-home-card-head"><div><small>ATTENDANCE</small><h2>Recent days</h2></div><Link href="/attendance">View all <ArrowUpRight size={15}/></Link></div>{attendance.length?<div className="employee-attendance-list">{[...attendance].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5).map(r=>{const isToday=String(r.date).slice(0,10)===today;return <div key={r.id}><span><strong>{displayDate(r.date)}</strong><small>{r.firstIn?new Date(r.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'—'} → {isToday&&fullDayLeaveToday?'On leave':isToday&&working?'Working':r.lastOut?new Date(r.lastOut).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'—'}</small></span><Badge value={isToday&&fullDayLeaveToday?leaveDayType:isToday&&onBreak?breakState:isToday&&working?'WORKING':r.firstIn&&!r.lastOut?'WORKING':r.status}/></div>})}</div>:<Empty title="No attendance yet" description="Your attendance will appear here after the first Face Scan."/>}</section>
    <section className="employee-home-card"><div className="employee-home-card-head"><div><small>YOUR DAY</small><h2>What’s next</h2></div></div><div className="employee-home-next"><div><span><CalendarDays size={18}/></span><div><strong>{approvedUpcoming.length?'Approved time off':'No upcoming leave'}</strong><small>{approvedUpcoming.length?displayDate(approvedUpcoming[0].startDate):'You are scheduled to work normally.'}</small></div></div><div><span><Wallet size={18}/></span><div><strong>{payslip?currencyValue(payslip.net,currency):'Payslip not available'}</strong><small>{payslip?.run?.month?'Latest locked payslip · '+payslip.run.month:'Locked payslips will appear here.'}</small></div></div><div><span><CalendarDays size={18}/></span><div><strong>{events[0]?.title??'No company event'}</strong><small>{events[0]?.date?displayDate(events[0].date):'Nothing upcoming on the company calendar.'}</small></div></div></div></section>
   </div>
 
   {events.length>1&&<section className="employee-home-card employee-home-events"><div className="employee-home-card-head"><div><small>COMPANY CALENDAR</small><h2>Upcoming</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div><div>{events.slice(0,4).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}</small></span><ChevronRight size={16}/></Link>)}</div></section>}
-  {faceOpen&&!fullDayLeaveToday&&<FaceScanAttendanceModal intent={faceIntent} onClose={()=>setFaceOpen(false)} onComplete={async result=>{if(result)setLivePunch(result);await onRefresh()}}/>}
+  {faceOpen&&!fullDayLeaveToday&&<FaceScanAttendanceModal intent={faceIntent} onClose={()=>setFaceOpen(false)} onComplete={async result=>{if(result)setLivePunch(result);await onRefresh();await attendanceQ.refetch();setLivePunch(null)}}/>}
  </div>;
 }
 
