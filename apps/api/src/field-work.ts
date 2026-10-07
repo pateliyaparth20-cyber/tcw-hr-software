@@ -2,7 +2,7 @@ import {BadRequestException,ConflictException,ForbiddenException,NotFoundExcepti
 import {z} from 'zod';
 import {Prisma} from '@prisma/client';
 import type {Database} from '../../../packages/database';
-import {attendanceCalculationPunches} from '../../../packages/attendance-engine';
+import {attendanceCalculationPunches,zonedMinute} from '../../../packages/attendance-engine';
 import {assertEmployee,audit,Context,employeeScope,requirePermission,tenant} from './context';
 export const fieldPolicySchema=z.object({enabled:z.boolean(),intervalSeconds:z.number().int().min(15).max(300),maxAccuracyMeters:z.number().int().min(20).max(500),maxSessionHours:z.number().int().min(1).max(12),employeeIds:z.array(z.string().uuid()).max(500)}).strict();
 export const fieldPointSchema=z.object({latitude:z.number().finite().min(-90).max(90),longitude:z.number().finite().min(-180).max(180),accuracy:z.number().finite().positive().max(5000),capturedAt:z.string().datetime()}).strict();
@@ -74,7 +74,7 @@ export class FieldWork {
    return {items,policy,limit:500};
   }
   if(key==='history'&&method==='GET'){
-   if(!eid)throw new BadRequestException('Select an employee.');const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(query.date),start=new Date(day+'T00:00:00Z');if(!Number.isFinite(+start)||start.toISOString().slice(0,10)!==day)throw new BadRequestException('Choose a valid date.');const end=new Date(+start+86400000),items=await this.db.fieldLocationPoint.findMany({where:{tenantId:tid,employeeId:eid,receivedAt:{gte:start,lt:end}},orderBy:{receivedAt:'asc'},take:1001});return {items:items.slice(0,1000),truncated:items.length>1000,date:day,timezone:'UTC'};
+   if(!eid)throw new BadRequestException('Select an employee.');const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(query.date),start=new Date(day+'T00:00:00Z');if(!Number.isFinite(+start)||start.toISOString().slice(0,10)!==day)throw new BadRequestException('Choose a valid date.');const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid},select:{timezone:true}}),timezone=company.timezone||'Asia/Kolkata',localStart=zonedMinute(day,0,timezone),end=zonedMinute(day,1440,timezone),items=await this.db.fieldLocationPoint.findMany({where:{tenantId:tid,employeeId:eid,receivedAt:{gte:localStart,lt:end}},orderBy:{receivedAt:'asc'},take:1001});return {items:items.slice(0,1000),truncated:items.length>1000,date:day,timezone};
   }
   if(key==='visits'){
    if(method==='GET')return {items:await this.db.fieldVisit.findMany({where:{tenantId:tid,...(eid?{employeeId:eid}:scope?{employeeId:{in:scope}}:{})},orderBy:{createdAt:'desc'},take:200})};
