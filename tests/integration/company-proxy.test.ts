@@ -24,6 +24,7 @@ test('Super Admin proxy handoff is single-use, tenant scoped, audited and bound 
   assert.equal((await call('auth/proxy-claim','POST',{grant:grant.data.grant})).status,401);
   const me=await call('auth/me','GET',undefined,{cookie:claimed.cookie,csrf:'',scope:'TENANT'});assert.equal(me.status,200);assert.equal(me.data.company.id,a.id);assert.equal(me.data.user.role,'HR_ADMIN');assert.equal(me.data.proxy.actorName,'Platform Administrator');
   const proxy={cookie:claimed.cookie,csrf:me.data.csrf,scope:'TENANT'};
+  assert.equal((await call('auth/me','GET',undefined,{...proxy,scope:'PLATFORM'})).status,401);
   assert.equal((await call('platform/companies','GET',undefined,proxy)).status,403);
   assert.equal((await call('auth/two-factor','GET',undefined,proxy)).status,403);
   const team=await call('teams','POST',{name:'Field sales',code:'FIELD'},proxy);assert.equal(team.status,200);
@@ -37,6 +38,11 @@ test('Super Admin proxy handoff is single-use, tenant scoped, audited and bound 
   assert.equal((await call('teams/'+team.data.id,'DELETE',undefined,proxy)).status,409);
   const audit=await db.auditLog.findFirst({where:{tenantId:a.id,entity:'employees',actorId:me.data.user.id}});assert(audit);assert((audit.after as any)?.proxySessionId);
   const expiredGrant=await call('auth/proxy-start','POST',{tenantId:b.id},root);await db.session.updateMany({where:{tenantId:b.id,proxyGrant:true},data:{expiresAt:new Date(0)}});assert.equal((await call('auth/proxy-claim','POST',{grant:expiredGrant.data.grant})).status,401);
-  await call('auth/logout','POST',{},root);assert.equal((await call('company','GET',undefined,proxy)).status,401);
+  await call('auth/logout','POST',{},proxy);assert.equal((await call('auth/me','GET',undefined,root)).status,200);assert.equal((await call('company','GET',undefined,proxy)).status,401);
+  assert(await db.auditLog.findFirst({where:{tenantId:a.id,action:'PROXY_LOGIN_ENDED',actorId:me.data.user.id}}));
+  const raceGrant=await call('auth/proxy-start','POST',{tenantId:a.id},root);const race=await Promise.all([call('auth/proxy-claim','POST',{grant:raceGrant.data.grant}),call('auth/proxy-claim','POST',{grant:raceGrant.data.grant})]);assert.deepEqual(race.map(r=>r.status).sort(),[200,401]);
+  const nextCookie=race.find(r=>r.status===200)!.cookie;const nextMe=await call('auth/me','GET',undefined,{cookie:nextCookie,csrf:'',scope:'TENANT'});const nextProxy={cookie:nextCookie,csrf:nextMe.data.csrf,scope:'TENANT'};
+  const nextSession=await db.session.findFirstOrThrow({where:{tenantId:a.id,proxyGrant:false,proxyParentSessionId:{not:null}}});const fixedExpiry=new Date(Date.now()+30000);await db.session.update({where:{id:nextSession.id},data:{expiresAt:fixedExpiry}});await call('auth/me','GET',undefined,nextProxy);assert.equal((await db.session.findUniqueOrThrow({where:{id:nextSession.id}})).expiresAt.getTime(),fixedExpiry.getTime());
+  await call('auth/logout','POST',{},root);assert.equal((await call('company','GET',undefined,nextProxy)).status,401);assert.equal((await call('company','GET',undefined,proxy)).status,401);
  }finally{io.close();await app.close();await f.close()}
 });
