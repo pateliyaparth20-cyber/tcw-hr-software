@@ -167,3 +167,11 @@ test('manual IN requires actual break punches without changing device automatic 
  assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[device,{...manual,punchTime:at(30),punchType:'OUT'}]),false);
  assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[{...manual,punchTime:at(30)},device]),false);
 });
+
+test('phone IN requires actual OUT before break and keeps device-opened days automatic',()=>{
+ const at=(minute:number)=>new Date(Date.UTC(2026,9,7,9,minute)),phone={punchTime:at(0),punchType:'IN',verificationType:'FACE_SCAN'},device={...phone,verificationType:'FACE_DEVICE'};
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[phone]),true);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[phone,{...phone,punchType:'OUT',punchTime:at(20)}]),true);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[device,{...phone,punchType:'OUT',punchTime:at(20)}]),false);
+ assert.equal(attendancePunchDrivenBreaks({punchDrivenBreaks:false},[{...phone,punchTime:at(20)},device]),false);
+});

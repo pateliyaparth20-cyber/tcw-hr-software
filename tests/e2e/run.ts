@@ -2,6 +2,7 @@ import {spawn,type ChildProcess} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {once} from 'node:events';
 import {createApp} from '../../apps/api/src/app';
+import {hashPassword} from '../../packages/auth';
 import {seed} from '../../prisma/seed';
 import {embeddedDatabase} from '../helpers/database';
 
@@ -24,6 +25,9 @@ async function run(){
   for(const [name,code] of [['QA Engineer','QA'],['Senior QA','SQA']])await fixture.db.designation.create({data:{tenantId:tenant.id,name,code}});
   await fixture.db.course.create({data:{tenantId:tenant.id,title:'E2E Operations Training',description:'Synthetic training fixture',trainer:'QA Trainer',date:new Date('2026-01-01'),capacity:3}});
   await fixture.db.asset.create({data:{tenantId:tenant.id,name:'E2E Operations Laptop',assetTag:'OPS-LAPTOP',category:'Laptop'}});
+  process.env.E2E_EMPLOYEE_PASSWORD=randomBytes(24).toString('hex');
+  const employeeRole=await fixture.db.role.findFirstOrThrow({where:{code:'EMPLOYEE'}});
+  await fixture.db.user.create({data:{tenantId:tenant.id,employeeId:leader.id,roleId:employeeRole.id,name:'Phone Employee',email:'phone-employee@example.test',passwordHash:await hashPassword(process.env.E2E_EMPLOYEE_PASSWORD),active:true,mustChangePassword:false}});
   api=await createApp(fixture.db);await api.app.listen(4000,'127.0.0.1');
   for(const [index,name] of ['web','super-admin'].entries()){
    const child=spawn(process.execPath,['../../node_modules/next/dist/bin/next','start','-p',String(3000+index),'-H','127.0.0.1'],{cwd:'apps/'+name,stdio:'inherit',env:{...process.env,NODE_ENV:'production',API_INTERNAL_URL:'http://127.0.0.1:4000'}});
