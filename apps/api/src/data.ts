@@ -119,17 +119,19 @@ export class DataService {
     const canSalary=hasPermission(ctx.user.role.permissions,'payroll','VIEW');
     const clean=(row:any)=>{if(canSalary)return row;const{monthlySalary,...rest}=row;const personal=this.object(rest.personal);for(const key of ['bankName','accountHolder','accountNumber','ifsc','bankBranch'])delete personal[key];return {...rest,personal};};
     if(method==='GET'){
-      if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();let designation=row.designation;if(/^[0-9a-f-]{36}$/i.test(designation)){const master=await this.db.designation.findFirst({where:{id:designation,tenantId:tid},select:{name:true}});if(master)designation=master.name;}const [department,branch,shift,manager]=await Promise.all([
+      if(recordId){const row=await this.db.employee.findFirst({where:{...where,id:id.parse(recordId),...(scope?{AND:{id:{in:scope}}}:{})}});if(!row)throw new NotFoundException();let designation=row.designation;if(/^[0-9a-f-]{36}$/i.test(designation)){const master=await this.db.designation.findFirst({where:{id:designation,tenantId:tid},select:{name:true}});if(master)designation=master.name;}const [department,branch,shift,manager,team]=await Promise.all([
         row.departmentId?this.db.department.findFirst({where:{tenantId:tid,id:row.departmentId},select:{name:true}}):null,
         row.branchId?this.db.branch.findFirst({where:{tenantId:tid,id:row.branchId},select:{name:true}}):null,
         row.shiftId?this.db.shift.findFirst({where:{tenantId:tid,id:row.shiftId},select:{name:true}}):null,
-        row.managerId?this.db.employee.findFirst({where:{tenantId:tid,id:row.managerId,deletedAt:null},select:{firstName:true,lastName:true}}):null
-      ]);return clean({...row,designation,departmentName:department?.name??null,branchName:branch?.name??null,shiftName:shift?.name??null,managerName:manager?`${manager.firstName} ${manager.lastName}`:null});}
+        row.managerId?this.db.employee.findFirst({where:{tenantId:tid,id:row.managerId,deletedAt:null},select:{firstName:true,lastName:true}}):null,
+        row.teamId?this.db.team.findFirst({where:{tenantId:tid,id:row.teamId},select:{name:true}}):null
+      ]);return clean({...row,designation,teamName:team?.name??null,departmentName:department?.name??null,branchName:branch?.name??null,shiftName:shift?.name??null,managerName:manager?`${manager.firstName} ${manager.lastName}`:null});}
       const scopeWhere={...where};
       if(query.q){const q=String(query.q).trim().slice(0,100),parts=q.split(/\s+/).filter(Boolean);where.OR=[{firstName:{contains:q,mode:'insensitive'}},{lastName:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{employeeCode:{contains:q,mode:'insensitive'}},...(parts.length>1?[{AND:[{firstName:{contains:parts[0],mode:'insensitive'}},{lastName:{contains:parts.slice(1).join(' '),mode:'insensitive'}}]}]:[])];}
       if(query.status)where.status=String(query.status);
       if(query.departmentId)where.departmentId=id.parse(query.departmentId);
       if(query.branchId)where.branchId=id.parse(query.branchId);
+      if(query.teamId)where.teamId=id.parse(query.teamId);
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||25)),page=Math.max(1,Number(query.page)||1);
       if(query.shiftId)where.shiftId=id.parse(query.shiftId);
       const sort=String(query.sort??'recent');
@@ -201,6 +203,7 @@ export class DataService {
         const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;
         if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG employee photo up to 5 MB.');
       }
+      if(before && !Object.prototype.hasOwnProperty.call(body??{},'teamId'))input.teamId=before.teamId;
       if(before && !(body as any)?.personal)input.personal=before.personal as any;
       if(before && !canSalary && !Object.prototype.hasOwnProperty.call(body??{},"monthlySalary"))input.monthlySalary=before.monthlySalary;
       if(!canSalary&&((before&&input.monthlySalary!==before.monthlySalary)||(!before&&input.monthlySalary>0)))throw new ForbiddenException('Payroll permission is required to set salary.');
@@ -213,7 +216,7 @@ export class DataService {
           if(Object.prototype.hasOwnProperty.call(previous,key))input.personal[key]=previous[key];
         }
       }
-      await this.references(tx,ctx,input,{departmentId:'department',branchId:'branch',shiftId:'shift',managerId:'employee'});
+      await this.references(tx,ctx,input,{departmentId:'department',branchId:'branch',teamId:'team',shiftId:'shift',managerId:'employee'});
       if(input.managerId){
         let current:string|null|undefined=input.managerId;const seen=new Set<string>(recordId?[recordId]:[]);
         while(current){if(seen.has(current))throw new BadRequestException('Reporting relationships cannot form a cycle.');seen.add(current);current=(await tx.employee.findFirst({where:{id:current,tenantId:tid},select:{managerId:true}}))?.managerId;}
@@ -235,6 +238,8 @@ export class DataService {
     let count=0,label='record';
     if(type==='branches'){label='Branch';count=(await Promise.all([tx.employee.count({where:{tenantId:tid,deletedAt:null,branchId:recordId}}),tx.attendanceDevice.count({where:{tenantId:tid,branchId:recordId}})])).reduce((a,b)=>a+b,0);}
     else if(type==='departments'){label='Department';count=(await Promise.all([tx.employee.count({where:{tenantId:tid,deletedAt:null,departmentId:recordId}}),tx.job.count({where:{tenantId:tid,departmentId:recordId}})])).reduce((a,b)=>a+b,0);}
+    else if(type==='teams'){label='Team';count=await tx.employee.count({where:{tenantId:tid,deletedAt:null,teamId:recordId}});}
+    else if(type==='locations'){label='Work location';count=await tx.employee.count({where:{tenantId:tid,deletedAt:null,personal:{path:['workLocation'],equals:String(before?.name??'')}}});}
     else if(type==='designations'){label='Designation';count=await tx.employee.count({where:{tenantId:tid,deletedAt:null,designation:{in:[recordId,String(before?.name??'')]}}});}
     else if(type==='shifts'){label='Shift';count=(await Promise.all([tx.employee.count({where:{tenantId:tid,deletedAt:null,shiftId:recordId}}),tx.attendanceDaily.count({where:{tenantId:tid,shiftId:recordId}})])).reduce((a,b)=>a+b,0);}
     else if(type==='leave-types'){label='Leave type';count=await tx.leaveRequest.count({where:{tenantId:tid,leaveTypeId:recordId}});}
@@ -267,6 +272,7 @@ export class DataService {
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||100)),page=Math.max(1,Number(query.page)||1);
       const orderBy=cfg.resource==='organization'&&query.sort==='name'?[{name:'asc'},{id:'asc'}]:[{createdAt:'desc'},{id:'desc'}];
       const [items,total]=await Promise.all([model.findMany({where,orderBy,take,skip:(page-1)*take}),model.count({where})]);
+      if(type==='teams'){const counts=await this.db.employee.groupBy({by:['teamId'],where:{tenantId:tid,deletedAt:null,teamId:{in:items.map((r:any)=>r.id)}},_count:{_all:true}});return {items:items.map((row:any)=>({...row,memberCount:counts.find(c=>c.teamId===row.id)?._count._all??0})),total,page,pageSize:take};}
       if(type==='devices')return {items:items.map((row:any)=>{const{apiSecretHash,...safe}=row;return safe;}),total,page,pageSize:take};
       return {items:['expenses','travel'].includes(type)?await approvalRows(this.db,tid,type,items):items,total,page,pageSize:take};
     }

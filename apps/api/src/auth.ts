@@ -6,7 +6,7 @@ import {allocateShortLoginId,temporaryPassword8} from './identifiers';
 import type { Database } from '../../../packages/database';
 import { digest, hashPassword, token, verifyPassword } from '../../../packages/auth';
 import { loginSchema, password } from '../../../packages/validation';
-import {sessionCookieName} from './context';
+import {sessionCookieName,platform,requirePermission} from './context';
 import type { Context } from './context';
 import {syncCompanyAccess} from './billing';
 const dummyHash=hashPassword('unusable-dummy-password');
@@ -26,6 +26,36 @@ export class AuthService {
     const legacyNames=user.role.scope==='PLATFORM'?['peopleos_session','tcw_admin_session']:['peopleos_session','tcw_hr_session'];
     for(const legacy of legacyNames)res.clearCookie(legacy,{path:'/'});
     return {user:this.publicUser(user),csrf,...(process.env.NODE_ENV==='production'?{}:{localSessionToken:raw})};
+  }
+  async startProxy(ctx:Context,body:unknown){
+    platform(ctx);requirePermission(ctx,'tenants','VIEW');
+    if(ctx.user.role.code!=='SUPER_ADMIN')throw new ForbiddenException('Proxy login requires Super Admin.');
+    const {tenantId}=z.object({tenantId:z.string().uuid()}).strict().parse(body);
+    const company=await this.db.tenant.findUnique({where:{id:tenantId}});
+    if(!company||company.status==='ARCHIVED')throw new BadRequestException('This company is unavailable.');
+    const grant=token();
+    await this.db.session.create({data:{tenantId,userId:ctx.user.id,proxyParentSessionId:ctx.session.id,proxyGrant:true,tokenHash:digest(grant),csrf:token(),expiresAt:new Date(Date.now()+60000),userAgent:'Proxy login handoff',ip:ctx.ip}});
+    const url=new URL('/proxy-login',process.env.WEB_URL??'http://localhost:3000');
+    return {grant,url:url.toString()};
+  }
+  async claimProxy(body:unknown,req:Request,res:Response){
+    const {grant}=z.object({grant:z.string().min(32).max(128)}).strict().parse(body);
+    const raw=token(),csrf=token(),now=new Date();
+    const result=await this.db.$transaction(async tx=>{
+      const row=await tx.session.findUnique({where:{tokenHash:digest(grant)}});
+      if(!row?.proxyGrant||!row.proxyParentSessionId||!row.tenantId||row.expiresAt<=now)throw new UnauthorizedException('Proxy link expired or already used. Open the company again from Super Admin.');
+      const parent=await tx.session.findUnique({where:{id:row.proxyParentSessionId},include:{user:{include:{role:true}}}});
+      if(!parent||parent.proxyParentSessionId||parent.expiresAt<=now||!parent.user.active||parent.userId!==row.userId||parent.user.role.code!=='SUPER_ADMIN'||parent.user.role.scope!=='PLATFORM')throw new UnauthorizedException('Super Admin session has ended.');
+      const company=await tx.tenant.findUnique({where:{id:row.tenantId}});
+      if(!company||company.status==='ARCHIVED'||company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason!=='BILLING')throw new ForbiddenException('This company is unavailable or suspended.');
+      if((await tx.session.deleteMany({where:{id:row.id,proxyGrant:true,expiresAt:{gt:now}}})).count!==1)throw new UnauthorizedException('Proxy link was already used.');
+      const expiresAt=new Date(Math.min(parent.expiresAt.getTime(),Date.now()+30*60000));
+      await tx.session.create({data:{tenantId:row.tenantId,userId:parent.userId,proxyParentSessionId:parent.id,proxyGrant:false,tokenHash:digest(raw),csrf,expiresAt,userAgent:String(req.headers['user-agent']??'').slice(0,300),ip:req.ip??''}});
+      await tx.auditLog.create({data:{tenantId:row.tenantId,actorId:parent.userId,action:'PROXY_LOGIN_STARTED',entity:'auth',entityId:row.tenantId,after:{companyCode:company.code,expiresAt:expiresAt.toISOString()},ip:req.ip}});
+      return {expiresAt};
+    });
+    res.cookie(sessionCookieName('TENANT'),raw,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',expires:result.expiresAt});
+    return {ok:true};
   }
   async login(body:unknown,req:Request,res:Response){
     const input=loginSchema.parse(body);
@@ -95,7 +125,7 @@ export class AuthService {
     await this.db.loginAttempt.upsert({where:{key:throttleKey},create:{key:throttleKey,failures:0},update:{failures:0,lockedUntil:null}});
     return {company:{id:created.company.id,name:created.company.name,status:created.company.status,plan:created.company.plan},trialEndsAt,email:input.ownerEmail,credentialsDelivery:'EMAIL'};
   }
-  async logout(ctx:Context,res:Response){await this.db.session.deleteMany({where:{id:ctx.session.id,userId:ctx.user.id}});const names=ctx.user.role.scope==='PLATFORM'?[sessionCookieName('PLATFORM'),'tcw_admin_session','peopleos_session']:[sessionCookieName('TENANT'),'tcw_hr_session','peopleos_session'];for(const name of names)res.clearCookie(name,{path:'/'});return {ok:true};}
+  async logout(ctx:Context,res:Response){if(ctx.session.proxyParentSessionId)await this.db.auditLog.create({data:{tenantId:ctx.tenantId,actorId:ctx.user.id,action:"PROXY_LOGIN_ENDED",entity:"auth",ip:ctx.ip}});await this.db.session.deleteMany({where:{id:ctx.session.id,userId:ctx.user.id}});const names=ctx.user.role.scope==='PLATFORM'?[sessionCookieName('PLATFORM'),'tcw_admin_session','peopleos_session']:[sessionCookieName('TENANT'),'tcw_hr_session','peopleos_session'];for(const name of names)res.clearCookie(name,{path:'/'});return {ok:true};}
   async forgot(body:unknown){
     const input=z.object({email:z.email().transform(v=>v.toLowerCase()),companyCode:z.string().optional()}).strict().parse(body);
     let company=input.companyCode?await this.db.tenant.findUnique({where:{code:input.companyCode.toUpperCase()}}):null;

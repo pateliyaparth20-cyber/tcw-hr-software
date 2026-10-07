@@ -30,7 +30,7 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
     const raw=req.cookies?.[name];
     if(!raw)continue;
     const candidate=await db.session.findUnique({where:{tokenHash:digest(raw)},include:{user:{include:{role:true}}}});
-    if(candidate&&(!scope||candidate.user.role.scope===scope)){session=candidate;break;}
+    if(candidate&&!candidate.proxyGrant&&(!scope||(candidate.proxyParentSessionId?'TENANT':candidate.user.role.scope)===scope)){session=candidate;break;}
   }
   // Local/LAN QA fallback: Next.js dev proxies on some Windows/browser combinations can
   // lose Set-Cookie while forwarding the embedded API response. In non-production only,
@@ -41,12 +41,18 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
     const raw=Array.isArray(headerValue)?headerValue[0]:String(headerValue??'');
     if(raw){
       const candidate=await db.session.findUnique({where:{tokenHash:digest(raw)},include:{user:{include:{role:true}}}});
-      if(candidate&&(!scope||candidate.user.role.scope===scope))session=candidate;
+      if(candidate&&!candidate.proxyGrant&&(!scope||(candidate.proxyParentSessionId?'TENANT':candidate.user.role.scope)===scope))session=candidate;
     }
   }
   if(!session) throw new UnauthorizedException('Please sign in.');
   const now=new Date();
   if(session.expiresAt<now||!session.user.active) throw new UnauthorizedException('Your session has expired.');
+  if(session.proxyParentSessionId){
+    const parent=await db.session.findUnique({where:{id:session.proxyParentSessionId},include:{user:{include:{role:true}}}});
+    if(!parent||parent.proxyParentSessionId||parent.expiresAt<=now||!parent.user.active||parent.user.id!==session.userId||parent.user.role.code!=='SUPER_ADMIN'||parent.user.role.scope!=='PLATFORM')throw new UnauthorizedException('Proxy access has ended. Open the company again from Super Admin.');
+    const role=await db.role.findUniqueOrThrow({where:{code:'HR_ADMIN'}});
+    session.user={...parent.user,tenantId:session.tenantId,employeeId:null,mustChangePassword:false,role};
+  }
   // Sliding expiry: active users are not interrupted while they are working.
   // A normal session is renewed when it is within 6 hours of expiry; a long
   // "Remember me" session is renewed when it is within 7 days of expiry.
@@ -54,7 +60,7 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
   const remembered=remaining>2*86400000;
   const ttl=remembered?30*86400000:86400000;
   const refreshWindow=remembered?7*86400000:6*3600000;
-  if(remaining<refreshWindow){
+  if(!session.proxyParentSessionId&&remaining<refreshWindow){
     const nextExpiry=new Date(now.getTime()+ttl);
     await db.session.update({where:{id:session.id},data:{expiresAt:nextExpiry}});
     session.expiresAt=nextExpiry;
@@ -98,5 +104,5 @@ function sanitize(value:any):any{
   return value;
 }
 export async function audit(db:any,ctx:Context,action:string,entity:string,entityId?:string,before?:any,after?:any){
-  await db.auditLog.create({data:{tenantId:ctx.tenantId,actorId:ctx.user.id,action,entity,entityId,ip:ctx.ip,...(before?{before:sanitize(before)}:{}),...(after?{after:sanitize(after)}:{})}});
+  await db.auditLog.create({data:{tenantId:ctx.tenantId,actorId:ctx.user.id,action,entity,entityId,ip:ctx.ip,...(before?{before:sanitize(before)}:{}),...(ctx.session.proxyParentSessionId?{after:{...(sanitize(after)??{}),proxySessionId:ctx.session.id}}:after?{after:sanitize(after)}:{})}});
 }

@@ -2,9 +2,9 @@
 import {EmployeeImportModal,EmployeeTasksModal,AssetHistoryModal,TrainingEnrollmentModal,OperationAlerts} from './hr-operations';
 import React,{useState,useEffect} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {Plus,Search,Download,SlidersHorizontal,Pencil,Trash2,ChevronLeft,ChevronRight,ArrowUpRight,Check,X,Monitor,Briefcase,GraduationCap,Target,Users,Building2,Smartphone,ScanFace,FileText,Sheet,FileDown,Network,MapPin,Tags,Clock3,CalendarDays,ClipboardCheck,History} from 'lucide-react';
+import {Plus,Search,Download,SlidersHorizontal,Pencil,Trash2,ChevronLeft,ChevronRight,ArrowUpRight,Check,X,Monitor,Briefcase,GraduationCap,Target,Users,Building2,Smartphone,ScanFace,FileText,Sheet,FileDown,Network,MapPin,Tags,Clock3,CalendarDays,ClipboardCheck,History,ShieldCheck} from 'lucide-react';
 import {modules,Row,Field,readable} from './config';
-import {useApp,useData,PageTitle,Stat,Table,Modal,PhotoViewer,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,currencyValue,displayDate} from './core';
+import {useApp,useData,api,PageTitle,Stat,Table,Modal,PhotoViewer,RecordForm,Confirm,Loading,Failure,Empty,Badge,Avatar,currencyValue,displayDate} from './core';
 import {RecruitmentDashboard} from './recruitment';
 import {TimeOffDashboard} from './time-off';
 import {OrganizationChart} from './organization-chart';
@@ -14,7 +14,7 @@ export {AttendanceMachineCatalogModal,DeviceNativeSetupModal,DevicePunchModal,De
 const inferDeviceFromSerial=(serial:string)=>{const s=serial.trim().toUpperCase();if(!s)return null;const rules=[{test:/^(BM|BIO|SPEEDFACE)/,vendor:'BIOMAX',model:'SpeedFace 5SE Lite',connectionMode:'NATIVE_PUSH',port:4370},{test:/^(ZK|ZKT|SF|ICLOCK)/,vendor:'ZKTECO',model:'Generic ZKTeco PUSH compatible',connectionMode:'NATIVE_PUSH',port:4370},{test:/^(ESSL|K30|X990|MB160|F22)/,vendor:'ESSL',model:'eSSL biometric terminal',connectionMode:'LAN_PULL',port:4370},{test:/^(HIK|DS-K1)/,vendor:'HIKVISION',model:'Hikvision attendance terminal',connectionMode:'LAN_PULL',port:80},{test:/^(CP|CPPLUS)/,vendor:'CPPLUS',model:'CP Plus attendance terminal',connectionMode:'LAN_PULL',port:80},{test:/^(DAHUA|ASI)/,vendor:'DAHUA',model:'Dahua attendance terminal',connectionMode:'LAN_PULL',port:80},{test:/^(ANVIZ|FACEDEEP|EP300)/,vendor:'ANVIZ',model:'Anviz attendance terminal',connectionMode:'CLOUD_PUSH',port:5010}];const r=rules.find(x=>x.test.test(s));return r?{name:`${r.vendor} Attendance Device`,vendor:r.vendor,model:r.model,serialNumber:serial.trim(),connectionMode:r.connectionMode,port:r.port,timezone:'Asia/Kolkata'}:{name:'Attendance Device',vendor:'GENERIC',model:'Other / Custom model',serialNumber:serial.trim(),connectionMode:'MIDDLEWARE',port:5005,timezone:'Asia/Kolkata'}};
 const companyEdit:Field[]=[{key:'status',label:'Subscription status',type:'select',required:true,options:['TRIAL','ACTIVE','SUSPENDED','EXPIRED']},{key:'plan',label:'Plan',type:'select',required:true,options:['STARTER','GROWTH','ENTERPRISE']},{key:'employeeLimit',label:'Employee limit',type:'number',required:true,min:1},{key:'expiresAt',label:'Expiry date',type:'date',required:false}];
 export function ModulePage({name}:{name:string}){
- const {session,can,mutate,currency}=useApp();
+ const {session,can,mutate,currency,notify}=useApp();
  const [importOpen,setImportOpen]=useState(false),[tasks,setTasks]=useState<Row|null>(null),[assetHistory,setAssetHistory]=useState<Row|null>(null),[training,setTraining]=useState<Row|null>(null);
  const policies=useData('approval-policies',name==='leave');
  let cfg=modules[name];if(name==='support'&&session.user.scope==='PLATFORM')cfg={...cfg,endpoint:'platform/support',fields:[{key:'status',label:'Status',type:'select',required:true,options:['OPEN','IN_PROGRESS','RESOLVED']},{key:'response',label:'Response',type:'textarea',required:true}]};
@@ -60,7 +60,9 @@ export function ModulePage({name}:{name:string}){
   if(key==='name'||key==='title'||key==='subject')return <strong>{row[key]}</strong>;
   return String(row[key]??'—');
  }
+ async function proxyLogin(row:Row){try{const r=await api('auth/proxy-start','POST',{tenantId:row.id},session.csrf);const form=document.createElement('form');form.method='POST';form.action=r.url;form.target='_self';const input=document.createElement('input');input.type='hidden';input.name='grant';input.value=r.grant;form.append(input);document.body.append(form);form.submit();form.remove()}catch(e:any){notify(e.message,true)}}
  const actions=(row:Row)=><>
+ {name==='companies'&&session.user.role==='SUPER_ADMIN'&&<button type="button" className="btn secondary small" disabled={row.status==='ARCHIVED'||row.status==='SUSPENDED'&&row.profile?.suspensionReason!=='BILLING'} onClick={()=>proxyLogin(row)}><ShieldCheck size={15}/>Proxy login</button>}
  {name==='employees'&&!restricted&&<button className="icon-button" aria-label={'Checklists for '+row.firstName+' '+row.lastName} title="Joining / exit checklists" onClick={()=>setTasks(row)}><ClipboardCheck size={17}/></button>}
  {name==='assets'&&!restricted&&<button className="icon-button" aria-label={'History for '+row.name} title="Asset history" onClick={()=>setAssetHistory(row)}><History size={17}/></button>}
  {name==='courses'&&<button className="btn secondary small" onClick={()=>setTraining(row)}>Participants</button>}

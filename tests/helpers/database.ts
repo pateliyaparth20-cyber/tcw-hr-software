@@ -34,6 +34,8 @@ export async function embeddedDatabase(directory?:string){
  if(!(field.rows[0] as any)?.name)await pg.exec(await readFile(path.resolve('prisma/migrations/202610070011_field_work/migration.sql'),'utf8'));
  const faceStatus=await pg.query("SELECT 1 FROM information_schema.columns WHERE table_name='employee_face_profiles' AND column_name='status'");
  if(!faceStatus.rows.length)await pg.exec(await readFile(path.resolve('prisma/migrations/202610070012_server_face_verification/migration.sql'),'utf8'));
+ const proxyColumns=await pg.query("SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='proxy_parent_session_id'");
+ if(!proxyColumns.rows.length)await pg.exec(await readFile(path.resolve("prisma/migrations/202610070013_company_proxy_teams/migration.sql"),"utf8"));
  const db=new PrismaClient({adapter:new PrismaPGlite(pg)});
  return {db,pg,close:async()=>{await db.$disconnect();await pg.close()}};
 }

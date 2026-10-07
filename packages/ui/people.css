@@ -19,3 +19,6 @@
 @media(max-width:950px){
  .modal:has(> .pd-employee-form)>.pd-employee-form>.record-form-fields{padding:18px 16px 28px!important}
 }
+/* Profile details scroll within the dialog; the close button remains visible. */
+html body dialog.pd-profile-modal{display:flex;flex-direction:column;overflow:hidden!important;max-height:calc(100dvh - 32px);width:min(920px,calc(100vw - 32px));padding:0}.pd-profile-modal>.modal-head{flex:0 0 auto}.pd-profile-modal>.pd-profile{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:thin}.pd-profile-modal .pd-profile-tabs{position:sticky;top:0;z-index:2;background:#fff;overflow-x:auto;flex-wrap:nowrap}.pd-profile-modal .pd-profile-tabs button{flex-shrink:0}.pd-profile-modal .pd-profile-facts>div{min-width:0}.pd-profile-modal .pd-profile-facts dd{overflow-wrap:anywhere}.pd-profile-modal .pd-profile-section{min-height:230px}
+@media(max-width:600px){html body dialog.pd-profile-modal{max-height:calc(100dvh - 20px);width:calc(100vw - 20px)}.pd-profile-modal .pd-profile-facts{grid-template-columns:1fr}.pd-profile-modal .pd-profile-tabs button{font-size:12px}.pd-profile-modal .pd-profile-facts dt{font-size:12px}.pd-profile-modal .pd-profile-facts dd{font-size:14px}}
