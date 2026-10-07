@@ -86,6 +86,7 @@ export class Api {
       if(!allowedAppOrigin(origin))throw new ForbiddenException('Request origin is not allowed.');
     }
     if(resource==='auth'){
+      if(key==='proxy-claim'&&method==='POST')return this.auth.claimProxy(req.body,req,res);
       if(key==='login'&&method==='POST')return this.auth.login(req.body,req,res);
       if(key==='signup'&&method==='POST')return this.auth.signup(req.body,req,res);
       if(key==='forgot-password'&&method==='POST')return this.auth.forgot(req.body);
@@ -93,6 +94,8 @@ export class Api {
       if(key==='reset-password'&&!action&&method==='POST')return this.auth.reset(req.body,req,res);
     }
     const ctx=await authenticate(this.db,req);
+    if(resource==='auth'&&key==='proxy-start'&&method==='POST')return this.auth.startProxy(ctx,req.body);
+    if(ctx.session.proxyParentSessionId&&resource==='auth'&&!['me','logout'].includes(key)&&!(key==='profile'&&method==='GET'))throw new ForbiddenException('Manage your platform identity from Super Admin after ending proxy access.');
     if(resource==='releases'&&key==='status'&&method==='GET')return this.releases.status(ctx);
     if(resource==='releases'&&key==='update'&&method==='POST')return this.releases.update(ctx,z.object({version:z.string().regex(/^[a-f0-9]{40}$/)}).strict().parse(req.body).version);
     if(resource==='releases')throw new NotFoundException('Software update route not found.');
@@ -100,7 +103,7 @@ export class Api {
     if(ctx.tenantId){
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
       const billingLocked=company&&(company.status==='EXPIRED'||(company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason==='BILLING')||(company.expiresAt&&company.expiresAt<new Date()));
-      if(billingLocked&&!['auth','subscription','push'].includes(resource))throw new ForbiddenException('Your trial or subscription has ended. Complete payment to unlock HR modules.');
+      if(billingLocked&&!ctx.session.proxyParentSessionId&&!['auth','subscription','push'].includes(resource))throw new ForbiddenException('Your trial or subscription has ended. Complete payment to unlock HR modules.');
     }
     if(resource==='push'&&key==='config'&&method==='GET')return pushConfig();
     if(resource==='push'&&key==='subscription'&&method==='POST'){
@@ -166,7 +169,7 @@ export class Api {
     }
     if(resource==='auth'){
       if(key==='two-factor')return twoFactor(this.db,ctx,method,action,body);
-      if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null};
+      if(key==='me'&&method==='GET')return {user:this.auth.publicUser(ctx.user),csrf:ctx.session.csrf,sessionExpiresAt:ctx.session.expiresAt.toISOString(),company:ctx.tenantId?await this.db.tenant.findUnique({where:{id:ctx.tenantId}}):null,...(ctx.session.proxyParentSessionId?{proxy:{actorName:ctx.user.name,expiresAt:ctx.session.expiresAt.toISOString(),returnUrl:new URL('/companies',process.env.ADMIN_URL??'http://localhost:3001').toString()}}:{})};
       if(key==='profile'&&method==='GET'){
         let profileUser:any=ctx.user;
         if(ctx.tenantId&&ctx.user.role?.code==='COMPANY_OWNER'){
@@ -255,7 +258,7 @@ export class Api {
     if(resource==='employees')return this.data.employees(ctx,method,key,body,req.query);
     if(resource==='users')return this.data.users(ctx,method,body,key);
     if(resource==='roles'&&method==='GET'){requirePermission(ctx,'users','VIEW');return {items:await this.db.role.findMany({where:{scope:ctx.user.role.scope}})};}
-    if(resource==='platform'){return this.data.platformResource(ctx,key,method,action,body);}
+    if(resource==='platform'){return this.data.platformResource(ctx,key,method,action,body,req.query);}
     if(resource==='attendance')return this.flows.attendance(ctx,method,body,req.query,key,action);
     if(['leave','expenses','travel'].includes(resource)&&key&&action==='review'&&method==='POST')return this.flows.review(ctx,resource,key,body);
     if(resource==='leave'&&key&&action==='cancel'&&method==='POST')return this.flows.cancelLeave(ctx,key,body);

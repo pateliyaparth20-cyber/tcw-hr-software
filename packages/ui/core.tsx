@@ -6,7 +6,7 @@ import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight,Clock3} from 'lucide
 import {Field,Row,readable} from './config';
 import {avatarInitials,avatarPhotoSrc} from './avatar';
 import {liveRefreshInterval,shouldRefreshForServerChange} from './live-refresh';
-export type Session={user:Row;csrf:string;company?:Row};
+export type Session={user:Row;csrf:string;company?:Row;proxy?:Row};
 export function notificationTarget(row:Row){
   const explicit=String(row.target??row.url??'').trim();
   if(/^\/(?![\/\\])/.test(explicit)&&!/[\\\u0000-\u0020]/.test(explicit))return explicit;
@@ -77,7 +77,7 @@ export function getLocalSessionToken(){
 }
 export function saveLocalSessionSnapshot(session:any){
   if(typeof window==='undefined'||!session?.user?.scope||!session?.csrf)return;
-  const safe={user:session.user,csrf:session.csrf,...(session.company?{company:session.company}:{})};
+  const safe={user:session.user,csrf:session.csrf,...(session.company?{company:session.company}:{}),...(session.proxy?{proxy:session.proxy}:{})};
   const encoded=JSON.stringify(safe);
   writeStorage('session',LOCAL_SESSION_SNAPSHOT_KEY,encoded);
   // Keep the persistent snapshot only on local/LAN development. Production sessions
@@ -216,11 +216,11 @@ export function Badge({value}:{value:any}){const str=String(value??'—'),label=
 export const displayDate=(v:any)=>v?new Date(v).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
 export const currencyValue=(v:number,currency='INR')=>new Intl.NumberFormat('en-IN',{style:'currency',currency,maximumFractionDigits:2}).format((v??0)/100);
 export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:string|null}){const tones=['#e4edff','#dff4ee','#f4e9ff','#fff0da'],photo=avatarPhotoSrc(src),initials=avatarInitials(name);return <span className={'avatar '+(large?'large':'')+(photo?' has-photo':'')} style={{background:tones[(String(name??'').charCodeAt(0)||0)%4]}}><span className="avatar-initials" aria-hidden={!!photo}>{initials}</span>{photo&&<img src={photo} alt={name+' profile photo'} onError={e=>{e.currentTarget.style.display='none'}}/>}</span>}
-export function Modal({title,children,onClose,wide=false}:{title:string;children:React.ReactNode;onClose:()=>void;wide?:boolean}){
+export function Modal({title,children,onClose,wide=false,className=''}:{title:string;children:React.ReactNode;onClose:()=>void;wide?:boolean;className?:string}){
   const ref=useRef<HTMLDialogElement>(null);
   const titleId=useId();
   useEffect(()=>{const d=ref.current;d?.showModal();return()=>{if(d?.open)d.close()}},[]);
-  return <dialog ref={ref} className={'modal '+(wide?'wide':'')} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target!==ref.current)return;const rect=e.currentTarget.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)onClose()}}><div className="modal-head"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
+  return <dialog ref={ref} className={'modal '+(wide?'wide':'')+' '+className} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target!==ref.current)return;const rect=e.currentTarget.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)onClose()}}><div className="modal-head"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
 }
 export function PhotoViewer({src,name,onClose}:{src:string;name:string;onClose:()=>void}){
   const ref=useRef<HTMLDialogElement>(null);
@@ -235,6 +235,7 @@ function Choice({field,value,onChange}:{field:Field;value:any;onChange:(v:any)=>
  const data=useData(source,!!field.source);const rows=data.data?.items??[];
  return <select id={'field-'+field.key} required={field.required} value={value??''} onChange={e=>onChange(e.target.value)} disabled={!!field.source&&data.isLoading}>
   <option value="">{data.isLoading?'Loading…':data.isError?'Unable to load options':field.emptyLabel??('Select '+field.label.toLowerCase())}</option>
+  {value&&!(field.source?rows.some((r:Row)=>(field.sourceValue==='name'?String(r.name??r.title??r.number??''):r.id)===value):field.options?.includes(value))&&!data.isLoading&&<option value={value}>{!field.source||field.sourceValue==='name'?value:'Current assignment (unavailable)'}</option>}
   {field.source?rows.map((r:Row)=>{const optionValue=field.sourceValue==='name'?String(r.name??r.title??r.number??''):r.id;return <option key={r.id} value={optionValue}>{r.firstName?`${r.firstName} ${r.lastName} · ${r.employeeCode}`:r.name??r.title??r.number}</option>}):field.options?.map(v=><option key={v} value={v}>{v==='INSUFFICIENT_HOURS'?'Insufficient Time':readable(v.toLowerCase())}</option>)}
  </select>;
 }
