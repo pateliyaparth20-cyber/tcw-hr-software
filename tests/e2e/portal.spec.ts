@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {totp} from '../../packages/auth/totp';
+import {toXlsx} from '../../packages/reporting-engine';
 
 test('report center filters its library, previews all columns and downloads real files',async({page})=>{
  await login(page);await page.setViewportSize({width:1440,height:1000});
@@ -234,8 +235,11 @@ test('HR sets a person-specific manual salary, keeps it on recalculation and res
 test('employee Excel CSV import and lifecycle checklist work on desktop and mobile',async({page})=>{
  await login(page);await page.goto('/employees');await page.getByRole('button',{name:'Import employees',exact:true}).click();
  let dialog=page.getByRole('dialog');const suffix=Date.now();
- await dialog.getByLabel('Employee file').setInputFiles({name:'employees.csv',mimeType:'text/csv',buffer:Buffer.from(`employeeCode,firstName,lastName,email,phone,joiningDate\nIMP-${suffix},Import,Browser,import-${suffix}@example.test,9000000000,2026-01-01`)});
+ await dialog.getByLabel('Employee file').setInputFiles({name:'employees.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:toXlsx([{'Employee Code':`IMP-${suffix}`,'FIRST NAME':'Import','last_name':'Browser',EMAIL:`import-${suffix}@example.test`,Phone:'09000000000','JOINING DATE':46023,'Employment Type':'full time',Status:'active'}])});
  await dialog.getByRole('button',{name:'Preview file',exact:true}).click();await expect(dialog).toContainText('Ready to import');
+ const preview=dialog.getByRole('region',{name:'Employee import preview'});await expect(preview).toContainText('2026-01-01');await expect(preview).toContainText('09000000000');
+ for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await preview.evaluate(el=>el.scrollWidth>el.clientWidth)).toBeTruthy();await preview.evaluate(el=>{el.scrollLeft=el.scrollWidth});expect(await preview.evaluate(el=>el.scrollLeft>0)).toBeTruthy();await page.screenshot({path:`test-results/people-import-preview-${width}.png`,fullPage:true,animations:'disabled'});}
+ await preview.evaluate(el=>{el.scrollLeft=0});await preview.focus();await page.keyboard.press('ArrowRight');await expect.poll(()=>preview.evaluate(el=>el.scrollLeft)).toBeGreaterThan(0);await page.setViewportSize({width:1440,height:1000});
  await dialog.getByRole('button',{name:'Import 1 employees',exact:true}).click();await expect(dialog).not.toBeVisible();
  await page.getByRole('textbox',{name:'Search people directory'}).fill('IMP-'+suffix);const row=page.getByRole('row').filter({hasText:'import-'+suffix+'@example.test'});await expect(row).toBeVisible();
  await row.getByRole('button',{name:'Checklists for Import Browser',exact:true}).click();dialog=page.getByRole('dialog');
