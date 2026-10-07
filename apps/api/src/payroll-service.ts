@@ -72,13 +72,13 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       const recovery=recoveries.reduce((n,i)=>n+i.amount,0);
       const employeeAdjustments=adjustments.filter(a=>a.employeeId===employee.id);
       const adjustment=employeeAdjustments.reduce((sum,a)=>sum+a.amount,0);
-      const calculated=calculatePay(attendanceGross+overtime,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap})),adjustment);
+      const calculated=calculatePay(attendanceGross+overtime,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap,basis:r.basis as 'GROSS'|'BASIC',calculation:r.calculation as 'PERCENT'|'FIXED',fixedAmount:r.fixedAmount,wageCap:r.wageCap,kind:r.kind})),adjustment,salary?earnings[0].amount:attendanceGross);
       const result={...calculated,deductions:calculated.deductions+recovery,net:calculated.net-recovery};
       if(result.net<0)throw new BadRequestException(`Loan deductions exceed pay for ${employee.employeeCode}. Adjust the recovery schedule before preparing.`);
       if(result.gross>1e9||result.deductions>1e9)throw new BadRequestException(`Salary exceeds the supported amount for ${employee.employeeCode}.`);
       const override=manualByEmployee.get(employee.id);
       const values=override?manualSalaryValues(override.net,result.deductions):result;
-      const components=[...earnings,...(overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...result.components.map(c=>({...c,type:c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
+      const components=[...earnings,...(overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...result.components.map(c=>({...c,type:c.type==='EMPLOYER'?'EMPLOYER':c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
         gross:values.gross,deductions:values.deductions,net:values.net,
@@ -103,6 +103,7 @@ export async function reopenPayrollMonth(db:Database,tenantId:string,runId:strin
     await lockPayrollRun(tx,tenantId,runId);
     const run=await tx.payrollRun.findFirst({where:{id:runId,tenantId}});
     if(!run)throw new NotFoundException('Payroll run not found.');
+    if(await tx.payrollPaymentSchedule.count({where:{tenantId,runId,status:{in:['SCHEDULED','RUNNING']}}}))throw new ConflictException('Cancel the salary payment schedule before reopening payroll.');
     if(await tx.payrollPayout.count({where:{tenantId,runId}}))throw new ConflictException('Salary payout has already started. Use a later-month adjustment instead of reopening this payroll.');
     if(!['DRAFT','REVIEW','APPROVED','LOCKED'].includes(run.status))throw new ConflictException('This payroll cannot be reopened.');
 

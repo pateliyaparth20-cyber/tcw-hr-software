@@ -22,6 +22,7 @@ async function run(){
   const department=await fixture.db.department.create({data:{tenantId:tenant.id,name:'E2E Engineering',code:'E2E'}});
   const leader=await fixture.db.employee.create({data:{tenantId:tenant.id,employeeCode:'CHART-LEAD',firstName:'Team',lastName:'Lead',email:'lead@example.test',joiningDate:new Date('2025-01-01'),departmentId:department.id}});
   await fixture.db.employee.create({data:{tenantId:tenant.id,employeeCode:'CHART-MEMBER',firstName:'QA',lastName:'Member',email:'member@example.test',joiningDate:new Date('2025-01-01'),managerId:leader.id,departmentId:department.id}});
+  const salaryFixture=await fixture.db.payrollRun.create({data:{tenantId:tenant.id,month:'2024-01',status:'REVIEW',totalGross:100000,totalNet:100000,items:{create:{employeeId:leader.id,employeeName:'Team Lead',employeeCode:leader.employeeCode,gross:100000,deductions:0,net:100000,components:[]}}}});await fixture.db.payrollRun.update({where:{id:salaryFixture.id},data:{status:'LOCKED',lockedAt:new Date()}});
   for(const [name,code] of [['QA Engineer','QA'],['Senior QA','SQA']])await fixture.db.designation.create({data:{tenantId:tenant.id,name,code}});
   await fixture.db.course.create({data:{tenantId:tenant.id,title:'E2E Operations Training',description:'Synthetic training fixture',trainer:'QA Trainer',date:new Date('2026-01-01'),capacity:3}});
   await fixture.db.asset.create({data:{tenantId:tenant.id,name:'E2E Operations Laptop',assetTag:'OPS-LAPTOP',category:'Laptop'}});
@@ -41,7 +42,7 @@ async function run(){
    }
    if(!ready)throw new Error(name+' did not become ready');
   }
-  const browser=spawn(process.execPath,['node_modules/@playwright/test/cli.js','test'],{stdio:'inherit',env:process.env});
+  const browser=spawn(process.execPath,['node_modules/@playwright/test/cli.js','test',...process.argv.slice(2)],{stdio:'inherit',env:process.env});
   children.push(browser);
   const [code]=await once(browser,'exit');
   if(code!==0)throw new Error('Browser verification failed');

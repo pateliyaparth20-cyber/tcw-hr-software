@@ -740,6 +740,10 @@ model SalaryRule {
   name      String
   kind      String
   percent   Decimal  @db.Decimal(6, 3)
+  basis     String @default("GROSS")
+  calculation String @default("PERCENT")
+  fixedAmount Int @default(0) @map("fixed_amount")
+  wageCap Int? @map("wage_cap")
   cap       Int?
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
@@ -1098,4 +1102,52 @@ model MeghnaConversation {
 
   @@index([tenantId, userId, updatedAt])
   @@map("meghna_conversations")
+}
+
+model CompanyPayoutConnection {
+  tenantId String @id @map("tenant_id") @db.Uuid
+  provider String @default("BANK_FILE")
+  bankName String @default("") @map("bank_name")
+  accountLabel String @default("") @map("account_label")
+  accountHint String @default("") @map("account_hint")
+  mode String @default("NEFT")
+  enabled Boolean @default(false)
+  credentialsCiphertext String? @map("credentials_ciphertext")
+  revision Int @default(1)
+  updatedBy String @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("company_payout_connections")
+}
+
+model PayrollPaymentSchedule {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  runId String @map("run_id") @db.Uuid
+  scheduledAt DateTime @map("scheduled_at")
+  timezone String
+  mode String
+  status String @default("SCHEDULED")
+  fingerprint String
+  connectionRevision Int @map("connection_revision")
+  approvedBy String @map("approved_by") @db.Uuid
+  startedAt DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  error String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([status, scheduledAt])
+  @@index([tenantId, runId])
+  @@map("payroll_payment_schedules")
+}
+
+model CompanyPayoutConnectionVersion {
+ tenantId String @map("tenant_id") @db.Uuid
+ revision Int
+ provider String
+ bankName String @map("bank_name")
+ credentialsCiphertext String? @map("credentials_ciphertext")
+ createdAt DateTime @default(now()) @map("created_at")
+ @@id([tenantId, revision])
+ @@map("company_payout_connection_versions")
 }

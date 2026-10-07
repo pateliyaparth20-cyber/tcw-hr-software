@@ -28,6 +28,8 @@ export async function embeddedDatabase(directory?:string){
  if(!(operations.rows[0] as any)?.name)await pg.exec(await readFile(path.resolve('prisma/migrations/202610060008_hr_operations/migration.sql'),'utf8'));
  const security=await pg.query("SELECT to_regclass('public.user_security') AS name");
  if(!(security.rows[0] as any)?.name)await pg.exec(await readFile(path.resolve('prisma/migrations/202610060009_two_factor/migration.sql'),'utf8'));
+ const payments=await pg.query("SELECT to_regclass('public.company_payout_connections') AS name");
+ if(!(payments.rows[0] as any)?.name)await pg.exec(await readFile(path.resolve('prisma/migrations/202610070010_company_payroll_payments/migration.sql'),'utf8'));
  const db=new PrismaClient({adapter:new PrismaPGlite(pg)});
  return {db,pg,close:async()=>{await db.$disconnect();await pg.close()}};
 }
