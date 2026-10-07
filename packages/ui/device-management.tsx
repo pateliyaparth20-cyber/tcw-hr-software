@@ -21,7 +21,7 @@ const vendorLabel=(value:any)=>String(value)==='TCW_MOBILE'?'TCW Mobile':readabl
 
 function DeviceIcon({row,large=false}:{row:Row|DeviceDraft;large?:boolean}){const mobile=String(row.connectionMode)==='EMPLOYEE_APP'||String(row.vendor)==='TCW_MOBILE';return <span className={'device-v3-icon '+(large?'large ':'')+(mobile?'mobile':'')}>{mobile?<Smartphone/>:<Monitor/>}</span>}
 function StatusChip({row}:{row:Row}){if(isOnline(row))return <span className="device-v3-status online"><i/>Online</span>;if(isInactive(row))return <span className="device-v3-status inactive"><i/>Inactive</span>;return <span className="device-v3-status offline"><i/>{String(row.status??'OFFLINE')==='AWAITING_CONNECTION'?'Awaiting':'Offline'}</span>}
-function DeviceField({label,children,required=false,className=''}:{label:string;children:React.ReactNode;required?:boolean;className?:string}){return <label className={'device-v3-field '+className}><span>{label}{required&&<b aria-hidden="true">*</b>}</span>{children}</label>}
+function DeviceField({label,children,required=false,className=''}:{label:string;children:React.ReactNode;required?:boolean;className?:string}){return <label className={'device-v3-field '+className}><span>{label}{required&&<b aria-hidden="true">*</b>}</span>{React.isValidElement(children)?React.cloneElement(children as React.ReactElement<any>,{'aria-label':label,'aria-required':required||undefined}):children}</label>}
 
 export function DeviceManagement(){
  const {can,mutate,notify}=useApp();
