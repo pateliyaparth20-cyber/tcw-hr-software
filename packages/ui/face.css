@@ -12,9 +12,10 @@
 .face-scan-modal .face-scan-status[role=alert]{background:#fff7ed;border-color:#fed7aa}
 .face-scan-modal .face-scan-privacy p{font-size:12px;line-height:1.6}
 .face-camera.idle,.face-camera.error{aspect-ratio:4/3;background:#f0f7fb;box-shadow:none;border:1px solid #dceaf2}
-.face-camera.idle video,.face-camera.error video{visibility:hidden}
-.face-camera-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;gap:12px;color:#34516c;text-align:center}
+.face-camera-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;gap:12px;color:#34516c;text-align:center;background:#f0f7fb}
 .face-camera-placeholder strong{font-size:16px}.face-camera-placeholder span{font-size:13px;line-height:1.6}
 .face-camera-help{padding:16px;border:1px solid #dceaf2;border-radius:12px;background:#f8fcff;color:#34516c}
 .face-camera-help h3{margin:0 0 10px;font-size:15px}.face-camera-help ol{margin:0;padding-left:20px;font-size:13px;line-height:1.6}.face-camera-help li+li{margin-top:8px}
 @media(max-width:600px){.employee-face-onboarding{padding-top:12px}.face-enrollment-card .face-scan-modal{padding:0}.face-enrollment-brand>div{min-width:0}.face-enrollment-brand strong{overflow-wrap:anywhere}.face-company-logo{flex:0 0 48px;width:48px;height:48px}.face-scan-modal .face-scan-actions{position:sticky;bottom:0;padding:12px 0 calc(4px + env(safe-area-inset-bottom));background:#fff;z-index:2}.face-scan-modal .face-scan-actions .btn{flex-basis:calc(50% - 5px);width:auto}.face-camera{max-height:360px}}
+
+body:has(.face-scan-modal) .tcw-ios-notice{display:none!important}
