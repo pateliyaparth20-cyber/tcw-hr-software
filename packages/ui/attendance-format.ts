@@ -19,3 +19,11 @@ export function attendanceMinuteClock12(value:any){
 export function attendanceBusinessMinutesFromSeconds(value:any){
   return Math.max(0,Math.round(Number(value??0)/60));
 }
+
+// Live break status uses elapsed seconds; payroll minute rounding is separate.
+export function attendanceLiveBreakState(row:Record<string,any>,now:number){
+  if(!row.currentBreakSince||row.workingNow)return null;
+  if(row.breakMode==='PUNCH_SCHEDULED'&&row.breakEntitlementEnd){const excess=Math.max(0,Math.floor((now-new Date(row.breakEntitlementEnd).getTime())/1000));return excess>0?'OVER_BREAK':'BREAK';}
+  const base=Math.max(0,Number(row.breakSeconds??Number(row.breakMinutes??0)*60)),allowed=Math.max(0,Number(row.allowedBreakSeconds??Number(row.allowedBreakMinutes??0)*60)),elapsed=Math.max(0,Math.floor((now-new Date(row.currentBreakSince).getTime())/1000));
+  return base+elapsed>allowed?'OVER_BREAK':'BREAK';
+}
