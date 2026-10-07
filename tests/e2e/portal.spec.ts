@@ -153,7 +153,7 @@ test('HR directory create edit search and delete',async({page})=>{
  await dialog.getByLabel('Designation').selectOption({label:'QA Engineer'});
  await dialog.getByLabel('Employment type').selectOption('FULL_TIME');
  await dialog.getByLabel('Joining date').fill('2026-01-01');await dialog.getByLabel('Employment status').selectOption('ACTIVE');
- await dialog.getByRole('combobox',{name:/^Work location/}).selectOption({label:'Hybrid workspace'});await dialog.getByLabel('Emergency contact name').fill('Emergency Fixture');await dialog.getByLabel('Bank name',{exact:true}).fill('Synthetic bank');await dialog.getByLabel('HR notes').fill('Profile notes persist');
+ await dialog.getByRole('combobox',{name:/^Work location/}).selectOption({label:'Employee Test Office'});await dialog.getByLabel('Emergency contact name').fill('Emergency Fixture');await dialog.getByLabel('Bank name',{exact:true}).fill('Synthetic bank');await dialog.getByLabel('HR notes').fill('Profile notes persist');
  await dialog.getByRole('button',{name:'Create employee'}).click();await expect(dialog).not.toBeVisible();
  await page.getByRole('textbox',{name:'Search people directory'}).fill('browser-'+unique);
  const row=page.getByRole('row').filter({hasText:'browser-'+unique});await expect(row).toBeVisible();
