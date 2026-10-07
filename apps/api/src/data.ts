@@ -463,7 +463,9 @@ export class DataService {
     const model=modelMap[type];if(!model)throw new NotFoundException();
     if(method==='GET'){
       if(type==='companies'||type==='invoices')await syncCompanyAccess(this.db);
-      const items=await(this.db as any)[model].findMany({orderBy:{createdAt:'desc'},take:500});
+      const companyWhere:any={};if(type==='companies'){if(query.q){const q=String(query.q).trim().slice(0,100);companyWhere.OR=[{name:{contains:q,mode:'insensitive'}},{code:{contains:q,mode:'insensitive'}}];}if(query.status)companyWhere.status=z.enum(['TRIAL','ACTIVE','SUSPENDED','EXPIRED','ARCHIVED']).parse(query.status);}
+      const companyPage=Math.max(1,Number(query.page)||1),companyTake=Math.min(500,Math.max(1,Number(query.pageSize)||500));
+      const items=await(this.db as any)[model].findMany({orderBy:[{createdAt:'desc'},{id:'desc'}],take:type==='companies'?companyTake:500,...(type==='companies'?{where:companyWhere,skip:(companyPage-1)*companyTake}:{})});
       if(type==='support'){
         const tenantIds:string[]=[...new Set<string>(items.map((r:any)=>String(r.tenantId)).filter(Boolean))];
         const companies=tenantIds.length?await this.db.tenant.findMany({where:{id:{in:tenantIds}},select:{id:true,name:true,code:true}}):[];
@@ -476,8 +478,8 @@ export class DataService {
         return {items:[...pending,...items]};
       }
       if(type!=='companies')return {items};
-      const invoices=await this.db.invoice.findMany({select:{tenantId:true,total:true,paidAmount:true,status:true,dueDate:true}});
-      return {items:items.map((company:any)=>{const billing=invoices.filter(i=>i.tenantId===company.id);return {...company,outstandingBalance:billing.reduce((sum,i)=>sum+Math.max(0,i.total-i.paidAmount),0),overdueInvoices:billing.filter(i=>i.status==='OVERDUE').length,suspensionReason:(company.profile as any)?.suspensionReason??null};})};
+      const [invoices,total]=await Promise.all([this.db.invoice.findMany({where:{tenantId:{in:items.map((r:any)=>r.id)}},select:{tenantId:true,total:true,paidAmount:true,status:true,dueDate:true}}),this.db.tenant.count({where:companyWhere})]);
+      return {total,page:companyPage,pageSize:companyTake,items:items.map((company:any)=>{const billing=invoices.filter(i=>i.tenantId===company.id);return {...company,outstandingBalance:billing.reduce((sum,i)=>sum+Math.max(0,i.total-i.paidAmount),0),overdueInvoices:billing.filter(i=>i.status==='OVERDUE').length,suspensionReason:(company.profile as any)?.suspensionReason??null};})};
     }
     if(type==='companies'&&method==='POST'){
       const input=tenantSchema.parse(body);

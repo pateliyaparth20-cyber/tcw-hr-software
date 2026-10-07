@@ -27,7 +27,7 @@ export function ModulePage({name}:{name:string}){
  const canEdit=can(cfg.resource,'EDIT')&&!restricted&&!['leave','expenses','travel','exit','invoices','payments'].includes(name);
  const canDelete=can(cfg.resource,'DELETE')&&!restricted&&((name==='companies')||(name==='invoices')||!cfg.endpoint)&&!['leave','expenses','travel','exit'].includes(name);
  const hrAssignLeave=name==='leave'&&policies.data?.items?.find((r:Row)=>r.resource==='leave')?.mode==='SINGLE'&&['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(session.user.role);
- const paginated=!['companies'].includes(name)&&cfg.kind!=='board';
+ const paginated=cfg.kind!=='board';
  const query=useData(paginated?`${endpoint}?q=${encodeURIComponent(search)}&status=${filter}&page=${page}&pageSize=100`:`${endpoint}?pageSize=500`);
  const employees=useData('employees?pageSize=500',can('employees'));
  const departments=useData('departments?pageSize=500',can('organization'));
@@ -39,7 +39,7 @@ export function ModulePage({name}:{name:string}){
  const raw=query.data?.items??[];
  const rows:Row[]=raw;
  const total=query.data?.total??raw.length;
- const options=[...new Set([...(cfg.fields.find(f=>f.key==='status'||f.key==='stage')?.options??[]),...raw.map((r:Row)=>r.status??r.stage).filter(Boolean)])] as string[];
+ const options=[...new Set([...(name==='companies'?['TRIAL','ACTIVE','SUSPENDED','EXPIRED','ARCHIVED']:[]),...(cfg.fields.find(f=>f.key==='status'||f.key==='stage')?.options??[]),...raw.map((r:Row)=>r.status??r.stage).filter(Boolean)])] as string[];
  useEffect(()=>{if(query.data&&!query.isFetching&&paginated)setPage(current=>Math.min(current,Math.max(1,Math.ceil(total/100))))},[query.data,query.isFetching,paginated,total]);
  const exportQuery=name==='employees'?new URLSearchParams({q:search,status:filter}).toString():'';
  const leavePending=name==='leave'?raw.filter((r:Row)=>r.status==='PENDING').length:0,leaveApproved=name==='leave'?raw.filter((r:Row)=>r.status==='APPROVED').length:0,leaveRejected=name==='leave'?raw.filter((r:Row)=>r.status==='REJECTED').length:0,leaveDays=name==='leave'?raw.filter((r:Row)=>r.status==='APPROVED').reduce((n:number,r:Row)=>n+Number(r.days??0),0):0;

@@ -15,6 +15,7 @@ test('Super Admin proxy handoff is single-use, tenant scoped, audited and bound 
  try{
   const root=await login('proxy-admin@example.test','ProxyAdmin!2026'),hr=await login('proxy-hr@example.test','ProxyHR!2026','PROXY-A');
   const a=await db.tenant.findUniqueOrThrow({where:{code:'PROXY-A'}}),b=await db.tenant.create({data:{name:'Other company',code:'PROXY-B',status:'ACTIVE'}});
+  const companies=await call('platform/companies?pageSize=1&page=2','GET',undefined,root);assert.equal(companies.data.total,2);assert.equal(companies.data.items.length,1);assert.equal(companies.data.page,2);const search=await call('platform/companies?q=PROXY-B&status=ACTIVE','GET',undefined,root);assert.equal(search.data.total,1);assert.equal(search.data.items[0].id,b.id);
   assert.equal((await call('auth/proxy-start','POST',{tenantId:a.id},hr)).status,403);
   assert.equal((await call('auth/proxy-start','POST',{tenantId:a.id},{...root,csrf:''})).status,403);
   const grant=await call('auth/proxy-start','POST',{tenantId:a.id},root);assert.equal(grant.status,200);
