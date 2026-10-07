@@ -269,11 +269,16 @@ export class DataService {
       return {items:['expenses','travel'].includes(type)?await approvalRows(this.db,tid,type,items):items,total,page,pageSize:take};
     }
     return this.db.$transaction(async tx=>{
+      if(type==='devices')await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${tid}::uuid FOR UPDATE`;
       if(recordId&&['assets','courses','goals'].includes(type)){const tableName=type==='assets'?'assets':type==='goals'?'goals':'courses';await tx.$queryRawUnsafe(`SELECT id FROM ${tableName} WHERE id = $1::uuid AND tenant_id = $2::uuid FOR UPDATE`,recordId,tid);}
       const table=(tx as any)[cfg.model];const before=recordId?await table.findFirst({where}):null;
       if(recordId&&!before)throw new NotFoundException('Record not found.');
-      if(method==='DELETE'){if(type==='assets')await recordAssetEvent(tx,ctx,before,null);if(type==='courses'&&await tx.courseEnrollment.count({where:{tenantId:tid,courseId:recordId}}))throw new ConflictException('A course with enrollments cannot be deleted. Cancel it instead.');await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
+      if(method==='DELETE'){if(type==='devices'&&await tx.attendancePunch.count({where:{tenantId:tid,deviceId:recordId}}))throw new ConflictException('This device has recorded punches and cannot be deleted. Existing attendance history must be retained.');if(type==='assets')await recordAssetEvent(tx,ctx,before,null);if(type==='courses'&&await tx.courseEnrollment.count({where:{tenantId:tid,courseId:recordId}}))throw new ConflictException('A course with enrollments cannot be deleted. Cancel it instead.');await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
       let values=body;
+      if(type==='devices'){
+        const parsed=z.object({expectedSettings:z.record(z.string(),z.unknown()).optional()}).passthrough().parse(body),{expectedSettings,...rest}=parsed;values=rest;
+        if(before&&expectedSettings){const keys=['name','vendor','model','serialNumber','connectionMode','host','port','branchId','timezone'];if(keys.some(key=>(expectedSettings[key]??null)!==(before[key]??null)))throw new ConflictException('Device settings changed. Reopen the device before saving your edits.');}
+      }
       if(type==='goals'){const parsed=z.object({expectedUpdatedAt:z.iso.datetime().optional()}).passthrough().parse(body);const {expectedUpdatedAt,...rest}=parsed;values=rest;if(before&&expectedUpdatedAt&&+before.updatedAt!==+new Date(expectedUpdatedAt))throw new ConflictException('This goal changed since you opened it. Close the form and reopen the latest goal.');}
       const input=cfg.schema.parse(values) as any;
       if(type==='assets'&&input.employeeId===undefined)input.employeeId=null;
@@ -293,6 +298,12 @@ export class DataService {
       if(type==='courses'&&before&&input.capacity<await tx.courseEnrollment.count({where:{tenantId:tid,courseId:before.id,status:{not:'CANCELLED'}}}))throw new ConflictException('Capacity cannot be lower than active enrollments.');
       if(type==='goals'&&input.progress>input.target)throw new BadRequestException('Progress cannot exceed the target.');
       if(type==='goals'&&input.status==='COMPLETED'&&input.progress!==input.target)throw new BadRequestException('A completed goal must reach its target.');
+      if(type==='devices'){
+        if(!input.timezone||!(()=>{try{new Intl.DateTimeFormat('en-IN',{timeZone:input.timezone});return true}catch{return false}})())throw new BadRequestException('Select a valid timezone.');
+        if(['LAN_PULL','WIFI_LAN'].includes(input.connectionMode)&&!input.host)throw new BadRequestException('LAN / Wi-Fi devices require a host or IP address.');
+        const mobile=input.connectionMode==='EMPLOYEE_APP'||input.vendor==='TCW_MOBILE';
+        if(mobile){const existing=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP',...(before?{id:{not:before.id}}:{})}});if(existing)throw new ConflictException('TCW Employee Mobile App attendance is already enabled for this company.');Object.assign(input,{vendor:'TCW_MOBILE',connectionMode:'EMPLOYEE_APP',model:'TCW Employee Face Scan',serialNumber:'TCW-EMPLOYEE-APP',host:'',port:443});}
+      }
       if(type==='devices'&&!before){
         if(input.connectionMode==='EMPLOYEE_APP'||input.vendor==='TCW_MOBILE'){
           const existingMobile=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP'}});

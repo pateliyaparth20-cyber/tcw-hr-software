@@ -33,6 +33,7 @@ export class BiometricService{
   async rotateSecret(ctx:Context,deviceId:string){
     const tid=tenant(ctx);requirePermission(ctx,'devices','MANAGE');
     const device=await this.db.attendanceDevice.findFirst({where:{id:deviceId,tenantId:tid}});if(!device)throw new NotFoundException('Device not found.');
+    if(device.connectionMode==='EMPLOYEE_APP')throw new BadRequestException('Employee Mobile App uses account authentication and does not need a gateway key.');
     const key=this.newSecret();
     const after=await this.db.attendanceDevice.update({where:{id:device.id},data:{apiSecretHash:key.hash,apiSecretHint:key.hint,status:'AWAITING_CONNECTION',lastError:null}});
     await this.db.deviceSyncLog.create({data:{tenantId:tid,deviceId:device.id,action:'SECRET_ROTATED',message:'TCW gateway push secret was rotated.'}});
@@ -80,11 +81,11 @@ export class BiometricService{
       await this.db.deviceEmployeeMap.delete({where:{id:before.id}});await audit(this.db,ctx,'DEVICE_MAPPING_REMOVED','devices',deviceId,before);return {ok:true};
     }
     const input=mapInput.parse(body);
-    const employee=await this.db.employee.findFirst({where:{id:input.employeeId,tenantId:tid,deletedAt:null}});if(!employee)throw new BadRequestException('Employee not found.');
-    const row=await this.db.deviceEmployeeMap.upsert({
-      where:{tenantId_deviceId_employeeId:{tenantId:tid,deviceId,employeeId:input.employeeId}},
-      create:{tenantId:tid,deviceId,employeeId:input.employeeId,deviceUserId:input.deviceUserId,active:input.active},
-      update:{deviceUserId:input.deviceUserId,active:input.active,lastSyncedAt:new Date()}
+    const row=await this.db.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT id FROM attendance_devices WHERE id = ${deviceId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+      const employee=await tx.employee.findFirst({where:{id:input.employeeId,tenantId:tid,deletedAt:null}});if(!employee)throw new BadRequestException('Employee not found.');
+      const duplicate=await tx.deviceEmployeeMap.findFirst({where:{tenantId:tid,deviceId,deviceUserId:input.deviceUserId,employeeId:{not:input.employeeId}}});if(duplicate)throw new ConflictException('This device user ID is already linked to another employee. Remove or update that mapping first.');
+      return tx.deviceEmployeeMap.upsert({where:{tenantId_deviceId_employeeId:{tenantId:tid,deviceId,employeeId:input.employeeId}},create:{tenantId:tid,deviceId,employeeId:input.employeeId,deviceUserId:input.deviceUserId,active:input.active},update:{deviceUserId:input.deviceUserId,active:input.active,lastSyncedAt:new Date()}});
     });
     await audit(this.db,ctx,'DEVICE_MAPPING_SAVED','devices',deviceId,undefined,{employeeId:input.employeeId,deviceUserId:input.deviceUserId});return row;
   }
@@ -108,13 +109,14 @@ export class BiometricService{
   async test(ctx:Context,deviceId:string){
     const tid=tenant(ctx);requirePermission(ctx,'devices','MANAGE');
     const row=await this.db.attendanceDevice.findFirst({where:{id:deviceId,tenantId:tid}});if(!row)throw new NotFoundException('Device not found.');
+    const recordStatus=async(status:string,message:string)=>{await this.db.attendanceDevice.update({where:{id:row.id},data:{status}});await this.db.deviceSyncLog.create({data:{tenantId:tid,deviceId:row.id,action:'CONNECTION_TEST',level:status==='AWAITING_CONNECTION'?'WARN':'INFO',message}});};
     if(row.connectionMode==='EMPLOYEE_APP'){
       const seen=row.lastSeenAt&&Date.now()-+row.lastSeenAt<24*60*60_000;
-      return {online:true,status:seen?'ONLINE':'READY',message:seen?'Employee Mobile App Face Scan was used recently.':'Employee Mobile App Face Scan is enabled and ready for employees.',lastSeenAt:row.lastSeenAt};
+      const status=seen?'ONLINE':'READY',message=seen?'Employee Mobile App Face Scan was used recently.':'Employee Mobile App Face Scan is enabled and ready for employees.';await recordStatus(status,message);return {online:true,status,message,lastSeenAt:row.lastSeenAt};
     }
     if(['CLOUD_PUSH','NATIVE_PUSH','MIDDLEWARE'].includes(row.connectionMode)){
       const seen=row.lastSeenAt&&Date.now()-+row.lastSeenAt<10*60_000;
-      return {online:!!seen,status:seen?'ONLINE':'AWAITING_CONNECTION',message:seen?'Recent biometric heartbeat/punch received.':'Push receiver is ready; waiting for BioMax to connect.',lastSeenAt:row.lastSeenAt};
+      const status=seen?'ONLINE':'AWAITING_CONNECTION',message=seen?'Recent biometric heartbeat/punch received.':'Push receiver is ready; waiting for the device to connect.';await recordStatus(status,message);return {online:!!seen,status,message,lastSeenAt:row.lastSeenAt};
     }
     if(!row.host)throw new BadRequestException('LAN/Wi-Fi mode requires the device IP/hostname.');
     const online=await new Promise<boolean>(resolve=>{const sock=createConnection({host:row.host,port:row.port});const finish=(v:boolean)=>{sock.destroy();resolve(v)};sock.setTimeout(2500);sock.once('connect',()=>finish(true));sock.once('timeout',()=>finish(false));sock.once('error',()=>finish(false));});
