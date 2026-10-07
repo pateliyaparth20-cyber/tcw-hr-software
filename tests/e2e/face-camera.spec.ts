@@ -3,6 +3,7 @@ import {test,expect} from '@playwright/test';
 test('employee face setup fits narrow phones and opens camera only on tap with permission recovery',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.addInitScript(()=>{
+  localStorage.setItem('tcw_cookie_consent_v1','essential');
   const w=window as any;w.cameraCalls=0;w.cameraDenied=true;
   Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{w.cameraCalls++;if(w.cameraDenied)throw new DOMException('Permission denied','NotAllowedError');const canvas=document.createElement('canvas');canvas.width=640;canvas.height=640;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#c8dae5';ctx.fillRect(0,0,640,640);const stream=canvas.captureStream(5);w.cameraTrack=stream.getVideoTracks()[0];w.cameraCanvas=canvas;return stream;}});
  });
