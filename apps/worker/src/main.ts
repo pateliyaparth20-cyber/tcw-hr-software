@@ -2,9 +2,18 @@ import 'dotenv/config';
 import {Queue,Worker} from 'bullmq';
 import nodemailer from 'nodemailer';
 import {db} from '../../../packages/database';
+import {PayrollPayments} from '../../api/src/payroll-payments';
 import {syncCompanyAccess} from '../../api/src/billing';
 import {monitorAttendanceDevices,normalizeRecentHrAssignedLeave,prepareScheduledPayroll,repairPrematureCurrentMonthPayrollLocks} from '../../api/src/automation';
 import {refreshCurrentNoPunchAttendance} from '../../api/src/attendance-automation';
+const salaryPayments=new PayrollPayments(db);
+let salaryScanning=false;
+async function scanSalaryPayments(){if(salaryScanning)return;salaryScanning=true;try{await salaryPayments.executeDue()}catch{console.error('Salary payment scan failed; retrying without resending existing claims.')}finally{salaryScanning=false}}
+const salaryInterval=setInterval(scanSalaryPayments,10000);void scanSalaryPayments();
+let salaryReconciling=false;
+async function reconcileSalaryPayments(){if(salaryReconciling)return;salaryReconciling=true;try{await salaryPayments.reconcilePending()}catch{console.error('Salary reconciliation failed; retrying on the next scan.')}finally{salaryReconciling=false}}
+const salaryReconciliationInterval=setInterval(reconcileSalaryPayments,60000);void reconcileSalaryPayments();
+
 
 const url=new URL(process.env.REDIS_URL??'redis://localhost:6379');
 const connection={host:url.hostname,port:Number(url.port)||6379,password:url.password||undefined,...(url.protocol==='rediss:'?{tls:{}}:{})};
@@ -133,5 +142,5 @@ async function scan(){if(scanning)return;scanning=true;try{
   await monitorAttendanceDevices(db);
 }catch{console.error('Worker scan failed; retrying on next interval.')}finally{scanning=false}}
 const interval=setInterval(scan,10000);scan();void refreshAttendanceAtBoundary();scheduleAttendanceBoundaryRefresh();
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);if(attendanceTimer)clearTimeout(attendanceTimer);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{clearInterval(interval);clearInterval(salaryInterval);clearInterval(salaryReconciliationInterval);if(attendanceTimer)clearTimeout(attendanceTimer);await worker.close();await queue.close();await db.$disconnect();process.exit(0)});
 console.log('TCW HR Software worker running: email/SMS outbox, subscription expiry, payroll automation, minute-boundary no-punch attendance finalization, attendance-device monitoring, and manual-sync attendance.');

@@ -22,6 +22,8 @@ import {Workflows} from './workflows';
 import {FilesService} from './files';
 import {BiometricService} from './biometric';
 import {PayoutService} from './payouts';
+import {PayoutConnections} from './payout-connections';
+import {PayrollPayments} from './payroll-payments';
 import {reportRows} from './report-data';
 import {Releases,ReleaseCandidate,runningRelease,claimReleaseNotice,releaseRecipients} from './releases';
 import {reportsAccess,requireReportsAccess} from './reports-access';
@@ -259,9 +261,14 @@ export class Api {
     if(resource==='leave'&&key==='balances'&&method==='GET')return this.flows.leaveBalances(ctx,req.query);
     if(resource==='leave')return this.flows.leave(ctx,method,body);
     if(resource==='payroll-adjustments'&&method==='POST')return this.flows.adjustment(ctx,body);
+    if(resource==='payroll-payment-settings'){const service=new PayoutConnections(this.db);if(method==='GET')return service.get(ctx);if(method==='PUT')return service.save(ctx,body);}
+    if(resource==='payroll'&&key&&action==='payment-overview'&&method==='GET')return new PayrollPayments(this.db).overview(ctx,id.parse(key));
+    if(resource==='payroll'&&key&&action==='payment-schedule'){const service=new PayrollPayments(this.db);if(method==='POST')return service.schedule(ctx,id.parse(key),body);if(method==='DELETE')return service.cancel(ctx,id.parse(key));}
+    if(resource==='payroll'&&key&&action==='manual-payment'&&method==='POST')return new PayrollPayments(this.db).manual(ctx,id.parse(key),body);
     if(resource==='payout-reconciliation'&&method==='GET')return this.payouts.reconciliation(ctx);
     if(resource==='payroll'&&key&&action==='payouts'&&method==='GET')return this.payouts.list(ctx,id.parse(key));
     if(resource==='payroll'&&key&&action==='payout'&&method==='POST')return this.payouts.pay(ctx,id.parse(key),body);
+    if(resource==='payroll'&&key&&action==='payment-reference'&&method==='POST')return this.payouts.recoverReference(ctx,id.parse(key),body);
     if(resource==='payroll'&&key&&action==='payout-sync'&&method==='POST')return this.payouts.sync(ctx,id.parse(key));
     if(resource==='payroll')return this.flows.payroll(ctx,method,key,action,body);
     if(resource==='workforce')return this.flows.workforce(ctx,method,body);
@@ -491,15 +498,17 @@ export class Api {
     let rows:any[]=[];
     if(type==='bank-payout'){
       requirePermission(ctx,'payroll','EXPORT');const tid=tenant(ctx);const runId=id.parse(String(req.query.runId??''));const run=await this.db.payrollRun.findFirst({where:{id:runId,tenantId:tid,status:{in:['APPROVED','LOCKED']}},include:{items:true}});if(!run)throw new BadRequestException('Approve payroll before generating a bank payout file.');
+      const claimed=await this.db.payrollPayout.findMany({where:{tenantId:tid,runId},select:{employeeId:true}}),claimedIds=new Set(claimed.map(p=>p.employeeId));
       const employees=await this.db.employee.findMany({where:{tenantId:tid,id:{in:run.items.map(i=>i.employeeId)}}});const byId=new Map(employees.map(e=>[e.id,e]));
-      rows=run.items.map(item=>{const employee=byId.get(item.employeeId),personal=(employee?.personal&&typeof employee.personal==='object'&&!Array.isArray(employee.personal)?employee.personal:{}) as any;return {employeeCode:item.employeeCode,employeeName:item.employeeName,accountHolder:personal.accountHolder??item.employeeName,bankName:personal.bankName??'',accountNumber:personal.accountNumber??'',ifsc:personal.ifsc??'',netAmount:(item.net/100).toFixed(2),reference:`SAL-${run.month}-${item.employeeCode}`};});
-      if(rows.some(r=>!r.accountNumber||!r.ifsc))throw new BadRequestException('Complete bank account number and IFSC for every employee before exporting payout data.');
+      rows=run.items.filter(item=>item.net>0&&!claimedIds.has(item.employeeId)).map(item=>{const employee=byId.get(item.employeeId),personal=(employee?.personal&&typeof employee.personal==='object'&&!Array.isArray(employee.personal)?employee.personal:{}) as any;return {employeeCode:item.employeeCode,employeeName:item.employeeName,accountHolder:personal.accountHolder??item.employeeName,bankName:personal.bankName??'',accountNumber:String(personal.accountNumber??'').trim(),ifsc:String(personal.ifsc??'').trim().toUpperCase(),netAmount:(item.net/100).toFixed(2),reference:`SAL-${run.month}-${item.employeeCode}`};});
+      if(rows.some(r=>!/^[A-Za-z0-9]{5,35}$/.test(String(r.accountNumber))||!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(String(r.ifsc).toUpperCase())))throw new BadRequestException('Complete bank account number and IFSC for every employee before exporting payout data.');
     }
+    else if(type==='salary-payments'){requirePermission(ctx,'payroll','EXPORT');const result=await this.payouts.reconciliation(ctx);rows=result.items.map(p=>({month:p.month,employeeCode:p.employeeCode,employeeName:p.employeeName,amount:(p.amount/100).toFixed(2),provider:p.provider,status:p.status,providerRef:p.providerRef??'',reference:p.reference,utr:p.utr??'',updatedAt:p.updatedAt.toISOString()}));}
     else if(type==='attendance-summary'){requirePermission(ctx,'attendance','EXPORT');const tid=tenant(ctx);const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(String(req.query.month??''));rows=(await (await import('./attendance-automation')).attendanceMonthSummary(this.db,tid,month)).items;}
     else rows=await reportRows(this.db,ctx,type,req.query);
     if(req.query.preview==='true')return {items:rows.slice(0,500),total:rows.length,limited:rows.length>500};
     const clean=rows.map(({tenantId,personal,passwordHash,items,...r})=>r),format=z.enum(['csv','xlsx','pdf']).parse(String(req.query.format??'csv').toLowerCase());
-    const reportNames:Record<string,string>={employees:'Employee Directory',attendance:'Attendance Records','attendance-summary':'Attendance Summary',leave:'Time Off & Leave',payroll:'Payroll Runs','payroll-items':'Employee Payroll','bank-payout':'Bank Payout',expenses:'Expense Claims',assets:'Asset Inventory',goals:'Performance Goals',candidates:'Recruitment Pipeline'};
+    const reportNames:Record<string,string>={employees:'Employee Directory',attendance:'Attendance Records','attendance-summary':'Attendance Summary',leave:'Time Off & Leave',payroll:'Payroll Runs','payroll-items':'Employee Payroll','bank-payout':'Bank Payout','salary-payments':'Salary Payment Reconciliation',expenses:'Expense Claims',assets:'Asset Inventory',goals:'Performance Goals',candidates:'Recruitment Pipeline'};
     const reportTitle='TCW HR - '+(reportNames[type]??type),stamp=new Date().toISOString().slice(0,10),baseName=('tcw-hr-'+type+'-'+stamp).replace(/[^a-z0-9._-]/gi,'-');
     const sendFile=(bytes:Buffer|string,mime:string,extension:string)=>{
       const length=Buffer.isBuffer(bytes)?bytes.length:Buffer.byteLength(bytes,'utf8');

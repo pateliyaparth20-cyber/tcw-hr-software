@@ -1,3 +1,4 @@
+import {challanPaymentStatus} from './salary-challan';
 import {approvalEnabled,approvalRows,createApproval,reviewApproval} from './approvals';
 import {updateManualSalary} from './manual-payroll';
 import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
@@ -347,11 +348,9 @@ export class Workflows {
 
     if(method==='GET'){
       if(scope){
-        return {items:await this.db.payrollItem.findMany({
-          where:{tenantId:tid,employeeId:ctx.user.employeeId??'00000000-0000-0000-0000-000000000000',run:{status:'LOCKED'}},
-          include:{run:{select:{month:true,status:true,lockedAt:true}}},
-          orderBy:{createdAt:'desc'}
-        })};
+        const items=await this.db.payrollItem.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId??'00000000-0000-0000-0000-000000000000',run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true,lockedAt:true}}},orderBy:{createdAt:'desc'}});
+        const payments=await this.db.payrollPayout.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId??'00000000-0000-0000-0000-000000000000',runId:{in:items.map(i=>i.runId)}}}),byRun=new Map(payments.map(p=>[p.runId,p]));
+        return {items:items.map(i=>{const p=byRun.get(i.runId);return {...i,payment:{status:challanPaymentStatus(i.net,p),mode:p?.mode??'',utr:p?.utr??'',updatedAt:p?.updatedAt??null}}})};
       }
       return {items:await this.db.payrollRun.findMany({
         where:{tenantId:tid,...(recordId?{id:id.parse(recordId)}:{})},
@@ -379,6 +378,7 @@ export class Workflows {
           await tx.attendancePeriodLock.update({where:{id:period.id},data:{status:'UNLOCKED',unlockedBy:ctx.user.id,unlockedAt:now}});
         }
         await audit(tx,ctx,'PAYROLL_RUN_DELETED','payroll-month',run.month,run,{deleted:true,month:run.month,skipAutomaticRecreation:true,attendanceReopened:period?.status==='LOCKED'});
+        await tx.payrollPaymentSchedule.deleteMany({where:{tenantId:tid,runId:recordId,status:{notIn:['SCHEDULED','RUNNING']}}});
         await tx.payrollRun.delete({where:{id:recordId}});
         await tx.notification.deleteMany({where:{tenantId:tid,title:{in:['Automatic payroll could not be prepared','Automatic payroll needs attendance review']},message:{contains:run.month}}});
         return {ok:true,id:recordId,month:run.month};

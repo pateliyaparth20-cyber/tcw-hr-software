@@ -1,3 +1,4 @@
+import {PayrollPayments} from '../../apps/api/src/payroll-payments';
 import type {PayrollItem} from '@prisma/client';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -128,6 +129,12 @@ export async function payrollRegressions(db:Database,t:TestContext,concurrent=fa
       await assert.rejects(()=>configured.pay(ctx,r.id,{confirm:true}));assert.equal(await db.payrollPayout.count({where:{runId:r.id}}),0);
       await db.employee.update({where:{id:employee.id},data:{personal:{accountNumber:'0000000000',ifsc:'TEST0000001'}}});
     });
+    await t.test('prepared payroll separates employer contribution and uses the prorated Basic wage basis',async()=>{
+      const r=await run('2024-10');await db.salaryVersion.create({data:{tenantId:tid,employeeId:employee.id,effectiveMonth:'2024-10',basic:50000,hra:50000,reason:'Synthetic salary structure',actorId}});
+      await db.salaryRule.create({data:{tenantId:tid,name:'Synthetic employer contribution',kind:'EMPLOYER',percent:12,basis:'BASIC',wageCap:150000}});
+      const prepared=await preparePayrollMonth(db,tid,r.month,actorId),item=prepared.items.find(i=>i.employeeId===employee.id)!;
+      const components=item.components as any[],basic=components.find(c=>c.name==='Basic'),employer=components.find(c=>c.type==='EMPLOYER');assert.ok(employer);assert.equal(employer.amount,Math.round(basic.amount*0.12));assert.equal(item.net,item.gross);assert.equal(item.deductions,0);
+    });
     if(concurrent){
       await t.test('finalize, reopen, delete and unlock serialize against an in-flight period change',async()=>{
         for(const [index,action] of ['finalize','reopen','delete','unlock','manual'].entries()){
@@ -159,6 +166,15 @@ export async function payrollRegressions(db:Database,t:TestContext,concurrent=fa
           await assert.rejects(()=>workflow.payroll(ctx,'DELETE',r.id));
         }finally{release.resolve();await first;}
         assert.equal(await db.payrollPayout.count({where:{runId:r.id}}),1);
+      });
+      await t.test('two salary schedulers dispatch an approved run once while the other observes its claim',async()=>{
+        const schedulerRole=await db.role.create({data:{code:'SCHEDULE-'+randomUUID(),name:'Synthetic scheduler approver',scope:'TENANT',permissions:role.permissions}});
+        await db.user.create({data:{id:actorId,tenantId:tid,roleId:schedulerRole.id,name:'Synthetic approver',email:'schedule-'+randomUUID()+'@example.test',passwordHash:'unused'}});
+        const r=await run('2024-11');await finalizePayrollMonth(db,tid,r.id,actorId);let sent=0;const entered=deferred(),release=deferred();
+        const service=new PayoutService(db,{validateConfiguration(){},async send(id){sent++;entered.resolve();await release.promise;return {id:'synthetic-'+id,status:'processing'}},async status(){return {}}}),payments=new PayrollPayments(db,service),now=new Date(),due=new Date(now.getTime()+90000);
+        const schedule=await payments.schedule(ctx,r.id,{scheduledAt:due.toISOString(),mode:'NEFT',confirm:true},now);const first=payments.executeDue(due);
+        try{await entered.promise;assert.equal((await payments.executeDue(due)).started,0);await assert.rejects(()=>payments.cancel(ctx,r.id),/started/);await assert.rejects(()=>service.pay(ctx,r.id,{confirm:true}),/scheduled/);assert.equal(sent,1)}finally{release.resolve();await first}
+        assert.equal((await db.payrollPaymentSchedule.findUniqueOrThrow({where:{id:schedule.id}})).status,'DISPATCHED');assert.equal(await db.payrollPayout.count({where:{runId:r.id}}),1);
       });
       await t.test('prepare, reopen and corrections wait for the same period transaction',async()=>{
         const r=await run('2024-07'),entered=deferred(),release=deferred();

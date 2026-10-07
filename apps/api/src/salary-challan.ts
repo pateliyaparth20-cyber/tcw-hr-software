@@ -26,6 +26,7 @@ export async function salaryPaymentChallan(db:Database,ctx:Context,runId:string)
     if(run.status!=='LOCKED')throw new BadRequestException('Finalize payroll before generating a salary payment challan.');
     if(!run.items.length)throw new BadRequestException('This payroll has no employee salaries.');
     const company=await tx.tenant.findUniqueOrThrow({where:{id:tenantId}});
+    const connection=await tx.companyPayoutConnection.findUnique({where:{tenantId}});
     const payouts=await tx.payrollPayout.findMany({where:{tenantId,runId:run.id}});
     const byEmployee=new Map(payouts.map(p=>[p.employeeId,p]));
     const items=run.items.map(item=>{
@@ -44,7 +45,7 @@ export async function salaryPaymentChallan(db:Database,ctx:Context,runId:string)
     },{employees:items.length,gross:0,deductions:0,net:0,paid:0,failed:0,pending:0,paidEmployees:0,failedEmployees:0,pendingEmployees:0,zeroEmployees:0});
     const profile=company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile as Record<string,unknown>:{};
     return {number:`SAL-${company.code}-${run.month}-${run.id}`,runId:run.id,month:run.month,finalizedAt:run.lockedAt,generatedAt:new Date(),
-      company:{name:company.name,code:company.code,currency:company.currency,address:String(profile.address??''),accountLabel:String(profile.payoutAccountLabel??'')},
+      company:{name:company.name,code:company.code,currency:company.currency,address:String(profile.address??''),accountLabel:connection?.accountLabel??String(profile.payoutAccountLabel??'')},
       items,totals,note:'Payment status reflects recorded transfers at generation time. Pending, failed and unverified amounts are not confirmed payments. This challan does not initiate a transfer.'};
   },{isolationLevel:'RepeatableRead'});
 }
