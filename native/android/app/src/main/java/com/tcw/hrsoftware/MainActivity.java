@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -26,6 +27,9 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 1001;
     private static final int NOTIFICATION_PERMISSION_REQUEST = 1002;
     private static final int CAMERA_PERMISSION_REQUEST = 1003;
+    private static final int LOCATION_PERMISSION_REQUEST = 1004;
+    private GeolocationPermissions.Callback pendingLocationCallback;
+    private String pendingLocationOrigin;
     private static final String NOTIFICATION_CHANNEL = "tcw_hr_updates";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -42,6 +46,7 @@ public class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setGeolocationEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -60,8 +65,20 @@ public class MainActivity extends Activity {
                 catch(ActivityNotFoundException error){ filePathCallback = null; return false; }
             }
 
+            @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback){
+                if(!isAppOrigin(Uri.parse(origin)) || !"https".equalsIgnoreCase(Uri.parse(origin).getScheme())){ callback.invoke(origin,false,false); return; }
+                if(Build.VERSION.SDK_INT < 23 || (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)){ callback.invoke(origin,true,false); return; }
+                if(pendingLocationCallback != null) pendingLocationCallback.invoke(pendingLocationOrigin,false,false);
+                pendingLocationCallback=callback; pendingLocationOrigin=origin;
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},LOCATION_PERMISSION_REQUEST);
+            }
+            @Override public void onGeolocationPermissionsHidePrompt(){
+                if(pendingLocationCallback != null) pendingLocationCallback.invoke(pendingLocationOrigin,false,false);
+                pendingLocationCallback=null; pendingLocationOrigin=null;
+            }
             @Override public void onPermissionRequest(PermissionRequest request){
                 runOnUiThread(() -> {
+                    if(!isAppOrigin(request.getOrigin())){ request.deny(); return; }
                     boolean wantsCamera = false;
                     for(String resource : request.getResources()){
                         if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)){ wantsCamera = true; break; }
@@ -171,6 +188,10 @@ public class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == LOCATION_PERMISSION_REQUEST && pendingLocationCallback != null){
+            boolean granted=checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED;
+            pendingLocationCallback.invoke(pendingLocationOrigin,granted,false); pendingLocationCallback=null; pendingLocationOrigin=null;
+        }
         if(requestCode == CAMERA_PERMISSION_REQUEST && pendingCameraPermission != null){
             PermissionRequest request = pendingCameraPermission;
             pendingCameraPermission = null;

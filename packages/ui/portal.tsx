@@ -14,6 +14,7 @@ import {PeopleDirectory} from './people';
 import {TrialsPage} from './trials';
 import {Dashboard} from './dashboard';
 import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows';
+import {FieldWorkPage,EmployeeFieldTracker} from './field-work';
 import {DeviceManagement} from './device-management';
 import {EmployeeFaceEnrollmentGate,preloadFaceEngine} from './face';
 import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,MyProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
@@ -290,6 +291,7 @@ function Shell({page}:{page:string}){
  else if(page==='devices')content=<DeviceManagement/>;
  else if(page==='payroll')content=<PayrollPage/>;
  else if(page==='calendar')content=<CalendarPage/>;
+ else if(page==='field-work')content=<FieldWorkPage/>;
  else if(page==='workforce')content=<WorkforcePage/>;
  else if(page==='settings')content=session.user.scope==='PLATFORM'?<PlatformSettingsPage/>:<><CompanySettings/><ApprovalSettings/></>;
  else if(page==='subscription')content=<SubscriptionLock manage/>;
@@ -329,8 +331,9 @@ function Shell({page}:{page:string}){
     <div className="employee-app-header-actions"><Link href="/notifications" className="employee-header-icon" aria-label="Notifications"><Bell size={20}/>{unreadNotices>0&&<i>{Math.min(unreadNotices,9)}</i>}</Link><Link href="/profile" className="employee-header-avatar" aria-label="My profile"><Avatar name={session.user.name} src={session.user.avatar}/></Link></div>
    </header>
    {session.company?.status==='TRIAL'&&session.company?.expiresAt&&<div className="employee-trial-strip">Trial · {Math.max(0,Math.ceil((new Date(session.company.expiresAt).getTime()-Date.now())/86400000))} day(s) remaining</div>}
+   {faceProfile.data?.status==='PENDING'&&<div className="employee-face-status-warning">Face setup awaits HR approval. Attendance will be enabled after approval.</div>}
    {faceProfile.error&&<button className="employee-face-status-warning" type="button" onClick={()=>faceProfile.refetch()}>Face status unavailable · tap to retry</button>}
-   <main className="employee-app-main"><div key={page} className="employee-page-stage">{isAllowed?content:<Empty title="Access restricted" description="This section is not available for your Employee account."/>}</div></main>
+   <EmployeeFieldTracker/><main className="employee-app-main"><div key={page} className="employee-page-stage">{isAllowed?content:<Empty title="Access restricted" description="This section is not available for your Employee account."/>}</div></main>
    <nav className="employee-app-bottom-nav" aria-label="Employee shortcuts">{primaryKeys.map(key=>{const item=flat.find(([k])=>k===key);if(!item)return null;const Icon=icons[key]??LayoutDashboard;return <Link key={key} href={'/'+key} className={page===key?'active':''} onClick={()=>setMobile(false)}><Icon size={21}/><span>{key==='dashboard'?'Home':key==='leave'?'Time off':key==='payroll'?'Payslips':item[1]}</span></Link>})}<button type="button" className={mobile?'active':''} onClick={()=>setMobile(v=>!v)} aria-expanded={mobile}><PanelLeft size={21}/><span>More</span></button></nav>
    {mobile&&<><button className="employee-more-scrim" aria-label="Close menu" onClick={()=>setMobile(false)}/><section className="employee-more-sheet"><div className="employee-more-handle"/><div className="employee-more-profile"><Avatar name={session.user.name} src={session.user.avatar}/><div><strong>{session.user.name}</strong><small>{session.user.roleName}</small></div></div><div className="employee-more-links">{moreItems.map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <Link href={'/'+key} key={key} onClick={()=>setMobile(false)}><Icon size={19}/><span>{label}</span><ChevronRight size={16}/></Link>})}<Link href="/profile" onClick={()=>setMobile(false)}><UserCircle size={19}/><span>My profile</span><ChevronRight size={16}/></Link><Link href="/security" onClick={()=>setMobile(false)}><LockKeyhole size={19}/><span>Security</span><ChevronRight size={16}/></Link><Link href="/notifications" onClick={()=>setMobile(false)}><Bell size={19}/><span>Notifications</span><ChevronRight size={16}/></Link><button type="button" onClick={()=>{setMobile(false);setLogoutConfirm(true)}}><LogOut size={19}/><span>Sign out</span><ChevronRight size={16}/></button></div></section></>}
    {logoutConfirm&&<Confirm title="Sign out?" description="You will need your Employee login details to sign in again." onClose={()=>setLogoutConfirm(false)} onConfirm={logout}/>}

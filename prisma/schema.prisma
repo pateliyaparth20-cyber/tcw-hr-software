@@ -272,6 +272,10 @@ model Employee {
 }
 
 model EmployeeFaceProfile {
+  status String @default("LEGACY")
+  reviewCiphertext String? @map("review_ciphertext") @db.Text
+  approvedBy String? @map("approved_by") @db.Uuid
+  approvedAt DateTime? @map("approved_at")
   id                 String   @id @default(uuid()) @db.Uuid
   tenantId           String   @map("tenant_id") @db.Uuid
   employeeId         String   @map("employee_id") @db.Uuid
@@ -1150,4 +1154,80 @@ model CompanyPayoutConnectionVersion {
  createdAt DateTime @default(now()) @map("created_at")
  @@id([tenantId, revision])
  @@map("company_payout_connection_versions")
+}
+
+model FieldWorkPolicy {
+  tenantId String @id @map("tenant_id") @db.Uuid
+  enabled Boolean @default(false)
+  intervalSeconds Int @default(30) @map("interval_seconds")
+  maxAccuracyMeters Int @default(100) @map("max_accuracy_meters")
+  maxSessionHours Int @default(10) @map("max_session_hours")
+  employeeIds String[] @default([]) @map("employee_ids")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("field_work_policies")
+}
+model FieldWorkSession {
+  attendanceInId String @map("attendance_in_id") @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  startedAt DateTime @default(now()) @map("started_at")
+  expiresAt DateTime @map("expires_at")
+  endedAt DateTime? @map("ended_at")
+  endReason String? @map("end_reason")
+  consentAt DateTime @default(now()) @map("consent_at")
+  @@unique([tenantId,id])
+  @@index([tenantId,employeeId,startedAt])
+  @@map("field_work_sessions")
+}
+model FieldLocationPoint {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  latitude Float
+  longitude Float
+  accuracy Float
+  capturedAt DateTime @map("captured_at")
+  receivedAt DateTime @default(now()) @map("received_at")
+  @@unique([sessionId,capturedAt])
+  @@index([tenantId,employeeId,receivedAt])
+  @@map("field_location_points")
+}
+model FieldVisit {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  title String
+  customer String @default("")
+  notes String @default("")
+  outcome String @default("")
+  status String @default("PLANNED")
+  scheduledAt DateTime? @map("scheduled_at")
+  latitude Float?
+  longitude Float?
+  radiusMeters Int @default(200) @map("radius_meters")
+  sessionId String? @map("session_id") @db.Uuid
+  startedAt DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  checkIn Json? @map("check_in")
+  checkOut Json? @map("check_out")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([tenantId,employeeId,createdAt])
+  @@map("field_visits")
+}
+
+model FaceCaptureChallenge {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ employeeId String @map("employee_id") @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ purpose String
+ turn String
+ expiresAt DateTime @map("expires_at")
+ usedAt DateTime? @map("used_at")
+ createdAt DateTime @default(now()) @map("created_at")
+ @@index([tenantId,employeeId,createdAt])
+ @@map("face_capture_challenges")
 }
