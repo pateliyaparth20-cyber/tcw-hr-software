@@ -42,7 +42,7 @@ async function run(){
    }
    if(!ready)throw new Error(name+' did not become ready');
   }
-  const browser=spawn(process.execPath,['node_modules/@playwright/test/cli.js','test'],{stdio:'inherit',env:process.env});
+  const browser=spawn(process.execPath,['node_modules/@playwright/test/cli.js','test',...process.argv.slice(2)],{stdio:'inherit',env:process.env});
   children.push(browser);
   const [code]=await once(browser,'exit');
   if(code!==0)throw new Error('Browser verification failed');
