@@ -33,6 +33,7 @@ jobs:
             test-results/update-*.png
             test-results/dashboard-*.png
             test-results/people-*.png
+            test-results/device-*.png
           if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@v4

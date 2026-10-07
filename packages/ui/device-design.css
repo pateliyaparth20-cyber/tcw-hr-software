@@ -2,3 +2,20 @@
 @media(max-width:1250px){.device-workspace .device-v3-layout{grid-template-columns:300px minmax(0,1fr)}.dw-stats{grid-template-columns:1fr 1fr}.device-workspace .device-v3-identity{flex-wrap:wrap}.device-workspace .device-v3-live-meta{width:100%}}
 @media(max-width:1000px){.device-workspace .device-v3-layout{grid-template-columns:1fr}.device-workspace .device-v3-list{max-height:330px}.device-workspace .device-v3-head{align-items:flex-start;flex-direction:column}.device-workspace .device-v3-head h1{font-size:29px}}
 @media(max-width:600px){.device-workspace .device-v3-head{padding:23px;border-radius:23px}.dw-stats{gap:9px}.dw-stats article{padding:14px;gap:8px;flex-direction:column}.dw-stats em{font-size:10px}.dw-stats strong{font-size:25px}.device-workspace .device-v3-editor-body{padding:0 16px}.device-workspace .device-v3-editor-head,.device-workspace .device-v3-footer{padding:17px}.device-workspace .device-v3-grid.two,.device-workspace .device-v3-grid.three{grid-template-columns:1fr}.device-workspace .device-v3-grid .span-2,.device-workspace .device-v3-grid .span-3{grid-column:auto}.device-workspace .device-v3-info-grid,.device-workspace .device-v3-tools{grid-template-columns:1fr}.device-workspace .device-v3-footer{flex-wrap:wrap;gap:12px}.device-workspace .device-v3-footer>div{flex-wrap:wrap}.device-tools{padding:15px!important}.dt-hero{padding:17px;gap:10px}.dt-hero>span{width:38px;height:38px}.dt-hero h3{font-size:19px}.dt-catalog,.dt-facts,.dt-form-grid{grid-template-columns:1fr}.dt-toolbar{align-items:stretch}.dt-toolbar label{width:100%;flex-basis:100%}.dt-toolbar select{flex:1}.dt-timeline article{padding:13px}.dt-timeline article>div>div{flex-wrap:wrap}.dt-pager{flex-wrap:wrap}}
+/* Compact overview and status controls. Keep all four states visible. */
+.device-workspace .dw-stats{gap:10px}
+.device-workspace .dw-stats article{padding:14px 16px;gap:10px;border-radius:18px;align-items:center}
+.device-workspace .dw-stats article>span{padding:8px;border-radius:12px}
+.device-workspace .dw-stats article>span svg{width:18px;height:18px}
+.device-workspace .dw-stats article>div{min-width:0}
+.device-workspace .dw-stats small{font-size:11px;line-height:1.4}
+.device-workspace .dw-stats strong{font-size:23px;line-height:1.2;margin:4px 0}
+.device-workspace .dw-stats em{font-size:10px;line-height:1.45}
+.device-workspace .device-v3-list-panel{padding:14px}
+.device-workspace .device-v3-list-head{margin-bottom:10px}
+.device-workspace .device-v3-list-head h2{font-size:15px}
+.device-workspace .device-v3-list-head span{min-width:22px;height:21px;font-size:11px}
+.device-workspace .device-v3-tabs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;padding:5px!important;border-radius:17px!important;overflow:visible!important;scrollbar-width:none;margin-bottom:12px}
+.device-workspace .device-v3-tabs>button{width:100%;min-width:0;min-height:32px!important;height:32px;padding:5px 9px!important;gap:5px!important;font-size:11px!important}
+.device-workspace .device-v3-tabs>button>span{min-width:18px;padding:1px 4px;font-size:10px!important;border-radius:999px}
+@media(max-width:600px){.device-workspace .dw-stats{gap:8px}.device-workspace .dw-stats article{padding:12px;gap:8px;flex-direction:row;align-items:flex-start;border-radius:16px}.device-workspace .dw-stats article>span{padding:6px}.device-workspace .dw-stats article>span svg{width:16px;height:16px}.device-workspace .dw-stats small{font-size:10px}.device-workspace .dw-stats strong{font-size:21px}.device-workspace .dw-stats em{font-size:10px}.device-workspace .device-v3-tabs>button{min-height:34px!important;height:34px}}
