@@ -110,6 +110,7 @@ export class Workflows {
       const faceHash=match.captureHash,sourceId=`face-${ctx.user.id.slice(0,18)}-${input.clientNonce.slice(0,36)}`;
       return this.db.$transaction(async tx=>{
         await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
+        if(!await tx.session.findFirst({where:{id:ctx.session.id,userId:ctx.user.id,expiresAt:{gt:new Date()}}}))throw new ForbiddenException('Your session changed. Sign in again before face attendance.');
         const approved=await tx.employeeFaceProfile.findFirst({where:{id:match.profileId,tenantId:tid,employeeId,status:'APPROVED',updatedAt:match.profileUpdatedAt}});if(!approved)throw new ForbiddenException('Face approval changed. Start a new face verification.');
         let mobileDevice=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP'}});
         if(!mobileDevice){

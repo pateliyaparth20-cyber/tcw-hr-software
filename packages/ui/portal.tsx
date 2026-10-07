@@ -278,7 +278,7 @@ function Shell({page}:{page:string}){
  useEffect(()=>setMobile(false),[page]);
  useEffect(()=>{if(!mobile)return;const previous=document.body.style.overflow;const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};document.body.style.overflow='hidden';window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',onKey)}},[mobile]);
  useEffect(()=>{const el=navRef.current;if(!el)return;const key=`tcw-sidebar-scroll:${session.user.scope}`;const saved=sessionStorage.getItem(key);if(saved!==null)el.scrollTop=Number(saved)||0;else requestAnimationFrame(()=>el.querySelector('[aria-current="page"]')?.scrollIntoView({block:'nearest'}));const save=()=>sessionStorage.setItem(key,String(el.scrollTop));el.addEventListener('scroll',save,{passive:true});return()=>el.removeEventListener('scroll',save)},[page,session.user.scope]);
- async function logout(){try{await api('auth/logout','POST',{},session.csrf)}finally{try{window.sessionStorage.removeItem(`tcw_active_window_${session.user.scope.toLowerCase()}`)}catch{}queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
+ async function logout(){try{if(session.user.role==='EMPLOYEE')await api('field-work/session','DELETE',{},session.csrf).catch(()=>{});await api('auth/logout','POST',{},session.csrf)}finally{try{window.sessionStorage.removeItem(`tcw_active_window_${session.user.scope.toLowerCase()}`)}catch{}queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
  let content:React.ReactNode;
  if(current&&!can(current[2]))content=<Empty title="Access restricted"/>;
  else if(page==='dashboard')content=<Dashboard/>;
