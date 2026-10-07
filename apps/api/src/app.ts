@@ -27,6 +27,7 @@ import {Releases,ReleaseCandidate,runningRelease,claimReleaseNotice,releaseRecip
 import {reportsAccess,requireReportsAccess} from './reports-access';
 import {twoFactor} from './two-factor';
 import {SalaryOperations} from './salary-operations';
+import {salaryPaymentChallan,salaryChallanPdf} from './salary-challan';
 import {PeopleOperations} from './people-operations';
 import {approvalPolicies} from './approvals';
 import {employeeImport,importColumns} from './employee-import';
@@ -215,6 +216,17 @@ export class Api {
       return {id:company.id,name:company.name,code:company.code,logo:company.logo,status:company.status,expiresAt:company.expiresAt,timezone:company.timezone,primaryColor:String(profile.primaryColor??'#3474ef')};
     }
     if(resource==='company'&&['GET','PATCH'].includes(method))return this.data.company(ctx,method==='PATCH'?body:undefined);
+    if(resource==='payroll'&&key&&action==='payment-challan'&&method==='GET'){
+      const format=z.enum(['json','pdf']).parse(String(req.query.format??'json'));
+      if(format==='pdf')requirePermission(ctx,'payroll','EXPORT');
+      const challan=await salaryPaymentChallan(this.db,ctx,key);
+      res.setHeader('Cache-Control','private, no-store');
+      if(format==='json')return challan;
+      const bytes=salaryChallanPdf(challan);
+      res.setHeader('Content-Type','application/pdf');
+      res.setHeader('Content-Disposition',`attachment; filename="salary-payment-challan-${challan.month}-${challan.runId}.pdf"`);
+      res.setHeader('X-Content-Type-Options','nosniff');res.end(bytes);return;
+    }
     if(resource==='salary-employees'&&method==='GET'){const tid=tenant(ctx);requirePermission(ctx,'payroll','MANAGE');const scope=await employeeScope(this.db,ctx);if(scope)throw new ForbiddenException();const search=String(req.query.q??'').trim().slice(0,100);return {items:await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,...(search?{OR:[{firstName:{contains:search,mode:'insensitive'}},{lastName:{contains:search,mode:'insensitive'}},{employeeCode:{contains:search,mode:'insensitive'}}]}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,monthlySalary:true,updatedAt:true,joiningDate:true},orderBy:{employeeCode:'asc'},take:100})};}
     if(resource==='salary-versions'&&key)return new SalaryOperations(this.db).versions(ctx,key,method,body);
     if(resource==='payroll-loans')return new SalaryOperations(this.db).loans(ctx,method,body,key);

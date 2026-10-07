@@ -62,22 +62,47 @@ const pdfAscii=(v:unknown)=>scalar(v).replace(/[^\x20-\x7E]/g,'?').replace(/[()\
 const human=(k:string)=>k.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/^./,c=>c.toUpperCase());
 const fit=(value:string,width:number)=>value.length<=width?value.padEnd(width):width<=3?value.slice(0,width):value.slice(0,width-3)+'...';
 
-export function toPdf(rows:Record<string,unknown>[],title='TCW HR Report'){
+export function toPdf(rows:Record<string,unknown>[],title='TCW HR Report',options:{metadata?:string[];summary?:string[];wrapCells?:boolean}={}){
   const keys=Object.keys(rows[0]??{}),columnGroups:string[][]=[];
   if(keys.length){for(let i=0;i<keys.length;i+=6)columnGroups.push(keys.slice(i,i+6));}else columnGroups.push([]);
-  const rowChunks=rows.length?Array.from({length:Math.ceil(rows.length/30)},(_,i)=>rows.slice(i*30,i*30+30)):[[]];
+  const wrap=(value:string,width:number)=>{
+    const lines:string[]=[];let rest=value.replace(/\s+/g,' ').trim();
+    while(rest.length>width){let cut=rest.lastIndexOf(' ',width);if(cut<width/2)cut=width;lines.push(rest.slice(0,cut));rest=rest.slice(cut).trimStart();}
+    lines.push(rest);return lines;
+  };
+  const metadata=(options.metadata??[]).flatMap(line=>wrap(line,160));
+  const summary=(options.summary??[]).flatMap(line=>wrap(line,170));
+  const tableTop=505-metadata.length*12,bottom=summary.length?55+summary.length*12:65;
   const pages:{content:string}[]=[];
   for(const group of columnGroups){
-    for(const chunk of rowChunks){
-      const columnWidth=Math.max(10,Math.floor(110/Math.max(1,group.length))),header=group.map(k=>fit(human(k),columnWidth)).join(' ');
-      const lines=chunk.map(row=>group.map(k=>fit(scalar(row[k]).replace(/\s+/g,' '),columnWidth)).join(' '));
-      const commands:string[]=['0.15 0.23 0.36 rg','BT','/F1 15 Tf','32 556 Td','('+pdfAscii(title)+') Tj','ET','0.38 0.45 0.56 rg','BT','/F2 8 Tf','32 540 Td','('+pdfAscii('Generated '+new Date().toISOString().slice(0,19).replace('T',' ')+' UTC · '+rows.length+' record(s)')+') Tj','ET'];
+    const columnWidth=Math.max(10,Math.floor((options.wrapCells?174:110)/Math.max(1,group.length))),header=group.map(k=>fit(human(k),columnWidth)).join(' ');
+    const rendered=rows.map(row=>{
+      const cells=group.map(k=>options.wrapCells?wrap(scalar(row[k]),columnWidth):[fit(scalar(row[k]).replace(/\s+/g,' '),columnWidth)]);
+      return Array.from({length:Math.max(1,...cells.map(c=>c.length))},(_,i)=>cells.map(c=>(c[i]??'').padEnd(columnWidth)).join(' '));
+    });
+    const chunks:string[][][]=[];let chunk:string[][]=[],used=0;
+    for(const lines of rendered){
+      const pageCapacity=Math.max(1,Math.floor((tableTop-18-bottom)/14));
+      if(chunk.length&&lines.length<=pageCapacity&&used+lines.length>pageCapacity){chunks.push(chunk);chunk=[];used=0;}
+      // Split oversized cells across pages rather than clipping their remaining text.
+      for(let offset=0;offset<lines.length;){
+        const capacity=Math.max(1,Math.floor((tableTop-18-bottom)/14)-used);
+        const part=lines.slice(offset,offset+capacity);chunk.push(part);used+=part.length;offset+=part.length;
+        if(used>=Math.floor((tableTop-18-bottom)/14)){chunks.push(chunk);chunk=[];used=0;}
+      }
+    }
+    if(chunk.length||!chunks.length)chunks.push(chunk);
+    for(const records of chunks){
+      const commands:string[]=['0.15 0.23 0.36 rg','BT','/F1 15 Tf','32 556 Td','('+pdfAscii(title)+') Tj','ET','0.38 0.45 0.56 rg','BT','/F2 8 Tf','32 540 Td','('+pdfAscii('Generated '+new Date().toISOString().slice(0,19).replace('T',' ')+' UTC - '+rows.length+' record(s)')+') Tj','ET'];
+      metadata.forEach((line,i)=>commands.push('BT','/F2 7 Tf',`32 ${524-i*12} Td`,'('+pdfAscii(line)+') Tj','ET'));
       if(group.length){
-        commands.push('0.93 0.95 0.98 rg','30 505 782 22 re f','0.18 0.25 0.36 rg','BT','/F2 7 Tf','34 512 Td','('+pdfAscii(header)+') Tj','ET');
-        lines.forEach((line,index)=>{commands.push(index%2===1?'0.98 0.99 1 rg':'1 1 1 rg','30 '+(483-index*14)+' 782 14 re f','0.22 0.28 0.38 rg','BT','/F2 7 Tf','34 '+(487-index*14)+' Td','('+pdfAscii(line)+') Tj','ET');});
+        commands.push('0.93 0.95 0.98 rg',`30 ${tableTop} 782 22 re f`,'0.18 0.25 0.36 rg','BT','/F2 7 Tf',`34 ${tableTop+7} Td`,'('+pdfAscii(header)+') Tj','ET');
+        let lineIndex=0;
+        records.forEach((lines,index)=>{for(const line of lines){const y=tableTop-18-lineIndex++*14;commands.push(index%2===1?'0.98 0.99 1 rg':'1 1 1 rg',`30 ${y-4} 782 14 re f`,'0.22 0.28 0.38 rg','BT','/F2 7 Tf',`34 ${y} Td`,'('+pdfAscii(line)+') Tj','ET');}});
       }else{
         commands.push('0.35 0.42 0.52 rg','BT','/F2 10 Tf','32 500 Td','(No records found for this report.) Tj','ET');
       }
+      summary.forEach((line,i)=>commands.push('0.22 0.28 0.38 rg','BT','/F2 7 Tf',`32 ${38+(summary.length-1-i)*12} Td`,'('+pdfAscii(line)+') Tj','ET'));
       pages.push({content:commands.join('\n')});
     }
   }
