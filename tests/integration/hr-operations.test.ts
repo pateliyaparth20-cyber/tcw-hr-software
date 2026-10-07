@@ -24,6 +24,23 @@ test('HR operations work through authenticated APIs with tenant isolation',async
     const department=await db.department.create({data:{tenantId:tid,name:'Engineering',code:'ENG'}});
     const input={employeeCode:'OPS-001',firstName:'Salary',lastName:'Employee',email:'salary-ops@example.test',phone:'9000000000',joiningDate:'2020-01-01',monthlySalary:100000,shiftId:shift.id,departmentId:department.id,personal:{bankName:'Synthetic bank',accountNumber:'0000000000'}};
     let employee=(await call('employees','POST',input,owner)).data;
+    await t.test('performance goals validate progress, reject stale edits and keep summaries tenant scoped',async()=>{
+      const body={employeeId:employee.id,title:'QA Performance objective',target:100,progress:20,dueDate:'2027-01-04',status:'ACTIVE'};
+      let r=await call('goals','POST',body,owner);assert.equal(r.status,200,JSON.stringify(r.data));const goal=r.data;
+      for(const patch of [{target:0},{progress:101},{status:'COMPLETED'},{dueDate:'2027-02-30'}])assert.equal((await call('goals','POST',{...body,...patch},owner)).status,400);
+      const otherTenant=await db.tenant.create({data:{name:'Foreign goal fixture',code:'GOAL-FOREIGN'}}),foreign=await db.employee.create({data:{tenantId:otherTenant.id,employeeCode:'FOREIGN',firstName:'Other',lastName:'Employee',email:'foreign-goal@example.test',joiningDate:new Date('2020-01-01')}});
+      assert.equal((await call('goals','POST',{...body,employeeId:foreign.id},owner)).status,404);assert.equal((await call('goals?employeeId='+foreign.id,'GET',undefined,owner)).status,404);
+      r=await call('goals?q=QA%20Performance&pageSize=1','GET',undefined,owner);assert.equal(r.status,200);assert.equal(r.data.total,1);assert.equal(r.data.items[0].employee.firstName,employee.firstName);assert.equal(r.data.items[0].employee.monthlySalary,undefined);
+      r=await call('goals/'+goal.id,'PATCH',{...body,progress:60,expectedUpdatedAt:goal.updatedAt},owner);assert.equal(r.status,200);const changed=r.data;
+      assert.equal((await call('goals/'+goal.id,'PATCH',{...body,progress:40,expectedUpdatedAt:goal.updatedAt},owner)).status,409);
+      r=await call('goals/'+goal.id,'PATCH',{...body,progress:100,status:'COMPLETED',expectedUpdatedAt:changed.updatedAt},owner);assert.equal(r.status,200);
+      const due=await call('goals','POST',{...body,title:'QA overdue objective',dueDate:'2024-01-01'},owner);assert.equal(due.status,200);
+      r=await call('goals?overdue=1&sort=due','GET',undefined,owner);assert.equal(r.status,200);assert(r.data.items.some((g:any)=>g.id===due.data.id&&g.overdue));assert(!r.data.items.some((g:any)=>g.id===goal.id));assert(r.data.summary.completed>=1);assert(r.data.summary.overdue>=1);
+      const employeeRole=await db.role.findUniqueOrThrow({where:{code:'EMPLOYEE'}});await db.user.create({data:{tenantId:tid,employeeId:employee.id,name:'Goal viewer',email:'goal-viewer@example.test',passwordHash:await hashPassword('SyntheticGoal!2026'),roleId:employeeRole.id,mustChangePassword:false}});const self=await login('goal-viewer@example.test','SyntheticGoal!2026');
+      const foreignGoal=await db.goal.create({data:{tenantId:otherTenant.id,employeeId:foreign.id,title:'Foreign private goal',target:100,progress:1,dueDate:new Date('2027-01-01')}});
+      r=await call('goals','GET',undefined,self);assert.equal(r.status,200);assert(r.data.items.every((g:any)=>g.employeeId===employee.id));assert.equal((await call('goals/'+foreignGoal.id,'GET',undefined,owner)).data.total,0);
+      assert.equal((await call('goals','POST',body,self)).status,403);assert.equal((await call('goals/'+goal.id,'DELETE',undefined,self)).status,403);assert.equal((await call('goals/'+goal.id,'DELETE',undefined,owner)).status,200);assert.equal((await call('goals/'+due.data.id,'DELETE',undefined,owner)).status,200);
+    });
     await t.test('salary versions retain an opening baseline and reject stale edits and unauthorized access',async()=>{
       const payload={effectiveMonth:'2024-03',basic:80000,hra:20000,allowances:10000,overtimeHourly:5000,reason:'Synthetic salary structure',expectedUpdatedAt:employee.updatedAt};
       const r=await call('salary-versions/'+employee.id,'POST',payload,owner);assert.equal(r.status,200,JSON.stringify(r.data));

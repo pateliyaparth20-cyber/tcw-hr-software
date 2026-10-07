@@ -8,6 +8,7 @@ import {io} from 'socket.io-client';
 import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,CalendarClock,Wallet,Briefcase,Target,GraduationCap,Package,Receipt,Plane,Files,DoorOpen,BarChart3,Sparkles,Headphones,Settings,ShieldCheck,ScrollText,Search,Bell,ChevronDown,ChevronRight,PanelLeft,LogOut,ArrowUpRight,Layers,TrendingUp,CreditCard,Server,LockKeyhole,ArrowRight,Command,X,PhoneCall,Send,RefreshCw,AlertTriangle,CheckCircle2,UserCircle,History,Trash2,Plus,UserCheck,Eye,EyeOff,UserRound,FileText} from 'lucide-react';
 import {adminNavigation,navigation,employeeNavigation,modules,Row,readable} from './config';
 import {api,Providers,useApp,useData,Avatar,Modal,Confirm,Session,Empty,Loading,Failure,Badge,BrandLogo,TCW_PRODUCT_LOGO,notificationTarget,currencyValue,displayDate,getLocalSessionToken,getLocalSessionSnapshot,saveLocalSessionSnapshot,clearLocalSessionState,isLocalBrowser} from './core';
+import {PerformanceDashboard} from './performance';
 import {ModulePage,Organization,Recruitment,LeavePage} from './modules';
 import {PeopleDirectory} from './people';
 import {TrialsPage} from './trials';
@@ -283,6 +284,7 @@ function Shell({page}:{page:string}){
  else if(page==='trials')content=<TrialsPage/>;
  else if(page==='organization')content=<Organization/>;
  else if(page==='recruitment')content=<Recruitment/>;
+ else if(page==='goals')content=<PerformanceDashboard/>;
  else if(page==='leave')content=<LeavePage/>;
  else if(page==='attendance')content=<AttendancePage/>;
  else if(page==='devices')content=<DeviceManagement/>;

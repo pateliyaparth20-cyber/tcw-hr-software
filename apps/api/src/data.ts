@@ -1,3 +1,4 @@
+import {localDate} from '../../../packages/attendance-engine';
 import {recordProfileSalaryChange} from './salary-operations';
 import {approvalRows,createApproval} from './approvals';
 import {recordAssetEvent} from './people-operations';
@@ -247,9 +248,20 @@ export class DataService {
     if(query.q){const q=String(query.q).trim().slice(0,100);if(q){const searchable=['name','title','code','location','email','subject','company','description','serialNumber','model'];const schemaShape=(cfg.schema as any).shape??{};const fields=searchable.filter(field=>field in schemaShape);if(fields.length)where.OR=fields.map(field=>({[field]:{contains:q,mode:'insensitive'}}));}}
     if(query.status){const key=type==='candidates'?'stage':'status';if(key in ((cfg.schema as any).shape??{})||['expenses','travel','exit'].includes(type))where[key]=String(query.status).slice(0,60);}
     if(type==='support'&&restrictedRoles.has(ctx.user.role.code))throw new ForbiddenException('Contact your HR administrator for company support tickets.');
+    if(type==='goals'&&query.employeeId){const employeeId=id.parse(query.employeeId);await assertEmployee(this.db,ctx,employeeId);where.employeeId=employeeId;}
     if(recordId)where.id=id.parse(recordId);
     const model=(this.db as any)[cfg.model];
     if(method==='GET'){
+      if(type==='goals'){
+        const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid},select:{timezone:true}}),today=new Date(localDate(new Date(),company.timezone)+'T00:00:00.000Z');
+        const baseWhere={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};
+        if(query.overdue==='1'){where.status='ACTIVE';where.dueDate={lt:today};}
+        const take=Math.min(100,Math.max(1,Number(query.pageSize)||12)),page=Math.max(1,Number(query.page)||1);
+        const orderBy:Prisma.GoalOrderByWithRelationInput[]=query.sort==='due'?[{dueDate:'asc'},{id:'asc'}]:[{createdAt:'desc'},{id:'desc'}];
+        const [items,total,summary,overdue]=await Promise.all([this.db.goal.findMany({where,orderBy,take,skip:(page-1)*take}),this.db.goal.count({where}),this.db.goal.groupBy({by:['status'],where:baseWhere,_count:{_all:true}}),this.db.goal.count({where:{...baseWhere,status:'ACTIVE',dueDate:{lt:today}}})]);
+        const people=await this.db.employee.findMany({where:{tenantId:tid,id:{in:[...new Set(items.map(r=>r.employeeId))]}},select:{id:true,firstName:true,lastName:true,employeeCode:true,designation:true,photo:true}});
+        return {items:items.map(row=>({...row,employee:people.find(p=>p.id===row.employeeId)??null,overdue:row.status==='ACTIVE'&&row.dueDate<today})),total,page,pageSize:take,summary:{total:summary.reduce((n,r)=>n+r._count._all,0),active:summary.find(r=>r.status==='ACTIVE')?._count._all??0,completed:summary.find(r=>r.status==='COMPLETED')?._count._all??0,cancelled:summary.find(r=>r.status==='CANCELLED')?._count._all??0,overdue}};
+      }
       const take=Math.min(500,Math.max(1,Number(query.pageSize)||100)),page=Math.max(1,Number(query.page)||1);
       const orderBy=cfg.resource==='organization'&&query.sort==='name'?[{name:'asc'},{id:'asc'}]:[{createdAt:'desc'},{id:'desc'}];
       const [items,total]=await Promise.all([model.findMany({where,orderBy,take,skip:(page-1)*take}),model.count({where})]);
@@ -257,11 +269,13 @@ export class DataService {
       return {items:['expenses','travel'].includes(type)?await approvalRows(this.db,tid,type,items):items,total,page,pageSize:take};
     }
     return this.db.$transaction(async tx=>{
-      if(recordId&&['assets','courses'].includes(type)){const tableName=type==='assets'?'assets':'courses';await tx.$queryRawUnsafe(`SELECT id FROM ${tableName} WHERE id = $1::uuid AND tenant_id = $2::uuid FOR UPDATE`,recordId,tid);}
+      if(recordId&&['assets','courses','goals'].includes(type)){const tableName=type==='assets'?'assets':type==='goals'?'goals':'courses';await tx.$queryRawUnsafe(`SELECT id FROM ${tableName} WHERE id = $1::uuid AND tenant_id = $2::uuid FOR UPDATE`,recordId,tid);}
       const table=(tx as any)[cfg.model];const before=recordId?await table.findFirst({where}):null;
       if(recordId&&!before)throw new NotFoundException('Record not found.');
       if(method==='DELETE'){if(type==='assets')await recordAssetEvent(tx,ctx,before,null);if(type==='courses'&&await tx.courseEnrollment.count({where:{tenantId:tid,courseId:recordId}}))throw new ConflictException('A course with enrollments cannot be deleted. Cancel it instead.');await this.assertMasterNotInUse(tx,tid,type,recordId!,before);await table.delete({where:{id:recordId}});await audit(tx,ctx,'DELETED',type,recordId,before);return {ok:true};}
-      const input=cfg.schema.parse(body) as any;
+      let values=body;
+      if(type==='goals'){const parsed=z.object({expectedUpdatedAt:z.iso.datetime().optional()}).passthrough().parse(body);const {expectedUpdatedAt,...rest}=parsed;values=rest;if(before&&expectedUpdatedAt&&+before.updatedAt!==+new Date(expectedUpdatedAt))throw new ConflictException('This goal changed since you opened it. Close the form and reopen the latest goal.');}
+      const input=cfg.schema.parse(values) as any;
       if(type==='assets'&&input.employeeId===undefined)input.employeeId=null;
       await this.references(tx,ctx,input,{...(cfg.employeeScoped?{employeeId:'employee'}:{}),...cfg.references});
       if(type==='calendar'&&input.kind==='ROSTER_OFF'){
@@ -278,6 +292,7 @@ export class DataService {
       if(ctx.user.role.code==='EMPLOYEE'&&input.employeeId!==ctx.user.employeeId)throw new ForbiddenException();
       if(type==='courses'&&before&&input.capacity<await tx.courseEnrollment.count({where:{tenantId:tid,courseId:before.id,status:{not:'CANCELLED'}}}))throw new ConflictException('Capacity cannot be lower than active enrollments.');
       if(type==='goals'&&input.progress>input.target)throw new BadRequestException('Progress cannot exceed the target.');
+      if(type==='goals'&&input.status==='COMPLETED'&&input.progress!==input.target)throw new BadRequestException('A completed goal must reach its target.');
       if(type==='devices'&&!before){
         if(input.connectionMode==='EMPLOYEE_APP'||input.vendor==='TCW_MOBILE'){
           const existingMobile=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP'}});
