@@ -5,8 +5,8 @@ const deviceId='448f727b-ab6e-402f-9597-e6aaf86beaa1',accountKey='ab20cdd1-b4ed-
 test.use({serviceWorkers:'block'});
 test.beforeEach(async({page})=>{
  await page.setViewportSize({width:390,height:844});
- await page.addInitScript(({publicKey})=>{localStorage.setItem('tcw_cookie_consent_v1','essential');const w=window as any;w.signCalls=0;w.cameraCalls=0;w.nativeDenied=false;w.gpsDenied=false;w.deviceHasKey=true;w.cancelCalls=0;
-  w.TCWBiometric={postMessage:(raw:string)=>{const request=JSON.parse(raw);if(request.action==='cancel'){w.cancelCalls++;return;}if(request.action==='sign')w.signCalls++;const result=request.action==='status'?{supported:true}:request.action==='key'?{publicKey:w.deviceHasKey?publicKey:null}:{publicKey,signature:'A'.repeat(96)};setTimeout(()=>w.TCWBiometric.onmessage({data:JSON.stringify(request.action==='sign'&&w.nativeDenied?{id:request.id,error:'Phone verification cancelled.'}:{id:request.id,result})}),25)}};
+ await page.addInitScript(({publicKey})=>{localStorage.setItem('tcw_cookie_consent_v1','essential');const w=window as any;w.signCalls=0;w.cameraCalls=0;w.nativeDenied=false;w.nativeSupported=true;w.gpsDenied=false;w.deviceHasKey=true;w.cancelCalls=0;
+  w.TCWBiometric={postMessage:(raw:string)=>{const request=JSON.parse(raw);if(request.action==='cancel'){w.cancelCalls++;return;}if(request.action==='sign')w.signCalls++;const result=request.action==='status'?{supported:w.nativeSupported}:request.action==='key'?{publicKey:w.deviceHasKey?publicKey:null}:{publicKey,signature:'A'.repeat(96)};setTimeout(()=>w.TCWBiometric.onmessage({data:JSON.stringify(request.action==='sign'&&w.nativeDenied?{id:request.id,error:'Phone verification cancelled.'}:{id:request.id,result})}),25)}};
   Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:async()=>{w.cameraCalls++;throw new Error('Camera must not open during phone biometrics')}}});
   Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(resolve:any,reject:any)=>w.gpsDenied?reject({code:1}):resolve({coords:{latitude:23,longitude:72,accuracy:10},timestamp:Date.now()})}});
  },{publicKey});
@@ -44,4 +44,11 @@ test('phone-only onboarding links without camera or GPS and allows dashboard whi
  let punches=0;await page.route('**/api/attendance/biometric-scan',route=>{punches++;return route.fulfill({json:{ok:true}})});
  await page.goto('/login');await page.locator('input[name=companyCode]').fill(process.env.DEMO_COMPANY_CODE!);await page.locator('input[name=username]').fill('phone-employee@example.test');await page.locator('input[name=password]').fill(process.env.E2E_EMPLOYEE_PASSWORD!);await page.getByRole('button',{name:'Sign in',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Set up phone verification'})).toBeVisible();await page.evaluate(()=>{(window as any).gpsDenied=true});await page.getByRole('button',{name:'Link this phone',exact:true}).click();await expect(page.locator('.employee-home-dashboard')).toBeVisible();await expect(page.locator('.employee-face-status-warning')).toContainText('Phone setup awaits HR approval');expect(registrations).toBe(1);expect(punches).toBe(0);expect(await page.evaluate(()=>(window as any).cameraCalls)).toBe(0);expect(await page.evaluate(()=>(window as any).signCalls)).toBe(1);
+});
+
+
+test('unsupported phone verification can switch to camera enrollment',async({page})=>{
+ await page.route('**/api/attendance/face-profile',route=>route.fulfill({json:{enrolled:false,status:'NOT_ENROLLED',phoneLinked:false}}));
+ await page.goto('/login');await page.evaluate(()=>{(window as any).nativeSupported=false});await page.locator('input[name=companyCode]').fill(process.env.DEMO_COMPANY_CODE!);await page.locator('input[name=username]').fill('phone-employee@example.test');await page.locator('input[name=password]').fill(process.env.E2E_EMPLOYEE_PASSWORD!);await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Set up phone verification'})).toBeVisible();await expect(page.getByRole('button',{name:'Link this phone'})).toBeDisabled();await page.getByRole('button',{name:'Use camera setup instead'}).click();await expect(page.getByRole('heading',{name:'Add your face',exact:true})).toBeVisible();expect(await page.evaluate(()=>(window as any).cameraCalls)).toBe(0);
 });

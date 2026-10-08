@@ -246,6 +246,7 @@ function Shell({page}:{page:string}){
  const employees=useData('employees?q='+encodeURIComponent(query)+'&pageSize=6',search&&query.length>1&&session.user.scope==='TENANT'&&can('employees'));
  const notices=useData('notifications',session.user.scope==='TENANT');
  const faceProfile=useData('attendance/face-profile',session.user.role==='EMPLOYEE'&&!session.user.mustChangePassword&&(!session.company||['ACTIVE','TRIAL'].includes(session.company.status)));
+ const[phoneSetupCamera,setPhoneSetupCamera]=useState(false);
  const faceEnrollmentKey='tcw_face_enrolled:'+String(session.user.employeeId??session.user.id);
  const[faceEnrollmentHint,setFaceEnrollmentHint]=useState(()=>{if(typeof window==='undefined')return false;try{return window.localStorage.getItem(faceEnrollmentKey)==='1'}catch{return false}});const faceFalseRetryRef=useRef(false);
  const branding=useData('company/branding',session.user.scope==='TENANT');
@@ -323,7 +324,7 @@ function Shell({page}:{page:string}){
  if(billingLocked&&!can('company','VIEW'))return <div className="employee-access-paused"><div className="employee-access-paused-card"><BrandLogo/><span>{session.user.role==='EMPLOYEE'?'EMPLOYEE SELF SERVICE':'COMPANY WORKSPACE'}</span><h1>Company access is temporarily paused</h1><p>Your company subscription needs attention. Billing details are available only to authorized company administrators. Please contact your HR administrator.</p><button className="btn secondary" type="button" onClick={logout}><LogOut size={16}/>Sign out</button></div></div>;
  if(billingLocked)return <SubscriptionLock/>;
  if(session.user.role==='EMPLOYEE'&&!faceProfile.isLoading&&!faceProfile.error&&faceProfile.data?.enrolled===false&&!faceProfile.data?.phoneLinked&&!faceEnrollmentHint){
-  if(hasPhoneBiometric())return <PhoneBiometricSetupGate onComplete={async()=>{await faceProfile.refetch()}} onSignOut={logout}/>;
+  if(hasPhoneBiometric()&&!phoneSetupCamera)return <PhoneBiometricSetupGate onCamera={()=>setPhoneSetupCamera(true)} onComplete={async()=>{await faceProfile.refetch()}} onSignOut={logout}/>;
   return <EmployeeFaceEnrollmentGate logo={companyLogo} companyName={workspaceBrand.name??session.company?.name} onComplete={async()=>{setFaceEnrollmentHint(true);faceFalseRetryRef.current=false;try{window.localStorage.setItem(faceEnrollmentKey,'1')}catch{}await faceProfile.refetch()}} onSignOut={logout}/>;
  }
  if(session.user.role==='EMPLOYEE'){
