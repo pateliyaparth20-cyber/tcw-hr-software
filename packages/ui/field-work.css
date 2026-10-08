@@ -23,7 +23,8 @@ html body .field-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 html body .field-work-page :is(h2, h3) { margin: 0 0 12px; }
 html body .field-work-page :is(input, select) { height: 44px; }
 html body .field-work-page :is(.field-consent, .field-employee-picker) input[type=checkbox] {
-  width: 18px !important; height: 18px !important; min-width: 18px; min-height: 18px;
+  width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important;
+  border-radius: 4px !important;
   flex: 0 0 18px; padding: 0; margin: 2px 0 0;
 }
 .field-setting-grid { align-items: start; }
