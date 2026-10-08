@@ -29,7 +29,8 @@ test('Teams connect to employee dropdowns, work locations preserve choices and m
  for(const viewport of [{width:390,height:500},{width:1366,height:650},{width:320,height:500},{width:844,height:390}]){
   await page.setViewportSize(viewport);await expect(scroll).toBeVisible();
   await expect.poll(()=>profile.evaluate(el=>el.getAnimations().some(animation=>animation.playState==='running'))).toBe(false);
-  await expect.poll(()=>scroll.evaluate(el=>el.scrollHeight>el.clientHeight&&el.clientHeight>=60)).toBe(true);
+  await expect.poll(()=>scroll.evaluate(el=>el.clientHeight)).toBeGreaterThanOrEqual(60);
+  await expect.poll(()=>scroll.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
   const before=await profile.locator('.pd-profile-head,.pd-profile-actions,.pd-profile-tabs,.pd-profile-footer').evaluateAll(els=>els.map(el=>el.getBoundingClientRect().top));
   const pageTop=await page.evaluate(()=>window.scrollY);
   await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight});
