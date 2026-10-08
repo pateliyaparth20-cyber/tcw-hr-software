@@ -25,9 +25,26 @@ test('Teams connect to employee dropdowns, work locations preserve choices and m
  await dialog.getByRole('combobox',{name:/^Work location/}).selectOption({label:'Browser Customer Site'});await dialog.getByRole('button',{name:'Close dialog'}).click();
  await page.goto('/organization?tab=teams');await page.getByRole('button',{name:'Members (0)',exact:true}).first().click();await expect(page.getByRole('dialog')).toContainText('No employees assigned');await page.getByRole('dialog').getByRole('button',{name:'Close dialog'}).click();
  await page.goto('/employees');await page.setViewportSize({width:390,height:500});await page.getByRole('button',{name:/View profile of/}).first().click();
- const profile=page.locator('.pd-profile-modal'),scroll=profile.locator('.pd-profile');await expect(scroll).toBeVisible();expect(await scroll.evaluate(el=>el.scrollHeight>el.clientHeight)).toBeTruthy();await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight});await expect(profile.getByRole('button',{name:'Close dialog'})).toBeVisible();expect(await profile.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBeTruthy();
- await page.setViewportSize({width:1366,height:650});await expect.poll(()=>scroll.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight});expect(await scroll.evaluate(el=>el.scrollTop>0)).toBeTruthy();await expect(profile.locator('.pd-profile-footer')).toBeVisible();await expect(profile.getByRole('button',{name:'Close dialog'})).toBeVisible();await page.screenshot({path:'test-results/people-profile-scroll-desktop.png',animations:'disabled'});await page.setViewportSize({width:390,height:500});
- await page.screenshot({path:'test-results/people-profile-scroll-mobile.png',fullPage:true,animations:'disabled'});await profile.getByRole('button',{name:'Close dialog'}).click();
+ const profile=page.locator('.pd-profile-modal'),scroll=profile.getByRole('region',{name:'Employment details',exact:true});
+ for(const viewport of [{width:390,height:500},{width:1366,height:650},{width:320,height:500},{width:844,height:390}]){
+  await page.setViewportSize(viewport);await expect(scroll).toBeVisible();
+  await expect.poll(()=>scroll.evaluate(el=>el.scrollHeight>el.clientHeight&&el.clientHeight>=60)).toBe(true);
+  const before=await profile.locator('.pd-profile-head,.pd-profile-actions,.pd-profile-tabs,.pd-profile-footer').evaluateAll(els=>els.map(el=>el.getBoundingClientRect().top));
+  const pageTop=await page.evaluate(()=>window.scrollY);
+  await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight});
+  expect(await scroll.evaluate(el=>el.scrollTop>0)).toBeTruthy();
+  expect(await profile.locator('.pd-profile').evaluate(el=>el.scrollTop===0&&el.scrollHeight<=el.clientHeight)).toBeTruthy();
+  expect(await profile.locator('.pd-profile-head,.pd-profile-actions,.pd-profile-tabs,.pd-profile-footer').evaluateAll(els=>els.map(el=>el.getBoundingClientRect().top))).toEqual(before);
+  expect(await page.evaluate(()=>window.scrollY)).toBe(pageTop);
+  await expect(profile.getByRole('button',{name:'Close dialog'})).toBeVisible();await expect(profile.locator('.pd-profile-footer')).toBeVisible();
+  expect(await profile.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBeTruthy();
+  await page.screenshot({path:`test-results/people-profile-scroll-${viewport.width}-${viewport.height}.png`,animations:'disabled'});
+ }
+ await profile.getByRole('button',{name:'Personal & emergency',exact:true}).click();
+ const personal=profile.getByRole('region',{name:'Personal & emergency',exact:true});await expect(personal).toBeVisible();expect(await personal.evaluate(el=>el.scrollTop)).toBe(0);
+ await profile.getByRole('button',{name:'Overview',exact:true}).click();await expect(scroll).toBeVisible();expect(await scroll.evaluate(el=>el.scrollTop)).toBe(0);
+ await profile.getByRole('button',{name:'Close dialog'}).click();await expect(profile).not.toBeVisible();
+ expect(await page.evaluate(()=>getComputedStyle(document.documentElement).overflowY)).not.toBe('hidden');
 });
 test('Company profile and field workspace use the shared palette without horizontal overflow',async({page})=>{
  test.setTimeout(120000);

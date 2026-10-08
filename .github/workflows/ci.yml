@@ -22,8 +22,8 @@ jobs:
       - run: npm run test:integration
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
-      - name: Verify company profile and field workspace alignment
-        run: npm run test:browser -- tests/e2e/company-workspace.spec.ts --grep "Company profile and field" --project=chromium
+      - name: Verify company and employee workspace alignment
+        run: npm run test:browser -- tests/e2e/company-workspace.spec.ts --grep "Company profile and field|Teams connect" --project=chromium
       - name: Save responsive workspace previews
         uses: actions/upload-artifact@v4
         if: always()
