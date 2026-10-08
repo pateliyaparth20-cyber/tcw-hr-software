@@ -1,4 +1,7 @@
 import {test,expect} from '@playwright/test';
+// Keep synthetic camera/profile requests outside service-worker fetch handling.
+test.use({serviceWorkers:'block'});
+test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem('tcw_cookie_consent_v1','essential'))});
 
 test('employee face setup fits narrow phones and opens camera only on tap with permission recovery',async({page})=>{
  await page.setViewportSize({width:390,height:844});

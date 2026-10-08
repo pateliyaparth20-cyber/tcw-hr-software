@@ -47,3 +47,11 @@
  .face-flow-punch .face-camera{max-height:min(320px,42dvh)}
 }
 @media(min-width:769px) and (max-width:1024px){.employee-desktop-sidebar{width:196px}.employee-app-shell{padding-left:196px!important}.employee-app-shell .employee-app-main{padding:22px 16px!important}.employee-app-shell .employee-home-grid{grid-template-columns:1fr!important}}
+@media(min-width:769px){
+ .employee-app-shell .employee-home-hero{min-height:110px!important}
+ .employee-app-shell .employee-home-person span{color:#64748b!important}
+ .employee-app-shell .employee-home-person .avatar{color:#075985!important}
+}
+@media(min-width:1025px){.employee-app-shell .employee-work-status{grid-template-columns:minmax(0,1fr) auto auto auto!important;gap:14px!important}.employee-app-shell .employee-work-status .btn{width:auto!important;min-width:112px!important}}
+@media(min-width:769px) and (max-width:1024px){.employee-app-shell .employee-work-status{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}.employee-app-shell .employee-work-clock{min-width:0!important}}
+@media(max-width:768px){.employee-app-shell .employee-home-person .avatar{color:#075985!important}}
