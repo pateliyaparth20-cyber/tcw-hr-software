@@ -9,6 +9,9 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +24,6 @@ jobs:
       - run: npm test
       - run: npm run test:integration
       - run: npm run build
-      - run: npx playwright install --with-deps chromium webkit
       - name: Verify company and employee workspace alignment
         run: npm run test:browser -- tests/e2e/company-workspace.spec.ts --grep "Company profile and field|Teams connect" --project=chromium
       - name: Save responsive workspace previews
