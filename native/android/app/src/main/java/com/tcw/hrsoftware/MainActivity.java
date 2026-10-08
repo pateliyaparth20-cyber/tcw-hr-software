@@ -1,6 +1,9 @@
 package com.tcw.hrsoftware;
 
 import android.app.Activity;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
+import java.util.Collections;
 import android.app.AlertDialog;
 import android.Manifest;
 import android.app.Notification;
@@ -35,6 +38,7 @@ public class MainActivity extends Activity {
     private String pendingLocationOrigin;
     private static final String NOTIFICATION_CHANNEL = "tcw_hr_updates";
     private WebView webView;
+    private PhoneBiometric phoneBiometric;
     private ValueCallback<Uri[]> filePathCallback;
     private PermissionRequest pendingCameraPermission;
 
@@ -45,6 +49,14 @@ public class MainActivity extends Activity {
         createNotificationChannel();
         requestNotificationPermission();
         webView.addJavascriptInterface(new NativeBridge(), "TCWNative");
+        phoneBiometric=new PhoneBiometric(this);
+        if("EMPLOYEE".equals(BuildConfig.TCW_APP_MODE)&&WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            WebViewCompat.addWebMessageListener(webView,"TCWBiometric",Collections.singleton(BuildConfig.TCW_APP_URL),
+                (view,message,origin,mainFrame,reply)->{
+                    if(mainFrame&&isAppOrigin(origin)&&"https".equalsIgnoreCase(origin.getScheme())&&message.getData()!=null)
+                        phoneBiometric.receive(message.getData(),reply);
+                });
+        }
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -285,7 +297,13 @@ public class MainActivity extends Activity {
         if(webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed();
     }
 
+    @Override protected void onStop(){
+        if(phoneBiometric!=null)phoneBiometric.cancel();
+        super.onStop();
+    }
+
     @Override protected void onDestroy(){
+        if(phoneBiometric!=null)phoneBiometric.cancel();
         if(pendingLocationCallback != null){ pendingLocationCallback.invoke(pendingLocationOrigin,false,false); pendingLocationCallback=null; pendingLocationOrigin=null; }
         if(filePathCallback != null){ filePathCallback.onReceiveValue(null); filePathCallback = null; }
         if(pendingCameraPermission != null){ pendingCameraPermission.deny(); pendingCameraPermission = null; }

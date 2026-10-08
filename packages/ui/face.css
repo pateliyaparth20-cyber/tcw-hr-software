@@ -19,3 +19,5 @@
 @media(max-width:600px){.employee-face-onboarding{padding-top:12px}.face-enrollment-card .face-scan-modal{padding:0}.face-enrollment-brand>div{min-width:0}.face-enrollment-brand strong{overflow-wrap:anywhere}.face-company-logo{flex:0 0 48px;width:48px;height:48px}.face-scan-modal .face-scan-actions{position:sticky;bottom:0;padding:12px 0 calc(4px + env(safe-area-inset-bottom));background:#fff;z-index:2}.face-scan-modal .face-scan-actions .btn{flex-basis:calc(50% - 5px);width:auto}.face-camera{max-height:360px}}
 
 body:has(.face-scan-modal) .tcw-ios-notice{display:none!important}
+
+.phone-biometric-mark{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:28px 12px;color:#34516c}.phone-biometric-mark p{margin:0;line-height:1.6}.phone-biometric-flow{display:flex;flex-direction:column;gap:16px}.phone-biometric-flow .phone-biometric-mark h2{font-size:22px}

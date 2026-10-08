@@ -46,3 +46,13 @@ If phone Location is off, the app offers the phone Location settings. If permiss
 An older installed APK must be replaced to pick up native permission changes. A Railway or website update cannot change Android manifest permissions. Versions before v1.3.2 did not declare location permissions.
 
 Tracking remains foreground-only. The app does not lock phone GPS, request background location, or automatically grant consent. Field Check OUT remains available if GPS is off.
+
+## Phone biometrics (v1.3.4)
+
+Employee Check IN/OUT defaults to the Android system biometric dialog when this APK's origin-restricted message bridge is available. Link the phone once, then have HR verify the employee and phone under People → Phone biometrics and approve it. Each punch requires a fresh signed server challenge and one system biometric authentication. Pending/revoked phones cannot punch. Camera verification remains available on desktop, older APKs and unsupported phones.
+
+Android 9+ is required for this feature; Android determines whether enrolled face or fingerprint meets its strong biometric requirements. Many phones' convenience face unlock cannot authorize cryptographic keys, so Android will use a supported fingerprint instead. There is no PIN fallback. Private P-256 keys stay in Android Keystore and require biometric authorization per signature. Changing biometric enrollment invalidates the key and requires linking and HR approval again. TCW receives a public key and signed challenge, never the phone's face/fingerprint template. Server signature verification proves possession of the HR-approved key; this implementation does not use remote hardware attestation.
+
+This authenticates whoever is enrolled on the phone, not a match against the employee's HR face template. Use the employee's own phone. Initial employee identity setup/approval remains required; resetting that identity revokes phone approvals. HR can revoke a phone independently. Field Check IN still requires consent and fresh precise GPS before and after the prompt; OUT does not require GPS. Closing/backgrounding the app cancels an open biometric prompt.
+
+A new APK installation is required; publishing web code alone cannot add the biometric bridge. CI builds are debug-signed test APKs. Use a stable private signing key for production upgrades.

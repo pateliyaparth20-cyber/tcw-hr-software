@@ -3,7 +3,7 @@ export function attendanceElapsedSeconds(start:Date,end:Date){
   return Math.max(0,Math.floor(end.getTime()/1000)-Math.floor(start.getTime()/1000));
 }
 export function attendanceCalculationPunches<T extends {punchTime:Date;punchType:string;verificationType?:string|null;rawPayload?:any}>(punches:T[]){
-  const explicitMobile=punches.filter(p=>p.verificationType==='FACE_SCAN'&&['IN','OUT'].includes(String(p.rawPayload?.intent??'')));
+  const explicitMobile=punches.filter(p=>['FACE_SCAN','PHONE_BIOMETRIC'].includes(p.verificationType??'')&&['IN','OUT'].includes(String(p.rawPayload?.intent??'')));
   if(!explicitMobile.length)return punches;
   return punches.filter(p=>{
     if(p.verificationType!=='FACE_SCAN'||['IN','OUT'].includes(String(p.rawPayload?.intent??'')))return true;
@@ -94,7 +94,7 @@ export function attendanceWorkdayDate(instant:Date,shiftStartMinute:number,shift
 // Manual and phone Face Scan days use actual OUT/IN breaks, even on an automatic shift.
 export function attendancePunchDrivenBreaks(shift:{punchDrivenBreaks?:boolean|null},punches:readonly {punchTime:Date;punchType:string;verificationType?:string|null}[]){
  const firstIn=punches.filter(p=>p.punchType==='IN').reduce<(typeof punches)[number]|null>((first,p)=>!first||p.punchTime<first.punchTime?p:first,null);
- return !!shift.punchDrivenBreaks||['MANUAL','FACE_SCAN'].includes(firstIn?.verificationType??'');
+ return !!shift.punchDrivenBreaks||['MANUAL','FACE_SCAN','PHONE_BIOMETRIC'].includes(firstIn?.verificationType??'');
 }
 export function isScheduledBreakOut(out:Date,breakStart:Date,breakEnd:Date){
   return out.getTime()>=breakStart.getTime()&&out.getTime()<breakEnd.getTime();

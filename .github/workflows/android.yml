@@ -30,6 +30,7 @@ jobs:
             grep -Fq 'android.permission.ACCESS_FINE_LOCATION' permissions.txt
             grep -Fq 'android.permission.ACCESS_COARSE_LOCATION' permissions.txt
             grep -Fq 'android.permission.CAMERA' permissions.txt
+            grep -Fq 'android.permission.USE_BIOMETRIC' permissions.txt
             if grep -Fq 'android.permission.ACCESS_BACKGROUND_LOCATION' permissions.txt; then exit 1; fi
             "$AAPT" dump badging "$APK" > badging.txt
             head -1 badging.txt

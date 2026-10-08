@@ -163,6 +163,7 @@ export class DataService {
         const rawPunchesRetained=await tx.attendancePunch.count({where:{tenantId:tid,employeeId}});
         const linkedUsers=await tx.user.findMany({where:{tenantId:tid,employeeId},select:{id:true}});
         const userIds=linkedUsers.map(u=>u.id);
+        await tx.employeeBiometricDevice.updateMany({where:{tenantId:tid,employeeId},data:{status:'REVOKED'}});
         await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.deviceEmployeeMap.deleteMany({where:{tenantId:tid,employeeId}});
         await tx.attendanceDaily.deleteMany({where:{tenantId:tid,employeeId}});
@@ -382,6 +383,7 @@ export class DataService {
       let user:any=existing;
       if(input.operation==='RESET_FACE'){
         const beforeFace=await tx.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId:employee.id}},select:{id:true,enrolledAt:true,templateVersion:true,sampleCount:true}});
+        await tx.employeeBiometricDevice.updateMany({where:{tenantId:tid,employeeId:employee.id},data:{status:'REVOKED'}});
         await tx.employeeFaceProfile.deleteMany({where:{tenantId:tid,employeeId:employee.id}});
         if(existing)await tx.session.deleteMany({where:{userId:existing.id}});
         await audit(tx,ctx,'EMPLOYEE_FACE_RESET','employees',employee.id,beforeFace??undefined,{employeeCode:employee.employeeCode});
@@ -525,6 +527,8 @@ export class DataService {
         await tx.attendancePunch.deleteMany({where:{tenantId:companyId}});
         await tx.attendanceDaily.deleteMany({where:{tenantId:companyId}});
         await tx.attendancePeriodLock.deleteMany({where:{tenantId:companyId}});
+        await tx.biometricChallenge.deleteMany({where:{tenantId:companyId}});
+        await tx.employeeBiometricDevice.deleteMany({where:{tenantId:companyId}});
         await tx.employeeFaceProfile.deleteMany({where:{tenantId:companyId}});
         await tx.leaveRequest.deleteMany({where:{tenantId:companyId}});
         await tx.employeeExit.deleteMany({where:{tenantId:companyId}});
