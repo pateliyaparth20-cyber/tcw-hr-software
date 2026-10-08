@@ -7,3 +7,64 @@
 /* Match the shared sky-blue workspace palette. */
 html body .field-hero{background:linear-gradient(115deg,#bae6fd,#7dd3fc 65%,#38bdf8);color:#082f49;border:1px solid #bae6fd;box-shadow:0 8px 28px #0c4a6e0a;padding:28px 30px}.field-hero>div{min-width:0}html body .field-hero :is(h1,strong){color:#17364a}html body .field-hero :is(p,small){color:#33647c}.field-hero-note{background:#ffffff80;border:1px solid #fff;padding:18px;border-radius:16px}.field-tabs{margin:0!important;padding:5px!important;background:#fff;border:1px solid #dcebf3;border-radius:14px;gap:6px!important}.field-tabs button{padding:12px 16px!important;border:0!important;border-radius:10px!important;font-size:13px!important}.field-work-page :is(input,select,textarea){min-height:44px;border-radius:10px;font-size:14px;width:100%;min-width:0;box-sizing:border-box}.field-work-page :is(.panel,.field-stats article,.field-person-card){border-color:#dcebf3;box-shadow:0 5px 18px #0c4a6e05}.field-stats article{border-radius:16px;position:relative;overflow:hidden}.field-stats article:before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:#38bdf8}.field-stats strong{color:#17364a}.field-person-card .person-cell{align-items:center;gap:10px}.field-person-card .person-cell>div{min-width:0;flex:1}.field-person-card strong{font-size:14px;overflow-wrap:anywhere}.field-person-card>small{font-size:12px;line-height:1.6}.field-person-card .field-state{flex-shrink:0}.field-person-card{background:#fff;padding:20px;display:flex;flex-direction:column;align-items:flex-start}.field-person-card>.person-cell{width:100%}.field-person-card>.btn:last-child{margin-top:auto}.field-person-card>.btn{min-height:38px}.field-work-page .toolbar{display:flex;gap:12px;align-items:end;min-width:0}.field-work-page .toolbar>input{flex:1;max-width:420px}.field-work-page .toolbar>.btn{flex-shrink:0}.field-work-page .toolbar>label{display:grid;gap:7px;font-size:13px;min-width:0}.field-work-page .toolbar>select{max-width:360px}.field-visit-form h2,.field-settings h2{font-size:21px;color:#17364a}.field-visit-form form{grid-template-columns:repeat(2,minmax(0,1fr));padding-top:10px}.field-visit-form form>label{min-width:0}.field-visit-form textarea{min-height:90px}.field-visit-form form>.btn{justify-self:start;min-height:44px}.field-visit-card{border-radius:16px;position:relative}.field-visit-card>.badge{justify-self:start}.field-visit-card :is(h3,p,span){overflow-wrap:anywhere}.field-employee-picker{background:#f8fbfd;scrollbar-gutter:stable;overscroll-behavior:contain}.field-employee-picker label{padding:10px;background:#fff;border:1px solid #e2edf3;border-radius:8px;font-weight:500!important}.field-settings .field-setting-grid label{min-width:0}.field-settings>.field-kicker{color:#0369a1}.field-policy-notice{display:flex;align-items:center;gap:12px;border:1px solid #bae6fd;background:#f0f9ff;padding:16px 20px;border-radius:14px;color:#075985;font-size:13px;line-height:1.6}.field-policy-notice>span{flex:1;min-width:0}.field-policy-notice .btn{flex-shrink:0}.field-route-preview svg{min-height:170px}.field-coordinate-list{scrollbar-gutter:stable;overscroll-behavior:contain}.field-route-preview>p{line-height:1.6}
 @media(max-width:600px){html body .field-hero{padding:22px 18px}.field-hero h1{font-size:24px;line-height:1.25}.field-hero p{font-size:13px}.field-tabs button{padding:11px 13px!important}.field-work-page .toolbar>input,.field-work-page .toolbar>label,.field-work-page .toolbar>select{max-width:none;width:100%;flex:auto}.field-work-page .toolbar>.btn{width:100%}.field-visit-form form{grid-template-columns:1fr}.field-visit-form form>.btn{width:100%}.field-policy-notice{padding:14px;flex-wrap:wrap}.field-policy-notice .btn{width:100%}.field-stats strong{font-size:25px}.field-person-card{padding:16px}}
+
+/* Scoped layout rules also take precedence over shared workspace form styles. */
+html body .field-work-page { gap: 20px; }
+html body .field-work-page .panel { padding: 24px; }
+html body .field-work-page .panel > .toolbar {
+  padding: 0 0 18px !important; margin: 0 0 20px; align-items: end; flex-wrap: wrap;
+}
+html body .field-hero { align-items: center; padding: 28px 24px; }
+.field-hero p { margin-bottom: 0; }
+.field-hero-note { flex: 0 0 240px; }
+html body .field-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.field-stats article { min-width: 0; }
+.field-stats span { overflow-wrap: anywhere; }
+html body .field-work-page :is(h2, h3) { margin: 0 0 12px; }
+html body .field-work-page :is(input, select) { height: 44px; }
+html body .field-work-page :is(.field-consent, .field-employee-picker) input[type=checkbox] {
+  width: 18px !important; height: 18px !important; min-width: 18px; min-height: 18px;
+  flex: 0 0 18px; padding: 0; margin: 2px 0 0;
+}
+.field-setting-grid { align-items: start; }
+html body .field-setting-grid label { display: flex; flex-direction: column; gap: 8px; }
+.field-setting-grid label > span { min-height: 40px; line-height: 20px; }
+html body .field-employee-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html body .field-employee-picker label { min-width: 0; align-items: flex-start; line-height: 1.5; overflow-wrap: anywhere; }
+.field-person-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+html body .field-person-card { gap: 12px; }
+html body .field-person-card p { margin: 0; line-height: 1.6; align-items: flex-start; }
+.field-person-card p > svg { flex-shrink: 0; margin-top: 3px; }
+html body .field-person-card > small { margin: 0; }
+html body .field-person-card > .btn { margin: 0; }
+html body .field-person-card > .btn:last-child { margin-top: auto; }
+html body .field-person-card .person-cell { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; }
+.field-person-card .person-cell .field-state { margin: 0; }
+html body .field-visit-form form { align-items: start; gap: 18px; }
+html body .field-visit-form .field-visit-notes { grid-column: 1 / -1; }
+.field-visit-form textarea { resize: vertical; }
+html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: flex; justify-content: flex-end; border-top: 1px solid #e2edf3; padding-top: 18px; }
+.field-visit-submit .btn { min-height: 44px; }
+.field-visit-card { min-width: 0; }
+.field-session-card > div { min-width: 0; }
+.field-face-reviews { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+@media (max-width: 1000px) {
+  html body .field-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field-setting-grid { grid-template-columns: 1fr; }
+  .field-setting-grid label > span { min-height: 0; }
+  .field-session-card { flex-wrap: wrap; }
+  .field-session-card > div { flex-basis: 100%; }
+}
+@media (max-width: 760px) {
+  html body .field-work-page { gap: 16px; }
+  html body .field-work-page .panel { padding: 18px; }
+  html body .field-hero { padding: 22px 18px; }
+  html body .field-work-page .panel > .toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+  html body .field-work-page .toolbar > :is(input, select, label, .btn) { max-width: none; width: 100%; flex: auto; }
+  html body .field-visit-form form, html body .field-visits, html body .field-employee-picker { grid-template-columns: minmax(0, 1fr); }
+  html body .field-visit-submit .btn { width: 100%; white-space: normal; }
+  .field-policy-notice { flex-wrap: wrap; padding: 16px; }
+  .field-policy-notice .btn { width: 100%; }
+  .field-settings form > .btn, .field-session-card .btn { width: 100%; }
+  .field-sharing-banner { flex-wrap: wrap; }
+}

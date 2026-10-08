@@ -30,12 +30,22 @@ test('Teams connect to employee dropdowns, work locations preserve choices and m
  await page.screenshot({path:'test-results/people-profile-scroll-mobile.png',fullPage:true,animations:'disabled'});await profile.getByRole('button',{name:'Close dialog'}).click();
 });
 test('Company profile and field workspace use the shared palette without horizontal overflow',async({page})=>{
+ test.setTimeout(120000);
  await login(page);
- for(const width of [1440,390,320]){
+ for(const width of [1440,1024,820,768,600,390,320]){
   await page.setViewportSize({width,height:900});await page.goto('/settings');await expect(page.getByRole('heading',{name:'Company Profile',exact:true})).toBeVisible();await expect(page.getByRole('group',{name:'Company identity'})).toBeVisible();
   if(width===1440){await page.getByRole('button',{name:'Save company profile',exact:true}).click();await expect(page.getByText('Company profile saved.',{exact:true})).toBeVisible();}
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-company-profile-${width}.png`,fullPage:true,animations:'disabled'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  expect(await page.locator('.company-profile-form .field > input:not([type=checkbox]), .company-profile-form .field > textarea, .company-profile-form .field > select').evaluateAll(els=>els.every(el=>{const r=el.getBoundingClientRect(),p=el.parentElement!.getBoundingClientRect();return r.width>0&&r.left>=p.left-1&&r.right<=p.right+1}))).toBeTruthy();
+  await page.screenshot({path:`test-results/people-company-profile-${width}.png`,fullPage:true,animations:'disabled'});
   await page.goto('/field-work');await expect(page.getByRole('heading',{name:'Your team in the field'})).toBeVisible();expect(await page.locator('.field-hero').evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('186, 230, 253');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-field-design-${width}.png`,fullPage:true,animations:'disabled'});
+  await page.getByRole('button',{name:'Visits',exact:true}).click();await expect(page.getByRole('heading',{name:'Assign a customer visit'})).toBeVisible();
+  const notes=await page.locator('.field-visit-notes').boundingBox(),form=await page.locator('.field-visit-form form').boundingBox();expect(Math.abs(notes!.width-form!.width)).toBeLessThan(2);
+  expect(await page.locator('.field-visit-form label').evaluateAll(els=>els.every(el=>{const r=el.getBoundingClientRect(),p=el.parentElement!.getBoundingClientRect();return r.left>=p.left-1&&r.right<=p.right+1}))).toBeTruthy();
+  await page.screenshot({path:`test-results/people-field-visits-${width}.png`,fullPage:true,animations:'disabled'});
+  await page.getByRole('button',{name:'Route history',exact:true}).click();await expect(page.getByRole('combobox',{name:'Route employee'})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await page.getByRole('button',{name:'Company settings',exact:true}).click();await expect(page.getByRole('heading',{name:'Field work settings'})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  expect(await page.locator('.field-employee-picker input[type=checkbox]').evaluateAll(els=>els.every(el=>{const r=el.getBoundingClientRect();return r.width===18&&r.height===18}))).toBeTruthy();
+  await page.screenshot({path:`test-results/people-field-settings-${width}.png`,fullPage:true,animations:'disabled'});
  }
 });

@@ -1,3 +1,62 @@
-.company-profile-form{padding:0!important;min-width:0}.company-profile-form .record-form-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.company-profile-form .record-form-section{min-width:0;margin:0;padding:20px;border:1px solid #dcebf3;border-radius:16px;background:#fff}.company-profile-form legend{padding:0 8px;font-size:15px;font-weight:750;color:#14384e}.company-profile-form legend span{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:8px;background:#e0f2fe;color:#0369a1;margin-right:8px;font-size:11px}.company-profile-form .record-form-section>p{font-size:13px;line-height:1.6;color:#64748b;margin:0 0 16px}.company-profile-form .form-grid{padding:0!important;gap:16px}.company-profile-form .field{min-width:0;font-size:13px}.company-profile-form .field :is(input,select,textarea){max-width:100%;min-width:0;font-size:14px;min-height:44px}.company-profile-form .field small{font-size:12px;line-height:1.5}.company-profile-form .form-actions-end{padding:20px 0 0;border-top:1px solid #e2edf3;margin-top:24px}.company-profile-v2-panel.company-profile-v2-form-only{padding:24px!important;background:#f8fbfd!important}.company-summary-logo-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}.company-profile-v2-banner>div{min-width:0}.company-profile-v2-banner h2{overflow-wrap:anywhere}.company-proxy-banner{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid #7dd3fc;background:#e0f2fe;color:#075985}.company-proxy-banner>div{flex:1;min-width:0}.company-proxy-banner strong,.company-proxy-banner small{display:block;overflow-wrap:anywhere}.company-proxy-banner small{font-size:12px;margin-top:4px}.company-proxy-banner .btn{flex-shrink:0}.org-team-members{max-height:70dvh;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.org-team-members>p{color:#64748b;line-height:1.6;font-size:13px}
-@media(max-width:1000px){.company-profile-form .record-form-fields{grid-template-columns:1fr}}
-@media(max-width:600px){.company-profile-v2-panel.company-profile-v2-form-only{padding:16px!important}.company-profile-form .record-form-section{padding:16px}.company-profile-form .form-grid{grid-template-columns:1fr!important}.company-profile-form .form-actions-end{position:sticky;bottom:0;background:#f8fbfd;padding:14px 0 calc(14px + env(safe-area-inset-bottom));flex-wrap:wrap}.company-profile-form .form-actions-end .btn{flex:1;min-width:0}.company-proxy-banner{padding:12px 16px;flex-wrap:wrap}.company-proxy-banner>.btn{width:100%}.company-proxy-banner>svg{display:none}}
+/* Keep the profile banner, editor and payment card on the same page edges. */
+html body .company-profile-v2-head { align-items: flex-start; gap: 20px; }
+.company-profile-v2-head > div:first-child { flex: 1; min-width: 0; }
+.company-profile-v2-head p { line-height: 1.6; }
+.company-profile-v2-state { flex-shrink: 0; }
+html body .company-profile-v2-banner {
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  gap: 20px;
+  padding: 24px;
+}
+.company-profile-v2-banner > div { min-width: 0; }
+.company-profile-v2-banner :is(h2, p, strong) { overflow-wrap: anywhere; }
+html body .company-profile-v2-code { min-width: 140px; text-align: left; gap: 4px; background: #ffffff80; border: 1px solid #fff; }
+html body .company-profile-v2-code span { color: #33647c; }
+html body .company-profile-v2-panel.company-profile-v2-form-only {
+  width: 100%; max-width: none; padding: 24px !important; background: #f8fbfd !important;
+  overflow: visible; transform: none;
+}
+html body .company-summary-logo-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 24px; }
+html body .company-profile-form { padding: 0 !important; border-top: 0; min-width: 0; }
+.company-profile-form .record-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.company-profile-form .record-form-section { min-width: 0; margin: 0; padding: 20px; border: 1px solid #dcebf3; border-radius: 16px; background: #fff; }
+.company-profile-form legend { max-width: 100%; padding: 0 8px; font-size: 15px; font-weight: 750; color: #14384e; line-height: 1.6; }
+.company-profile-form legend span { display: inline-grid; place-items: center; width: 25px; height: 25px; border-radius: 8px; background: #e0f2fe; color: #0369a1; margin-right: 8px; font-size: 11px; }
+.company-profile-form .record-form-section > p { font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px; }
+html body .company-profile-form .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; padding: 0 !important; gap: 16px; align-items: start; }
+html body .company-profile-form .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: 13px; }
+html body .company-profile-form .field.span-two { grid-column: 1 / -1; }
+html body .company-profile-form .field > :is(input, select, textarea) { width: 100%; max-width: 100%; min-width: 0; font-size: 14px; min-height: 44px; border-radius: 10px; }
+.company-profile-form .field > small { font-size: 12px; line-height: 1.5; }
+.company-profile-form .field.checkbox-field { grid-column: 1 / -1; }
+.company-profile-form .form-switch-row { min-height: 54px; }
+html body .company-profile-form .form-switch-copy small { font-size: 12px !important; line-height: 1.5; }
+html body .company-profile-form .form-actions-end { margin: 24px 0 0 !important; padding: 20px 0 0 !important; }
+html body .company-payments-link { margin-top: 20px; padding: 24px; }
+.company-payments-link p { margin: 8px 0 16px; line-height: 1.6; }
+.company-proxy-banner { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid #7dd3fc; background: #e0f2fe; color: #075985; }
+.company-proxy-banner > div { flex: 1; min-width: 0; }
+.company-proxy-banner strong, .company-proxy-banner small { display: block; overflow-wrap: anywhere; }
+.company-proxy-banner small { font-size: 12px; margin-top: 4px; }
+.company-proxy-banner .btn { flex-shrink: 0; }
+.org-team-members { max-height: 70dvh; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.org-team-members > p { color: #64748b; line-height: 1.6; font-size: 13px; }
+@media (max-width: 1200px) {
+  .company-profile-form .record-form-fields { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  html body .company-profile-v2-banner { grid-template-columns: 68px minmax(0, 1fr); gap: 14px; padding: 18px; }
+  html body .company-profile-v2-code { grid-column: 1 / -1; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  html body .company-profile-v2-panel.company-profile-v2-form-only { padding: 16px !important; }
+  .company-profile-form .record-form-fields { gap: 16px; }
+  .company-profile-form .record-form-section { padding: 16px; }
+  html body .company-profile-form .form-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  html body .company-profile-form .field > :is(input, select, textarea) { font-size: 16px; }
+  html body .company-profile-form .form-actions-end { flex-wrap: wrap; }
+  .company-profile-form .form-actions-end .btn { flex: 1 1 180px; min-width: 0; white-space: normal; }
+  html body .company-payments-link { padding: 18px; }
+  .company-payments-link .btn { width: 100%; white-space: normal; }
+  .company-proxy-banner { padding: 12px 16px; flex-wrap: wrap; }
+  .company-proxy-banner > .btn { width: 100%; }
+  .company-proxy-banner > svg { display: none; }
+}
