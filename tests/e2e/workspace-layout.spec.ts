@@ -32,6 +32,7 @@ test('employee pages fit phones and desktops with readable check IN and profile 
   const action=page.locator('.employee-home-face-button');await expect(action.locator('strong')).toBeVisible();
   await expect(action.locator('small')).toBeVisible();
   expect(await page.locator('.employee-home-person .avatar-initials').evaluate(el=>getComputedStyle(el).color)).toBe('rgb(7, 89, 133)');
+  expect(await page.locator('.employee-home-person .avatar-initials').evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);const text=range.getBoundingClientRect(),avatar=el.parentElement!.getBoundingClientRect();return Math.abs(text.x+text.width/2-avatar.x-avatar.width/2)<3&&Math.abs(text.y+text.height/2-avatar.y-avatar.height/2)<3})).toBe(true);
   await page.locator('.employee-home-person h1').evaluate(el=>{el.textContent='Alexandriawithalongfirstname'});
   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await page.screenshot({path:`test-results/people-employee-polished-${width}.png`,fullPage:true,animations:'disabled'});

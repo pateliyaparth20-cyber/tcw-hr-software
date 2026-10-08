@@ -15,7 +15,7 @@
 .employee-app-shell .employee-home-person{flex:1;min-width:0}
 .employee-app-shell .employee-home-person h1{overflow-wrap:anywhere;line-height:1.2}
 .employee-app-shell .employee-home-person p{white-space:normal!important;overflow-wrap:anywhere;line-height:1.5}
-.employee-app-shell .employee-home-person .avatar .avatar-initials{color:#075985!important;font-size:20px!important;letter-spacing:0!important}
+.employee-app-shell .employee-home-person .avatar .avatar-initials{display:flex!important;align-items:center;justify-content:center;color:#075985!important;font-size:20px!important;letter-spacing:0!important}
 .employee-app-shell .employee-home-card-head{gap:12px;align-items:flex-start}
 .employee-app-shell .employee-home-card-head>div{min-width:0}
 .employee-app-shell .employee-home-card-head h2{line-height:1.3}
