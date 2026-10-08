@@ -1,6 +1,7 @@
 package com.tcw.hrsoftware;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -10,6 +11,8 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.location.LocationManager;
+import android.provider.Settings;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.CookieManager;
@@ -66,11 +69,7 @@ public class MainActivity extends Activity {
             }
 
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback){
-                if(!isAppOrigin(Uri.parse(origin)) || !"https".equalsIgnoreCase(Uri.parse(origin).getScheme())){ callback.invoke(origin,false,false); return; }
-                if(Build.VERSION.SDK_INT < 23 || (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)){ callback.invoke(origin,true,false); return; }
-                if(pendingLocationCallback != null) pendingLocationCallback.invoke(pendingLocationOrigin,false,false);
-                pendingLocationCallback=callback; pendingLocationOrigin=origin;
-                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},LOCATION_PERMISSION_REQUEST);
+                runOnUiThread(() -> requestFieldLocation(origin,callback));
             }
             @Override public void onGeolocationPermissionsHidePrompt(){
                 if(pendingLocationCallback != null) pendingLocationCallback.invoke(pendingLocationOrigin,false,false);
@@ -105,6 +104,56 @@ public class MainActivity extends Activity {
         });
 
         if(state == null || webView.restoreState(state) == null) webView.loadUrl(BuildConfig.TCW_APP_URL);
+    }
+
+    private boolean locationEnabled(){
+        LocationManager manager=(LocationManager)getSystemService(LOCATION_SERVICE);
+        if(manager==null)return false;
+        if(Build.VERSION.SDK_INT>=28)return manager.isLocationEnabled();
+        return manager.isProviderEnabled(LocationManager.GPS_PROVIDER)||manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    }
+
+    private void openAppPermissionSettings(){
+        try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))); }
+        catch(ActivityNotFoundException ignored) { }
+    }
+
+    private void showLocationSettings(boolean deviceOff){
+        if(isFinishing()||isDestroyed())return;
+        new AlertDialog.Builder(this)
+            .setTitle(deviceOff?"Turn on phone location":"Allow precise location")
+            .setMessage(deviceOff?"Turn Location on in your phone settings, then return to TCW and retry Check IN.":"Field Check IN needs precise location. Open Permissions → Location, select Allow only while using the app, and turn Use precise location on. Return to TCW and retry Check IN.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Open settings",(dialog,which)->{
+                if(deviceOff){
+                    try { startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)); }
+                    catch(ActivityNotFoundException ignored) { }
+                }else openAppPermissionSettings();
+            }).show();
+    }
+
+    private void requestFieldLocation(String origin,GeolocationPermissions.Callback callback){
+        Uri uri=Uri.parse(origin);
+        if(!isAppOrigin(uri)||!"https".equalsIgnoreCase(uri.getScheme())||isFinishing()||isDestroyed()){
+            callback.invoke(origin,false,false);return;
+        }
+        if(!locationEnabled()){
+            callback.invoke(origin,false,false);showLocationSettings(true);return;
+        }
+        // Approximate-only access must not silently satisfy a precise field check-in.
+        if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
+            callback.invoke(origin,true,false);return;
+        }
+        if(pendingLocationCallback!=null){callback.invoke(origin,false,false);return;}
+        boolean asked=getPreferences(MODE_PRIVATE).getBoolean("field_location_asked",false);
+        boolean approximate=checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED;
+        if(asked&&!approximate&&!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)){
+            callback.invoke(origin,false,false);showLocationSettings(false);return;
+        }
+        pendingLocationCallback=callback;pendingLocationOrigin=origin;
+        getPreferences(MODE_PRIVATE).edit().putBoolean("field_location_asked",true).apply();
+        // Android 12+ requires both permissions in the same runtime request.
+        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},LOCATION_PERMISSION_REQUEST);
     }
 
     private void createNotificationChannel(){
@@ -155,6 +204,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface public boolean isEmployeeApp(){
             return "EMPLOYEE".equals(BuildConfig.TCW_APP_MODE);
         }
+
+        @JavascriptInterface public String getAppVersion(){return BuildConfig.VERSION_NAME;}
+
+        @JavascriptInterface public void openLocationSettings(){
+            runOnUiThread(()->{
+                if(webView!=null&&webView.getUrl()!=null&&isAppOrigin(Uri.parse(webView.getUrl()))) {
+                    if(locationEnabled())openAppPermissionSettings();else showLocationSettings(true);
+                }
+            });
+        }
     }
 
     @Override protected void onNewIntent(Intent intent){
@@ -189,8 +248,11 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if(requestCode == LOCATION_PERMISSION_REQUEST && pendingLocationCallback != null){
-            boolean granted=checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED;
-            pendingLocationCallback.invoke(pendingLocationOrigin,granted,false); pendingLocationCallback=null; pendingLocationOrigin=null;
+            boolean granted=checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;
+            GeolocationPermissions.Callback callback=pendingLocationCallback;String origin=pendingLocationOrigin;
+            pendingLocationCallback=null;pendingLocationOrigin=null;
+            callback.invoke(origin,granted&&locationEnabled(),false);
+            if(!granted)showLocationSettings(false);
         }
         if(requestCode == CAMERA_PERMISSION_REQUEST && pendingCameraPermission != null){
             PermissionRequest request = pendingCameraPermission;
@@ -224,6 +286,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy(){
+        if(pendingLocationCallback != null){ pendingLocationCallback.invoke(pendingLocationOrigin,false,false); pendingLocationCallback=null; pendingLocationOrigin=null; }
         if(filePathCallback != null){ filePathCallback.onReceiveValue(null); filePathCallback = null; }
         if(pendingCameraPermission != null){ pendingCameraPermission.deny(); pendingCameraPermission = null; }
         if(webView != null){ webView.stopLoading(); webView.destroy(); webView = null; }

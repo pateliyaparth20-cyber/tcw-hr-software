@@ -21,6 +21,19 @@ jobs:
           gradle-version: '8.9'
       - name: Build HR and Employee debug APKs
         run: gradle -p native/android :app:assembleAdminDebug :app:assembleEmployeeDebug
+      - name: Verify Android permissions and variants
+        run: |
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          test -n "$AAPT"
+          for APK in native/android/app/build/outputs/apk/{admin,employee}/debug/*.apk; do
+            "$AAPT" dump permissions "$APK" | tee permissions.txt
+            rg -q 'android.permission.ACCESS_FINE_LOCATION' permissions.txt
+            rg -q 'android.permission.ACCESS_COARSE_LOCATION' permissions.txt
+            rg -q 'android.permission.CAMERA' permissions.txt
+            if rg -q 'android.permission.ACCESS_BACKGROUND_LOCATION' permissions.txt; then exit 1; fi
+            "$AAPT" dump badging "$APK" > badging.txt
+            head -1 badging.txt
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: TCW-HR-Android

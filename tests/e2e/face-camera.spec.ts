@@ -47,7 +47,7 @@ test('face frames capture automatically after stable straight, turn and return p
 
 test('field check IN requires location before camera and mobile and desktop navigation differ',async({page})=>{
  await page.addInitScript(()=>{
-  const w=window as any;w.cameraCalls=0;
+  const w=window as any;w.cameraCalls=0;w.locationSettingsCalls=0;w.TCWNative={openLocationSettings:()=>{w.locationSettingsCalls++}};
   Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(_:any,reject:any)=>reject({code:1})}});
   Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:async()=>{w.cameraCalls++;throw new Error('Camera must not open without GPS')}}});
  });
@@ -61,5 +61,7 @@ test('field check IN requires location before camera and mobile and desktop navi
   if(width>768){await expect(page.locator('.employee-desktop-sidebar')).toBeVisible();await expect(page.locator('.employee-app-bottom-nav')).toBeHidden();}else{await expect(page.locator('.employee-desktop-sidebar')).toBeHidden();await expect(page.locator('.employee-app-bottom-nav')).toBeVisible();}
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-employee-layout-${width}.png`,fullPage:true,animations:'disabled'});
  }
- await page.locator('.employee-home-face-button').click();const modal=page.getByRole('dialog');await expect(modal.getByRole('button',{name:'Open camera'})).toBeDisabled();await modal.getByRole('checkbox').check();await modal.getByRole('button',{name:'Open camera'}).click();await expect(modal.getByRole('alert')).toContainText('Location permission is denied');expect(await page.evaluate(()=>(window as any).cameraCalls)).toBe(0);expect(faceWrites).toBe(0);await modal.getByRole('button',{name:'Cancel',exact:true}).click();
+ await page.locator('.employee-home-face-button').click();const modal=page.getByRole('dialog');await expect(modal.getByRole('button',{name:'Open camera'})).toBeDisabled();await modal.getByRole('checkbox').check();await modal.getByRole('button',{name:'Open camera'}).click();await expect(modal.getByRole('alert')).toContainText('Location permission is denied');await expect(modal.getByRole('heading',{name:'Allow precise location'})).toBeVisible();await expect(modal).toContainText('Location needs attention');await modal.getByRole('button',{name:'Open location settings'}).click();expect(await page.evaluate(()=>(window as any).locationSettingsCalls)).toBe(1);expect(await page.evaluate(()=>(window as any).cameraCalls)).toBe(0);expect(faceWrites).toBe(0);
+ // An older installed APK has no settings bridge; give manual recovery rather than a dead button.
+ await page.evaluate(()=>{delete (window as any).TCWNative.openLocationSettings});await modal.getByRole('button',{name:'Open camera'}).click();await expect(modal).toContainText('install the latest TCW Employee APK');await expect(modal.getByRole('button',{name:'Open location settings'})).toHaveCount(0);expect(faceWrites).toBe(0);await page.screenshot({path:'test-results/people-location-permission-help-mobile.png',fullPage:true,animations:'disabled'});await modal.getByRole('button',{name:'Cancel',exact:true}).click();
 });
