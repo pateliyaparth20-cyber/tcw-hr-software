@@ -49,7 +49,7 @@ final class PhoneBiometric {
             if(Build.VERSION.SDK_INT<28){reply(proxy,id,"Phone biometrics require Android 9 or later. Use camera verification on this phone.",null);return;}
             if("status".equals(action)){
                 boolean supported=true;
-                if(Build.VERSION.SDK_INT>=30){BiometricManager manager=activity.getSystemService(BiometricManager.class);supported=manager!=null&&manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)==BiometricManager.BIOMETRIC_SUCCESS;}
+                if(Build.VERSION.SDK_INT>=30){BiometricManager manager=activity.getSystemService(BiometricManager.class);supported=manager!=null&&manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG|BiometricManager.Authenticators.DEVICE_CREDENTIAL)==BiometricManager.BIOMETRIC_SUCCESS;}
                 JSONObject result=new JSONObject();result.put("supported",supported);reply(proxy,id,null,result);return;
             }
             if(!"sign".equals(action)&&!"key".equals(action))return;
@@ -67,7 +67,7 @@ final class PhoneBiometric {
                     .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
                     .setDigests(KeyProperties.DIGEST_SHA256).setUserAuthenticationRequired(true)
                     .setInvalidatedByBiometricEnrollment(true);
-                if(Build.VERSION.SDK_INT>=30)builder.setUserAuthenticationParameters(0,KeyProperties.AUTH_BIOMETRIC_STRONG);
+                if(Build.VERSION.SDK_INT>=30)builder.setUserAuthenticationParameters(0,KeyProperties.AUTH_BIOMETRIC_STRONG|KeyProperties.AUTH_DEVICE_CREDENTIAL);
                 generator.initialize(builder.build());generator.generateKeyPair();
             }
             final Signature signature=Signature.getInstance("SHA256withECDSA");
@@ -78,10 +78,10 @@ final class PhoneBiometric {
             cancellation=new CancellationSignal();pendingReply=proxy;pendingId=id;
             BiometricPrompt.Builder builder=new BiometricPrompt.Builder(activity)
                 .setTitle(register?"Link TCW Employee phone":"TCW Employee attendance")
-                .setSubtitle("Verify with your phone's face or fingerprint")
-                .setDescription("Use the biometrics enrolled on this phone. TCW does not receive your phone's biometric data.")
-                .setNegativeButton("Cancel",activity.getMainExecutor(),(dialog,which)->cancel());
-            if(Build.VERSION.SDK_INT>=30)builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                .setSubtitle("Verify with your phone's face, fingerprint or screen lock")
+                .setDescription("Use your phone's enrolled biometrics or screen lock. TCW does not receive your face, fingerprint or PIN.");
+            if(Build.VERSION.SDK_INT>=30)builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG|BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+            else builder.setNegativeButton("Cancel",activity.getMainExecutor(),(dialog,which)->cancel());
             builder.build().authenticate(new BiometricPrompt.CryptoObject(signature),cancellation,activity.getMainExecutor(),new BiometricPrompt.AuthenticationCallback(){
                 @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult auth){
                     try{Signature authenticated=auth.getCryptoObject()==null?null:auth.getCryptoObject().getSignature();if(authenticated==null)throw new Exception("Phone could not authorize its signing key.");
