@@ -5,7 +5,7 @@ import {createApp} from '../../apps/api/src/app';
 import {randomUUID} from 'node:crypto';
 import {embeddedDatabase} from '../helpers/database';
 import {roleDefinitions} from '../../packages/permissions';
-import {FieldWork,cleanFieldWork,closeFieldSessions} from '../../apps/api/src/field-work';
+import {FieldWork,cleanFieldWork,closeFieldSessions,validateFieldCheckIn} from '../../apps/api/src/field-work';
 import {createFaceChallenge,faceProfileStatus,reviewEmployeeFace,enrollEmployeeFace} from '../../apps/api/src/face-profile';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -21,6 +21,12 @@ test('field work isolates company/team data, requires duty and consent, and clos
   const hr=await context(company.id,hrRole),self=await context(company.id,empRole,own.id),leader=await context(company.id,managerRole,manager.id),fctx=await context(other.id,empRole,foreign.id),service=new FieldWork(db);const call=(...args:Parameters<FieldWork["handle"]>):Promise<any>=>service.handle(...args);
   const point=()=>({latitude:23.0225,longitude:72.5714,accuracy:10,capturedAt:new Date().toISOString()});const settings={enabled:true,intervalSeconds:15,maxAccuracyMeters:100,maxSessionHours:10,employeeIds:[own.id]};
   await assert.rejects(call(self,'PUT',settings,{},'settings'),/permission/);await assert.rejects(call(hr,'PUT',{...settings,employeeIds:[foreign.id]},{},'settings'),/not found/);await call(hr,'PUT',settings,{},'settings');
+  assert.throws(()=>validateFieldCheckIn(settings,own.id,undefined,true),/precise location/);
+  assert.throws(()=>validateFieldCheckIn(settings,own.id,point(),false),/precise location/);
+  assert.throws(()=>validateFieldCheckIn(settings,own.id,{...point(),capturedAt:new Date(Date.now()-61000).toISOString()},true),/stale/);
+  assert.throws(()=>validateFieldCheckIn(settings,own.id,{...point(),accuracy:101},true),/accuracy/);
+  assert.equal(validateFieldCheckIn(settings,own.id,point(),true),true);
+  assert.equal(validateFieldCheckIn(settings,peer.id,undefined,false),false);
   await assert.rejects(call(self,'POST',{consent:false,point:point()},{},'session'));await assert.rejects(call(self,'POST',{consent:true,point:point()},{},'session'),/Check in/);
   await db.attendancePunch.create({data:{tenantId:company.id,employeeId:own.id,sourceId:randomUUID(),punchType:'IN',punchTime:new Date(Date.now()-60000),verificationType:'MANUAL',rawPayload:{source:'fixture'}}});
   const started:any=await call(self,'POST',{consent:true,point:point()},{},'session');assert(started.session.id);const repeated:any=await call(self,'POST',{consent:true,point:point()},{},'session');assert.equal(repeated.session.id,started.session.id);await db.fieldLocationPoint.create({data:{tenantId:company.id,employeeId:own.id,sessionId:started.session.id,latitude:23,longitude:72,accuracy:10,capturedAt:new Date('2026-01-01T20:00:00Z'),receivedAt:new Date('2026-01-01T20:00:00Z')}});const localHistory=await call(self,'GET',undefined,{employeeId:own.id,date:'2026-01-02'},'history');assert.equal(localHistory.items.length,1);assert.equal(localHistory.timezone,'Asia/Kolkata');
@@ -31,7 +37,7 @@ test('field work isolates company/team data, requires duty and consent, and clos
   await assert.rejects(call(fctx,'POST',{point:point()},{},visit.id,'start'),/not found/);await assert.rejects(call(self,'POST',{point:{...point(),latitude:24}},{},visit.id,'start'),/outside/);
   const active:any=await call(self,'POST',{point:point()},{},visit.id,'start');assert.equal(active.status,'ACTIVE');await assert.rejects(call(self,'POST',{point:point(),outcome:''},{},visit.id,'complete'),/outcome/);
   const complete:any=await call(self,'POST',{point:point(),outcome:'Inspection finished'},{},visit.id,'complete');assert.equal(complete.status,'COMPLETED');assert(complete.checkOut);
-  const v2:any=await call(self,'POST',{title:'Follow-up'},{},'visits');await call(self,'POST',{point:point()},{},v2.id,'start');await call(self,'DELETE',{}, {},'session');assert.equal((await db.fieldVisit.findUniqueOrThrow({where:{id:v2.id}})).status,'INCOMPLETE');await assert.rejects(call(self,'POST',{sessionId:started.session.id,point:point()},{},'point'),/Start a new/);
+  const v2:any=await call(self,'POST',{title:'Follow-up'},{},'visits');await call(self,'POST',{point:point()},{},v2.id,'start');await assert.rejects(call(self,'DELETE',{}, {},'session'),/Check OUT/);await closeFieldSessions(db,company.id,own.id,'ATTENDANCE_CHECKOUT');assert.equal((await db.fieldVisit.findUniqueOrThrow({where:{id:v2.id}})).status,'INCOMPLETE');await assert.rejects(call(self,'POST',{sessionId:started.session.id,point:point()},{},'point'),/Start a new/);
   const next:any=await call(self,'POST',{consent:true,point:point()},{},'session');await call(hr,'PUT',{...settings,enabled:false},{},'settings');assert.equal((await db.fieldWorkSession.findUniqueOrThrow({where:{id:next.session.id}})).endReason,'POLICY_DISABLED');
   await call(hr,'PUT',settings,{},'settings');const expired:any=await call(self,'POST',{consent:true,point:point()},{},'session');await db.fieldWorkSession.update({where:{id:expired.session.id},data:{expiresAt:new Date(Date.now()-1)}});await cleanFieldWork(db);assert.equal((await db.fieldWorkSession.findUniqueOrThrow({where:{id:expired.session.id}})).endReason,'SESSION_EXPIRED');
   const current:any=await call(self,'POST',{consent:true,point:point()},{},'session');await db.attendancePunch.create({data:{tenantId:company.id,employeeId:own.id,sourceId:randomUUID(),punchType:'OUT',punchTime:new Date(),verificationType:'MANUAL',rawPayload:{source:'fixture'}}});await assert.rejects(call(self,'POST',{sessionId:current.session.id,point:point()},{},'point'),/open attendance IN/);assert.equal((await call(self,'GET',undefined,{},'session'))!.session,null);await cleanFieldWork(db);assert.equal((await db.fieldWorkSession.findUniqueOrThrow({where:{id:current.session.id}})).endReason,'ATTENDANCE_CHECKOUT');
@@ -47,6 +53,7 @@ test('field work isolates company/team data, requires duty and consent, and clos
    const live=await fetch(base+'field-work',{headers});assert.equal(live.status,200);assert.equal((await live.json()).items.length,1);
    assert.equal((await fetch(base+'field-work/history?employeeId='+foreign.id+'&date=2026-10-07',{headers})).status,404);
    assert.equal((await fetch(base+'attendance/face-scan',{method:'POST',headers,body:JSON.stringify({frame,descriptor:Array(128).fill(.1),clientNonce:randomUUID()})})).status,400);
+   const blocked=await fetch(base+'attendance/face-scan',{method:'POST',headers,body:JSON.stringify({challengeId:randomUUID(),frames:[frame,frame,frame],clientNonce:randomUUID(),intent:'IN'})});assert.equal(blocked.status,400);assert.match(await blocked.text(),/precise location/);assert.equal(await db.attendancePunch.count({where:{verificationType:'FACE_SCAN'}}),0);
    assert.equal((await fetch(base+'field-work/session',{method:'DELETE',headers:{...headers,'X-CSRF-Token':'wrong'},body:'{}'})).status,403);
   }finally{await io.close();await app.close();}
 

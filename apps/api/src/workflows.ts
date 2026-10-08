@@ -1,4 +1,4 @@
-import {closeFieldSessions} from './field-work';
+import {closeFieldSessions,fieldPointSchema,validateFieldCheckIn} from './field-work';
 import {challanPaymentStatus} from './salary-challan';
 import {approvalEnabled,approvalRows,createApproval,reviewApproval} from './approvals';
 import {updateManualSalary} from './manual-payroll';
@@ -96,7 +96,8 @@ export class Workflows {
       requirePermission(ctx,'attendance','VIEW');
       if(ctx.user.role.code!=='EMPLOYEE')throw new ForbiddenException('Face Scan attendance is available from an Employee account.');
       if(!ctx.user.employeeId)throw new BadRequestException('Link this user account to an employee before using Face Scan attendance.');
-      const input=z.object({challengeId:z.string().uuid(),frames:z.array(z.string().min(1000).max(800000)).length(3),clientNonce:z.string().uuid(),intent:z.enum(['IN','OUT']).optional()}).strict().parse(body);
+      const input=z.object({challengeId:z.string().uuid(),frames:z.array(z.string().min(1000).max(800000)).length(3),clientNonce:z.string().uuid(),intent:z.enum(['IN','OUT']).optional(),point:fieldPointSchema.optional(),locationConsent:z.boolean().optional()}).strict().parse(body);
+      if(input.intent==='IN'){const policy=await this.db.fieldWorkPolicy.findUnique({where:{tenantId:tid}});if(policy)validateFieldCheckIn(policy,ctx.user.employeeId,input.point,input.locationConsent);}
       const match=await verifyEmployeeFace(this.db,ctx,{challengeId:input.challengeId,frames:input.frames});
       if(!match.enrolled)throw new ForbiddenException('Add your face before using Face Scan attendance.');
       if(!match.matched){
@@ -109,6 +110,7 @@ export class Workflows {
       let start=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone),end=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);start=new Date(Math.min(+start,punchTime.getTime()-300000));end=new Date(Math.max(+end,punchTime.getTime()+300000));
       const faceHash=match.captureHash,sourceId=`face-${ctx.user.id.slice(0,18)}-${input.clientNonce.slice(0,36)}`;
       return this.db.$transaction(async tx=>{
+        await tx.$queryRaw`SELECT tenant_id FROM field_work_policies WHERE tenant_id=${tid}::uuid FOR UPDATE`;
         await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
         if(!await tx.session.findFirst({where:{id:ctx.session.id,userId:ctx.user.id,expiresAt:{gt:new Date()}}}))throw new ForbiddenException('Your session changed. Sign in again before face attendance.');
         const approved=await tx.employeeFaceProfile.findFirst({where:{id:match.profileId,tenantId:tid,employeeId,status:'APPROVED',updatedAt:match.profileUpdatedAt}});if(!approved)throw new ForbiddenException('Face approval changed. Start a new face verification.');
@@ -123,10 +125,17 @@ export class Workflows {
         const statePunches=(await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{lte:punchTime}},orderBy:{punchTime:'desc'},take:200})).reverse(),effectiveState=attendanceCalculationPunches(statePunches);let openPunch:any=null,lastAccepted:any=null;for(const p of effectiveState){if(p.punchType==='IN'){if(!openPunch){openPunch=p;lastAccepted=p}}else if(openPunch){openPunch=null;lastAccepted=p}}if(openPunch&&input.intent!=='IN'){const resolved=await shiftForOpenPunch(tx,tid,employeeId,openPunch,shift);shift=resolved.shift;day=resolved.day??attendanceWorkdayDate(openPunch.punchTime,shift.startMinute,shift.endMinute,shift.timezone);night=shift.endMinute<=shift.startMinute;const scheduledStart=zonedMinute(day,night?shift.startMinute-240:0,shift.timezone);start=new Date(Math.min(+scheduledStart,+openPunch.punchTime-60000));const scheduledEnd=zonedMinute(day,night?1440+shift.startMinute-240:1440,shift.timezone);end=new Date(Math.max(+scheduledEnd,punchTime.getTime()+300000));await assertAttendanceUnlocked(tx as any,tid,new Date(day));}const priorPunches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});
         if(lastAccepted&&punchTime.getTime()-lastAccepted.punchTime.getTime()<45000)throw new ConflictException('A Face Scan punch was just recorded. Wait a few seconds before scanning again.');
         let punchType:'IN'|'OUT';if(input.intent==='IN'){if(openPunch)throw new ConflictException('You are already checked in. Check out before starting another IN.');punchType='IN';}else if(input.intent==='OUT'){if(!openPunch)throw new ConflictException('You are not currently checked in. Check in before checking out.');punchType='OUT';}else punchType=openPunch?'OUT':'IN';
+        const fieldPolicy=await tx.fieldWorkPolicy.findUnique({where:{tenantId:tid}});const startField=punchType==='IN'&&fieldPolicy&&validateFieldCheckIn(fieldPolicy,employeeId,input.point,input.locationConsent);
         await lockPayrollPeriod(tx,tid,day.slice(0,7));await assertAttendanceUnlocked(tx,tid,new Date(day));
       const targetDate=new Date(day),targetAttendance=await tx.attendanceDaily.findUnique({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:targetDate}}});if(targetAttendance?.shiftId===shift.id&&targetAttendance.firstIn)start=new Date(targetAttendance.firstIn.getTime()-60000);else if(punchType==='IN')start=new Date(punchTime.getTime()-60000);
         if(punchType==='OUT')await closeFieldSessions(tx,tid,employeeId,'ATTENDANCE_CHECKOUT');
         const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId,deviceId:mobileDevice.id,sourceId,punchTime,punchType,verificationType:'FACE_SCAN',rawPayload:{source:'FACE_SCAN',app:'TCW_EMPLOYEE',intent:punchType,actorId:ctx.user.id,faceCaptureHash:faceHash,rawImageStored:false,faceMatched:true,faceDistance:match.distance,faceThreshold:match.threshold}}});
+        if(startField&&fieldPolicy&&input.point){
+          await closeFieldSessions(tx,tid,employeeId,'NEW_ATTENDANCE_IN');
+          const fieldSession=await tx.fieldWorkSession.create({data:{tenantId:tid,employeeId,attendanceInId:row.id,expiresAt:new Date(+punchTime+fieldPolicy.maxSessionHours*3600000)}});
+          await tx.fieldLocationPoint.create({data:{tenantId:tid,employeeId,sessionId:fieldSession.id,...input.point,capturedAt:new Date(input.point.capturedAt)}});
+          await audit(tx,ctx,'FIELD_SHARING_STARTED','field-work',fieldSession.id,undefined,{employeeId,consent:true,source:'ATTENDANCE_IN',expiresAt:fieldSession.expiresAt});
+        }
         const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
         const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
         const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});

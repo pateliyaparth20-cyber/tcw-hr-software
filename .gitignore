@@ -9,3 +9,5 @@ playwright-report/
 *.tsbuildinfo
 .local-data/
 *.log
+
+/apps/*/public/face-guide-v1/

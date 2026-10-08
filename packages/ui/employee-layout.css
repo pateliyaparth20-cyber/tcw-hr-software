@@ -1,0 +1,49 @@
+.employee-desktop-sidebar{display:none}
+.face-location-consent{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px}
+.face-location-consent input{flex:0 0 18px;width:18px!important;height:18px!important;min-height:18px!important;margin:2px 0 0!important}
+@media(min-width:769px){
+ .employee-desktop-sidebar{display:flex;position:fixed;inset:0 auto 0 0;width:232px;z-index:45;background:#fff;border-right:1px solid #e2e8f0;padding:24px 16px;flex-direction:column;box-sizing:border-box}
+ .employee-desktop-brand{display:flex;align-items:center;gap:10px;color:#0f172a;font-size:15px;line-height:1.4;margin-bottom:28px;overflow-wrap:anywhere}
+ .employee-desktop-brand img{width:40px;height:40px;border-radius:12px;object-fit:contain;flex-shrink:0}
+ .employee-desktop-label{font-size:10px;font-weight:800;letter-spacing:1.4px;color:#94a3b8;padding:0 12px 12px}
+ .employee-desktop-sidebar nav{display:flex;flex-direction:column;gap:4px;min-height:0;overflow:auto;flex:1}
+ .employee-desktop-sidebar nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:9px 12px;border-radius:10px;font-size:13px;color:#64748b;box-sizing:border-box}
+ .employee-desktop-sidebar nav a svg{flex:0 0 19px}
+ .employee-desktop-sidebar nav a.active{background:#e0f2fe;color:var(--primary);font-weight:800}
+ .employee-desktop-account{display:flex;align-items:center;gap:8px;padding-top:18px;border-top:1px solid #e2e8f0;margin-top:16px}
+ .employee-desktop-account>div{min-width:0;flex:1}.employee-desktop-account strong{display:block;font-size:12px;overflow-wrap:anywhere}.employee-desktop-account a{font-size:10px;color:#64748b}
+ .employee-app-shell{padding-left:232px!important;background:#f3f6fa!important;min-height:100dvh}
+ .employee-app-shell .employee-app-header{position:sticky!important;top:0!important;padding:14px 24px!important;min-height:72px!important;background:#ffffff!important;border-bottom:1px solid #e2e8f0!important;box-shadow:none!important;border-radius:0!important}
+ .employee-app-shell .employee-desktop-nav{display:none!important}
+ .employee-app-shell .employee-app-main{max-width:1280px!important;margin:0 auto!important;padding:28px 24px 40px!important}
+ .employee-app-shell .employee-app-bottom-nav{display:none!important}
+ .employee-app-shell .employee-home-dashboard{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.65fr);gap:22px!important}
+ .employee-app-shell .employee-home-hero,.employee-app-shell .employee-home-quick,.employee-app-shell .employee-home-grid,.employee-app-shell .employee-home-events{grid-column:1/-1}
+ .employee-app-shell .employee-work-status{grid-column:1/-1;border-radius:16px!important;background:#fff!important;box-shadow:0 5px 20px #0f172a06!important}
+ .employee-app-shell .employee-home-hero{background:transparent!important;color:#0f172a!important;padding:0!important;box-shadow:none!important;border:none!important}
+ .employee-app-shell .employee-home-person h1{color:#0f172a!important}.employee-app-shell .employee-home-person p{color:#64748b!important}
+ .employee-app-shell .employee-home-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)!important}
+ .modal-card:has(.face-flow-punch){width:min(880px,calc(100vw - 48px))!important;max-width:880px!important}
+ .face-flow-punch{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+ .face-flow-punch .face-camera{grid-column:1;grid-row:1/6;align-self:start;margin:0}
+ .face-flow-punch .face-enrollment-progress{grid-column:1;grid-row:6}
+ .face-flow-punch .face-location-consent{grid-column:2;grid-row:1}
+ .face-flow-punch .face-scan-status{grid-column:2;grid-row:2}
+ .face-flow-punch .face-camera-help{grid-column:2;grid-row:3}
+ .face-flow-punch .face-scan-privacy{grid-column:2;grid-row:4}
+ .face-flow-punch .face-scan-actions{grid-column:2;grid-row:5}
+}
+@media(max-width:768px){
+ .employee-desktop-sidebar{display:none!important}.employee-app-shell{padding-left:0!important}
+ .employee-app-shell .employee-app-main{padding:14px 12px calc(96px + env(safe-area-inset-bottom))!important}
+ .employee-app-shell .employee-home-dashboard{display:flex!important;flex-direction:column;gap:16px!important}
+ .employee-app-shell .employee-home-hero{border-radius:22px!important;padding:20px 16px!important;background:linear-gradient(135deg,#075985,#0369a1)!important;color:white!important}
+ .employee-app-shell .employee-home-person h1,.employee-app-shell .employee-home-person p,.employee-app-shell .employee-home-person span{color:#fff!important}
+ .employee-app-shell .employee-home-face-button{min-height:56px!important;width:100%!important}
+ .employee-app-shell .employee-home-quick{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+ .employee-app-shell .employee-home-quick a{min-height:82px!important}
+ .employee-app-shell .employee-home-grid{display:flex!important;flex-direction:column;gap:16px!important}
+ .employee-app-shell .employee-work-status .btn{min-height:48px!important}
+ .face-flow-punch .face-camera{max-height:min(320px,42dvh)}
+}
+@media(min-width:769px) and (max-width:1024px){.employee-desktop-sidebar{width:196px}.employee-app-shell{padding-left:196px!important}.employee-app-shell .employee-app-main{padding:22px 16px!important}.employee-app-shell .employee-home-grid{grid-template-columns:1fr!important}}

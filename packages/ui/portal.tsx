@@ -21,6 +21,7 @@ import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPa
 import {SupportPage} from './support';
 import {MEGHNA_AVATAR} from './meghna-avatar';
 import './auth-design.css';
+import './employee-layout.css';
 const icons:Record<string,any>={'field-work':Briefcase,dashboard:LayoutDashboard,employees:Users,organization:Building2,calendar:CalendarDays,attendance:Clock3,devices:Monitor,workforce:Activity,leave:CalendarClock,payroll:Wallet,recruitment:Briefcase,goals:Target,courses:GraduationCap,assets:Package,expenses:Receipt,travel:Plane,documents:Files,exit:DoorOpen,reports:BarChart3,support:Headphones,settings:Settings,users:ShieldCheck,audit:ScrollText,security:LockKeyhole,companies:Building2,trials:PhoneCall,plans:Layers,leads:TrendingUp,invoices:Receipt,payments:CreditCard,system:Server,profile:UserCircle,subscription:CreditCard,'software-update':RefreshCw};
 
 const HR_PORTAL_HOST='hr.techcyberwarrior.in';
@@ -326,6 +327,7 @@ function Shell({page}:{page:string}){
   const primaryKeys=['dashboard','attendance','leave','payroll'];
   const moreItems=flat.filter(([key])=>!primaryKeys.includes(key)&&!['profile','security','notifications'].includes(key));
   return <div className="employee-app-shell" style={{'--primary':primaryColor} as React.CSSProperties}>
+   <aside className="employee-desktop-sidebar" aria-label="Employee desktop workspace"><Link href="/dashboard" className="employee-desktop-brand"><img src={companyLogo} alt="Company logo"/><strong>{workspaceBrand.name??'TCW Employee'}</strong></Link><small className="employee-desktop-label">MY WORKSPACE</small><nav aria-label="Desktop employee sections">{flat.map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <Link href={'/'+key} key={key} className={page===key?'active':''}><Icon size={19}/><span>{label}</span></Link>})}</nav><div className="employee-desktop-account"><Avatar name={session.user.name} src={session.user.avatar}/><div><strong>{session.user.name}</strong><Link href="/security">Account & security</Link></div><button className="icon-button" aria-label="Sign out" onClick={()=>setLogoutConfirm(true)}><LogOut size={18}/></button></div></aside>
    <header className="employee-app-header">
     <Link href="/dashboard" className="employee-app-brand" onClick={()=>setMobile(false)}><span><img src={companyLogo} alt={(workspaceBrand.name??'Company')+' logo'} onError={e=>{e.currentTarget.src=TCW_PRODUCT_LOGO}}/></span><div><strong>{workspaceBrand.name??session.company?.name??'TCW Employee'}</strong><small>Employee</small></div></Link>
     <nav className="employee-desktop-nav" aria-label="Employee navigation">{primaryKeys.map(key=>{const item=flat.find(([k])=>k===key);if(!item)return null;const Icon=icons[key]??LayoutDashboard;return <Link key={key} href={'/'+key} className={page===key?'active':''}><Icon size={17}/>{item[1]}</Link>})}</nav>

@@ -13,7 +13,13 @@ function openDutyPunch(punches:any[],now=new Date()){
  let open:any=null;for(const p of attendanceCalculationPunches(punches)){if(p.punchType==='IN'){if(!open)open=p;}else if(p.punchType==='OUT'&&open)open=null;}
  return open&&+now-+open.punchTime<=24*3600000?open:null;
 }
-function validatePoint(point:Point,policy:typeof defaults,now=new Date()){const age=+now-Date.parse(point.capturedAt);if(age>60000||age< -10000)throw new BadRequestException('Location is stale. Capture a fresh GPS position.');if(point.accuracy>policy.maxAccuracyMeters)throw new BadRequestException(`GPS accuracy must be within ${policy.maxAccuracyMeters} metres. Enable precise location, move outside and retry.`);}
+export function validatePoint(point:Point,policy:typeof defaults,now=new Date()){const age=+now-Date.parse(point.capturedAt);if(age>60000||age< -10000)throw new BadRequestException('Location is stale. Capture a fresh GPS position.');if(point.accuracy>policy.maxAccuracyMeters)throw new BadRequestException(`GPS accuracy must be within ${policy.maxAccuracyMeters} metres. Enable precise location, move outside and retry.`);}
+export function fieldLocationRequired(policy:typeof defaults,employeeId:string){return policy.enabled&&(!policy.employeeIds.length||policy.employeeIds.includes(employeeId));}
+export function validateFieldCheckIn(policy:typeof defaults,employeeId:string,point:Point|undefined,consent:boolean|undefined){
+ if(!fieldLocationRequired(policy,employeeId))return false;
+ if(!point||consent!==true)throw new BadRequestException('Field employees must enable precise location and agree to on-duty sharing before checking IN.');
+ validatePoint(point,policy);return true;
+}
 export async function closeFieldSessions(db:any,tid:string,employeeId:string,reason:string){const now=new Date();await db.fieldVisit.updateMany({where:{tenantId:tid,employeeId,status:'ACTIVE'},data:{status:'INCOMPLETE',completedAt:now,outcome:reason}});await db.fieldWorkSession.updateMany({where:{tenantId:tid,employeeId,endedAt:null},data:{endedAt:now,endReason:reason}});}
 export async function cleanFieldWork(db:Database){
  const now=new Date(),sessions=await db.fieldWorkSession.findMany({where:{endedAt:null},take:1000});
@@ -52,7 +58,7 @@ export class FieldWork {
     const input=z.object({consent:z.literal(true),point:fieldPointSchema}).strict().parse(body);this.allowed(policy,eid);validatePoint(input.point,policy);
     return this.db.$transaction(async tx=>{await this.lock(tx,tid,eid);await tx.$queryRaw`SELECT tenant_id FROM field_work_policies WHERE tenant_id=${tid}::uuid FOR UPDATE`;const lockedPolicy=await tx.fieldWorkPolicy.findUnique({where:{tenantId:tid}})??defaults;this.allowed(lockedPolicy,eid);validatePoint(input.point,lockedPolicy);const duty=await this.duty(tx,tid,eid);if(!duty)throw new ConflictException('Check in to attendance before starting field work.');const prior=await tx.fieldWorkSession.findFirst({where:{tenantId:tid,employeeId:eid,endedAt:null}});if(prior&&prior.expiresAt>new Date()&&prior.attendanceInId===duty.id)return {session:prior};if(prior)await closeFieldSessions(tx,tid,eid,prior.expiresAt<=new Date()?'SESSION_EXPIRED':'ATTENDANCE_CHECKOUT');const session=await tx.fieldWorkSession.create({data:{tenantId:tid,employeeId:eid,attendanceInId:duty.id,expiresAt:new Date(Date.now()+lockedPolicy.maxSessionHours*3600000)}});await tx.fieldLocationPoint.create({data:{tenantId:tid,employeeId:eid,sessionId:session.id,...input.point,capturedAt:new Date(input.point.capturedAt)}});await audit(tx,ctx,'FIELD_SHARING_STARTED','field-work',session.id,undefined,{employeeId:eid,consent:true,expiresAt:session.expiresAt});return {session};});
    }
-   if(method==='DELETE')return this.db.$transaction(async tx=>{await this.lock(tx,tid,eid);await closeFieldSessions(tx,tid,eid,'EMPLOYEE_STOPPED');await audit(tx,ctx,'FIELD_SHARING_STOPPED','field-work',eid);return {ok:true};});
+   if(method==='DELETE')return this.db.$transaction(async tx=>{await this.lock(tx,tid,eid);const current=await tx.fieldWorkPolicy.findUnique({where:{tenantId:tid}})??defaults;if(fieldLocationRequired(current,eid)&&await this.duty(tx,tid,eid))throw new ConflictException('Location sharing is required during field duty. Check OUT to stop sharing.');await closeFieldSessions(tx,tid,eid,'EMPLOYEE_STOPPED');await audit(tx,ctx,'FIELD_SHARING_STOPPED','field-work',eid);return {ok:true};});
   }
   if(key==='point'&&method==='POST'){
    const eid=this.own(ctx),input=z.object({sessionId:z.string().uuid(),point:fieldPointSchema}).strict().parse(body);validatePoint(input.point,policy);await assertEmployee(this.db,ctx,eid);
