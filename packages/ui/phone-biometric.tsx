@@ -13,7 +13,7 @@ function request(action:string,data:any={}){const native=bridge();if(!native?.po
 function cancel(){bridge()?.postMessage(JSON.stringify({id:crypto.randomUUID(),action:'cancel'}));}
 export function hasPhoneBiometric(){return !!bridge()?.postMessage;}
 export function PhoneBiometricFlow({intent,onClose,onComplete,onCamera}:{intent:'IN'|'OUT';onClose:()=>void;onComplete?:(result:any)=>void|Promise<any>;onCamera:()=>void}){
- const{session}=useApp(),devices=useData('attendance/biometric-device'),field=useData('field-work/session'),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[completed,setCompleted]=useState(false),[error,setError]=useState(''),[locationError,setLocationError]=useState(false),[message,setMessage]=useState('Use the face or fingerprint enrolled on this phone.'),[supported,setSupported]=useState<boolean|null>(null),mounted=useRef(true),lock=useRef(false);
+ const{session}=useApp(),devices=useData('attendance/biometric-device'),field=useData('field-work/session',intent==='IN'),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[completed,setCompleted]=useState(false),[error,setError]=useState(''),[locationError,setLocationError]=useState(false),[message,setMessage]=useState('Use the face or fingerprint enrolled on this phone.'),[supported,setSupported]=useState<boolean|null>(null),mounted=useRef(true),lock=useRef(false);
  useEffect(()=>{mounted.current=true;request('status').then(r=>{if(mounted.current)setSupported(!!r.supported)}).catch(e=>{if(mounted.current){setSupported(false);setError(e.message)}});return()=>{mounted.current=false;cancel()}},[]);
  async function run(){if(lock.current)return;lock.current=true;setBusy(true);setError('');setLocationError(false);try{
   if(devices.isLoading||devices.error||(intent==='IN'&&(field.isLoading||field.error)))throw new Error('Attendance requirements could not load. Retry.');
@@ -27,9 +27,9 @@ export function PhoneBiometricFlow({intent,onClose,onComplete,onCamera}:{intent:
   if(!device){
    setMessage('Link this phone with your biometrics…');const challenge:any=await api('attendance/biometric-challenge','POST',{purpose:'REGISTER',intent},session.csrf);if(!mounted.current)return;
    const signed=await request('sign',{accountKey:challenge.accountKey,payload:challenge.payload,register:true});if(!mounted.current)return;
-   const registered:any=await api('attendance/biometric-device','POST',{challengeId:challenge.challengeId,signature:signed.signature,publicKey:signed.publicKey,label:'Employee phone',intent},session.csrf);if(!mounted.current)return;await devices.refetch();setMessage(registered.status==='APPROVED'?'Phone approved. Tap Verify to check attendance.':'Phone linked. Ask HR to approve it in People → Phone biometrics.');return;
+   const registered:any=await api('attendance/biometric-device','POST',{challengeId:challenge.challengeId,signature:signed.signature,publicKey:signed.publicKey,label:'Employee phone',intent},session.csrf);if(!mounted.current)return;await devices.refetch();setMessage(registered.status==='APPROVED'?'Phone approved. Tap Verify to check attendance.':'Phone linked. Ask HR to approve it in Field work → Face approvals → Phone biometrics.');return;
   }
-  if(device.status!=='APPROVED'){await devices.refetch();setMessage('This phone is awaiting HR approval. Ask HR to approve it in People → Phone biometrics.');return;}
+  if(device.status!=='APPROVED'){await devices.refetch();setMessage('This phone is awaiting HR approval. Ask HR to approve it in Field work → Face approvals → Phone biometrics.');return;}
   setMessage('Verify with your phone…');const punch:any=await api('attendance/biometric-challenge','POST',{purpose:'PUNCH',intent,deviceId:device.id},session.csrf);if(!mounted.current)return;
   const proof=await request('sign',{accountKey:punch.accountKey,payload:punch.payload,register:false});if(!mounted.current)return;
   const point=intent==='IN'&&field.data?.eligible?await freshLocation():null;if(!mounted.current)return;
