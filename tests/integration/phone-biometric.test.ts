@@ -6,6 +6,7 @@ import {roleDefinitions} from '../../packages/permissions';
 import {digest} from '../../packages/auth';
 import {createBiometricChallenge,phoneBiometricStatus,registerBiometricDevice,reviewBiometricDevices,verifyBiometricPunch} from '../../apps/api/src/phone-biometric';
 import {Workflows} from '../../apps/api/src/workflows';
+import {faceProfileStatus} from '../../apps/api/src/face-profile';
 
 test('phone biometrics bind signed one-use challenges to employee, session, intent and HR-approved device; field GPS remains required',async()=>{
  const fixture=await embeddedDatabase(),db=fixture.db;
@@ -17,19 +18,19 @@ test('phone biometrics bind signed one-use challenges to employee, session, inte
   await db.shift.create({data:{tenantId:tenant.id,name:'Day',startMinute:540,endMinute:1080,timezone:'Asia/Kolkata'}});
   const context=async(role:any,eid?:string)=>{const user=await db.user.create({data:{tenantId:tenant.id,roleId:role.id,name:'Fixture',email:randomUUID()+'@example.test',passwordHash:'synthetic',employeeId:eid}}),session=await db.session.create({data:{tenantId:tenant.id,userId:user.id,tokenHash:digest(randomUUID()),csrf:'synthetic',expiresAt:new Date(Date.now()+3600000),userAgent:'fixture',ip:'127.0.0.1'}});return {tenantId:tenant.id,user:{...user,role},session,ip:'127.0.0.1'};};
   const self=await context(empRole,own.id),other=await context(empRole,peer.id),hr=await context(hrRole),workflow=new Workflows(db);
-  await assert.rejects(createBiometricChallenge(db,self,{purpose:'REGISTER',intent:'IN'}),/HR approval/);
-  await db.employeeFaceProfile.create({data:{tenantId:tenant.id,employeeId:own.id,templateCiphertext:'fixture-unused',templateVersion:'server-face-api-1.7.15-v3',status:'APPROVED',approvedAt:new Date()}});
+  // Phone enrollment and HR-approved attendance work without a camera face profile.
+  assert.equal(await db.employeeFaceProfile.count(),0);
   const keys=generateKeyPairSync('ec',{namedCurve:'prime256v1'}),publicKey=keys.publicKey.export({format:'der',type:'spki'}).toString('base64');
   const signed=(c:any)=>({challengeId:c.challengeId,signature:sign('sha256',Buffer.from(c.payload),keys.privateKey).toString('base64')});
   const register=await createBiometricChallenge(db,self,{purpose:'REGISTER',intent:'IN'});
   await assert.rejects(registerBiometricDevice(db,other,{...signed(register),publicKey,label:'Phone A',intent:'IN'}),/expired/);
-  const device=await registerBiometricDevice(db,self,{...signed(register),publicKey,label:'Phone A',intent:'IN'});assert.equal(device.status,'PENDING');
+  const device=await registerBiometricDevice(db,self,{...signed(register),publicKey,label:'Phone A',intent:'IN'});assert.equal(device.status,'PENDING');assert.equal((await faceProfileStatus(db,self)).phoneLinked,true);assert.equal((await faceProfileStatus(db,self)).phoneAttendanceReady,false);
   await assert.rejects(registerBiometricDevice(db,self,{...signed(register),publicKey,label:'Phone A',intent:'IN'}),/already used/);
   await assert.rejects(createBiometricChallenge(db,self,{purpose:'PUNCH',intent:'IN',deviceId:device.id}),/HR approval/);
   let row=await db.employeeBiometricDevice.findUniqueOrThrow({where:{id:device.id}});
   await assert.rejects(reviewBiometricDevices(db,self,'POST',{deviceId:row.id,decision:'APPROVE',expectedUpdatedAt:row.updatedAt.toISOString(),identityConfirmed:true}),/permission/);
   await reviewBiometricDevices(db,hr,'POST',{deviceId:row.id,decision:'APPROVE',expectedUpdatedAt:row.updatedAt.toISOString(),identityConfirmed:true});
-  assert.equal((await phoneBiometricStatus(db,self)).items[0].status,'APPROVED');assert.equal((await phoneBiometricStatus(db,other)).items.length,0);
+  assert.equal((await phoneBiometricStatus(db,self)).items[0].status,'APPROVED');assert.equal((await faceProfileStatus(db,self)).phoneAttendanceReady,true);assert.equal((await faceProfileStatus(db,self)).attendanceReady,false);assert.equal((await phoneBiometricStatus(db,other)).items.length,0);
   // Tests need several independent challenges; clear the completed attempt window between groups.
   await db.biometricChallenge.deleteMany();
   const first=await createBiometricChallenge(db,self,{purpose:'PUNCH',intent:'IN',deviceId:device.id});

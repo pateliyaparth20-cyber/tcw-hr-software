@@ -119,7 +119,7 @@ export class Workflows {
         await tx.$queryRaw`SELECT tenant_id FROM field_work_policies WHERE tenant_id=${tid}::uuid FOR UPDATE`;
         await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
         if(!await tx.session.findFirst({where:{id:ctx.session.id,userId:ctx.user.id,expiresAt:{gt:new Date()}}}))throw new ForbiddenException('Your session changed. Sign in again before face attendance.');
-        const approved=await tx.employeeFaceProfile.findFirst({where:{id:match.profileId,tenantId:tid,employeeId,status:'APPROVED',updatedAt:match.profileUpdatedAt}});if(!approved)throw new ForbiddenException('Face approval changed. Start a new face verification.');
+        if(!biometric){const approved=await tx.employeeFaceProfile.findFirst({where:{id:match.profileId!,tenantId:tid,employeeId,status:'APPROVED',updatedAt:match.profileUpdatedAt!}});if(!approved)throw new ForbiddenException('Face approval changed. Start a new face verification.');}
         if(biometric){const device=(match as any);await tx.$queryRaw`SELECT id FROM employee_biometric_devices WHERE id=${device.deviceId}::uuid AND tenant_id=${tid}::uuid FOR UPDATE`;if(!await tx.employeeBiometricDevice.findFirst({where:{id:device.deviceId,tenantId:tid,employeeId,status:'APPROVED',updatedAt:device.deviceUpdatedAt}}))throw new ForbiddenException('Phone approval changed. Retry verification.');}
         let mobileDevice=await tx.attendanceDevice.findFirst({where:{tenantId:tid,connectionMode:'EMPLOYEE_APP'}});
         if(!mobileDevice){

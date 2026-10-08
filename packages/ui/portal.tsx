@@ -17,6 +17,7 @@ import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows
 import {FieldWorkPage,EmployeeFieldTracker} from './field-work';
 import {DeviceManagement} from './device-management';
 import {EmployeeFaceEnrollmentGate,preloadFaceEngine} from './face';
+import {hasPhoneBiometric,PhoneBiometricSetupGate} from './phone-biometric';
 import {CompanySettings,UsersPage,SecurityPage,DocumentsPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,MyProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
 import {SupportPage} from './support';
 import {MEGHNA_AVATAR} from './meghna-avatar';
@@ -321,7 +322,8 @@ function Shell({page}:{page:string}){
  if(session.user.mustChangePassword)return <FirstPasswordChange/>;
  if(billingLocked&&!can('company','VIEW'))return <div className="employee-access-paused"><div className="employee-access-paused-card"><BrandLogo/><span>{session.user.role==='EMPLOYEE'?'EMPLOYEE SELF SERVICE':'COMPANY WORKSPACE'}</span><h1>Company access is temporarily paused</h1><p>Your company subscription needs attention. Billing details are available only to authorized company administrators. Please contact your HR administrator.</p><button className="btn secondary" type="button" onClick={logout}><LogOut size={16}/>Sign out</button></div></div>;
  if(billingLocked)return <SubscriptionLock/>;
- if(session.user.role==='EMPLOYEE'&&!faceProfile.isLoading&&!faceProfile.error&&faceProfile.data?.enrolled===false&&!faceEnrollmentHint){
+ if(session.user.role==='EMPLOYEE'&&!faceProfile.isLoading&&!faceProfile.error&&faceProfile.data?.enrolled===false&&!faceProfile.data?.phoneLinked&&!faceEnrollmentHint){
+  if(hasPhoneBiometric())return <PhoneBiometricSetupGate onComplete={async()=>{await faceProfile.refetch()}} onSignOut={logout}/>;
   return <EmployeeFaceEnrollmentGate logo={companyLogo} companyName={workspaceBrand.name??session.company?.name} onComplete={async()=>{setFaceEnrollmentHint(true);faceFalseRetryRef.current=false;try{window.localStorage.setItem(faceEnrollmentKey,'1')}catch{}await faceProfile.refetch()}} onSignOut={logout}/>;
  }
  if(session.user.role==='EMPLOYEE'){
@@ -335,6 +337,7 @@ function Shell({page}:{page:string}){
     <div className="employee-app-header-actions"><Link href="/notifications" className="employee-header-icon" aria-label="Notifications"><Bell size={20}/>{unreadNotices>0&&<i>{Math.min(unreadNotices,9)}</i>}</Link><Link href="/profile" className="employee-header-avatar" aria-label="My profile"><Avatar name={session.user.name} src={session.user.avatar}/></Link></div>
    </header>
    {session.company?.status==='TRIAL'&&session.company?.expiresAt&&<div className="employee-trial-strip">Trial · {Math.max(0,Math.ceil((new Date(session.company.expiresAt).getTime()-Date.now())/86400000))} day(s) remaining</div>}
+   {faceProfile.data?.phoneLinked&&!faceProfile.data?.phoneAttendanceReady&&<div className="employee-face-status-warning">Phone setup awaits HR approval. Phone attendance will be enabled after approval.</div>}
    {faceProfile.data?.status==='PENDING'&&<div className="employee-face-status-warning">Face setup awaits HR approval. Attendance will be enabled after approval.</div>}
    {faceProfile.error&&<button className="employee-face-status-warning" type="button" onClick={()=>faceProfile.refetch()}>Face status unavailable · tap to retry</button>}
    <EmployeeFieldTracker/><main className="employee-app-main"><div key={page} className="employee-page-stage">{isAllowed?content:<Empty title="Access restricted" description="This section is not available for your Employee account."/>}</div></main>
