@@ -1,0 +1,119 @@
+# Free web services with externally managed PostgreSQL.
+services:
+- type: web
+  name: tcw-hr-api
+  region: singapore
+  runtime: node
+  buildCommand: npm ci --include=dev && npm run build:backend
+  startCommand: npm run db:migrate && npm run db:seed && npm run start:api
+  healthCheckPath: /api/health
+  envVars:
+  - key: NODE_VERSION
+    value: 22.12.0
+  - key: NODE_ENV
+    value: production
+  - key: COOKIE_SECURE
+    value: 'true'
+  - key: PUBLIC_SIGNUP_ENABLED
+    value: 'true'
+  - key: TRIAL_DAYS
+    value: '3'
+  - key: AUTO_SUSPEND_OVERDUE
+    value: 'false'
+  - key: OVERDUE_GRACE_DAYS
+    value: '3'
+  - key: SEED_DEMO
+    value: 'false'
+  - key: WEB_URL
+    sync: false
+  - key: ADMIN_URL
+    sync: false
+  - key: APP_ORIGINS
+    sync: false
+  - key: DATABASE_URL
+    sync: false
+  - key: CONFIG_ENCRYPTION_KEY
+    generateValue: true
+  - key: ADMIN_EMAIL
+    sync: false
+  - key: ADMIN_PASSWORD
+    sync: false
+  plan: free
+  repo: https://github.com/pateliyaparth20-cyber/tcw-hr-software
+  branch: main
+  autoDeployTrigger: 'off'
+- type: web
+  name: tcw-hr-portal
+  runtime: node
+  region: singapore
+  plan: free
+  repo: https://github.com/pateliyaparth20-cyber/tcw-hr-software
+  branch: main
+  autoDeployTrigger: 'off'
+  buildCommand: npm ci --include=dev && node scripts/prepare-face-assets.mjs && npm
+    run build --workspace=@peopleos/web
+  startCommand: node node_modules/next/dist/bin/next start apps/web -H 0.0.0.0 -p
+    $PORT
+  healthCheckPath: /login
+  envVars:
+  - key: NODE_VERSION
+    value: 22.12.0
+  - key: NODE_ENV
+    value: production
+  - key: NEXT_TELEMETRY_DISABLED
+    value: '1'
+  - key: API_INTERNAL_URL
+    fromService:
+      name: tcw-hr-api
+      type: web
+      envVarKey: RENDER_EXTERNAL_URL
+- type: web
+  name: tcw-employee-portal
+  runtime: node
+  region: singapore
+  plan: free
+  repo: https://github.com/pateliyaparth20-cyber/tcw-hr-software
+  branch: main
+  autoDeployTrigger: 'off'
+  buildCommand: npm ci --include=dev && node scripts/prepare-face-assets.mjs && npm
+    run build --workspace=@peopleos/web
+  startCommand: node node_modules/next/dist/bin/next start apps/web -H 0.0.0.0 -p
+    $PORT
+  healthCheckPath: /login
+  envVars:
+  - key: NODE_VERSION
+    value: 22.12.0
+  - key: NODE_ENV
+    value: production
+  - key: NEXT_TELEMETRY_DISABLED
+    value: '1'
+  - key: API_INTERNAL_URL
+    fromService:
+      name: tcw-hr-api
+      type: web
+      envVarKey: RENDER_EXTERNAL_URL
+- type: web
+  name: tcw-super-admin
+  runtime: node
+  region: singapore
+  plan: free
+  repo: https://github.com/pateliyaparth20-cyber/tcw-hr-software
+  branch: main
+  autoDeployTrigger: 'off'
+  buildCommand: npm ci --include=dev && node scripts/prepare-face-assets.mjs && npm
+    run build --workspace=@peopleos/super-admin
+  startCommand: node node_modules/next/dist/bin/next start apps/super-admin -H 0.0.0.0
+    -p $PORT
+  healthCheckPath: /login
+  envVars:
+  - key: NODE_VERSION
+    value: 22.12.0
+  - key: NODE_ENV
+    value: production
+  - key: NEXT_TELEMETRY_DISABLED
+    value: '1'
+  - key: API_INTERNAL_URL
+    fromService:
+      name: tcw-hr-api
+      type: web
+      envVarKey: RENDER_EXTERNAL_URL
