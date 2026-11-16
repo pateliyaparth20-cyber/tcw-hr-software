@@ -42,6 +42,10 @@ export class Workflows {
   private async reconcileLeaveAttendance(ctx:Context,row:any){
     if(!row)return;
     const tid=tenant(ctx),company=await this.db.tenant.findUnique({where:{id:tid},select:{timezone:true}}),currentMonth=localDate(new Date(),company?.timezone||'Asia/Kolkata').slice(0,7);
+    await this.db.attendanceDaily.updateMany({
+      where:{tenantId:tid,employeeId:row.employeeId,date:{gte:row.startDate,lte:row.endDate},correctionNote:''},
+      data:{syncedAt:null}
+    });
     for(const month of monthsCovered(row.startDate,row.endDate)){
       if(month>currentMonth)continue;
       await reconcileAttendanceMonth(this.db,tid,month);
