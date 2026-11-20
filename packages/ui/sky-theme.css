@@ -55,3 +55,17 @@ html body :is(.search-field,.command-search,.support-search,.device-v3-search,.t
   border-color:#38bdf8!important;
   box-shadow:0 0 0 3px #38bdf820!important;
 }
+
+/* Auth, profile and composite form fields keep one outer border and focus ring. */
+html body :is(.entry-field-control,.entry-password-control,.auth-field-control,.auth-password-control,.profile-field-control,.shift-v3-select,.shift-v3-number,.shift-v3-time,.shift-v5-number-input,.shift-v5-time-input,.shift-v5-duration-clock,.duration-clock-manual,.time12-field.time12-manual)>:is(input,select),
+html body :is(.entry-field-control,.entry-password-control,.auth-field-control,.auth-password-control,.profile-field-control,.shift-v3-select,.shift-v3-number,.shift-v3-time,.shift-v5-number-input,.shift-v5-time-input,.shift-v5-duration-clock,.duration-clock-manual,.time12-field.time12-manual)>:is(input,select):is(:hover,:focus,:focus-visible){
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+html body :is(.entry-field-control,.entry-password-control,.auth-field-control,.auth-password-control,.profile-field-control,.shift-v3-select,.shift-v3-number,.shift-v3-time,.shift-v5-number-input,.shift-v5-time-input,.shift-v5-duration-clock,.duration-clock-manual,.time12-field.time12-manual):focus-within{
+  border-color:#38bdf8!important;
+  box-shadow:0 0 0 3px #38bdf820!important;
+}
