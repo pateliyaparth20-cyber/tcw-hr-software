@@ -1,0 +1,65 @@
+/* Shared desktop and mobile authentication, scoped away from workspace forms. */
+body:has(.auth-welcome){background:#f1edf8}
+html body .auth-refresh.auth-welcome{--primary:#7c3aed!important;--entry-ink:#28243c;display:grid;grid-template-columns:minmax(0,56%) minmax(0,44%);width:calc(100% - 80px);max-width:1120px;min-height:700px;margin:48px auto;background:#fff;border:1px solid #e8e1f1;border-radius:24px;box-shadow:0 24px 80px #3423571c;overflow:hidden}
+html body .auth-welcome .entry-main{order:1;min-height:0;padding:48px 52px;background:#fff;align-items:center}
+html body .auth-welcome .entry-card{width:100%;max-width:420px;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent}
+html body .auth-welcome .entry-side{order:2;display:flex;justify-content:flex-start;gap:0;padding:62px 36px 80px 42px;clip-path:polygon(0 0,100% 0,100% 100%,0 30%);background:conic-gradient(from 35deg at 65% 18%,#ffffff10 0deg 65deg,#00000008 65deg 125deg,transparent 125deg 240deg,#ffffff0c 240deg),conic-gradient(from 110deg at 20% 48%,transparent 0deg 95deg,#ffffff12 95deg 155deg,#0000000d 155deg 235deg,transparent 235deg),linear-gradient(155deg,#a331dc 0%,#7b30dd 35%,#593aca 63%,#21bfca 100%)!important;color:white}
+html body .auth-welcome .entry-copy{margin:0 0 0 auto;max-width:285px;text-align:right}
+html body .auth-welcome .entry-copy h1{margin:0 0 20px;font-size:clamp(40px,4.2vw,58px);line-height:1.08;letter-spacing:-.045em;font-weight:750;color:white!important}
+html body .auth-welcome .entry-copy h1 em{font-style:normal;color:white!important}
+html body .auth-welcome .entry-copy>p{margin-left:auto;max-width:240px;font-size:14px;line-height:1.7;color:#ffffffdf!important}
+html body .auth-welcome :is(.entry-preview,.entry-benefits,.entry-side-foot,.entry-kicker,.entry-head){display:none}
+html body .auth-welcome .entry-side .entry-brand{display:none}
+html body .auth-welcome .entry-mobile-brand{margin-bottom:30px;color:#342c4d}
+html body .auth-welcome .entry-mobile-brand .entry-logo{width:44px;height:44px;background:#f7f3fc;border-color:#ede5f6;border-radius:12px}
+html body .auth-welcome .entry-mobile-brand small{color:#8b7d9d}
+html body .auth-welcome .entry-card h2{font-size:32px;color:#2c253a;letter-spacing:-.035em;margin-bottom:10px}
+html body .auth-welcome .entry-subtitle{color:#82788e;font-size:13px;line-height:1.7;margin-bottom:28px}
+html body .auth-welcome .entry-form{gap:18px}
+html body .auth-welcome .entry-form label{color:#51475e}
+html body .auth-welcome :is(.entry-field-control,.entry-password-control){border:1px solid #e7e0ee;border-radius:11px;background:#fff;min-height:52px}
+html body .auth-welcome :is(.entry-field-control,.entry-password-control)>svg{color:#9561d4}
+html body .auth-welcome .entry-form :is(input,select){min-height:50px;color:#3b324b;font-size:14px}
+html body .auth-welcome .entry-form label>input:not([type=checkbox]),html body .auth-welcome .entry-form select{border:1px solid #e7e0ee!important;border-radius:11px;background:#fff!important}
+html body .auth-welcome :is(.entry-field-control,.entry-password-control):focus-within,html body .auth-welcome .entry-form label>input:not([type=checkbox]):focus,html body .auth-welcome .entry-form select:focus{border-color:#9959e7!important;box-shadow:0 0 0 3px #8b45df18!important;outline:0}
+html body .auth-welcome :is(.entry-field-control,.entry-password-control)>input,html body .auth-welcome :is(.entry-field-control,.entry-password-control)>input:focus{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:0!important}
+html body .auth-welcome .entry-form input[type=checkbox]{min-height:17px;accent-color:#7c3aed}
+html body .auth-welcome .entry-password-control button{color:#998ca8}
+html body .auth-welcome .entry-password-control button:hover{background:#f5effb;color:#7c3aed}
+html body .auth-welcome :is(.entry-forgot-link,.entry-signup-link a,.back-login,.entry-terms-check a){color:#7c3aed!important}
+html body .auth-welcome .btn.primary{background:linear-gradient(110deg,#9a4be6,#7039dd)!important;color:#fff!important;border:0!important;border-radius:12px;box-shadow:0 6px 18px #7c3aed26!important}
+html body .auth-welcome .entry-submit{min-height:50px;width:180px;align-self:flex-end;border-radius:28px;font-size:14px}
+html body .auth-welcome.entry-signup .entry-submit{width:100%;border-radius:12px}
+html body .auth-welcome .entry-form button:focus-visible,html body .auth-welcome a:focus-visible{outline:3px solid #bb92ef;outline-offset:3px}
+html body .auth-welcome .entry-signup-link{border-color:#efe9f5;color:#887a97;margin-top:26px;padding-top:22px}
+html body .auth-welcome .entry-legal{margin-top:24px}
+html body .auth-welcome .entry-legal :is(a,button){color:#91859e;font-size:11px}
+html body .auth-welcome .entry-section-heading{color:#8a67ad}
+html body .auth-welcome .entry-section-heading small{background:#f3eafa;color:#8854bd}
+html body .auth-welcome .entry-form .signup-short-note{background:#faf7fe;border-color:#ece3f5;color:#80718f}
+html body .auth-welcome.entry-signup{grid-template-columns:minmax(0,60%) minmax(0,40%)}
+html body .auth-welcome.entry-signup .entry-card{max-width:510px}
+@media(max-width:1000px) and (min-width:801px){html body .auth-refresh.auth-welcome{width:calc(100% - 40px);margin:24px auto;grid-template-columns:minmax(0,58%) minmax(0,42%)}html body .auth-welcome .entry-main{padding:40px 30px}html body .auth-welcome .entry-side{padding:54px 26px}html body .auth-welcome .entry-copy h1{font-size:44px}}
+@media(max-width:800px){
+ html body .auth-refresh.auth-welcome,html body .auth-refresh.auth-welcome.entry-signup{display:block;width:100%;max-width:none;min-height:100dvh;margin:0;border:0;border-radius:0;box-shadow:none;overflow:visible;background:#fff}
+ html body .auth-welcome .entry-side{display:flex;min-height:285px;padding:28px 24px 64px;clip-path:none;align-items:center;background:radial-gradient(ellipse at 5% 100%,#6532b9 0%,#6532b900 57%),radial-gradient(ellipse at 95% 0%,#944bd0 0%,#944bd000 60%),linear-gradient(120deg,#a541cf,#7439d4)!important}
+ html body .auth-welcome .entry-side::after{content:"";position:absolute;left:-10%;bottom:-36px;width:120%;height:76px;background:#fff;border-radius:50% 50% 0 0}
+ html body .auth-welcome .entry-side .entry-brand{display:flex;justify-content:center;margin-bottom:17px}
+ html body .auth-welcome .entry-side .entry-brand>span:last-child{display:none}
+ html body .auth-welcome .entry-side .entry-logo{width:54px;height:54px;border-radius:17px;background:#fff;padding:8px;box-shadow:0 5px 18px #45257826}
+ html body .auth-welcome .entry-copy{max-width:420px;margin:0;text-align:center}
+ html body .auth-welcome .entry-copy h1{font-size:32px;margin:0 0 10px;line-height:1.2;letter-spacing:-.03em}
+ html body .auth-welcome .entry-copy h1 br{display:none}
+ html body .auth-welcome .entry-copy h1 em::before{content:" "}
+ html body .auth-welcome .entry-copy>p{max-width:300px;margin:0 auto;font-size:14px;line-height:1.6}
+ html body .auth-welcome .entry-main{position:relative;z-index:1;min-height:calc(100dvh - 250px);margin-top:-26px;padding:22px 28px calc(30px + env(safe-area-inset-bottom));border-radius:30px 30px 0 0;background:#fff;align-items:flex-start}
+ html body .auth-welcome .entry-card,html body .auth-welcome.entry-signup .entry-card{max-width:480px;padding:0;border:0;border-radius:0}
+ html body .auth-welcome .entry-mobile-brand{display:none}
+ html body .auth-welcome .entry-card h2{font-size:26px;margin-bottom:8px}
+ html body .auth-welcome .entry-subtitle{font-size:13px;margin-bottom:24px}
+ html body .auth-welcome .entry-form :is(input,select){font-size:16px}
+ html body .auth-welcome .entry-submit{width:100%;border-radius:12px;min-height:52px;margin-top:4px}
+ html body .auth-welcome .entry-signup-grid{grid-template-columns:1fr;gap:17px}
+ html body .auth-welcome .entry-legal-row{gap:10px 14px}
+}
+@media(max-width:360px){html body .auth-welcome .entry-main{padding-left:18px;padding-right:18px}html body .auth-welcome .entry-options{gap:10px;font-size:11px}html body .auth-welcome .entry-copy h1{font-size:29px}}
