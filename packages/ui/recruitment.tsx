@@ -108,7 +108,7 @@ export function RecruitmentDashboard(){
  const pipelineTotal=Math.max(1,candidates.length);
  let cursor=0;
  const mixSegments=stageCounts.map(({stage,count})=>{const start=cursor,end=cursor+(count/pipelineTotal)*100;cursor=end;return {stage,count,start,end};});
- const mixColors:Record<string,string>={APPLIED:'#7c3aed',SCREENING:'#7c3aed',INTERVIEW:'#f59e0b',OFFER:'#10b981',HIRED:'#22c55e',REJECTED:'#ef4444'};
+ const mixColors:Record<string,string>={APPLIED:'#c4b5fd',SCREENING:'#7c3aed',INTERVIEW:'#f59e0b',OFFER:'#10b981',HIRED:'#22c55e',REJECTED:'#ef4444'};
  const donut=mixSegments.map(s=>`${mixColors[s.stage.key]} ${s.start}% ${s.end}%`).join(',');
 
  async function moveCandidate(candidate:Row,target:PipelineStage){
