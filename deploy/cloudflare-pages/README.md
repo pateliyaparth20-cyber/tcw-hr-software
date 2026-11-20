@@ -35,6 +35,12 @@ Compatibility date: `2026-11-20`; `fail_open: false`. No token is stored here.
 This is a Cloudflare gateway to the existing Render apps and API, with Supabase
 still providing the database. It is not a migration of Node.js to Workers.
 Render free-service startup delays can still affect portal and API availability.
+Temporary 502/503/504 responses and fetch failures now return a noncached 503
+startup screen for browser GET navigations. It refreshes the same URL every
+eight seconds. API and POST requests return a retryable JSON error instead and
+are never replayed, so a login or form submission is not duplicated. Render's
+virtual-host routing receives the fixed upstream hostname. Verify this behavior
+with `node --test deploy/cloudflare-pages/gateway.test.mjs`.
 All dynamic responses are no-store. Same-origin Origin headers are translated
 only to the matching fixed upstream; foreign origins remain unchanged for the
 backend to reject, and cookies and CSRF headers are preserved.
