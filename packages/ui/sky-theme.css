@@ -1,43 +1,44 @@
-/* Shared accessible sky-blue theme for HR, employee and platform portals. */
-:root{--primary:#0369a1;--sky:#38bdf8;--primary-soft:#bae6fd;--sky-ink:#075985;--sky-border:#7dd3fc}
-html body .btn.primary,html body .tenant-shell .btn.primary,html body .employee-app-shell .btn.primary,html body .platform-shell .btn.primary{background:#38bdf8!important;border-color:#38bdf8!important;color:#082f49!important;box-shadow:0 3px 10px #38bdf81a!important}
-html body .btn.primary:hover{background:#0ea5e9!important;border-color:#0ea5e9!important;color:#082f49!important}
-html body .nav-item.active,html body .app-shell .sidebar .nav-item.selected,html body .mobile-bottom-nav a.active,html body .mobile-bottom-nav button.active{background:#bae6fd!important;color:#075985!important;border-color:#bae6fd!important}
-html body .tabs button.active{color:#075985!important;border-color:#38bdf8!important;background:#bae6fd!important}
-html body input:focus,html body select:focus,html body textarea:focus{border-color:#38bdf8!important;box-shadow:0 0 0 3px #38bdf820!important}
-html body a:not(.btn):focus-visible,html body button:focus-visible{outline-color:#38bdf8}
-html body .update-hero{background:linear-gradient(115deg,#bae6fd,#7dd3fc 65%,#38bdf8);border:1px solid #bae6fd;color:#082f49;box-shadow:0 8px 28px #0c4a6e0a}
-html body .update-hero h2{color:#082f49}html body .update-hero p{color:#33647c}html body .update-eyebrow{color:#0369a1}html body .update-hero-mark{color:#0369a1;background:#ffffff70;border-color:#fff}html body .update-status{background:#ffffff80;border-color:#fff;color:#075985}
-html body .update-small-icon,html body .update-next-build,html body .update-process span{background:#e0f2fe;color:#075985;border-color:#bae6fd}
-html body .reporting-company{color:#075985;background:#e0f2fe;border-color:#bae6fd}
-html body .reporting-person.search-match{border-color:#7dd3fc;background:#f0f9ff}
-html body .auth-refresh .entry-side{background:linear-gradient(150deg,#bae6fd,#7dd3fc 65%,#38bdf8);color:#082f49}
-html body .auth-refresh .entry-copy h1{color:#082f49}html body .auth-refresh .entry-copy h1 em{color:#0369a1}
-html body .auth-refresh .entry-side :is(.entry-kicker,.entry-preview-mark,.entry-preview-title,.entry-preview-header>span,.entry-preview-modules>div){color:#0369a1}
-html body .auth-refresh .entry-side :is(.entry-copy>p,.entry-brand small,.entry-preview-header>small,.entry-preview-title>span,.entry-preview-modules span,.entry-preview-row strong,.entry-preview-row small,.entry-benefits span,.entry-side-foot){color:#33647c}
-html body .auth-refresh .entry-preview{background:#ffffff90;border-color:#ffffff;box-shadow:0 16px 40px #0c4a6e0a}
-html body .auth-refresh .entry-preview-modules>div{background:#f0f9ff;border-color:#bae6fd}
-html body .auth-refresh .entry-preview-avatar{background:#e0f2fe;color:#075985}
-html body .auth-refresh .entry-submit{background:#38bdf8;color:#082f49}
-html body .auth-refresh :is(.entry-forgot-link,.entry-signup-link a,.entry-terms-check a){color:#0369a1}
-html body .rc-hero{background:linear-gradient(115deg,#bae6fd,#7dd3fc 65%,#38bdf8);color:#082f49;border:1px solid #bae6fd}
-html body .rc-hero :is(.rc-eyebrow,p,.rc-hero-note,.rc-hero-stats span){color:#33647c}html body .rc-hero h2{color:#082f49}
+/* Shared purple theme for HR, employee and platform portals. */
+html body :is(.app-shell,.employee-app-shell,.mandatory-overlay){--primary:#7c3aed!important;--primary-soft:#ede9fe;--canvas:#faf8ff;--line:#e9e2f2;--ink:#30263f}
+:root{--primary:#6d28d9;--sky:#7c3aed;--primary-soft:#ddd6fe;--sky-ink:#5b21b6;--sky-border:#c4b5fd}
+html body .btn.primary,html body .tenant-shell .btn.primary,html body .employee-app-shell .btn.primary,html body .platform-shell .btn.primary{background:#7c3aed!important;border-color:#7c3aed!important;color:#fff!important;box-shadow:0 3px 10px #7c3aed1a!important}
+html body .btn.primary:hover{background:#7c3aed!important;border-color:#7c3aed!important;color:#fff!important}
+html body .nav-item.active,html body .app-shell .sidebar .nav-item.selected,html body .mobile-bottom-nav a.active,html body .mobile-bottom-nav button.active{background:#ddd6fe!important;color:#5b21b6!important;border-color:#ddd6fe!important}
+html body .tabs button.active{color:#5b21b6!important;border-color:#7c3aed!important;background:#ddd6fe!important}
+html body input:focus,html body select:focus,html body textarea:focus{border-color:#7c3aed!important;box-shadow:0 0 0 3px #7c3aed20!important}
+html body a:not(.btn):focus-visible,html body button:focus-visible{outline-color:#7c3aed}
+html body .update-hero{background:linear-gradient(115deg,#ddd6fe,#c4b5fd 65%,#7c3aed);border:1px solid #ddd6fe;color:#2e1065;box-shadow:0 8px 28px #4c1d950a}
+html body .update-hero h2{color:#2e1065}html body .update-hero p{color:#53337c}html body .update-eyebrow{color:#6d28d9}html body .update-hero-mark{color:#6d28d9;background:#ffffff70;border-color:#fff}html body .update-status{background:#ffffff80;border-color:#fff;color:#5b21b6}
+html body .update-small-icon,html body .update-next-build,html body .update-process span{background:#ede9fe;color:#5b21b6;border-color:#ddd6fe}
+html body .reporting-company{color:#5b21b6;background:#ede9fe;border-color:#ddd6fe}
+html body .reporting-person.search-match{border-color:#c4b5fd;background:#f5f3ff}
+html body .auth-refresh .entry-side{background:linear-gradient(150deg,#ddd6fe,#c4b5fd 65%,#7c3aed);color:#2e1065}
+html body .auth-refresh .entry-copy h1{color:#2e1065}html body .auth-refresh .entry-copy h1 em{color:#6d28d9}
+html body .auth-refresh .entry-side :is(.entry-kicker,.entry-preview-mark,.entry-preview-title,.entry-preview-header>span,.entry-preview-modules>div){color:#6d28d9}
+html body .auth-refresh .entry-side :is(.entry-copy>p,.entry-brand small,.entry-preview-header>small,.entry-preview-title>span,.entry-preview-modules span,.entry-preview-row strong,.entry-preview-row small,.entry-benefits span,.entry-side-foot){color:#53337c}
+html body .auth-refresh .entry-preview{background:#ffffff90;border-color:#ffffff;box-shadow:0 16px 40px #4c1d950a}
+html body .auth-refresh .entry-preview-modules>div{background:#f5f3ff;border-color:#ddd6fe}
+html body .auth-refresh .entry-preview-avatar{background:#ede9fe;color:#5b21b6}
+html body .auth-refresh .entry-submit{background:#7c3aed;color:#fff}
+html body .auth-refresh :is(.entry-forgot-link,.entry-signup-link a,.entry-terms-check a){color:#6d28d9}
+html body .rc-hero{background:linear-gradient(115deg,#ddd6fe,#c4b5fd 65%,#7c3aed);color:#2e1065;border:1px solid #ddd6fe}
+html body .rc-hero :is(.rc-eyebrow,p,.rc-hero-note,.rc-hero-stats span){color:#53337c}html body .rc-hero h2{color:#2e1065}
 html body .rc-hero-stats article{background:#ffffff80;border-color:#fff}
-html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform){background:linear-gradient(115deg,#bae6fd,#7dd3fc 65%,#38bdf8)!important;color:#082f49!important;border-color:#bae6fd!important}
-html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform) :is(h1,h2,h3,h4,p,small,strong){color:#17364a!important}
+html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform){background:linear-gradient(115deg,#ddd6fe,#c4b5fd 65%,#7c3aed)!important;color:#2e1065!important;border-color:#ddd6fe!important}
+html body :is(.employee-directory-hero,.organization-v2-hero,.calendar-v2-hero,.attendance-v2-hero,.devices-v2-hero,.workforce-v2-hero,.leave-v2-hero,.attendance-v4-hero,.company-profile-v2-banner,.hr-command-hero,.platform-hero,.digital-command-hero,.hr-welcome-card,.mobile-app-hero,.mobile-app-welcome,.employee-self-hero,.employee-home-hero,.platform-mobile-hero,.mobile-unified-hero-tenant,.mobile-unified-hero-platform) :is(h1,h2,h3,h4,p,small,strong){color:#2e174a!important}
 
 /* Keep the pull indicator absent until a real pull gesture requests it. */
 html body .tcw-pull-refresh:not(.show){visibility:hidden;opacity:0}
 html body .tcw-pull-refresh.show{visibility:visible;opacity:1}
 html body .org-search input:focus{outline:none!important;box-shadow:none!important;border:0!important}
 
-html body .app-shell .sidebar .nav-item.selected::before{background:#38bdf8!important}
-html body .app-shell .sidebar .nav-item.selected :is(svg,span){color:#075985!important}
+html body .app-shell .sidebar .nav-item.selected::before{background:#7c3aed!important}
+html body .app-shell .sidebar .nav-item.selected :is(svg,span){color:#5b21b6!important}
 
-/* Stronger sky surfaces remain visibly blue beside white content. */
-html body :is(.org-hero,.hr-overview .ov-welcome){background:linear-gradient(110deg,#bae6fd,#7dd3fc 70%,#38bdf8);border-color:#7dd3fc}
-html body .hr-overview .ov-metric{background:linear-gradient(140deg,#e0f2fe,#f0f9ff);border-color:#b7dff4}
-html body .org-navigation button.active{background:#bae6fd;box-shadow:inset 0 0 0 1px #7dd3fc}
+/* Lavender surfaces remain distinct beside white content. */
+html body :is(.org-hero,.hr-overview .ov-welcome){background:linear-gradient(110deg,#ddd6fe,#c4b5fd 70%,#7c3aed);border-color:#c4b5fd}
+html body .hr-overview .ov-metric{background:linear-gradient(140deg,#ede9fe,#f5f3ff);border-color:#d2b7f4}
+html body .org-navigation button.active{background:#ddd6fe;box-shadow:inset 0 0 0 1px #c4b5fd}
 
 /* Composite search/filter controls have one border and one focus indicator. */
 html body :is(.search-field,.command-search,.support-search,.device-v3-search,.timeoff-v3-search,.recruit-v3-search,.pd-search,.org-search,.org-sort,.payment-search,.performance-search,.rc-search,.attendance-employee-search,.filter)>:is(input,select),
@@ -52,8 +53,8 @@ html body :is(.search-field,.command-search,.support-search,.device-v3-search,.t
   padding:0!important;
 }
 html body :is(.search-field,.command-search,.support-search,.device-v3-search,.timeoff-v3-search,.recruit-v3-search,.pd-search,.org-search,.org-sort,.payment-search,.performance-search,.rc-search,.attendance-employee-search,.filter):focus-within{
-  border-color:#38bdf8!important;
-  box-shadow:0 0 0 3px #38bdf820!important;
+  border-color:#7c3aed!important;
+  box-shadow:0 0 0 3px #7c3aed20!important;
 }
 
 /* Auth, profile and composite form fields keep one outer border and focus ring. */
@@ -66,6 +67,15 @@ html body :is(.entry-field-control,.entry-password-control,.auth-field-control,.
   background:transparent!important;
 }
 html body :is(.entry-field-control,.entry-password-control,.auth-field-control,.auth-password-control,.profile-field-control,.shift-v3-select,.shift-v3-number,.shift-v3-time,.shift-v5-number-input,.shift-v5-time-input,.shift-v5-duration-clock,.duration-clock-manual,.time12-field.time12-manual):focus-within{
-  border-color:#38bdf8!important;
-  box-shadow:0 0 0 3px #38bdf820!important;
+  border-color:#7c3aed!important;
+  box-shadow:0 0 0 3px #7c3aed20!important;
 }
+
+/* Match the welcome screen's purple actions across every portal. */
+html body .btn.primary,html body .tenant-shell .btn.primary,html body .employee-app-shell .btn.primary,html body .platform-shell .btn.primary{background:linear-gradient(110deg,#9a4be6,#7039dd)!important;border-color:#7c3aed!important;color:#fff!important;box-shadow:0 4px 14px #7c3aed26!important}
+html body .btn.primary:hover{background:linear-gradient(110deg,#893ad6,#622bc8)!important;border-color:#6d28d9!important;color:#fff!important}
+html body :is(.app-shell,.employee-app-shell) :is(.tabs,.shift-v3-tabs,.device-v3-tabs,.timeoff-v3-tabs,.pd-profile-tabs,.recruit-v3-tabs,.recruit-v3-detail-tabs)>:is(button,a):is(.active,[aria-selected="true"],[aria-pressed="true"]){background:#7c3aed!important;border-color:#7c3aed!important;color:#fff!important}
+html body .app-shell .sidebar .nav-item.selected{background:#ede9fe!important;color:#5b21b6!important;border-color:#ddd6fe!important}
+html body .app-shell .sidebar .nav-item.selected::before{background:#7c3aed!important}
+html body .app-shell .sidebar .nav-item.selected :is(svg,span){color:#5b21b6!important}
+html body :is(.app-shell,.employee-app-shell) input[type=checkbox]{accent-color:#7c3aed}
