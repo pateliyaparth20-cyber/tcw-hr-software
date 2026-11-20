@@ -1,7 +1,20 @@
-name: Android APKs
+name: Android Apps
 
 on:
   workflow_dispatch:
+    inputs:
+      build_release:
+        description: Build signed Play Store bundles using the configured upload key
+        type: boolean
+        default: false
+      hr_url:
+        description: HTTPS origin for the HR portal
+        type: string
+        default: https://tcw-hr-portal-ef18.onrender.com
+      employee_url:
+        description: HTTPS origin for the employee portal
+        type: string
+        default: https://tcw-employee-portal-ef18.onrender.com
   push:
     paths:
       - 'native/android/**'
@@ -18,7 +31,9 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.11.1'
+      - name: Install Android 36 SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Build HR and Employee debug APKs
         run: gradle -p native/android :app:assembleAdminDebug :app:assembleEmployeeDebug
       - name: Verify Android permissions and variants
@@ -43,3 +58,29 @@ jobs:
         with:
           name: TCW-Employee-Android
           path: native/android/app/build/outputs/apk/employee/debug/*.apk
+      - name: Build signed Play Store bundles
+        if: github.event_name == 'workflow_dispatch' && inputs.build_release
+        env:
+          TCW_UPLOAD_KEYSTORE_BASE64: ${{ secrets.TCW_UPLOAD_KEYSTORE_BASE64 }}
+          TCW_KEYSTORE_PATH: ${{ runner.temp }}/tcw-play-upload.jks
+          TCW_KEYSTORE_PASSWORD: ${{ secrets.TCW_KEYSTORE_PASSWORD }}
+          TCW_KEY_ALIAS: ${{ secrets.TCW_KEY_ALIAS }}
+          TCW_KEY_PASSWORD: ${{ secrets.TCW_KEY_PASSWORD }}
+          TCW_HR_URL: ${{ inputs.hr_url }}
+          TCW_EMPLOYEE_URL: ${{ inputs.employee_url }}
+        run: |
+          test -n "$TCW_UPLOAD_KEYSTORE_BASE64"
+          test -n "$TCW_KEYSTORE_PASSWORD"
+          test -n "$TCW_KEY_ALIAS"
+          test -n "$TCW_KEY_PASSWORD"
+          trap 'rm -f "$TCW_KEYSTORE_PATH"' EXIT
+          printf '%s' "$TCW_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$TCW_KEYSTORE_PATH"
+          chmod 600 "$TCW_KEYSTORE_PATH"
+          gradle -p native/android :app:bundleAdminRelease :app:bundleEmployeeRelease :app:lintAdminRelease :app:lintEmployeeRelease \
+            -PTCW_APP_URL="$TCW_HR_URL" -PTCW_EMPLOYEE_APP_URL="$TCW_EMPLOYEE_URL"
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.build_release
+        with:
+          name: TCW-Play-Store-Bundles
+          if-no-files-found: error
+          path: native/android/app/build/outputs/bundle/*Release/*.aab

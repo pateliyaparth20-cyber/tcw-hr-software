@@ -9,5 +9,10 @@ playwright-report/
 *.tsbuildinfo
 .local-data/
 *.log
+*.jks
+*.keystore
+native/android/.gradle/
+native/android/local.properties
+native/android/app/build/
 
 /apps/*/public/face-guide-v1/

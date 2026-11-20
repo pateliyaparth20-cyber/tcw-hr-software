@@ -19,7 +19,7 @@ The Employee URL defaults to `https://employee.techcyberwarrior.in`; the HR URL 
 
 ## Build
 
-Requirements: Android SDK 35, JDK 21, Gradle 8.9.
+Requirements: Android SDK 36, SDK Build Tools 35.0.0, JDK 21, Gradle 8.11.1.
 
 HR/Admin debug APK:
 
@@ -34,6 +34,44 @@ Release variants:
 `gradle -p native/android :app:assembleAdminRelease :app:assembleEmployeeRelease`
 
 Configure a signing key before distributing production release APKs.
+
+## Play Store release
+
+Version 1.3.5 targets Android 16 / API 36. Package IDs stay unchanged for both apps.
+
+Set these environment variables using your private upload keystore:
+
+- `TCW_KEYSTORE_PATH` — absolute path to the keystore.
+- `TCW_KEYSTORE_PASSWORD` — keystore password.
+- `TCW_KEY_ALIAS` — signing key alias.
+- `TCW_KEY_PASSWORD` — key password.
+
+Build signed Android App Bundles with the portal origins that are active:
+
+```sh
+gradle -p native/android :app:bundleAdminRelease :app:bundleEmployeeRelease \
+  :app:lintAdminRelease :app:lintEmployeeRelease \
+  -PTCW_APP_URL=https://tcw-hr-portal-ef18.onrender.com \
+  -PTCW_EMPLOYEE_APP_URL=https://tcw-employee-portal-ef18.onrender.com
+```
+
+The bundles are written under `app/build/outputs/bundle/adminRelease/` and
+`app/build/outputs/bundle/employeeRelease/`. Release builds require all four
+signing variables and validate that both portal URLs are HTTPS origins.
+Replace the URL properties with the custom domains once their DNS and HTTPS
+are verified. The compiled portal origin also restricts camera, location and
+phone biometric access.
+
+For GitHub Actions, configure repository secrets `TCW_UPLOAD_KEYSTORE_BASE64`,
+`TCW_KEYSTORE_PASSWORD`, `TCW_KEY_ALIAS` and `TCW_KEY_PASSWORD`. Run the
+**Android Apps** workflow manually with **build_release** enabled. Preserve
+the upload keystore privately for future releases. Never commit signing keys
+or passwords.
+
+Before public submission, test both apps on Android phones, provide the store
+listing and privacy policy, complete Data safety and app access details, and
+complete the testing required by your Play Console account. Play Console
+publication and review are separate from building these files.
 
 The Employee APK requests Android camera permission only when the web Face Scan flow asks for camera access. Face Scan attendance is linked to the **TCW Employee Mobile App** source under Devices / Attendance sources.
 
