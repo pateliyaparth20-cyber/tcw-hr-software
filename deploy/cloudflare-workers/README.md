@@ -25,16 +25,15 @@ to the public hostname. Dynamic responses and API responses are not cached.
 
 Cloudflare account: `b871aeba431ed78539a001d4484b0b1f`.
 Zone: `45c0ff9080cc237110e503710b067e1f` (Free plan).
-The custom domains are attached to their corresponding Workers but are inactive.
+The custom domains have moved to the `tcw-portals` Pages project. Only the
+`workers.dev` URLs remain attached to these Workers as fallback portals.
 The owner explicitly requires keeping GoDaddy's existing nameservers unchanged.
 Do not migrate this zone's nameservers.
 
-The existing Workers custom-domain setup requires an active Cloudflare zone,
-so it cannot activate using an external GoDaddy CNAME alone. The supported
-alternative is a Pages project with the three custom subdomains associated
-before adding CNAME records at GoDaddy. Provisioning that project remains
-blocked by automatic approval review pending explicit approval for the new
-Pages project. No Pages project or CNAME target has been created yet.
+The Workers custom-domain setup requires an active Cloudflare zone and cannot
+activate using an external GoDaddy CNAME alone. The owner approved creating
+one free Pages project. It is deployed and all three subdomains are associated;
+see `../cloudflare-pages/README.md` for the authoritative CNAME targets.
 
 Keep `ns67.domaincontrol.com` and `ns68.domaincontrol.com` at GoDaddy.
 

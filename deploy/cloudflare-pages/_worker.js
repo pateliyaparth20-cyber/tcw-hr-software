@@ -1,51 +1,68 @@
-const origins = {
-  'hr.techcyberwarrior.in': 'https://tcw-hr-portal-ef18.onrender.com',
-  'admin.techcyberwarrior.in': 'https://tcw-super-admin-ef18.onrender.com',
-  'employee.techcyberwarrior.in': 'https://tcw-employee-portal-ef18.onrender.com',
-};
+// Each deployment binds PORTAL_ORIGIN to one fixed Render portal.
+const allowedOrigins = new Set([
+  'https://tcw-hr-portal-ef18.onrender.com',
+  'https://tcw-super-admin-ef18.onrender.com',
+  'https://tcw-employee-portal-ef18.onrender.com',
+]);
 
-export default {
-  async fetch(request) {
+const gateway = {
+  async fetch(request, env) {
     const publicUrl = new URL(request.url);
-    const origin = origins[publicUrl.hostname]
-      ?? (publicUrl.hostname.endsWith('.pages.dev') ? origins['hr.techcyberwarrior.in'] : undefined);
-
-    if (!origin) {
-      return new Response('Unknown portal hostname.', { status: 404 });
+    if (!allowedOrigins.has(env.PORTAL_ORIGIN)) {
+      return new Response('Portal configuration is unavailable.', { status: 503 });
     }
-
-    const upstreamUrl = new URL(publicUrl.pathname + publicUrl.search, origin);
-    const upstreamRequest = new Request(upstreamUrl, request);
+    const upstreamUrl = new URL(env.PORTAL_ORIGIN);
+    upstreamUrl.pathname = publicUrl.pathname;
+    upstreamUrl.search = publicUrl.search;
     const headers = new Headers(request.headers);
     headers.delete('host');
     headers.set('x-forwarded-host', publicUrl.host);
     headers.set('x-forwarded-proto', 'https');
-
+    // Translate only same-origin browser requests. Foreign origins remain foreign
+    // and are rejected by the API's existing origin and CSRF verification.
+    if (headers.get('origin') === publicUrl.origin) {
+      headers.set('origin', upstreamUrl.origin);
+    }
     let response;
     try {
-      response = await fetch(upstreamRequest, { headers, redirect: 'manual' });
+      response = await fetch(new Request(upstreamUrl, request), {
+        headers, redirect: 'manual', cache: 'no-store',
+      });
     } catch {
-      return Response.json(
-        { message: 'The portal is starting. Please try again shortly.' },
-        { status: 503, headers: { 'cache-control': 'no-store' } },
-      );
+      console.error(JSON.stringify({ event: 'portal_upstream_unavailable' }));
+      return Response.json({ message: 'The portal is starting. Please try again shortly.' }, {
+        status: 503, headers: { 'cache-control': 'no-store' },
+      });
     }
-
-    if (response.status === 101) {
-      return response;
-    }
-
+    if (response.status === 101) return response;
     const result = new Response(response.body, response);
     const location = result.headers.get('location');
     if (location) {
       const destination = new URL(location, upstreamUrl);
-      if (destination.origin === new URL(origin).origin) {
+      if (destination.origin === upstreamUrl.origin) {
         destination.protocol = publicUrl.protocol;
         destination.host = publicUrl.host;
         result.headers.set('location', destination.toString());
       }
     }
-
+    if (!publicUrl.pathname.startsWith('/_next/static/')) {
+      result.headers.set('cache-control', 'no-store');
+    }
+    result.headers.set('x-tcw-edge', 'cloudflare');
     return result;
+  },
+};
+
+const origins = {
+  'hr.techcyberwarrior.in': 'https://tcw-hr-portal-ef18.onrender.com',
+  'admin.techcyberwarrior.in': 'https://tcw-super-admin-ef18.onrender.com',
+  'employee.techcyberwarrior.in': 'https://tcw-employee-portal-ef18.onrender.com',
+};
+export default {
+  async fetch(request) {
+    const host = new URL(request.url).hostname;
+    const origin = origins[host] ?? ((host === 'tcw-portals.pages.dev' || host.endsWith('.tcw-portals.pages.dev')) ? origins['hr.techcyberwarrior.in'] : undefined);
+    if (!origin) return new Response('Unknown portal hostname.', { status: 404 });
+    return gateway.fetch(request, { PORTAL_ORIGIN: origin });
   },
 };
