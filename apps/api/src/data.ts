@@ -376,7 +376,7 @@ export class DataService {
     const generatedPassword=credentialOperation&&!input.password?temporaryPassword8():null;
     const newPassword=input.password??generatedPassword??undefined;
     const company=await this.db.tenant.findUnique({where:{id:tid},select:{name:true,code:true}});
-    const loginUrl='https://employee.techcyberwarrior.in/login';
+    const loginUrl=new URL('/login',process.env.EMPLOYEE_URL??'https://employee.techcyberwarrior.in').toString();
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE tenant_id=${tid}::uuid AND id=${employee.id}::uuid FOR UPDATE`;
       if(input.operation==='RESET_FACE'||input.operation==='RESET_PASSWORD'||(input.operation==='SET_ACTIVE'&&!input.active))await closeFieldSessions(tx,tid,employee.id,'EMPLOYEE_ACCESS_CHANGED');

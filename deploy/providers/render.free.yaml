@@ -38,6 +38,14 @@ services:
     sync: false
   - key: ADMIN_PASSWORD
     sync: false
+  - key: RESEND_API_KEY
+    sync: false
+  - key: SMTP_FROM
+    value: TCW HR Software <noreply@techcyberwarrior.in>
+  - key: EMAIL_OUTBOX_ENABLED
+    value: 'true'
+  - key: EMPLOYEE_URL
+    sync: false
   plan: free
   repo: https://github.com/pateliyaparth20-cyber/tcw-hr-software
   branch: main

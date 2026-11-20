@@ -21,21 +21,26 @@ origin; foreign Origin headers remain unchanged so backend origin validation
 continues rejecting them. Upstream redirects to the same portal are rewritten
 to the public hostname. Dynamic responses and API responses are not cached.
 
-## Domain activation
+## Domain activation: external DNS only
 
 Cloudflare account: `b871aeba431ed78539a001d4484b0b1f`.
 Zone: `45c0ff9080cc237110e503710b067e1f` (Free plan).
-The custom domains are attached to their corresponding Workers.
+The custom domains are attached to their corresponding Workers but are inactive.
+The owner explicitly requires keeping GoDaddy's existing nameservers unchanged.
+Do not migrate this zone's nameservers.
 
-The zone remains pending until GoDaddy's authoritative nameservers are changed
-from `ns67.domaincontrol.com` and `ns68.domaincontrol.com` to:
+The existing Workers custom-domain setup requires an active Cloudflare zone,
+so it cannot activate using an external GoDaddy CNAME alone. The supported
+alternative is a Pages project with the three custom subdomains associated
+before adding CNAME records at GoDaddy. Provisioning that project remains
+blocked by automatic approval review pending explicit approval for the new
+Pages project. No Pages project or CNAME target has been created yet.
 
-- `dom.ns.cloudflare.com`
-- `robin.ns.cloudflare.com`
+Keep `ns67.domaincontrol.com` and `ns68.domaincontrol.com` at GoDaddy.
 
 Scanned apex, www, mail, verification, SPF, DMARC, DKIM and autodiscovery DNS
-records were imported without proxying. Before a nameserver change, compare
-the full GoDaddy DNS zone against Cloudflare: automated scans may miss uncommon
-record names. Do not delete existing mail or website records.
+records were imported without proxying into the pending, non-authoritative
+Cloudflare zone. Authoritative records still live at GoDaddy. Preserve its
+existing mail and website records when changing the three portal subdomains.
 
 No paid Cloudflare plan was enabled. Provider free limits still apply.
