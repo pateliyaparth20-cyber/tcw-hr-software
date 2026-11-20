@@ -38,3 +38,20 @@ html body .app-shell .sidebar .nav-item.selected :is(svg,span){color:#075985!imp
 html body :is(.org-hero,.hr-overview .ov-welcome){background:linear-gradient(110deg,#bae6fd,#7dd3fc 70%,#38bdf8);border-color:#7dd3fc}
 html body .hr-overview .ov-metric{background:linear-gradient(140deg,#e0f2fe,#f0f9ff);border-color:#b7dff4}
 html body .org-navigation button.active{background:#bae6fd;box-shadow:inset 0 0 0 1px #7dd3fc}
+
+/* Composite search/filter controls have one border and one focus indicator. */
+html body :is(.search-field,.command-search,.support-search,.device-v3-search,.timeoff-v3-search,.recruit-v3-search,.pd-search,.org-search,.org-sort,.payment-search,.performance-search,.rc-search,.attendance-employee-search,.filter)>:is(input,select),
+html body :is(.search-field,.command-search,.support-search,.device-v3-search,.timeoff-v3-search,.recruit-v3-search,.pd-search,.org-search,.org-sort,.payment-search,.performance-search,.rc-search,.attendance-employee-search,.filter)>:is(input,select):is(:hover,:focus,:focus-visible){
+  min-width:0!important;
+  min-height:0!important;
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  padding:0!important;
+}
+html body :is(.search-field,.command-search,.support-search,.device-v3-search,.timeoff-v3-search,.recruit-v3-search,.pd-search,.org-search,.org-sort,.payment-search,.performance-search,.rc-search,.attendance-employee-search,.filter):focus-within{
+  border-color:#38bdf8!important;
+  box-shadow:0 0 0 3px #38bdf820!important;
+}

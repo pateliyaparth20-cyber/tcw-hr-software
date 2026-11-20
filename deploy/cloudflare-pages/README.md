@@ -36,8 +36,13 @@ This is a Cloudflare gateway to the existing Render apps and API, with Supabase
 still providing the database. It is not a migration of Node.js to Workers.
 Render free-service startup delays can still affect portal and API availability.
 Temporary 502/503/504 responses and fetch failures now return a noncached 503
-startup screen for browser GET navigations. It refreshes the same URL every
-eight seconds. API and POST requests return a retryable JSON error instead and
+startup screen for browser GET navigations. It keeps its startup requests alive
+and checks the same URL every eight seconds, navigating only once ready.
+Credential-free browser requests to the fixed Render login and API-health
+endpoints wake sleeping services. Hidden credentialless sandboxed frames also
+allow Render's startup interstitial to complete. Successful HTML navigations
+warm only the fixed public API-health endpoint; no user URL, token, referrer,
+or cookie is forwarded by the warm-up script. API and POST requests return a retryable JSON error instead and
 are never replayed, so a login or form submission is not duplicated. Render's
 virtual-host routing receives the fixed upstream hostname. Verify this behavior
 with `node --test deploy/cloudflare-pages/gateway.test.mjs`.
