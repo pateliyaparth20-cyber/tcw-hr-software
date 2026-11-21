@@ -511,11 +511,13 @@ export class DataService {
     if(type==='companies'&&recordId&&method==='DELETE'){
       const companyId=id.parse(recordId);
       return this.db.$transaction(async tx=>{
+        await tx.$queryRaw`SELECT id FROM tenants WHERE id=${companyId}::uuid FOR UPDATE`;
         const before=await tx.tenant.findUnique({where:{id:companyId}});if(!before)throw new NotFoundException('Company not found.');
+        if(await tx.billingCheckout.count({where:{tenantId:companyId,kind:'AUTOPAY',state:{notIn:['FAILED','ABANDONED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:['cancelled','completed','expired']}}]}}))throw new BadRequestException('Cancel and reconcile all AutoPay mandates before permanently deleting this company.');
         const owner=await tx.user.findFirst({where:{tenantId:companyId},orderBy:{createdAt:'asc'},select:{email:true}});
         await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${companyId}, true), set_config('app.allow_raw_punch_delete', 'on', true), set_config('app.audit_delete_tenant', ${companyId}, true), set_config('app.allow_audit_delete', 'on', true)`;
         const securityUsers=await tx.user.findMany({where:{tenantId:companyId},select:{id:true}});await tx.userSecurity.deleteMany({where:{userId:{in:securityUsers.map(u=>u.id)}}});
-        // Permanent tenant purge: billing state does not block deletion. Children first, then every company-scoped master.
+        // Close external mandates before purging local billing and company-scoped records.
         for(const model of ['salaryVersion','payrollLoan','loanInstallment','approvalPolicy','approvalRequest','courseEnrollment','assetEvent','employeeTask'] as const)await (tx as any)[model].deleteMany({where:{tenantId:companyId}});
         await tx.supportTicketMessage.deleteMany({where:{tenantId:companyId}});
         await tx.payrollPayout.deleteMany({where:{tenantId:companyId}});
@@ -526,6 +528,8 @@ export class DataService {
         await tx.payrollPayItem.deleteMany({where:{tenantId:companyId}});
         await tx.employeeTaxDeclaration.deleteMany({where:{tenantId:companyId}});
         await tx.leavePolicyDebit.deleteMany({where:{tenantId:companyId}});
+        await tx.billingCharge.deleteMany({where:{tenantId:companyId}});
+        await tx.billingCheckout.deleteMany({where:{tenantId:companyId}});
         await tx.payrollRun.deleteMany({where:{tenantId:companyId}});
         await tx.deviceEmployeeMap.deleteMany({where:{tenantId:companyId}});
         await tx.deviceSyncLog.deleteMany({where:{tenantId:companyId}});
@@ -622,7 +626,7 @@ export class DataService {
         await tx.invoice.update({where:{id:invoice.id},data:{paidAmount,status:paidAmount===invoice.total?'PAID':overdue?'OVERDUE':'PART_PAID'}});
         if(paidAmount===invoice.total){
           const company=await tx.tenant.findUnique({where:{id:invoice.tenantId}});
-          if(company){const nextExpiry=new Date();nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile);delete profile.pendingPaymentProof;delete profile.suspensionReason;await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,profile}});}
+          if(company){const nextExpiry=new Date(Math.max(Date.now(),company.expiresAt?.getTime()??0));nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile),pending=profile.pendingInvoiceId===invoice.id?await tx.plan.findUnique({where:{name:String(profile.pendingPlan??'')}}):null;delete profile.pendingPaymentProof;delete profile.suspensionReason;delete profile.pendingInvoiceId;delete profile.pendingPlan;await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,...(pending?{plan:pending.name,employeeLimit:pending.employeeLimit}:{}),profile}});}
         }
         await audit(tx,ctx,'PAYMENT_RECORDED','payments',payment.id,undefined,payment);return payment;
       });

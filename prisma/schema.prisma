@@ -986,6 +986,7 @@ model Plan {
   id            String   @id @default(uuid()) @db.Uuid
   name          String   @unique
   monthlyPrice  Int
+  yearlyPrice   Int?
   employeeLimit Int
   deviceLimit   Int
   features      String[]
@@ -1350,4 +1351,53 @@ model LeavePolicyDebit {
  @@index([tenantId,employeeId,leaveTypeId,year])
  @@index([tenantId,runId])
  @@map("leave_policy_debits")
+}
+
+model BillingCheckout {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ requestKey String @map("request_key") @db.Uuid
+ gatewayRevision String @map("gateway_revision") @db.Uuid
+ mode String
+ kind String
+ cycle String
+ planName String @map("plan_name")
+ amount Int
+ subtotal Int
+ tax Int
+ snapshot Json
+ providerRef String? @unique @map("provider_ref")
+ providerPlanId String? @map("provider_plan_id")
+ state String @default("CREATING")
+ mandateStatus String? @map("mandate_status")
+ cancelScheduled Boolean @default(false) @map("cancel_scheduled")
+ createdAt DateTime @default(now()) @map("created_at")
+ updatedAt DateTime @updatedAt @map("updated_at")
+ @@unique([tenantId,requestKey])
+ @@index([tenantId,createdAt])
+ @@map("billing_checkouts")
+}
+model BillingCharge {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ checkoutId String @map("checkout_id") @db.Uuid
+ providerPaymentId String @unique @map("provider_payment_id")
+ providerInvoiceId String? @unique @map("provider_invoice_id")
+ invoiceId String? @map("invoice_id") @db.Uuid
+ amount Int
+ mode String
+ periodStart DateTime @map("period_start")
+ periodEnd DateTime @map("period_end")
+ createdAt DateTime @default(now()) @map("created_at")
+ @@index([tenantId,createdAt])
+ @@map("billing_charges")
+}
+model BillingGatewayEvent {
+ id String @id @default(uuid()) @db.Uuid
+ gatewayRevision String @map("gateway_revision") @db.Uuid
+ eventId String @map("event_id")
+ digest String
+ createdAt DateTime @default(now()) @map("created_at")
+ @@unique([gatewayRevision,eventId])
+ @@map("billing_gateway_events")
 }

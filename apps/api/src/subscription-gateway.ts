@@ -1,0 +1,110 @@
+import {BadRequestException,ConflictException,ForbiddenException,NotFoundException,ServiceUnavailableException} from '@nestjs/common';
+import {createHash,createHmac,randomUUID,timingSafeEqual} from 'node:crypto';
+import {z} from 'zod';
+import type {Database} from '../../../packages/database';
+import {audit,platform,requirePermission,tenant,type Context} from './context';
+import {jsonObject,openPayoutCredentials,sealPayoutCredentials} from './payout-connections';
+
+const modeSchema=z.enum(['TEST','LIVE']),id=z.string().uuid(),ref=z.string().regex(/^[a-z]+_[A-Za-z0-9]+$/).max(100);
+const closed=['cancelled','completed','expired'];
+export function billingQuote(price:number,gstPercent:number,inclusive=false){
+ if(!Number.isSafeInteger(price)||price<100||price>100000000)throw new BadRequestException('Configure a plan price between ₹1 and ₹10,00,000.');
+ const subtotal=inclusive?Math.round(price/(1+gstPercent/100)):price,tax=inclusive?price-subtotal:Math.round(price*gstPercent/100);return {subtotal,tax,amount:subtotal+tax};
+}
+export function addBillingMonths(start:Date,months:number){const end=new Date(start),d=end.getUTCDate();end.setUTCDate(1);end.setUTCMonth(end.getUTCMonth()+months);end.setUTCDate(Math.min(d,new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth()+1,0)).getUTCDate()));return end;}
+export function validBillingSignature(body:string|Buffer,signature:string,secret:string){if(!/^[a-f0-9]{64}$/i.test(signature))return false;return timingSafeEqual(Buffer.from(createHmac('sha256',secret).update(body).digest('hex'),'hex'),Buffer.from(signature,'hex'));}
+type Version={mode:'TEST'|'LIVE';keyId:string;ciphertext:string};
+export class SubscriptionGateway{
+ constructor(private db:Database,private transport:typeof fetch=fetch){}
+ async version(revision:string){const row=await this.db.platformSetting.findUnique({where:{key:'billing-gateway-version:'+revision}});if(!row)throw new ServiceUnavailableException('This gateway configuration is unavailable. Contact support.');return row.value as unknown as Version;}
+ async request(version:Version,path:string,body?:any){
+  const credentials=openPayoutCredentials('SUBSCRIPTIONS:'+version.mode,version.ciphertext);
+  let response:Response;try{response=await this.transport('https://api.razorpay.com/v1/'+path,{method:body===undefined?'GET':'POST',redirect:'error',headers:{authorization:'Basic '+Buffer.from(version.keyId+':'+credentials.keySecret).toString('base64'),'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(15000)});}catch{throw new ServiceUnavailableException('Razorpay did not confirm the request. Check status before trying again.');}
+  const result=await response.json().catch(()=>null) as any;if(!response.ok||!result)throw new ServiceUnavailableException('Razorpay: '+String(result?.error?.description??'request unavailable').slice(0,220));return result;
+ }
+ async config(){return jsonObject((await this.db.platformSetting.findUnique({where:{key:'billing-gateway'}}))?.value);}
+ async settings(ctx:Context,method:string,body:any,query:any={}){
+  platform(ctx);requirePermission(ctx,'system',method==='GET'?'VIEW':'EDIT');const config=await this.config();
+  if(method==='GET'){const mode=modeSchema.parse(query.mode??config.mode??'TEST'),revision=config.revisions?.[mode],v=revision?await this.version(revision):null;return {enabled:config.enabled===true,autoPayEnabled:config.autoPayEnabled===true,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};}
+  const input=z.object({mode:modeSchema,enabled:z.boolean(),autoPayEnabled:z.boolean(),keyId:z.string().regex(/^rzp_(test|live)_[A-Za-z0-9]+$/),keySecret:z.string().min(8).max(250).optional(),webhookSecret:z.string().min(16).max(250).optional(),expectedRevision:z.string().uuid().nullable()}).strict().parse(body);
+  if(!input.keyId.startsWith(input.mode==='LIVE'?'rzp_live_':'rzp_test_'))throw new BadRequestException('The key must match the selected Test or Live mode.');
+  return this.db.$transaction(async tx=>{
+   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('tcw-subscription-gateway'))`;
+   const current=jsonObject((await tx.platformSetting.findUnique({where:{key:'billing-gateway'}}))?.value);if((current.revision??null)!==input.expectedRevision)throw new ConflictException('Gateway settings changed in another window. Refresh first.');
+   const oldId=current.revisions?.[input.mode],old=oldId?(await tx.platformSetting.findUnique({where:{key:'billing-gateway-version:'+oldId}}))?.value as unknown as Version:null,previous=old&&old.keyId===input.keyId?openPayoutCredentials('SUBSCRIPTIONS:'+input.mode,old.ciphertext):{};
+   const keySecret=input.keySecret??previous.keySecret,webhookSecret=input.webhookSecret??previous.webhookSecret;if(!keySecret||!webhookSecret)throw new BadRequestException('Enter the API secret and a webhook secret of at least 16 characters.');
+   const revision=randomUUID(),value={mode:input.mode,keyId:input.keyId,ciphertext:sealPayoutCredentials('SUBSCRIPTIONS:'+input.mode,{keySecret,webhookSecret})};
+   await tx.platformSetting.create({data:{key:'billing-gateway-version:'+revision,value}});
+   const next={revision,mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled,revisions:{...current.revisions,[input.mode]:revision}};await tx.platformSetting.upsert({where:{key:'billing-gateway'},create:{key:'billing-gateway',value:next},update:{value:next}});
+   await audit(tx,ctx,'SUBSCRIPTION_GATEWAY_CONFIGURED','system',revision,undefined,{mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled});return {ok:true,revision,webhookUrl:this.webhookUrl(revision)};
+  });
+ }
+ webhookUrl(revision:string){return new URL('/api/billing/razorpay/webhook/'+revision,process.env.WEB_URL??'https://hr.techcyberwarrior.in').toString();}
+ async summary(ctx:Context){const tid=tenant(ctx),c=await this.config(),rows=await this.db.billingCheckout.findMany({where:{tenantId:tid,kind:'AUTOPAY'},orderBy:{createdAt:'desc'},take:8});return {gateway:{configured:c.enabled===true&&!!c.revisions?.[c.mode],mode:c.mode??'TEST',autoPayEnabled:c.autoPayEnabled===true},autopay:rows.map(r=>({id:r.id,planName:r.planName,cycle:r.cycle,mode:r.mode,status:r.mandateStatus??r.state,amount:r.amount,cancelScheduled:r.cancelScheduled,providerRef:r.providerRef,createdAt:r.createdAt})),recentCharges:await this.db.billingCharge.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:12})};}
+ async checkout(ctx:Context,body:any){
+  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.enum(['ONETIME','AUTOPAY']),requestKey:id}).strict().parse(body),config=await this.config();
+  if(!config.enabled||!config.revisions?.[config.mode])throw new ServiceUnavailableException('Razorpay checkout is not connected yet.');if(input.kind==='AUTOPAY'&&!config.autoPayEnabled)throw new ServiceUnavailableException('AutoPay has not been enabled by the administrator.');
+  const revision=String(config.revisions[config.mode]);let version=await this.version(revision);
+  let row=await this.db.$transaction(async tx=>{
+   await tx.$queryRaw`SELECT id FROM tenants WHERE id=${tid}::uuid FOR UPDATE`;
+   const existing=await tx.billingCheckout.findUnique({where:{tenantId_requestKey:{tenantId:tid,requestKey:input.requestKey}}});if(existing){if(existing.planName!==input.plan||existing.cycle!==input.cycle||existing.kind!==input.kind)throw new ConflictException('Checkout request already belongs to another plan.');return existing;}
+   const mandate=await tx.billingCheckout.findFirst({where:{tenantId:tid,kind:'AUTOPAY',mode:config.mode,state:{notIn:['FAILED','ABANDONED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:closed}}]}});if(mandate)throw new ConflictException('An AutoPay mandate already exists. Manage or cancel it before starting another payment.');
+   const [company,plan,payRow,employees,devices]=await Promise.all([tx.tenant.findUniqueOrThrow({where:{id:tid}}),tx.plan.findUnique({where:{name:input.plan}}),tx.platformSetting.findUnique({where:{key:'billing-payment'}}),tx.employee.count({where:{tenantId:tid,deletedAt:null}}),tx.attendanceDevice.count({where:{tenantId:tid,connectionMode:{not:'EMPLOYEE_APP'}}})]);
+   if(company.currency!=='INR')throw new BadRequestException('This gateway supports INR subscription plans.');if(!plan)throw new NotFoundException('Plan not found.');if(employees>plan.employeeLimit||devices>plan.deviceLimit)throw new BadRequestException('This plan is below your current employee or device usage.');
+   const price=input.cycle==='YEARLY'?plan.yearlyPrice:plan.monthlyPrice;if(!price)throw new BadRequestException('The selected billing cycle has no published price yet.');const pay=jsonObject(payRow?.value),rate=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18))),quote=billingQuote(price,rate,pay.pricesIncludeGst===true);
+   return tx.billingCheckout.create({data:{tenantId:tid,requestKey:input.requestKey,gatewayRevision:revision,mode:version.mode,kind:input.kind,cycle:input.cycle,planName:plan.name,...quote,snapshot:{employeeLimit:plan.employeeLimit,deviceLimit:plan.deviceLimit,features:plan.features,gstPercent:rate,pricesIncludeGst:pay.pricesIncludeGst===true,startAt:input.kind==='AUTOPAY'&&company.expiresAt&&company.expiresAt>new Date()?Math.ceil(company.expiresAt.getTime()/1000):null}}});
+  });
+  version=await this.version(row.gatewayRevision);
+  if(row.state!=='CREATING')return this.checkoutPublic(row,version);
+  // Only the creator claims the remote operation. A timeout is not retried automatically.
+  const claimed=await this.db.billingCheckout.updateMany({where:{id:row.id,state:'CREATING'},data:{state:'INITIALIZING'}});if(!claimed.count)throw new ConflictException('Checkout is being prepared. Refresh its status shortly.');
+  try{
+   let remote:any,providerPlanId:string|null=null;
+   if(row.kind==='AUTOPAY'){const p=await this.request(version,'plans',{period:row.cycle==='YEARLY'?'yearly':'monthly',interval:1,item:{name:'TCW '+row.planName+' '+row.cycle,amount:row.amount,currency:'INR'},notes:{checkout_id:row.id}});providerPlanId=p.id;const startAt=jsonObject(row.snapshot).startAt;remote=await this.request(version,'subscriptions',{plan_id:p.id,total_count:row.cycle==='YEARLY'?10:120,quantity:1,customer_notify:false,expire_by:Math.floor(Date.now()/1000)+86400,...(startAt&&startAt>Math.floor(Date.now()/1000)+60?{start_at:startAt}:{}),notes:{checkout_id:row.id,tenant_id:tid}});}
+   else remote=await this.request(version,'orders',{amount:row.amount,currency:'INR',receipt:'TCW'+row.id.replace(/-/g,''),notes:{checkout_id:row.id,tenant_id:tid}});
+   if(typeof remote.id!=='string'||!ref.safeParse(remote.id).success)throw new ServiceUnavailableException('Razorpay returned an invalid checkout identifier.');
+   row=await this.db.billingCheckout.update({where:{id:row.id},data:{providerRef:remote.id,providerPlanId,state:'READY',mandateStatus:row.kind==='AUTOPAY'?String(remote.status??'created'):null}});return this.checkoutPublic(row,version);
+  }catch(e){await this.db.billingCheckout.update({where:{id:row.id},data:{state:'UNCERTAIN'}});throw e;}
+ }
+ checkoutPublic(row:any,version:Version){if(!row.providerRef||!['READY','PAID','TEST_PAID'].includes(row.state))throw new ConflictException('Checkout is awaiting confirmation. Do not start a second mandate; contact support to reconcile it.');return {id:row.id,keyId:version.keyId,mode:row.mode,kind:row.kind,cycle:row.cycle,planName:row.planName,amount:row.amount,subtotal:row.subtotal,tax:row.tax,state:row.state,providerRef:row.providerRef,gstPercent:jsonObject(row.snapshot).gstPercent,startAt:jsonObject(row.snapshot).startAt,totalCycles:row.cycle==='YEARLY'?10:120};}
+ async verify(ctx:Context,body:any){const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({checkoutId:id,paymentId:ref,signature:z.string().length(64)}).strict().parse(body),row=await this.db.billingCheckout.findFirst({where:{id:input.checkoutId,tenantId:tid}});if(!row?.providerRef)throw new NotFoundException('Checkout not found.');const version=await this.version(row.gatewayRevision),credentials=openPayoutCredentials('SUBSCRIPTIONS:'+version.mode,version.ciphertext),signed=row.kind==='AUTOPAY'?input.paymentId+'|'+row.providerRef:row.providerRef+'|'+input.paymentId;if(!validBillingSignature(signed,input.signature,credentials.keySecret))throw new ForbiddenException('Payment signature did not verify.');return this.acceptPayment(row,input.paymentId,version);}
+ async acceptPayment(row:any,paymentId:string,version:Version){
+  const p=await this.request(version,'payments/'+ref.parse(paymentId));if(p.id!==paymentId||p.currency!=='INR'||p.status!=='captured'||p.captured!==true)return {ok:false,status:'PENDING',message:'Payment is not captured yet. Check payment status shortly.'};
+  let periodStart:Date|undefined,periodEnd:Date|undefined,providerInvoiceId:string|null=null;
+  if(row.kind==='ONETIME'){if(p.order_id!==row.providerRef)throw new ForbiddenException('Payment belongs to another order.');}
+  else{
+   if(!p.invoice_id)return {ok:true,status:'MANDATE_AUTHORIZED',message:'Mandate authorization received. Access changes only after a full subscription charge.'};
+   const inv=await this.request(version,'invoices/'+ref.parse(p.invoice_id));if(inv.subscription_id!==row.providerRef||inv.payment_id!==p.id||inv.status!=='paid'||inv.currency!=='INR')throw new ForbiddenException('Payment does not match this subscription invoice.');
+   if(!inv.billing_start||!inv.billing_end)return {ok:true,status:'MANDATE_AUTHORIZED',message:'Mandate authorized; awaiting the first billing-period charge.'};
+   if(inv.amount_paid!==row.amount)throw new BadRequestException('Subscription invoice amount does not match the agreed plan.');providerInvoiceId=inv.id;periodStart=new Date(inv.billing_start*1000);periodEnd=new Date(inv.billing_end*1000);if(!Number.isFinite(+periodEnd)||+periodEnd<=+periodStart)throw new BadRequestException('Invalid subscription billing period.');
+  }
+  if(p.amount!==row.amount||Number(p.amount_refunded??0)>0)throw new BadRequestException('Captured amount does not match this plan or has been refunded.');
+  const result=await this.db.$transaction(async tx=>{
+   await tx.$queryRaw`SELECT id FROM tenants WHERE id=${row.tenantId}::uuid FOR UPDATE`;
+   const old=await tx.billingCharge.findUnique({where:{providerPaymentId:p.id}});if(old){if(old.checkoutId!==row.id)throw new ForbiddenException('Payment already belongs to another checkout.');return {ok:true,status:old.mode==='LIVE'?'PAID':'TEST_PAID',duplicate:true};}
+   const company=await tx.tenant.findUniqueOrThrow({where:{id:row.tenantId}}),captured=new Date(Number(p.created_at)*1000);if(!Number.isFinite(+captured))throw new BadRequestException('Invalid payment time.');
+   const start=periodStart??new Date(Math.max(+captured,company.expiresAt?.getTime()??0)),end=periodEnd??addBillingMonths(start,row.cycle==='YEARLY'?12:1);let invoiceId:string|null=null;
+   if(row.mode==='LIVE'){
+    const invoice=await tx.invoice.create({data:{tenantId:row.tenantId,number:'TCW-'+p.id,amount:row.subtotal,tax:row.tax,total:row.amount,paidAmount:row.amount,status:'PAID',dueDate:captured}});invoiceId=invoice.id;await tx.payment.create({data:{tenantId:row.tenantId,invoiceId:invoice.id,amount:row.amount,reference:'RAZORPAY:'+p.id,date:captured}});
+    const profile=jsonObject(company.profile);const last=Number(profile.gatewayLastPaidPeriodStart??0);if(+start>=last){delete profile.suspensionReason;delete profile.billingPreviousStatus;delete profile.billingSuspendedAt;delete profile.pendingPaymentProof;delete profile.pendingPlan;profile.gatewayLastPaidPeriodStart=+start;profile.subscriptionCycle=row.cycle;await tx.tenant.update({where:{id:company.id},data:{status:company.status==='ARCHIVED'||company.status==='SUSPENDED'&&jsonObject(company.profile).suspensionReason!=='BILLING'?company.status:'ACTIVE',plan:row.planName,employeeLimit:jsonObject(row.snapshot).employeeLimit,expiresAt:new Date(Math.max(company.expiresAt?.getTime()??0,+end)),profile}});}
+   }
+   await tx.billingCharge.create({data:{tenantId:row.tenantId,checkoutId:row.id,providerPaymentId:p.id,providerInvoiceId,invoiceId,amount:row.amount,mode:row.mode,periodStart:start,periodEnd:end}});await tx.billingCheckout.update({where:{id:row.id},data:{state:row.mode==='LIVE'?'PAID':'TEST_PAID'}});
+   await tx.auditLog.create({data:{tenantId:row.tenantId,action:row.mode==='LIVE'?'SUBSCRIPTION_PAYMENT_VERIFIED':'SUBSCRIPTION_TEST_PAYMENT_VERIFIED',entity:'billing',entityId:row.id,after:{paymentId:p.id,amount:row.amount,mode:row.mode}}});return {ok:true,status:row.mode==='LIVE'?'PAID':'TEST_PAID',message:row.mode==='LIVE'?'Payment verified and subscription updated.':'Test payment verified. Your production subscription has not changed.'};
+  },{timeout:30000});
+  if(row.kind==='AUTOPAY')await this.syncMandate(row,version);return result;
+ }
+ async syncMandate(row:any,version:Version){return this.db.$transaction(async tx=>{await tx.$queryRaw`SELECT id FROM tenants WHERE id=${row.tenantId}::uuid FOR UPDATE`;const s=await this.request(version,'subscriptions/'+ref.parse(row.providerRef));if(s.id!==row.providerRef)throw new BadRequestException('Invalid mandate response.');return tx.billingCheckout.update({where:{id:row.id},data:{mandateStatus:String(s.status),...(closed.includes(s.status)?{cancelScheduled:false}:{})}});},{timeout:22000});}
+ async reconcile(ctx:Context,body:any){const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({checkoutId:id}).strict().parse(body),row=await this.db.billingCheckout.findFirst({where:{id:input.checkoutId,tenantId:tid}});if(!row?.providerRef)throw new NotFoundException('Checkout is not ready.');const version=await this.version(row.gatewayRevision);let items:any[]=[];if(row.kind==='ONETIME')items=(await this.request(version,'orders/'+ref.parse(row.providerRef)+'/payments')).items??[];else{await this.syncMandate(row,version);for(let skip=0;skip<200;skip+=100){const list=await this.request(version,'invoices?subscription_id='+encodeURIComponent(row.providerRef)+'&count=100&skip='+skip);items.push(...(list.items??[]).filter((i:any)=>i.status==='paid'&&i.payment_id).map((i:any)=>({id:i.payment_id})));if((list.items??[]).length<100)break;}}
+  let result:any={ok:true,status:'PENDING',message:'No captured subscription payment yet.'};for(const p of items){if(await this.db.billingCharge.findUnique({where:{providerPaymentId:p.id}})){result={ok:true,status:row.mode==='LIVE'?'PAID':'TEST_PAID'};continue;}result=await this.acceptPayment(row,p.id,version);}return result;
+ }
+ async cancel(ctx:Context,body:any){const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const {checkoutId}=z.object({checkoutId:id}).strict().parse(body),row=await this.db.billingCheckout.findFirst({where:{id:checkoutId,tenantId:tid,kind:'AUTOPAY'}});if(!row?.providerRef)throw new NotFoundException('AutoPay mandate not found.');const version=await this.version(row.gatewayRevision),fresh=await this.syncMandate(row,version);if(closed.includes(fresh.mandateStatus??''))return {ok:true,message:'This mandate has already ended.'};const cancelAtEnd=['active','authenticated','pending','halted','paused'].includes(fresh.mandateStatus??'');await this.request(version,'subscriptions/'+ref.parse(row.providerRef)+'/cancel',{cancel_at_cycle_end:cancelAtEnd?1:0});const after=await this.syncMandate(row,version);await this.db.billingCheckout.update({where:{id:row.id},data:{cancelScheduled:!closed.includes(after.mandateStatus??'')}});await audit(this.db,ctx,'SUBSCRIPTION_AUTOPAY_CANCEL_REQUESTED','billing',row.id);return {ok:true,message:'AutoPay cancellation confirmed by Razorpay. Paid access continues until its existing expiry.'};}
+ async webhook(revision:string,raw:Buffer,signature:string,eventId:string){
+  id.parse(revision);const version=await this.version(revision),credentials=openPayoutCredentials('SUBSCRIPTIONS:'+version.mode,version.ciphertext);if(!raw?.length||!validBillingSignature(raw,signature,credentials.webhookSecret))throw new ForbiddenException('Invalid webhook signature.');
+  const digest=createHash('sha256').update(raw).digest('hex'),eid=eventId||digest;if(eid.length>200)throw new BadRequestException('Invalid event identifier.');const existing=await this.db.billingGatewayEvent.findUnique({where:{gatewayRevision_eventId:{gatewayRevision:revision,eventId:eid}}});if(existing){if(existing.digest!==digest)throw new ForbiddenException('Webhook event identifier collision.');return {ok:true,duplicate:true};}
+  const event=JSON.parse(raw.toString('utf8')),payment=event.payload?.payment?.entity,sub=event.payload?.subscription?.entity;let row:any=null;
+  if(sub?.id)row=await this.db.billingCheckout.findFirst({where:{providerRef:String(sub.id),gatewayRevision:revision}});else if(payment?.order_id)row=await this.db.billingCheckout.findFirst({where:{providerRef:String(payment.order_id),gatewayRevision:revision}});
+  if(!row&&payment?.invoice_id){const inv=await this.request(version,'invoices/'+ref.parse(payment.invoice_id));if(inv.subscription_id)row=await this.db.billingCheckout.findFirst({where:{providerRef:inv.subscription_id,gatewayRevision:revision}});}
+  if(row){if(['payment.captured','subscription.charged','invoice.paid'].includes(event.event)&&payment?.id){const result=await this.acceptPayment(row,ref.parse(payment.id),version);if(result.status==='PENDING')throw new ServiceUnavailableException('Payment capture is still pending. Retry this webhook.');}if(row.kind==='AUTOPAY')await this.syncMandate(row,version);}
+  await this.db.billingGatewayEvent.upsert({where:{gatewayRevision_eventId:{gatewayRevision:revision,eventId:eid}},create:{gatewayRevision:revision,eventId:eid,digest},update:{}});return {ok:true};
+ }
+}

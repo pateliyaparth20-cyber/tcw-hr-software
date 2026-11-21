@@ -1,3 +1,4 @@
+import {SubscriptionGateway} from './subscription-gateway';
 import {statutoryImport,statutoryColumns} from './statutory-import';
 import {WorkforceSettings} from './workforce-settings';
 import 'reflect-metadata';
@@ -60,12 +61,13 @@ function allowedAppOrigin(origin:string|undefined){
   return configured.includes(origin)||localLanOrigin(origin);
 }
 export class Api {
-  auth:AuthService;data:DataService;flows:Workflows;files:FilesService;biometric:BiometricService;payouts:PayoutService;io?:Server;
+  billing:SubscriptionGateway;auth:AuthService;data:DataService;flows:Workflows;files:FilesService;biometric:BiometricService;payouts:PayoutService;io?:Server;
   releases:Releases;
-  constructor(public db:Database,releaseSource?:()=>Promise<ReleaseCandidate>){this.auth=new AuthService(db);this.data=new DataService(db);this.flows=new Workflows(db);this.files=new FilesService(db);this.biometric=new BiometricService(db);this.payouts=new PayoutService(db);this.releases=new Releases(db,releaseSource);}
+  constructor(public db:Database,releaseSource?:()=>Promise<ReleaseCandidate>){this.billing=new SubscriptionGateway(db);this.auth=new AuthService(db);this.data=new DataService(db);this.flows=new Workflows(db);this.files=new FilesService(db);this.biometric=new BiometricService(db);this.payouts=new PayoutService(db);this.releases=new Releases(db,releaseSource);}
   async handle(req:Request,res:Response){
     const parts=req.path.replace(/^\/api\/?/,'').split('/').filter(Boolean),[resource,key,action]=parts;
     const method=req.method;
+    if(resource==='billing'&&key==='razorpay'&&action==='webhook'&&parts[3]&&method==='POST')return this.billing.webhook(parts[3],(req as any).rawBody,String(req.headers['x-razorpay-signature']??''),String(req.headers['x-razorpay-event-id']??''));
     if(resource==='health'&&method==='GET')return {status:'ok',service:'tcw-hr-api'};
     if(resource==='version'&&method==='GET')return {version:runningRelease(),release:process.env.APP_VERSION??process.env.npm_package_version??'1.3.0',channel:process.env.APP_RELEASE_CHANNEL??'Production'};
     if(resource==='releases'&&key==='deployable'&&method==='GET')return this.releases.deployable();
@@ -117,7 +119,12 @@ export class Api {
       const input=z.object({endpoint:z.string().url().max(4000)}).strict().parse(body);
       return deletePushSubscription(this.db,ctx.user.id,input.endpoint);
     }
-    if(resource==='subscription'&&method==='GET'){
+    if(resource==='system'&&key==='billing-gateway')return this.billing.settings(ctx,method,body,req.query);
+    if(resource==='subscription'&&key==='gateway-checkout'&&method==='POST')return this.billing.checkout(ctx,body);
+    if(resource==='subscription'&&key==='gateway-verify'&&method==='POST')return this.billing.verify(ctx,body);
+    if(resource==='subscription'&&key==='gateway-status'&&method==='POST')return this.billing.reconcile(ctx,body);
+    if(resource==='subscription'&&key==='autopay-cancel'&&method==='POST')return this.billing.cancel(ctx,body);
+    if(resource==='subscription'&&!key&&method==='GET'){
       const tid=tenant(ctx);requirePermission(ctx,'company','VIEW');const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}});const [invoices,plans,employeesUsed,devicesUsed]=await Promise.all([
         this.db.invoice.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:24}),
         this.db.plan.findMany({orderBy:{monthlyPrice:'asc'}}),
@@ -127,11 +134,12 @@ export class Api {
       const payRow=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
-      const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18));
-      return {company,plans,invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent};
+      const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)));
+      return {...await this.billing.summary(ctx),company,plans,invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
+      if(await this.db.billingCheckout.count({where:{tenantId:tid,mode:'LIVE',kind:'AUTOPAY',state:{notIn:['FAILED','ABANDONED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:['cancelled','completed','expired']}}]}}))throw new ConflictException('Cancel the existing AutoPay mandate before starting another subscription payment.');
       const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),mode:z.enum(['GATEWAY','UPI']).default('UPI')}).strict().parse(body);
       const [company,plan,payRow]=await Promise.all([
         this.db.tenant.findUniqueOrThrow({where:{id:tid}}),
@@ -142,22 +150,19 @@ export class Api {
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const base=String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim();
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
-      const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18));
-      if(input.mode==='GATEWAY'&&!base)throw new ServiceUnavailableException('Card/online gateway is not configured yet.');
+      const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)));
+      if(input.mode==='GATEWAY')throw new BadRequestException('Use the verified Razorpay checkout flow for online payments.');
       if(input.mode==='UPI'&&!upiId)throw new ServiceUnavailableException('UPI payment is not configured yet.');
-      const tax=Math.round(plan.monthlyPrice*gstPercent/100),total=plan.monthlyPrice+tax;
-      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['ISSUED','OVERDUE','PART_PAID']},amount:plan.monthlyPrice,tax,total},orderBy:{createdAt:'desc'}});
-      const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount:plan.monthlyPrice,tax,total,dueDate:new Date(new Date().toISOString().slice(0,10))}});
-      await this.db.tenant.update({where:{id:tid},data:{plan:plan.name,employeeLimit:plan.employeeLimit,profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString(),paymentMode:input.mode,pendingInvoiceId:invoice.id}}});
+      const amount=pay.pricesIncludeGst===true?Math.round(plan.monthlyPrice/(1+gstPercent/100)):plan.monthlyPrice,tax=pay.pricesIncludeGst===true?plan.monthlyPrice-amount:Math.round(amount*gstPercent/100),total=amount+tax;
+      const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['DRAFT','ISSUED','OVERDUE','PART_PAID']},amount,tax,total},orderBy:{createdAt:'desc'}});
+      const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount,tax,total,status:'DRAFT',dueDate:new Date(new Date().toISOString().slice(0,10))}});
+      await this.db.tenant.update({where:{id:tid},data:{profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString(),paymentMode:input.mode,pendingInvoiceId:invoice.id}}});
       await audit(this.db,ctx,'SUBSCRIPTION_PAYMENT_STARTED','tenants',tid,undefined,{plan:plan.name,invoiceId:invoice.id,total:invoice.total,mode:input.mode});
-      if(input.mode==='GATEWAY'){
-        const checkoutUrl=`${base}${base.includes('?')?'&':'?'}invoice=${encodeURIComponent(invoice.id)}&tenant=${encodeURIComponent(tid)}&plan=${encodeURIComponent(plan.name)}&amount=${invoice.total}`;
-        return {ok:true,invoice,plan,mode:'GATEWAY',checkoutUrl};
-      }
-      const amount=(invoice.total/100).toFixed(2);
-      const upiUrl=`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent('TCW HR '+invoice.number)}`;
+
+      const upiAmount=(invoice.total/100).toFixed(2);
+      const upiUrl=`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(upiAmount)}&cu=INR&tn=${encodeURIComponent('TCW HR '+invoice.number)}`;
       const qrUrl=`https://quickchart.io/qr?size=280&margin=1&text=${encodeURIComponent(upiUrl)}`;
-      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{payeeName},amount,gstPercent,breakdown:{subtotal:invoice.amount,tax:invoice.tax,total:invoice.total}};
+      return {ok:true,invoice,plan,mode:'UPI',upiUrl,qrUrl,upi:{payeeName},amount:upiAmount,gstPercent,breakdown:{subtotal:invoice.amount,tax:invoice.tax,total:invoice.total}};
     }
     if(resource==='subscription'&&key==='manual-payment'&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
@@ -380,8 +385,8 @@ export class Api {
     }
     if(resource==='system'&&key==='payment-settings'){
       platform(ctx);
-      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {upiId:String(value.upiId??process.env.PAYMENT_UPI_ID??''),payeeName:String(value.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software'),gstPercent:Number(value.gstPercent??process.env.PAYMENT_GST_PERCENT??18)||18};}
-      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({upiId:z.string().trim().max(120),payeeName:z.string().trim().min(1).max(120),gstPercent:z.number().min(0).max(100).default(18)}).strict().parse(body);if(input.upiId&&!/^[A-Za-z0-9._-]{2,}@[A-Za-z0-9.-]{2,}$/.test(input.upiId))throw new BadRequestException('Enter a valid UPI ID, for example name@bank.');const row=await this.db.platformSetting.upsert({where:{key:'billing-payment'},update:{value:input},create:{key:'billing-payment',value:input}});await audit(this.db,ctx,'PAYMENT_SETTINGS_UPDATED','system');return row.value;}
+      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'billing-payment'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {pricesIncludeGst:value.pricesIncludeGst===true,upiId:String(value.upiId??process.env.PAYMENT_UPI_ID??''),payeeName:String(value.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software'),gstPercent:Number(value.gstPercent??process.env.PAYMENT_GST_PERCENT??18)};}
+      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({upiId:z.string().trim().max(120),payeeName:z.string().trim().min(1).max(120),gstPercent:z.number().min(0).max(100).default(18),pricesIncludeGst:z.boolean().default(false)}).strict().parse(body);if(input.upiId&&!/^[A-Za-z0-9._-]{2,}@[A-Za-z0-9.-]{2,}$/.test(input.upiId))throw new BadRequestException('Enter a valid UPI ID, for example name@bank.');const row=await this.db.platformSetting.upsert({where:{key:'billing-payment'},update:{value:input},create:{key:'billing-payment',value:input}});await audit(this.db,ctx,'PAYMENT_SETTINGS_UPDATED','system');return row.value;}
       throw new NotFoundException();
     }
     if(resource==='system'&&key==='company-update'){
@@ -594,7 +599,7 @@ export async function createApp(db:Database,releaseSource?:()=>Promise<ReleaseCa
   const api=new Api(db,releaseSource);
   @Module({controllers:[RootController,BiomaxPushController],providers:[{provide:'API',useValue:api}]})class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:process.env.NODE_ENV==='test'?false:['error','warn','log'],bodyParser:false});
-  app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb'}));
+  app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb',verify:(req,_res,buffer)=>{if(req.url?.startsWith('/api/billing/razorpay/webhook/'))(req as any).rawBody=Buffer.from(buffer);}}));
   // Edge Nginx adds an independent shared limit. This cap protects a local instance.
   const windows=new Map<string,{start:number;count:number}>();
   // The isolated browser suite shares one loopback IP across every synthetic user.

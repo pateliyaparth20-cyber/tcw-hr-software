@@ -10,7 +10,7 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
   const target=new URL(`/api/${(path??[]).join('/')}`,apiBase);
   target.search=incoming.search;
   const headers=new Headers();
-  for(const name of ['accept','content-type','cookie','user-agent','x-csrf-token','x-forwarded-for','x-tcw-local-session']){
+  for(const name of ['accept','content-type','cookie','user-agent','x-csrf-token','x-forwarded-for','x-tcw-local-session','x-razorpay-signature','x-razorpay-event-id']){
     const value=request.headers.get(name);if(value)headers.set(name,value);
   }
   headers.set('origin',request.headers.get('origin')??incoming.origin);
