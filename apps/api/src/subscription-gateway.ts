@@ -8,6 +8,7 @@ import {jsonObject,openPayoutCredentials,sealPayoutCredentials} from './payout-c
 const modeSchema=z.enum(['TEST','LIVE']),id=z.string().uuid(),ref=z.string().regex(/^[a-z]+_[A-Za-z0-9]+$/).max(100);
 const closed=['cancelled','completed','expired'];
 export function billingQuote(price:number,gstPercent:number,inclusive=false){
+ if(!Number.isFinite(gstPercent)||gstPercent<0||gstPercent>100)throw new BadRequestException('Configure a valid GST percentage before checkout.');
  if(!Number.isSafeInteger(price)||price<100||price>100000000)throw new BadRequestException('Configure a plan price between ₹1 and ₹10,00,000.');
  const subtotal=inclusive?Math.round(price/(1+gstPercent/100)):price,tax=inclusive?price-subtotal:Math.round(price*gstPercent/100);return {subtotal,tax,amount:subtotal+tax};
 }
@@ -25,7 +26,7 @@ export class SubscriptionGateway{
  async config(){return jsonObject((await this.db.platformSetting.findUnique({where:{key:'billing-gateway'}}))?.value);}
  async settings(ctx:Context,method:string,body:any,query:any={}){
   platform(ctx);requirePermission(ctx,'system',method==='GET'?'VIEW':'EDIT');const config=await this.config();
-  if(method==='GET'){const mode=modeSchema.parse(query.mode??config.mode??'TEST'),revision=config.revisions?.[mode],v=revision?await this.version(revision):null;return {enabled:config.enabled===true,autoPayEnabled:config.autoPayEnabled===true,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};}
+  if(method==='GET'){const mode=modeSchema.parse(query.mode??config.mode??'TEST'),revision=config.revisions?.[mode],v=revision?await this.version(revision):null;return {enabled:config.enabled===true,autoPayEnabled:config.autoPayEnabled===true,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,webhookVerified:!!revision&&!!await this.db.billingGatewayEvent.count({where:{gatewayRevision:revision}}),revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};}
   const input=z.object({mode:modeSchema,enabled:z.boolean(),autoPayEnabled:z.boolean(),keyId:z.string().regex(/^rzp_(test|live)_[A-Za-z0-9]+$/),keySecret:z.string().min(8).max(250).optional(),webhookSecret:z.string().min(16).max(250).optional(),expectedRevision:z.string().uuid().nullable()}).strict().parse(body);
   if(!input.keyId.startsWith(input.mode==='LIVE'?'rzp_live_':'rzp_test_'))throw new BadRequestException('The key must match the selected Test or Live mode.');
   return this.db.$transaction(async tx=>{
@@ -33,10 +34,11 @@ export class SubscriptionGateway{
    const current=jsonObject((await tx.platformSetting.findUnique({where:{key:'billing-gateway'}}))?.value);if((current.revision??null)!==input.expectedRevision)throw new ConflictException('Gateway settings changed in another window. Refresh first.');
    const oldId=current.revisions?.[input.mode],old=oldId?(await tx.platformSetting.findUnique({where:{key:'billing-gateway-version:'+oldId}}))?.value as unknown as Version:null,previous=old&&old.keyId===input.keyId?openPayoutCredentials('SUBSCRIPTIONS:'+input.mode,old.ciphertext):{};
    const keySecret=input.keySecret??previous.keySecret,webhookSecret=input.webhookSecret??previous.webhookSecret;if(!keySecret||!webhookSecret)throw new BadRequestException('Enter the API secret and a webhook secret of at least 16 characters.');
-   const revision=randomUUID(),value={mode:input.mode,keyId:input.keyId,ciphertext:sealPayoutCredentials('SUBSCRIPTIONS:'+input.mode,{keySecret,webhookSecret})};
-   await tx.platformSetting.create({data:{key:'billing-gateway-version:'+revision,value}});
-   const next={revision,mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled,revisions:{...current.revisions,[input.mode]:revision}};await tx.platformSetting.upsert({where:{key:'billing-gateway'},create:{key:'billing-gateway',value:next},update:{value:next}});
-   await audit(tx,ctx,'SUBSCRIPTION_GATEWAY_CONFIGURED','system',revision,undefined,{mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled});return {ok:true,revision,webhookUrl:this.webhookUrl(revision)};
+   const reuse=oldId&&old?.keyId===input.keyId&&!input.keySecret&&!input.webhookSecret,revision=reuse?String(oldId):randomUUID(),settingsRevision=randomUUID();
+   if(!reuse)await tx.platformSetting.create({data:{key:'billing-gateway-version:'+revision,value:{mode:input.mode,keyId:input.keyId,ciphertext:sealPayoutCredentials('SUBSCRIPTIONS:'+input.mode,{keySecret,webhookSecret})}}});
+   if(input.autoPayEnabled&&!await tx.billingGatewayEvent.count({where:{gatewayRevision:revision}}))throw new BadRequestException('Save credentials with AutoPay off, register this webhook in Razorpay and send a test event, then enable AutoPay.');
+   const next={revision:settingsRevision,mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled,revisions:{...current.revisions,[input.mode]:revision}};await tx.platformSetting.upsert({where:{key:'billing-gateway'},create:{key:'billing-gateway',value:next},update:{value:next}});
+   await audit(tx,ctx,'SUBSCRIPTION_GATEWAY_CONFIGURED','system',revision,undefined,{mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled});return {ok:true,revision:settingsRevision,webhookUrl:this.webhookUrl(revision)};
   });
  }
  webhookUrl(revision:string){return new URL('/api/billing/razorpay/webhook/'+revision,process.env.WEB_URL??'https://hr.techcyberwarrior.in').toString();}

@@ -6,12 +6,12 @@ This receives customer subscription payments. Company salary payouts retain thei
 
 1. Super Admin → Plans: set the monthly price, optional yearly price, employee/device limits and features. Values are entered in rupees. A blank yearly price leaves yearly checkout unavailable.
 2. Super Admin → Settings → UPI receiving account: set the GST percentage and whether published prices include GST. A zero GST rate is supported. Direct UPI remains a separately verified monthly payment option.
-3. Settings → Razorpay checkout & UPI AutoPay: choose **Test**, enter its Key ID, API Secret and a webhook secret of at least 16 characters, and save. Secrets are encrypted with the existing `CONFIG_ENCRYPTION_KEY` and never returned to the browser or audit log.
+3. Settings → Razorpay checkout & UPI AutoPay: choose **Test**, enter its Key ID, API Secret and a webhook secret of at least 16 characters, and save with AutoPay off. Secrets are encrypted with the existing `CONFIG_ENCRYPTION_KEY` and never returned to the browser or audit log.
 4. Copy the configuration-specific webhook URL into the same mode in the Razorpay dashboard. Configure the same webhook secret and these events: `payment.captured`, `payment.failed`, `subscription.authenticated`, `subscription.activated`, `subscription.charged`, `subscription.updated`, `subscription.pending`, `subscription.halted`, `subscription.cancelled`, `subscription.paused`, `subscription.resumed`, `subscription.completed`.
-5. Enable Subscriptions and UPI AutoPay on the merchant account, including its required checkout features. Test checkout, mandate authorization, a successful cycle, duplicate webhook delivery, failure and cancellation.
+5. Send a test event from Razorpay and confirm “Signed webhook received” in TCW settings. Enable Subscriptions and UPI AutoPay on the merchant account, including its required checkout features. Test checkout, mandate authorization, a successful cycle, duplicate webhook delivery, failure and cancellation.
 6. Enter the corresponding **Live** credentials and configure its separate webhook URL before enabling live checkout. Enabling AutoPay only offers the option; every customer must authorize their mandate through Razorpay and their payment app.
 
-Each saved configuration has an immutable credential version and webhook URL. Retain old webhook routes and usable API credentials for existing mandates and retries. Secret rotation or merchant account changes require planning for those existing mandates.
+Each credential configuration has an immutable version and webhook URL. Enabling/disabling checkout or AutoPay retains that URL; changing secrets or keys creates a new one. AutoPay requires a valid signed webhook test before it can be offered. Retain old webhook routes and usable API credentials for existing mandates and retries. Secret rotation or merchant account changes require planning for those existing mandates.
 
 ## Behavior
 
