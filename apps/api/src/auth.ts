@@ -80,7 +80,10 @@ export class AuthService {
       const row=await this.db.loginAttempt.upsert({where:{key},create:{key,failures:1},update:{failures:{increment:1}}});
       if(row.failures>=5)await this.db.loginAttempt.update({where:{key},data:{lockedUntil:new Date(Date.now()+15*60000),failures:0}});
       await this.db.auditLog.create({data:{tenantId:company?.id,action:'LOGIN_FAILED',entity:'auth',ip:req.ip}});
-      throw new UnauthorizedException('Email, password, or company code is incorrect.');
+      if(input.companyCode&&!company)throw new UnauthorizedException('Company Code not found. Check the code provided by your HR team.');
+      if(!candidates.length)throw new UnauthorizedException(input.companyCode?'User ID or email not found in this company. Check your Company Code and User ID or email.':'Admin User ID or email not found. Check your administrator sign-in details.');
+      if(!candidates.some(candidate=>candidate.active))throw new ForbiddenException('This user account is disabled. Contact your HR team or administrator.');
+      throw new UnauthorizedException('Incorrect password. Try again or use Forgot password to reset it.');
     }
     if(company){await syncCompanyAccess(this.db,company.id);company=await this.db.tenant.findUnique({where:{id:company.id}});}
     if(company&&company.status==='ARCHIVED')throw new ForbiddenException('This company account has been archived. Contact your software administrator.');

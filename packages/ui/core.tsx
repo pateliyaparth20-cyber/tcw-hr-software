@@ -6,6 +6,7 @@ import {X,LoaderCircle,AlertCircle,Check,Inbox,ChevronRight,Clock3} from 'lucide
 import {Field,Row,readable} from './config';
 import {avatarInitials,avatarPhotoSrc} from './avatar';
 import {liveRefreshInterval,shouldRefreshForServerChange} from './live-refresh';
+import {responseErrorMessage} from './api-error';
 export type Session={user:Row;csrf:string;company?:Row;proxy?:Row};
 export function notificationTarget(row:Row){
   const explicit=String(row.target??row.url??'').trim();
@@ -151,13 +152,12 @@ export async function api(path:string,method='GET',data?:any,csrf?:string){
     await sleep(350);
   }
   if(!response){
-    const message=lastError?.name==='AbortError'?(path.startsWith('auth/')?'The server is taking too long to respond. Please try again.':'The server did not respond in time. Please try again.'):'Unable to reach TCW HR Software. Please check your connection and try again.';
+    const message=['AbortError','TimeoutError'].includes(lastError?.name)?(path.startsWith('auth/')?'The server is taking too long to respond. Please try again.':'The server did not respond in time. Please try again.'):'Unable to reach TCW HR Software. Please check your connection and try again.';
     if(typeof window!=='undefined'&&!path.startsWith('agent'))window.dispatchEvent(new CustomEvent('tcw-app-error',{detail:{path,status:0,message}}));
     throw new Error(message);
   }
   if(!response.ok){
-    let message='The request failed.';
-    try{message=(await response.json()).message??message;}catch{}
+    const message=await responseErrorMessage(response,path);
     if(path==='auth/logout')clearLocalSessionState();
     if(response.status===401&&!path.startsWith('auth/')){
       clearLocalSessionState();
