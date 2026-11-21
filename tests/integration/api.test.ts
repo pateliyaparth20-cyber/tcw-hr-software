@@ -128,7 +128,7 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
    await db.asset.deleteMany({where:{tenantId:alphaTenant,assetTag:{startsWith:'EXPORT-ASSET-'}}});await db.asset.delete({where:{id:foreign.id}});
   });
   await t.test('payroll prepare, reopen and finalization use one safe workflow',async()=>{
-   assert.equal((await call('payroll','POST',{month:'2026-10'},alpha)).status,400);
+   assert.equal((await call('payroll','POST',{month:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'}).format(new Date())},alpha)).status,400);
    const prior=await db.payrollRun.create({data:{tenantId:alphaTenant,month:'2026-07',status:'LOCKED'}});
    const excluded=await db.employee.create({data:{tenantId:alphaTenant,employeeCode:'FUTURE',firstName:'Future',lastName:'Employee',email:'future@example.test',joiningDate:new Date('2099-01-01')}});
    const includedAdjustment=await db.payrollAdjustment.create({data:{tenantId:alphaTenant,originalRunId:prior.id,employeeId:a.data.id,targetMonth:'2026-08',amount:100,reason:'Included in payroll'}});

@@ -1,9 +1,11 @@
+import {employeePolicyThresholds,leaveEntitlement,leaveUsage,workforceConfig} from './workforce-settings';
+import {policyAttendanceStatus,effectivePolicy,type LeaveSettings,type PayrollSettings} from '../../../packages/workforce-rules';
 import {createBiometricChallenge,phoneBiometricStatus,registerBiometricDevice,reviewBiometricDevices,verifyBiometricPunch} from './phone-biometric';
 import {closeFieldSessions,fieldPointSchema,validateFieldCheckIn} from './field-work';
 import {challanPaymentStatus} from './salary-challan';
 import {approvalEnabled,approvalRows,createApproval,reviewApproval} from './approvals';
 import {updateManualSalary} from './manual-payroll';
-import {lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
+import {lockSalaryInputs,lockPayrollPeriod,lockPayrollRun} from './payroll-lock';
 import {BadRequestException,ForbiddenException,NotFoundException,ConflictException} from '@nestjs/common';
 import {z} from 'zod';
 import type {Database} from '../../../packages/database';
@@ -145,8 +147,9 @@ export class Workflows {
         }
         const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
         const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
-        const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
-        const status=punchedAttendanceStatusAtMoment(calculated.status,new Date(),shiftEnd,effectivePunches.length>0),attendanceValues={...calculated,status},reportDate=new Date(day),payableUnits=attendancePayableUnits(status,calculated.workMinutes,shift.halfDayMinutes);
+        const policyThresholds=await employeePolicyThresholds(tx,tid,employeeId,day,shift);
+        const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,...policyThresholds,overtimeAfterMinutes:shift.overtimeAfterMinutes});
+        const status=policyAttendanceStatus(punchedAttendanceStatusAtMoment(calculated.status,new Date(),shiftEnd,effectivePunches.length>0),calculated.workMinutes,policyThresholds.halfDayMinutes,policyThresholds.policyEnabled),attendanceValues={...calculated,status},reportDate=new Date(day),payableUnits=attendancePayableUnits(status,calculated.workMinutes,policyThresholds.halfDayMinutes);
         await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId,date:reportDate}},create:{tenantId:tid,employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...attendanceValues},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...attendanceValues}});
         await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});
         await tx.deviceSyncLog.create({data:{tenantId:tid,deviceId:mobileDevice.id,action:biometric?'PHONE_BIOMETRIC_PUNCH':'FACE_SCAN_PUNCH',message:`Employee ${biometric?'phone biometric':'Face Scan'} ${punchType} recorded.`,details:{employeeId,punchType,punchTime,verificationType}}});
@@ -216,8 +219,9 @@ export class Workflows {
       const row=await tx.attendancePunch.create({data:{tenantId:tid,employeeId:input.employeeId,sourceId:input.sourceId,punchTime:input.punchTime,punchType:input.punchType,verificationType:'MANUAL',rawPayload:{...body,source:'MANUAL',actorId:ctx.user.id}}});
       const punches=await tx.attendancePunch.findMany({where:{tenantId:tid,employeeId:input.employeeId,punchTime:{gte:start,lt:end}},orderBy:{punchTime:'asc'}});const effectivePunches=attendanceCalculationPunches(punches);
       const shiftEnd=zonedMinute(day,night?1440+shift.endMinute:shift.endMinute,shift.timezone),breakWindow=shiftBreakWindow(day,shift);
-      const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,fullDayMinutes:shift.fullDayMinutes,halfDayMinutes:shift.halfDayMinutes,overtimeAfterMinutes:shift.overtimeAfterMinutes});
-      const status=punchedAttendanceStatusAtMoment(calculated.status,new Date(),shiftEnd,effectivePunches.length>0),attendanceValues={...calculated,status},reportDate=new Date(day),payableUnits=attendancePayableUnits(status,calculated.workMinutes,shift.halfDayMinutes);
+      const policyThresholds=await employeePolicyThresholds(tx,tid,input.employeeId,day,shift);
+      const calculated=calculateAttendance(effectivePunches.map(p=>({time:p.punchTime,type:p.punchType as 'IN'|'OUT'})),{shiftStart:zonedMinute(day,shift.startMinute,shift.timezone),shiftEnd,breakStart:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.start,breakEnd:attendancePunchDrivenBreaks(shift,effectivePunches)?undefined:breakWindow?.end,graceMinutes:shift.graceMinutes,earlyOutGraceMinutes:shift.earlyOutGraceMinutes,...policyThresholds,overtimeAfterMinutes:shift.overtimeAfterMinutes});
+      const status=policyAttendanceStatus(punchedAttendanceStatusAtMoment(calculated.status,new Date(),shiftEnd,effectivePunches.length>0),calculated.workMinutes,policyThresholds.halfDayMinutes,policyThresholds.policyEnabled),attendanceValues={...calculated,status},reportDate=new Date(day),payableUnits=attendancePayableUnits(status,calculated.workMinutes,policyThresholds.halfDayMinutes);
       await tx.attendanceDaily.upsert({where:{tenantId_employeeId_date:{tenantId:tid,employeeId:input.employeeId,date:reportDate}},create:{tenantId:tid,employeeId:input.employeeId,date:reportDate,shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,leaveUnits:0,dayType:'WORKING',exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',...attendanceValues},update:{shiftId:shift.id,scheduledMinutes:shift.fullDayMinutes,payableUnits,exceptionCode:status==='MISSING_PUNCH'?'MISSING_PUNCH':'',correctionNote:'',...attendanceValues}});
       await tx.attendancePunch.updateMany({where:{tenantId:tid,id:{in:punches.map(p=>p.id)}},data:{processedAt:new Date()}});await audit(tx,ctx,'PUNCH_RECORDED','attendance',row.id,undefined,{employeeId:input.employeeId,punchTime:input.punchTime,punchType:input.punchType});return attendanceValues;
     });
@@ -245,11 +249,9 @@ export class Workflows {
     const tid=tenant(ctx);requirePermission(ctx,'leave','VIEW');
     const input=z.object({employeeId:id,year:z.coerce.number().int().min(1970).max(2100)}).parse(query);
     await assertEmployee(this.db,ctx,input.employeeId);
-    const [types,usage]=await Promise.all([
-      this.db.leaveType.findMany({where:{tenantId:tid},orderBy:{name:'asc'}}),
-      this.db.leaveRequest.groupBy({by:['leaveTypeId','status'],where:{tenantId:tid,employeeId:input.employeeId,status:{in:['PENDING','APPROVED']},startDate:{gte:new Date(Date.UTC(input.year,0,1)),lt:new Date(Date.UTC(input.year+1,0,1))}},_sum:{days:true}})
-    ]);
-    const items=types.map(type=>{const approved=Number(usage.find(r=>r.leaveTypeId===type.id&&r.status==='APPROVED')?._sum.days??0),pending=Number(usage.find(r=>r.leaveTypeId===type.id&&r.status==='PENDING')?._sum.days??0),annual=Number(type.annualDays);return {id:type.id,name:type.name,paid:type.paid,annual,approved,pending,remaining:Math.max(0,annual-approved-pending)};});
+    const types=await this.db.leaveType.findMany({where:{tenantId:tid},orderBy:{name:'asc'}}),employee=await this.db.employee.findFirstOrThrow({where:{tenantId:tid,id:input.employeeId}}),nowMonth=localDate(new Date(),'Asia/Kolkata').slice(0,7),period=input.year===Number(nowMonth.slice(0,4))?nowMonth:`${input.year}-12`,config=await workforceConfig(this.db,tid,'LEAVE',period),policy=effectivePolicy(config.value as LeaveSettings,employee);
+    const items=[];
+    for(const type of types){const rule=policy?.types.find(t=>t.leaveTypeId===type.id);if(policy&&!rule)continue;const usage=await leaveUsage(this.db,tid,input.employeeId,type.id,input.year),approved=usage.requests.filter((r:any)=>r.status==='APPROVED').reduce((n:number,r:any)=>n+Number(type.paid?(r.paidDays??r.days):r.days),0),pending=usage.requests.filter((r:any)=>r.status==='PENDING').reduce((n:number,r:any)=>n+Number(type.paid?(r.paidDays??r.days):r.days),0),annual=rule?.annualDays??Number(type.annualDays);items.push({id:type.id,name:type.name,paid:type.paid,annual,approved,pending,automatic:usage.automatic,remaining:annual-approved-pending-usage.automatic,negativeAllowed:rule?.allowNegativeDays??0,policy:policy?.name??null});}
     return {employeeId:input.employeeId,year:input.year,items,paidTaken:items.filter(r=>r.paid).reduce((sum,r)=>sum+r.approved,0),unpaidTaken:items.filter(r=>!r.paid).reduce((sum,r)=>sum+r.approved,0)};
   }
   async leave(ctx:Context,method:string,body:any){
@@ -258,7 +260,7 @@ export class Workflows {
     if(method==='GET'){const visibleEmployeeIds=scope??(await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null},select:{id:true}})).map(e=>e.id),where={tenantId:tid,employeeId:{in:visibleEmployeeIds}};const [list,summary]=await Promise.all([this.db.leaveRequest.findMany({where,orderBy:{createdAt:'desc'},take:500}),this.db.leaveRequest.groupBy({by:['status'],where,_count:{_all:true}})]);const people=await this.db.employee.findMany({where:{tenantId:tid,id:{in:[...new Set(list.map(r=>r.employeeId))]}},select:{id:true,firstName:true,lastName:true,employeeCode:true,designation:true,photo:true}});return {items:(await approvalRows(this.db,tid,'leave',list)).map(row=>({...row,employee:people.find(p=>p.id===row.employeeId)??null})),summary:Object.fromEntries(summary.map(r=>[r.status,r._count._all])),total:summary.reduce((sum,r)=>sum+r._count._all,0)};}
     const input=leaveSchema.parse(body);await assertEmployee(this.db,ctx,input.employeeId);
     let autoApprove=false,duplicate=false;
-    const after=await this.db.$transaction(async tx=>{
+    const after=await this.db.$transaction(async tx=>{await lockSalaryInputs(tx,tid);
       await tx.$queryRaw`SELECT id FROM employees WHERE id = ${input.employeeId}::uuid AND tenant_id = ${tid}::uuid FOR UPDATE`;
       if(input.requestKey){const existing=await tx.leaveRequest.findFirst({where:{tenantId:tid,requestKey:input.requestKey}});if(existing){if(existing.employeeId!==input.employeeId||existing.leaveTypeId!==input.leaveTypeId||+existing.startDate!==+input.startDate||+existing.endDate!==+input.endDate||existing.reason!==input.reason||(Number(existing.days)===0.5)!==input.halfDay)throw new ConflictException('Request key already belongs to a different leave request.');duplicate=true;return existing;}}
       const leaveType=await tx.leaveType.findFirst({where:{id:input.leaveTypeId,tenantId:tid}});if(!leaveType)throw new BadRequestException('Leave type not found.');
@@ -275,11 +277,14 @@ export class Workflows {
       if(input.halfDay)days=days?0.5:0;
       if(!days)throw new BadRequestException('There are no working days in the requested period.');
       const year=input.startDate.getUTCFullYear();
-      const used=await tx.leaveRequest.aggregate({where:{tenantId:tid,employeeId:input.employeeId,leaveTypeId:input.leaveTypeId,status:{in:['PENDING','APPROVED']},startDate:{gte:new Date(`${year}-01-01`),lt:new Date(`${year+1}-01-01`)}},_sum:{days:true}});
-      if(Number(used._sum.days??0)+days>Number(leaveType.annualDays))throw new BadRequestException('The request exceeds the annual leave allowance.');
+      const entitlement=await leaveEntitlement(tx,tid,input.employeeId,input.leaveTypeId,input.startDate.toISOString().slice(0,7)),usage=await leaveUsage(tx,tid,input.employeeId,input.leaveTypeId,year),payrollConfig=await workforceConfig(tx,tid,'PAYROLL',input.startDate.toISOString().slice(0,7)),allowUnpaid=(payrollConfig.value as PayrollSettings).allowUnpaidLeave,used=leaveType.paid?usage.paid+usage.automatic:usage.requests.reduce((n:number,r:any)=>n+Number(r.days),0),available=Math.max(0,entitlement.annual+entitlement.negative-used);
+      if(days>available&&!allowUnpaid)throw new BadRequestException('The request exceeds the available leave balance. Unpaid overflow is disabled.');
+      const paidDays=leaveType.paid?Math.min(days,Math.floor(available*2)/2):0,paidDates:{date:string;units:number}[]=[];let paidLeft=paidDays*100;
+      for(let t=+input.startDate;t<=+input.endDate;t+=86400000){const day=new Date(t),dateKey=day.toISOString().slice(0,10);if(!isScheduledWorkDay(day,shift)||excluded.has(dateKey))continue;const units=Math.min(paidLeft,input.halfDay?50:100);paidDates.push({date:dateKey,units});paidLeft-=units;}
+      const policySnapshot={policyId:entitlement.policy?.id??null,policyName:entitlement.policy?.name??null,annual:entitlement.annual,paidDates,unpaidDays:days-paidDays};
       const {halfDay,...values}=input;
       autoApprove=!await approvalEnabled(tx,tid,'leave')&&['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'].includes(ctx.user.role.code)&&input.employeeId!==ctx.user.employeeId;
-      const created=await tx.leaveRequest.create({data:{tenantId:tid,...values,days,...(autoApprove?{status:'APPROVED',reviewerId:ctx.user.id,reviewNote:'Assigned by HR'}:{})}});
+      const created=await tx.leaveRequest.create({data:{tenantId:tid,...values,days,paidDays,policySnapshot,...(autoApprove?{status:'APPROVED',reviewerId:ctx.user.id,reviewNote:'Assigned by HR'}:{})}});
       if(!autoApprove)await createApproval(tx,tid,'leave',created);
       await audit(tx,ctx,autoApprove?'LEAVE_ASSIGNED':'LEAVE_REQUESTED','leave',created.id,undefined,created);return created;
     });
@@ -389,6 +394,8 @@ export class Workflows {
         await tx.payrollAdjustment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
         await tx.loanInstallment.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
         await tx.payrollItem.deleteMany({where:{tenantId:tid,runId:recordId}});
+        await tx.payrollPayItem.updateMany({where:{tenantId:tid,appliedRunId:recordId},data:{appliedRunId:null}});
+        await tx.leavePolicyDebit.deleteMany({where:{tenantId:tid,runId:recordId}});
         const period=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId:tid,month:run.month}}});
         if(period?.status==='LOCKED'){
           const {first,next}=monthBounds(run.month),now=new Date();

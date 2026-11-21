@@ -521,6 +521,11 @@ export class DataService {
         await tx.payrollPayout.deleteMany({where:{tenantId:companyId}});
         await tx.payrollItem.deleteMany({where:{tenantId:companyId}});
         await tx.payrollAdjustment.deleteMany({where:{tenantId:companyId}});
+        await tx.workforceConfig.deleteMany({where:{tenantId:companyId}});
+        await tx.salaryContract.deleteMany({where:{tenantId:companyId}});
+        await tx.payrollPayItem.deleteMany({where:{tenantId:companyId}});
+        await tx.employeeTaxDeclaration.deleteMany({where:{tenantId:companyId}});
+        await tx.leavePolicyDebit.deleteMany({where:{tenantId:companyId}});
         await tx.payrollRun.deleteMany({where:{tenantId:companyId}});
         await tx.deviceEmployeeMap.deleteMany({where:{tenantId:companyId}});
         await tx.deviceSyncLog.deleteMany({where:{tenantId:companyId}});

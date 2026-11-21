@@ -1,3 +1,4 @@
+import {configuredPayroll} from './configured-payroll';
 import {MANUAL_SALARY,manualSalary,manualSalaryValues} from '../../../packages/payroll-engine/manual';
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
 import type {Prisma} from '@prisma/client';
@@ -43,6 +44,8 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
     const previousItems=await tx.payrollItem.findMany({where:{tenantId,runId:run.id},select:{employeeId:true,components:true}});
     const manualByEmployee=new Map(previousItems.map(i=>[i.employeeId,manualSalary(i.components)]));
     await tx.payrollItem.deleteMany({where:{tenantId,runId:run.id}});
+    await tx.payrollPayItem.updateMany({where:{tenantId,appliedRunId:run.id},data:{appliedRunId:null}});
+    await tx.leavePolicyDebit.deleteMany({where:{tenantId,runId:run.id}});
 
     const [employees,rules,adjustments,versions,loans,installments]=await Promise.all([
       tx.employee.findMany({where:{tenantId,id:{in:employeeIds},joiningDate:{lt:nextMonthStart(month)}}}),
@@ -72,18 +75,20 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       const recovery=recoveries.reduce((n,i)=>n+i.amount,0);
       const employeeAdjustments=adjustments.filter(a=>a.employeeId===employee.id);
       const adjustment=employeeAdjustments.reduce((sum,a)=>sum+a.amount,0);
-      const calculated=calculatePay(attendanceGross+overtime,rules.map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap,basis:r.basis as 'GROSS'|'BASIC',calculation:r.calculation as 'PERCENT'|'FIXED',fixedAmount:r.fixedAmount,wageCap:r.wageCap,kind:r.kind})),adjustment,salary?earnings[0].amount:attendanceGross);
-      const result={...calculated,deductions:calculated.deductions+recovery,net:calculated.net-recovery};
+      const configured=await configuredPayroll(tx,tenantId,month,run.id,employee,attendance,{monthlySalary,basic:salary?.basic??monthlySalary,hra:salary?.hra??0,allowances:salary?.allowances??0,overtimeHourly:salary?.overtimeHourly??0}).catch(e=>{if(/^(Configure|Set the|Professional Tax)/.test(e.message))throw new BadRequestException(e.message);throw e;});
+      const calculated=calculatePay(configured?.gross??attendanceGross+overtime,rules.filter(r=>!configured?.excludedLegacyNames.has(r.name.toLowerCase())).map(r=>({name:r.name,percent:Number(r.percent),cap:r.cap,basis:r.basis as 'GROSS'|'BASIC',calculation:r.calculation as 'PERCENT'|'FIXED',fixedAmount:r.fixedAmount,wageCap:r.wageCap,kind:r.kind})),adjustment,configured?.basic??(salary?earnings[0].amount:attendanceGross));
+      const extraDeductions=configured?.deductions.filter(c=>c.type==='DEDUCTION').reduce((sum,c)=>sum+c.amount,0)??0;
+      const result={...calculated,deductions:calculated.deductions+recovery+extraDeductions,net:calculated.net-recovery-extraDeductions};
       if(result.net<0)throw new BadRequestException(`Loan deductions exceed pay for ${employee.employeeCode}. Adjust the recovery schedule before preparing.`);
       if(result.gross>1e9||result.deductions>1e9)throw new BadRequestException(`Salary exceeds the supported amount for ${employee.employeeCode}.`);
       const override=manualByEmployee.get(employee.id);
       const values=override?manualSalaryValues(override.net,result.deductions):result;
-      const components=[...earnings,...(overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...result.components.map(c=>({...c,type:c.type==='EMPLOYER'?'EMPLOYER':c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
+      const components=[...(configured?.earnings??earnings),...(!configured&&overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...(configured?.deductions??[]),...(configured?.snapshots??[]),...result.components.map(c=>({...c,type:c.type==='EMPLOYER'?'EMPLOYER':c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:configured?.payableUnits??payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:configured?.monthlySalary??monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
         gross:values.gross,deductions:values.deductions,net:values.net,
         components,
-        scheduledDays:eligibleDays,payableUnits,presentDays:attendance.presentDays,halfDays:attendance.halfDays,
+        scheduledDays:eligibleDays,payableUnits:configured?.payableUnits??payableUnits,presentDays:attendance.presentDays,halfDays:attendance.halfDays,
         paidLeaveUnits:attendance.paidLeaveUnits,unpaidLeaveUnits:attendance.unpaidLeaveUnits,absentDays:attendance.absentDays,
         lateMinutes:attendance.lateMinutes,overtimeMinutes:attendance.overtimeMinutes
       }});
@@ -111,6 +116,8 @@ export async function reopenPayrollMonth(db:Database,tenantId:string,runId:strin
     await tx.payrollAdjustment.updateMany({where:{tenantId,appliedRunId:runId},data:{appliedRunId:null}});
     await tx.loanInstallment.updateMany({where:{tenantId,appliedRunId:runId},data:{appliedRunId:null}});
     await tx.payrollItem.deleteMany({where:{tenantId,runId}});
+    await tx.payrollPayItem.updateMany({where:{tenantId,appliedRunId:runId},data:{appliedRunId:null}});
+    await tx.leavePolicyDebit.deleteMany({where:{tenantId,runId}});
     await tx.payrollRun.update({where:{id:runId},data:{totalGross:0,totalDeductions:0,totalNet:0}});
 
     const lock=await tx.attendancePeriodLock.findUnique({where:{tenantId_month:{tenantId,month:run.month}}});

@@ -1,3 +1,5 @@
+import {statutoryImport,statutoryColumns} from './statutory-import';
+import {WorkforceSettings} from './workforce-settings';
 import 'reflect-metadata';
 import {All,Controller,Inject,Module,Req,Res,NotFoundException,BadRequestException,ForbiddenException,HttpException,ServiceUnavailableException,ConflictException} from '@nestjs/common';
 import {NestFactory} from '@nestjs/core';
@@ -234,6 +236,17 @@ export class Api {
       res.setHeader('X-Content-Type-Options','nosniff');res.end(bytes);return;
     }
     if(resource==='salary-employees'&&method==='GET'){const tid=tenant(ctx);requirePermission(ctx,'payroll','MANAGE');const scope=await employeeScope(this.db,ctx);if(scope)throw new ForbiddenException();const search=String(req.query.q??'').trim().slice(0,100);return {items:await this.db.employee.findMany({where:{tenantId:tid,deletedAt:null,...(search?{OR:[{firstName:{contains:search,mode:'insensitive'}},{lastName:{contains:search,mode:'insensitive'}},{employeeCode:{contains:search,mode:'insensitive'}}]}:{})},select:{id:true,employeeCode:true,firstName:true,lastName:true,monthlySalary:true,updatedAt:true,joiningDate:true},orderBy:{employeeCode:'asc'},take:100})};}
+    if(resource==='payroll-settings')return new WorkforceSettings(this.db).config(ctx,'PAYROLL',method,body,req.query);
+    if(resource==='leave-policies')return new WorkforceSettings(this.db).config(ctx,'LEAVE',method,body,req.query);
+    if(resource==='holiday-reward-choices')return new WorkforceSettings(this.db).config(ctx,'HOLIDAY',method,body,req.query);
+    if(resource==='leave-settings-directory'&&method==='GET')return new WorkforceSettings(this.db).leaveDirectory(ctx);
+    if(resource==='payroll-settings-directory'&&method==='GET')return new WorkforceSettings(this.db).directory(ctx);
+    if(resource==='salary-contracts')return new WorkforceSettings(this.db).contracts(ctx,method,body,key);
+    if(resource==='pay-items')return new WorkforceSettings(this.db).payItems(ctx,method,body,key);
+    if(resource==='tax-declarations')return new WorkforceSettings(this.db).tax(ctx,method,body,req.query);
+    if(resource==='statutory-ids'&&key==='template'&&method==='GET'){const directory=await new WorkforceSettings(this.db).directory(ctx);const rows=directory.employees.map((e:any)=>Object.fromEntries(statutoryColumns.map(k=>[k,k==='employeeCode'?e.employeeCode:e.personal?.[k]??''])));res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition','attachment; filename="statutory-ids-template.xlsx"');res.setHeader('Cache-Control','private, no-store');res.end(toXlsx(rows.length?rows:[Object.fromEntries(statutoryColumns.map(k=>[k,'']))],'Statutory IDs'));return;}
+    if(resource==='statutory-ids'&&key==='import'&&method==='POST'&&['preview','commit'].includes(action??''))return statutoryImport(this.db,ctx,body,action==='commit');
+    if(resource==='statutory-ids'&&method==='POST')return new WorkforceSettings(this.db).ids(ctx,body);
     if(resource==='salary-versions'&&key)return new SalaryOperations(this.db).versions(ctx,key,method,body);
     if(resource==='payroll-loans')return new SalaryOperations(this.db).loans(ctx,method,body,key);
     if(resource==='approval-policies')return approvalPolicies(this.db,ctx,method,body);

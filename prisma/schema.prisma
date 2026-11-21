@@ -421,6 +421,8 @@ model AttendanceDaily {
   overtimeMinutes Int       @default(0)
   payableUnits    Int       @default(0) @map("payable_units")
   leaveUnits      Int       @default(0) @map("leave_units")
+  paidLeaveUnits Int @default(0) @map("paid_leave_units")
+  unpaidLeaveUnits Int @default(0) @map("unpaid_leave_units")
   dayType         String    @default("WORKING") @map("day_type")
   status          String
   exceptionCode   String    @default("") @map("exception_code")
@@ -478,6 +480,8 @@ model LeaveRequest {
   startDate   DateTime @db.Date
   endDate     DateTime @db.Date
   days        Decimal  @db.Decimal(5, 1)
+  paidDays    Decimal? @map("paid_days") @db.Decimal(5, 1)
+  policySnapshot Json? @map("policy_snapshot")
   reason      String
   requestKey  String?  @map("request_key")
   status      String   @default("PENDING")
@@ -1269,4 +1273,81 @@ model BiometricChallenge {
  createdAt DateTime @default(now()) @map("created_at")
  @@index([tenantId,employeeId,createdAt])
  @@map("biometric_challenges")
+}
+
+model WorkforceConfig {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ kind String
+ effectiveMonth String @map("effective_month")
+ value Json
+ actorId String @map("actor_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at")
+ @@index([tenantId,kind,effectiveMonth,createdAt])
+ @@map("workforce_configs")
+}
+model SalaryContract {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ employeeId String @map("employee_id") @db.Uuid
+ effectiveMonth String @map("effective_month")
+ endMonth String? @map("end_month")
+ kind String @default("MONTHLY")
+ amount Int
+ templateId String? @map("template_id") @db.Uuid
+ data Json @default("{}")
+ actorId String @map("actor_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at")
+ updatedAt DateTime @updatedAt @map("updated_at")
+ @@index([tenantId,employeeId,effectiveMonth])
+ @@map("salary_contracts")
+}
+model PayrollPayItem {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ employeeId String @map("employee_id") @db.Uuid
+ month String
+ name String
+ kind String @default("EARNING")
+ taxable Boolean @default(true)
+ amount Int
+ status String @default("PENDING")
+ appliedRunId String? @map("applied_run_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at")
+ updatedAt DateTime @updatedAt @map("updated_at")
+ @@index([tenantId,month,employeeId])
+ @@map("payroll_pay_items")
+}
+model EmployeeTaxDeclaration {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ employeeId String @map("employee_id") @db.Uuid
+ financialYear String @map("financial_year")
+ regime String @default("NEW")
+ declaredDeduction Int @default(0) @map("declared_deduction")
+ approvedDeduction Int @default(0) @map("approved_deduction")
+ otherIncome Int @default(0) @map("other_income")
+ previousIncome Int @default(0) @map("previous_income")
+ previousTds Int @default(0) @map("previous_tds")
+ status String @default("PENDING")
+ note String @default("")
+ reviewerId String? @map("reviewer_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at")
+ updatedAt DateTime @updatedAt @map("updated_at")
+ @@unique([tenantId,employeeId,financialYear])
+ @@map("employee_tax_declarations")
+}
+model LeavePolicyDebit {
+ id String @id @default(uuid()) @db.Uuid
+ tenantId String @map("tenant_id") @db.Uuid
+ employeeId String @map("employee_id") @db.Uuid
+ leaveTypeId String @map("leave_type_id") @db.Uuid
+ runId String @map("run_id") @db.Uuid
+ year Int
+ days Decimal @db.Decimal(6,2)
+ reason String
+ @@index([tenantId,employeeId,leaveTypeId,year])
+ @@index([tenantId,runId])
+ @@map("leave_policy_debits")
 }

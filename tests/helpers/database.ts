@@ -38,6 +38,8 @@ export async function embeddedDatabase(directory?:string){
  if(!proxyColumns.rows.length)await pg.exec(await readFile(path.resolve("prisma/migrations/202610070013_company_proxy_teams/migration.sql"),"utf8"));
  const biometric=await pg.query("SELECT to_regclass('public.employee_biometric_devices') AS name");
  if(!(biometric.rows[0] as any)?.name)await pg.exec(await readFile(path.resolve('prisma/migrations/202610080014_phone_biometric/migration.sql'),'utf8'));
+ const workforce=await pg.query("SELECT to_regclass('public.workforce_configs') AS name");
+ if(!(workforce.rows[0] as any)?.name)await pg.exec(await readFile(path.resolve('prisma/migrations/202611210015_workforce_policies/migration.sql'),'utf8'));
  const db=new PrismaClient({adapter:new PrismaPGlite(pg)});
  return {db,pg,close:async()=>{await db.$disconnect();await pg.close()}};
 }

@@ -31,6 +31,8 @@ export async function repairPrematureCurrentMonthPayrollLocks(db:Database){
    if(run){
     await tx.payrollAdjustment.updateMany({where:{tenantId:company.id,appliedRunId:run.id},data:{appliedRunId:null}});
     await tx.payrollItem.deleteMany({where:{tenantId:company.id,runId:run.id}});
+    await tx.payrollPayItem.updateMany({where:{tenantId:company.id,appliedRunId:run.id},data:{appliedRunId:null}});
+    await tx.leavePolicyDebit.deleteMany({where:{tenantId:company.id,runId:run.id}});
     await tx.payrollRun.delete({where:{id:run.id}});
    }
    await tx.attendanceDaily.updateMany({where:{tenantId:company.id,date:{gte:first,lt:next}},data:{lockedAt:null}});
