@@ -65,6 +65,7 @@ if(require.main===module){
       await db.tenant.update({where:{id:tenant.id},data:{name:'TCW QA Workspace',profile:{...((tenant.profile as any)??{}),legalName:'TCW QA Workspace',industry:'Technology',website:'https://hr.techcyberwarrior.in',email:qaEmail,phone:'+91 9000000000',address:'QA workspace',city:'Ahmedabad',state:'Gujarat',country:'India',postalCode:'380001',companyType:'Private Limited',contactPerson:'QA Administrator',contactDesignation:'HR Manager',supportEmail:qaEmail,billingEmail:qaEmail,primaryColor:'#3474ef',footer:'© TCW HR Software · QA workspace'}}});
       console.log('QA workspace ready:',qaCode,`loginId=${updatedQaUser.loginId}`);
     }
+    if(process.env.DEMO_SHOWCASE_BOOTSTRAP==='true')await (await import('./demo-showcase')).completeDemoWorkspace(db);
     console.log('Bootstrap complete. Existing passwords were preserved.');
   })().catch(e=>{console.error(e.message);process.exitCode=1}).finally(()=>db.$disconnect());
 }
