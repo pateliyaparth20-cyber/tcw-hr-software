@@ -545,3 +545,16 @@ test('sidebar retains lower menu scroll after reload and navigation',async({page
  const afterNavigation=await nav.evaluate(el=>el.scrollTop);expect(afterNavigation).toBeGreaterThan(100);
  await page.reload();await expect.poll(()=>nav.evaluate(el=>el.scrollTop)).toBeGreaterThan(afterNavigation-3);
 });
+
+test('Super Admin phone branding stays readable without clipping',async({page})=>{
+ await login(page,true);const dashboard=page.locator('.platform-mobile-dashboard');
+ for(const width of [320,360,393,760]){
+  await page.setViewportSize({width,height:900});await expect(dashboard).toBeVisible();
+  const logo=dashboard.locator('.mobile-unified-logo img'),name=dashboard.locator('.mobile-unified-brand-copy strong');
+  await expect(name).toHaveText('TCW HR Software');await expect.poll(()=>logo.evaluate(img=>(img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const metrics=await dashboard.evaluate(el=>{const name=el.querySelector('.mobile-unified-brand-copy strong') as HTMLElement,logo=el.querySelector('.mobile-unified-logo img') as HTMLElement,box=el.querySelector('.mobile-unified-logo') as HTMLElement;return {color:getComputedStyle(name).color,whiteSpace:getComputedStyle(name).whiteSpace,fit:getComputedStyle(logo).objectFit,logoWidth:logo.getBoundingClientRect().width,boxWidth:box.getBoundingClientRect().width,overflow:document.documentElement.scrollWidth>innerWidth}});
+  expect(metrics.color).toBe('rgb(255, 255, 255)');expect(metrics.whiteSpace).toBe('normal');expect(metrics.fit).toBe('contain');expect(metrics.logoWidth).toBeGreaterThan(40);expect(metrics.logoWidth).toBeLessThanOrEqual(metrics.boxWidth);expect(metrics.overflow).toBe(false);
+ }
+ await page.setViewportSize({width:393,height:900});await dashboard.getByRole('button',{name:'Open navigation menu',exact:true}).click();await expect(page.locator('#workspace-sidebar')).toHaveClass(/open/);await page.keyboard.press('Escape');await expect(page.locator('#workspace-sidebar')).not.toHaveClass(/open/);
+ await page.setViewportSize({width:1280,height:900});await expect(dashboard).not.toBeVisible();
+});

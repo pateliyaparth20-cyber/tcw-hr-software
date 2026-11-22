@@ -1,4 +1,5 @@
 'use client';
+import './platform-mobile-polish.css';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
 import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard,Camera,Menu,Home} from 'lucide-react';
@@ -37,14 +38,14 @@ function LiveClock({timezone}:{timezone?:string}){
 }
 function dashboardHolidayEvents(){const year=new Date().getFullYear(),next=year+1,fixed=[['01-01','New Year'],['01-14','Makar Sankranti'],['01-26','Republic Day'],['03-08','International Women’s Day'],['04-14','Dr. Ambedkar Jayanti'],['05-01','Gujarat Foundation Day'],['08-15','Independence Day'],['10-02','Gandhi Jayanti'],['10-31','Sardar Patel Jayanti'],['12-25','Christmas']];return [year,next].flatMap(y=>fixed.map(([md,title])=>({id:`festival-${y}-${md}`,title,date:`${y}-${md}`,kind:'HOLIDAY'})))}
 function mergeUpcomingEvents(events:Row[]=[]){const today=new Date().toISOString().slice(0,10),all=[...events,...dashboardHolidayEvents().filter(f=>!events.some(e=>String(e.date).slice(0,10)===f.date&&String(e.title).toLowerCase()===f.title.toLowerCase()))];return all.filter(e=>String(e.date).slice(0,10)>=today).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
-function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,outstanding,openTickets,currency,support}:{session:any;companies:Row[];trials:number;trialSummary:Row;paid:number;outstanding:number;openTickets:number;currency:string;support:Row[]}){
+export function MobilePlatformDashboard({session,companies,trials,trialSummary,paid,outstanding,openTickets,currency,support}:{session:any;companies:Row[];trials:number;trialSummary:Row;paid:number;outstanding:number;openTickets:number;currency:string;support:Row[]}){
  const active=companies.filter(c=>c.status==='ACTIVE').length;
  const firstName=String(session.user.name??'Admin').split(' ')[0];
  const greeting=useTimeGreeting('Asia/Kolkata');
  return <section className="platform-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-platform">
-   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><BrandLogo alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><div className="mobile-hero-actions"><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={19}/><i>3</i></Link><Link href="/settings" className="mobile-unified-action" aria-label="Menu"><Menu size={20}/></Link></div></div>
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>Platform Administrator</span></div><div className="mobile-hero-date"><span>{new Date().toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</span><strong>☀️ 26°C</strong><small>Ahmedabad</small></div></div>
+   <div className="mobile-unified-brand"><span className="mobile-unified-logo"><BrandLogo alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><div className="mobile-hero-actions"><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={19}/></Link><button type="button" className="mobile-unified-action" aria-label="Open navigation menu" aria-controls="workspace-sidebar" onClick={()=>window.dispatchEvent(new Event('tcw-open-navigation'))}><Menu size={20}/></button></div></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>Platform Administrator</span></div><div className="mobile-hero-date"><time dateTime={new Date().toISOString()}>{new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</time><small>IST</small></div></div>
   </div>
   <Link href="/companies" className="mobile-business-banner"><div><strong>Manage Your<br/>Business Smarter</strong><small>All-in-One HR Management Platform</small></div><TrendingUp size={52}/><ChevronRight size={20}/></Link>
   <div className="platform-mobile-stats">
