@@ -550,3 +550,14 @@ test('navigation and nested payroll sections survive refresh and browser history
  await page.goto('/employees');await page.reload();await expect(page).toHaveURL(/\/employees$/);
  await expect(page.locator('a[aria-current="page"][href="/employees"]').first()).toBeVisible();
 });
+
+test('sidebar retains lower menu scroll after reload and navigation',async({page})=>{
+ await login(page);await page.setViewportSize({width:1280,height:720});await page.goto('/security');
+ const nav=page.getByRole('navigation',{name:'Main navigation',exact:true});await expect(nav.getByRole('link',{name:'My security',exact:true})).toBeVisible();
+ const position=await nav.evaluate(el=>{el.scrollTop=el.scrollHeight-el.clientHeight;el.dispatchEvent(new Event('scroll'));return el.scrollTop});expect(position).toBeGreaterThan(100);
+ await page.reload();await expect(nav.getByRole('link',{name:'My security',exact:true})).toBeVisible();
+ await expect.poll(()=>nav.evaluate(el=>el.scrollTop)).toBeGreaterThan(position-3);
+ await nav.getByRole('link',{name:'Audit log',exact:true}).click();await expect(page).toHaveURL(/\/audit$/);
+ const afterNavigation=await nav.evaluate(el=>el.scrollTop);expect(afterNavigation).toBeGreaterThan(100);
+ await page.reload();await expect.poll(()=>nav.evaluate(el=>el.scrollTop)).toBeGreaterThan(afterNavigation-3);
+});

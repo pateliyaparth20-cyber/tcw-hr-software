@@ -8,6 +8,8 @@ import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter,useSearchParams} from 'next/navigation';
 import {workspaceReturnPath,workspaceSignInPath} from '../navigation-state';
+import {sidebarPositionKey,readSidebarState} from '../sidebar-position';
+import {sidebarSessionStorage,useSidebarPosition} from './use-sidebar-position';
 import {useQueryClient} from '@tanstack/react-query';
 import {io} from 'socket.io-client';
 import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,CalendarClock,Wallet,Briefcase,Target,GraduationCap,Package,Receipt,Plane,Files,DoorOpen,BarChart3,Sparkles,Headphones,Settings,ShieldCheck,ScrollText,Search,Bell,ChevronDown,ChevronRight,PanelLeft,LogOut,ArrowUpRight,Layers,TrendingUp,CreditCard,Server,LockKeyhole,ArrowRight,Command,X,PhoneCall,Send,RefreshCw,AlertTriangle,CheckCircle2,UserCircle,History,Trash2,Plus,UserCheck,Eye,EyeOff,UserRound,FileText} from 'lucide-react';
@@ -44,7 +46,7 @@ function portalLoginUrl(portal:'HR'|'EMPLOYEE',companyCode='',user=''){
  return url.toString();
 }
 function isEmployeeNativeApp(){if(typeof window==='undefined')return false;try{const bridge=(window as any).TCWNative;return bridge?.isEmployeeApp?.()===true||bridge?.getAppMode?.()==='EMPLOYEE'||isEmployeePortalHost()}catch{return false}}
-export function Portal({session,page}:{session:Session;page:string}){return <Providers session={session}><Shell page={page}/></Providers>}
+export function Portal({session,page}:{session:Session;page:string}){return <Providers session={session}><Shell key={`${session.user.scope}:${session.company?.id??'platform'}:${session.user.id}`} page={page}/></Providers>}
 export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';page:string}){
  const router=useRouter();
  const[session,setSession]=useState<Session|null>(null),[error,setError]=useState(''),[checking,setChecking]=useState(true),[attempt,setAttempt]=useState(0);
@@ -120,12 +122,13 @@ function SubscriptionLock({manage=false}:{manage?:boolean}){return <Subscription
 
 function Shell({page}:{page:string}){
  const{session,can,notify}=useApp();const router=useRouter();const queryClient=useQueryClient();
- const[moreNav,setMoreNav]=useState(false);
  const concept=session.user.scope==='TENANT'&&session.user.role!=='EMPLOYEE';
+ const primaryKeys=new Set(['dashboard','employees','organization','calendar','attendance','workforce','leave','payroll','reports']);
+ const sidebarKey=sidebarPositionKey(session.user.scope,session.user.id,session.company?.id);
+ const[moreNav,setMoreNav]=useState(()=>concept&&!primaryKeys.has(page)||readSidebarState(sidebarSessionStorage(),sidebarKey)?.expanded===true);
  const[mobile,setMobile]=useState(false),[search,setSearch]=useState(false),[query,setQuery]=useState(''),[logoutConfirm,setLogoutConfirm]=useState(false);
  const allNavigation=session.user.scope==='PLATFORM'?adminNavigation:session.user.role==='EMPLOYEE'?employeeNavigation:navigation;
  const nav=allNavigation.map(g=>({...g,items:g.items.filter(([, ,p])=>can(p)&&!(session.user.role==='EMPLOYEE'&&p==='support'))})).filter(g=>g.items.length);
- const primaryKeys=new Set(['dashboard','employees','organization','calendar','attendance','workforce','leave','payroll','reports']);
  const conceptNav=[{group:'Workspace',keys:['dashboard','employees','organization','calendar']},{group:'Time & work',keys:['attendance','workforce','leave']},{group:'Management',keys:['payroll','reports']}].map(g=>({group:g.group,items:nav.flatMap(s=>s.items).filter(([key])=>g.keys.includes(key)).sort((a,b)=>g.keys.indexOf(a[0])-g.keys.indexOf(b[0]))})).filter(g=>g.items.length);
  const extraNav=nav.map(g=>({...g,items:g.items.filter(([key])=>!primaryKeys.has(key)&&key!=='settings')})).filter(g=>g.items.length);
  const flat=nav.flatMap(g=>g.items);const current=flat.find(([key])=>key===page);const navRef=useRef<HTMLElement>(null);
@@ -169,7 +172,7 @@ function Shell({page}:{page:string}){
  useEffect(()=>setMobile(false),[page]);
  useEffect(()=>{if(concept&&(mobile||!primaryKeys.has(page)))setMoreNav(true)},[concept,mobile,page]);
  useEffect(()=>{if(!mobile)return;const previous=document.body.style.overflow;const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};document.body.style.overflow='hidden';window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',onKey)}},[mobile]);
- useEffect(()=>{const el=navRef.current;if(!el)return;const key=`tcw-sidebar-scroll:${session.user.scope}`;const saved=sessionStorage.getItem(key);if(saved!==null)el.scrollTop=Number(saved)||0;else requestAnimationFrame(()=>el.querySelector('[aria-current="page"]')?.scrollIntoView({block:'nearest'}));const save=()=>sessionStorage.setItem(key,String(el.scrollTop));el.addEventListener('scroll',save,{passive:true});return()=>el.removeEventListener('scroll',save)},[page,session.user.scope]);
+ useSidebarPosition(navRef,sidebarKey,page,moreNav,!concept||primaryKeys.has(page)||moreNav);
  async function logout(){try{if(session.user.role==='EMPLOYEE')await api('field-work/session','DELETE',{},session.csrf).catch(()=>{});await api('auth/logout','POST',{},session.csrf)}finally{try{window.sessionStorage.removeItem(`tcw_active_window_${session.user.scope.toLowerCase()}`)}catch{}queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
  let content:React.ReactNode;
  if(current&&!can(current[2]))content=<Empty title="Access restricted"/>;
