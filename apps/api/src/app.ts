@@ -1,5 +1,6 @@
 import {pricedPlan,isPlanDowngrade} from '../../../packages/subscription-policy';
 import {billingLimited,billingRouteBlocked} from '../../../packages/billing-access';
+import {effectiveCompanyLogo} from '../../../packages/branding';
 import {publicLoading,loadingSettings} from './loading-branding';
 import {salesPipeline} from './sales-pipeline';
 import {subscriptionInvoice} from './subscription-invoices';
@@ -79,14 +80,15 @@ export class Api {
     if(resource==='branding'&&method==='GET'){
       const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});
       const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};
-      return {logo:value.logo??'/tcw-logo.png',loading:await publicLoading(this.db),updatedAt:row?.updatedAt??null};
+      return {logo:effectiveCompanyLogo(null,value.logo),...(req.query.logoOnly==='1'?{}:{loading:await publicLoading(this.db)}),updatedAt:row?.updatedAt??null};
     }
     if(resource==='tenant-branding'&&key&&method==='GET'){
       const code=z.string().trim().toUpperCase().min(3).max(60).regex(/^[A-Z0-9-]+$/).parse(key);
       const company=await this.db.tenant.findUnique({where:{code},select:{name:true,logo:true,profile:true}});
       if(!company)return {found:false};
       const profile=company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile as any:{};
-      return {found:true,name:company.name,logo:company.logo??null,primaryColor:String(profile.primaryColor??'#3474ef')};
+      const branding=await this.db.platformSetting.findUnique({where:{key:'branding'}});
+      return {found:true,name:company.name,logo:effectiveCompanyLogo(company.logo,(branding?.value as any)?.logo),primaryColor:String(profile.primaryColor??'#3474ef')};
     }
     if(resource==='biometric'&&key==='push'&&method==='POST')return this.biometric.genericPush(req.headers as any,req.body);
     if(resource==='biometric'&&key==='biomax'&&action==='push'&&method==='POST')return this.biometric.biomaxPush(req.headers as any,req.body);
@@ -240,7 +242,8 @@ export class Api {
       const company=await this.db.tenant.findUnique({where:{id:tid},select:{id:true,name:true,code:true,logo:true,status:true,expiresAt:true,timezone:true,profile:true}});
       if(!company)throw new NotFoundException('Company not found.');
       const profile=company.profile&&typeof company.profile==='object'&&!Array.isArray(company.profile)?company.profile as any:{};
-      return {id:company.id,name:company.name,code:company.code,logo:company.logo,status:company.status,expiresAt:company.expiresAt,timezone:company.timezone,primaryColor:String(profile.primaryColor??'#3474ef')};
+      const branding=await this.db.platformSetting.findUnique({where:{key:'branding'}});
+      return {id:company.id,name:company.name,code:company.code,logo:effectiveCompanyLogo(company.logo,(branding?.value as any)?.logo),status:company.status,expiresAt:company.expiresAt,timezone:company.timezone,primaryColor:String(profile.primaryColor??'#3474ef')};
     }
     if(resource==='company'&&['GET','PATCH'].includes(method))return this.data.company(ctx,method==='PATCH'?body:undefined);
     if(resource==='payroll'&&key&&action==='payment-challan'&&method==='GET'){

@@ -249,14 +249,8 @@ test('employee Excel CSV import and lifecycle checklist work on desktop and mobi
  await dialog.getByRole('button',{name:'Close dialog'}).click();
 });
 
-test('salary structures and two-stage policy settings persist',async({page})=>{
- await login(page);await page.goto('/payroll');await page.getByRole('button',{name:'Payment Settings',exact:true}).click();await page.getByRole('navigation',{name:'Payment settings sections'}).getByRole('button',{name:'Salary structures',exact:true}).click();
- await page.getByRole('textbox',{name:'Search employee name or code',exact:true}).fill('CHART-MEMBER');await page.getByRole('button',{name:/QA Member.*CHART-MEMBER/}).click();
- await page.getByRole('button',{name:'Add salary revision',exact:true}).click();const dialog=page.getByRole('dialog');
- const month=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'});
- await dialog.getByLabel('Effective month (YYYY-MM)').fill(month);await dialog.getByLabel('Basic salary').fill('20000');await dialog.getByLabel('HRA').fill('5000');await dialog.getByLabel('Other allowances').fill('1000');await dialog.getByLabel('Overtime rate per hour').fill('100');await dialog.getByLabel('Reason for salary revision').fill('Browser verified salary structure');
- await dialog.getByRole('button',{name:'Save salary revision',exact:true}).click();await expect(dialog).not.toBeVisible();await expect(page.locator('.hr-salary-detail')).toContainText('Browser verified salary structure');
- await page.goto('/settings');const policy=page.getByRole('combobox',{name:'expenses approval policy',exact:true});await policy.selectOption('MANAGER_HR');await expect(policy).toHaveValue('MANAGER_HR');await page.reload();await expect(policy).toHaveValue('MANAGER_HR');await policy.selectOption('SINGLE');
+test('two-stage policy settings persist',async({page})=>{
+ await login(page); await page.goto('/settings');const policy=page.getByRole('combobox',{name:'expenses approval policy',exact:true});await policy.selectOption('MANAGER_HR');await expect(policy).toHaveValue('MANAGER_HR');await page.reload();await expect(policy).toHaveValue('MANAGER_HR');await policy.selectOption('SINGLE');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });
 
@@ -490,14 +484,8 @@ test('device modal filters seconds, log levels, pagination and read-only actions
 });
 
 
-test('company payment setup and manual salary recording work on desktop and mobile',async({page})=>{
- await login(page);await page.goto('/payroll');await page.getByRole('button',{name:'Payment Settings',exact:true}).click();
- const settings=page.locator('.company-payments');await expect(settings.getByRole('heading',{name:'Company payment settings'})).toBeVisible();
- await settings.getByRole('combobox',{name:'Payment method',exact:true}).selectOption('BANK_FILE');await settings.getByLabel('Account label',{exact:true}).fill('Synthetic salary account');await settings.getByRole('checkbox',{name:'I am authorized to configure'}).check();await settings.getByRole('button',{name:'Save company payment settings'}).click();await expect(settings.locator('.payment-summary')).toContainText('Synthetic salary account');
- await settings.getByRole('combobox',{name:'Payment method',exact:true}).selectOption('BANK_API');await expect(settings).toContainText('No business bank connector is installed yet.');await expect(settings.getByRole('textbox',{name:'API key ID',exact:true})).toHaveValue('');
- await expect(settings.getByRole('checkbox',{name:'Enable live payments'})).toBeDisabled();
- for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:`test-results/people-bank-settings-${width}.png`,fullPage:true,animations:'disabled'});}
- await settings.getByRole('button',{name:/^Manual payment/}).click();await expect(settings.getByRole('combobox',{name:'Payment method',exact:true})).toHaveValue('MANUAL');await expect(settings.getByRole('textbox',{name:'API key ID',exact:true})).toHaveCount(0);
+test('manual salary recording works on desktop and mobile',async({page})=>{
+ await login(page);await page.goto('/payroll');
  await page.getByRole('button',{name:'Payroll',exact:true}).click();await page.getByLabel('Payroll month',{exact:true}).fill('2024-01');
  const center=page.locator('.payroll-payment-center');await expect(center.getByRole('heading',{name:'Salary payment controls',exact:true})).toBeVisible();await expect(center.getByRole('button',{name:'Schedule automatic salary',exact:true})).toBeDisabled();
  await center.getByRole('textbox',{name:'Search salary payments'}).fill('no-such-employee');await expect(center.getByText('No matching salary payments',{exact:true})).toBeVisible();await center.getByRole('button',{name:'Clear filters',exact:true}).click();await expect(center.getByRole('button',{name:'Record manual payment',exact:true})).toBeVisible();
@@ -541,12 +529,8 @@ test('navigation and nested payroll sections survive refresh and browser history
  await page.goto('/payroll?tab=payments&payrollSection=settings&payrollTab=statutory');
  await expect(page.getByRole('heading',{name:'Deductions',exact:true})).toBeVisible();
  await page.reload();await expect(page.getByRole('heading',{name:'Deductions',exact:true})).toBeVisible();
- const sections=page.getByRole('navigation',{name:'Payment settings sections'});
- await sections.getByRole('button',{name:'Salary structures',exact:true}).click();
- await expect(page).toHaveURL(/payrollSection=structures/);await page.reload();
- await expect(sections.getByRole('button',{name:'Salary structures',exact:true})).toHaveAttribute('aria-pressed','true');
- await sections.getByRole('button',{name:'Contribution rules',exact:true}).click();await expect(page).toHaveURL(/payrollSection=rules/);
- await page.goBack();await expect(sections.getByRole('button',{name:'Salary structures',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.getByRole('navigation',{name:'Payment settings sections'})).toHaveCount(0);
+ for(const name of ['Contribution rules','Salary structures','Payment account','Payment reconciliation'])await expect(page.getByRole('button',{name,exact:true})).toHaveCount(0);
  await page.goto('/employees');await page.reload();await expect(page).toHaveURL(/\/employees$/);
  await expect(page.locator('a[aria-current="page"][href="/employees"]').first()).toBeVisible();
 });

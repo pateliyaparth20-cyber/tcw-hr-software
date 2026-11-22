@@ -1,4 +1,7 @@
 'use client';
+import {fetchCompleteResponse} from './api-request';
+import {useProductLogo} from './product-logo';
+import './controls.css';
 import {billingLimited,billingPermissionBlocked} from '../billing-access';
 import {BrandedLoading} from './loading-branding';
 import React,{createContext,useContext,useEffect,useRef,useState,useId} from 'react';
@@ -38,14 +41,8 @@ export function notificationTarget(row:Row){
 
 export const TCW_PRODUCT_LOGO='/tcw-logo.png';
 export function BrandLogo({alt='TCW HR Software',className}:{alt?:string;className?:string}){
-  const[src,setSrc]=useState(()=>{if(typeof window==='undefined')return TCW_PRODUCT_LOGO;try{return window.localStorage.getItem('tcw_brand_logo')||TCW_PRODUCT_LOGO}catch{return TCW_PRODUCT_LOGO}});
-  useEffect(()=>{let active=true;fetch('/api/branding',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{
-    if(!active)return;
-    const next=String(v?.logo||TCW_PRODUCT_LOGO);
-    try{window.localStorage.setItem('tcw_brand_logo',next)}catch{}
-    if(next!==src)setSrc(next);
-  }).catch(()=>{});return()=>{active=false}},[]);
-  return <img src={src} alt={alt} className={className} decoding="async" draggable={false} onError={()=>{if(src!==TCW_PRODUCT_LOGO)setSrc(TCW_PRODUCT_LOGO)}}/>;
+ const src=useProductLogo();
+ return <img src={src} alt={alt} className={className} decoding="async" draggable={false} onError={e=>{if(!e.currentTarget.src.endsWith(TCW_PRODUCT_LOGO))e.currentTarget.src=TCW_PRODUCT_LOGO}}/>;
 }
 
 const LOCAL_SESSION_KEY='tcw_local_session';
@@ -131,11 +128,7 @@ function requestTimeout(path:string,method:string,data:any){
 function sleep(ms:number){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function requestOnce(path:string,method:string,data:any,csrf:string|undefined,localSession:string|null){
   const form=data instanceof FormData;
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),requestTimeout(path,method,data));
-  try{
-    return await fetch('/api/'+path,{method,credentials:'include',cache:'no-store',signal:controller.signal,headers:{...(!form&&data!==undefined?{'Content-Type':'application/json'}:{}),...(csrf?{'X-CSRF-Token':csrf}:{}),...(localSession?{'X-TCW-Local-Session':localSession}:{})},...(data!==undefined?{body:form?data:JSON.stringify(data)}:{})});
-  }finally{clearTimeout(timeout)}
+  return fetchCompleteResponse('/api/'+path,{method,credentials:'include',cache:'no-store',headers:{...(!form&&data!==undefined?{'Content-Type':'application/json'}:{}),...(csrf?{'X-CSRF-Token':csrf}:{}),...(localSession?{'X-TCW-Local-Session':localSession}:{})},...(data!==undefined?{body:form?data:JSON.stringify(data)}:{})},requestTimeout(path,method,data));
 }
 export async function api(path:string,method='GET',data?:any,csrf?:string){
   const localSession=getLocalSessionToken();
@@ -319,4 +312,8 @@ export function RecordForm({fields,initial,onSave,onCancel,submit='Save changes'
 export function Confirm({title,description,onConfirm,onClose}:{title:string;description:string;onConfirm:()=>Promise<any>;onClose:()=>void}){const[busy,setBusy]=useState(false),[error,setError]=useState('');return <Modal title={title} onClose={onClose}><div className="modal-body"><p>{description}</p>{error&&<p role="alert" className="form-error">{error}</p>}<div className="form-footer"><button className="btn secondary" onClick={onClose}>Cancel</button><button className="btn danger" disabled={busy} onClick={async()=>{setBusy(true);try{await onConfirm();onClose()}catch(e:any){setError(e.message)}finally{setBusy(false)}}}>{busy?'Working…':'Confirm'}</button></div></div></Modal>}
 export function PageTitle({title,subtitle,children}:{title:string;subtitle?:string;children?:React.ReactNode}){return <div className="page-title"><div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div><div className="title-actions">{children}</div></div>}
 export function Stat({label,value,detail,icon}:{label:string;value:React.ReactNode;detail?:string;icon?:React.ReactNode}){return <div className="stat"><div className="stat-label">{label}<span>{icon}</span></div><strong>{value}</strong>{detail&&<small>{detail}</small>}</div>}
-export function Table({columns,rows,cell,actions}:{columns:string[];rows:Row[];cell?:(r:Row,k:string)=>React.ReactNode;actions?:(r:Row)=>React.ReactNode}){return <div className="table-scroll"><table><thead><tr>{columns.map(k=><th key={k} className={'col-'+k}>{readable(k.replace('Id',''))}</th>)}{actions&&<th className="align-right col-actions">Actions</th>}</tr></thead><tbody>{rows.map(r=><tr key={r.id}>{columns.map(k=><td key={k} className={'col-'+k}>{cell?.(r,k)??String(r[k]??'—')}</td>)}{actions&&<td className="row-actions col-actions">{actions(r)}</td>}</tr>)}</tbody></table></div>}
+export function Table({columns,rows,cell,actions,pagination=true}:{columns:string[];rows:Row[];cell?:(r:Row,k:string)=>React.ReactNode;actions?:(r:Row)=>React.ReactNode;pagination?:boolean}){
+ const [page,setPage]=useState(1),[size,setSize]=useState(25),pages=Math.max(1,Math.ceil(rows.length/size)),current=Math.min(page,pages),start=(current-1)*size;
+ useEffect(()=>setPage(1),[rows.length,size]);
+ return <><div className="table-scroll"><table><thead><tr>{columns.map(k=><th key={k} className={'col-'+k}>{readable(k.replace('Id',''))}</th>)}{actions&&<th className="align-right col-actions">Actions</th>}</tr></thead><tbody>{rows.map((r,index)=><tr key={r.id??index} className={pagination&&(index<start||index>=start+size)?'table-page-hidden':undefined}>{columns.map(k=><td key={k} className={'col-'+k}>{cell?.(r,k)??String(r[k]??'—')}</td>)}{actions&&<td className="row-actions col-actions">{actions(r)}</td>}</tr>)}</tbody></table></div>{pagination&&rows.length>25&&<nav className="shared-pagination no-print" aria-label="Table pagination"><span>{start+1}–{Math.min(start+size,rows.length)} of {rows.length} records</span><div><label>Rows <select aria-label="Rows per page" value={size} onChange={e=>setSize(Number(e.target.value))}>{[25,50,100].map(n=><option key={n} value={n}>{n}</option>)}</select></label><button className="btn secondary small" disabled={current===1} onClick={()=>setPage(current-1)} aria-label="Previous table page">Previous</button><span>Page {current} of {pages}</span><button className="btn secondary small" disabled={current===pages} onClick={()=>setPage(current+1)} aria-label="Next table page">Next</button></div></nav>}</>;
+}

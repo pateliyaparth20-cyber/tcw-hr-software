@@ -1,4 +1,5 @@
 'use client';
+import {PagedCollection} from './paged-collection';
 import React,{useMemo,useState} from 'react';
 import {ArrowUpRight,Briefcase,CalendarDays,CheckCircle2,Clock3,Download,GripVertical,Mail,MapPin,MoreHorizontal,Phone,Plus,Search,TrendingUp,UserPlus,Users,X} from 'lucide-react';
 import {modules,Row,readable} from './config';
@@ -167,7 +168,7 @@ export function RecruitmentDashboard(){
        >
         <header><strong>{stage.label}</strong><span>{rows.length}</span></header>
         <div className="recruit-v3-drop-note">{dragOver===stage.key?'Drop to move here':' '}</div>
-        <div className="recruit-v3-column-list">{rows.map(candidate=><CandidateCard
+        <PagedCollection rows={rows} resetKey={search+jobFilter+departmentFilter+stageFilter}>{pageRows=><div className="recruit-v3-column-list">{pageRows.map(candidate=><CandidateCard
           key={candidate.id}
           candidate={candidate}
           jobTitle={String(jobById.get(String(candidate.jobId))?.title??'')}
@@ -175,7 +176,7 @@ export function RecruitmentDashboard(){
           onOpen={()=>setSelectedId(String(candidate.id))}
           onDragStart={e=>{setDragId(String(candidate.id));e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/candidate',String(candidate.id))}}
           onDragEnd={()=>{setDragId('');setDragOver('')}}
-        />)}{!rows.length&&<div className="recruit-v3-empty-stage">Drop candidates here</div>}</div>
+        />)}{!rows.length&&<div className="recruit-v3-empty-stage">Drop candidates here</div>}</div>}</PagedCollection>
        </section>
       })}
      </div>}

@@ -8,6 +8,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter,useSearchParams} from 'next/navigation';
 import {workspaceReturnPath,workspaceSignInPath} from '../navigation-state';
+import {useProductLogo} from './product-logo';
 import {sidebarPositionKey,readSidebarState} from '../sidebar-position';
 import {sidebarSessionStorage,useSidebarPosition} from './use-sidebar-position';
 import {useQueryClient} from '@tanstack/react-query';
@@ -124,6 +125,7 @@ function Shell({page}:{page:string}){
  const{session,can,notify}=useApp();const router=useRouter();const queryClient=useQueryClient();
  const concept=session.user.scope==='TENANT'&&session.user.role!=='EMPLOYEE';
  const primaryKeys=new Set(['dashboard','employees','organization','calendar','attendance','workforce','leave','payroll','reports']);
+ const productLogo=useProductLogo();
  const sidebarKey=sidebarPositionKey(session.user.scope,session.user.id,session.company?.id);
  const[moreNav,setMoreNav]=useState(()=>concept&&!primaryKeys.has(page)||readSidebarState(sidebarSessionStorage(),sidebarKey)?.expanded===true);
  const[mobile,setMobile]=useState(false),[search,setSearch]=useState(false),[query,setQuery]=useState(''),[logoutConfirm,setLogoutConfirm]=useState(false);
@@ -207,7 +209,7 @@ function Shell({page}:{page:string}){
  const isAllowed=page==='notifications'?session.user.scope==='TENANT':!!current;
  const workspaceBrand=branding.data??session.company??{};
  const primaryColor=String(workspaceBrand.primaryColor??workspaceBrand.profile?.primaryColor??'#0369a1');
- const companyLogo=String(workspaceBrand.logo||session.company?.logo||TCW_PRODUCT_LOGO);
+ const companyLogo=String(workspaceBrand.logo||session.company?.logo||productLogo);
  const billingLocked=session.user.scope==='TENANT'&&!session.proxy&&billingLimited(workspaceBrand);
  if(billingLocked&&page==='reports')content=<Empty title="Reports require an active plan" description="Renew your plan to use reports and exports. Login, employee profiles and attendance remain available."/>;
  if(billingLocked&&['employees','payroll'].includes(page))content=<><div className="pricing-inline-note" role="status">Your plan has ended. Employee profiles and attendance remain available. Renew to process payroll, use reports or exports, or add employees.{can('company','VIEW')&&<a href="/subscription"> View plans & payment</a>}</div>{content}</>;
@@ -286,13 +288,14 @@ function TCWAgent(){
 }
 
 export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',prefillUser=''}:{scope:'TENANT'|'PLATFORM';mode?:string;resetToken?:string;prefillCompanyCode?:string;prefillUser?:string}){
+ const productLogo=useProductLogo();
  const returnParams=useSearchParams();const returnPath=workspaceReturnPath(returnParams.get('next'),scope);
  const router=useRouter();
  const[twoFactorRequired,setTwoFactorRequired]=useState(false),[twoFactorCode,setTwoFactorCode]=useState('');
  const[companyCode,setCompanyCode]=useState(prefillCompanyCode),[email,setEmail]=useState(prefillUser),[password,setPassword]=useState(''),[confirmPassword,setConfirmPassword]=useState(''),[showPassword,setShowPassword]=useState(false),[remember,setRemember]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[resetReady,setResetReady]=useState(mode!=='reset-password'),[resetChecking,setResetChecking]=useState(mode==='reset-password');
  const[companyName,setCompanyName]=useState(''),[ownerName,setOwnerName]=useState(''),[phone,setPhone]=useState(''),[plan,setPlan]=useState('STARTER'),[terms,setTerms]=useState(false),[contactConsent,setContactConsent]=useState(false),[created,setCreated]=useState<Row|null>(null),[employeeApp,setEmployeeApp]=useState(false),[loginBrand,setLoginBrand]=useState<Row|null>(null);
  const signup=scope==='TENANT'&&mode==='signup';
- const loginBrandLogo=String(loginBrand?.logo??TCW_PRODUCT_LOGO),loginBrandName=String(loginBrand?.name??(employeeApp?'TCW Employee':'TCW HR Software')),loginBrandColor=String(loginBrand?.primaryColor??'#0369a1');
+ const loginBrandLogo=String(loginBrand?.logo||productLogo),loginBrandName=String(loginBrand?.name??(employeeApp?'TCW Employee':'TCW HR Software')),loginBrandColor=String(loginBrand?.primaryColor??'#0369a1');
  useEffect(()=>{setEmployeeApp(scope==='TENANT'&&isEmployeeNativeApp())},[scope]);
  useEffect(()=>{if(scope!=='TENANT'||signup||mode==='reset-password'){setLoginBrand(null);return;}const code=companyCode.trim().toUpperCase();if(code.length<3){setLoginBrand(null);return;}let active=true;const timer=window.setTimeout(()=>{api('tenant-branding/'+encodeURIComponent(code)).then(r=>{if(active)setLoginBrand(r?.found?r:null)}).catch(()=>{if(active)setLoginBrand(null)})},280);return()=>{active=false;window.clearTimeout(timer)}},[scope,signup,mode,companyCode]);
  useEffect(()=>{if(scope==='TENANT'&&mode==='login'&&isEmployeeNativeApp())preloadFaceEngine()},[scope,mode]);

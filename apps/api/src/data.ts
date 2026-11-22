@@ -1,3 +1,4 @@
+import {effectiveCompanyLogo} from '../../../packages/branding';
 import {isPlanDowngrade} from '../../../packages/subscription-policy';
 import {recordSubscriptionInvoice} from './subscription-invoices';
 import {activeSalesCompany,salesCompany} from './sales-pipeline';
@@ -87,7 +88,7 @@ export class DataService {
   }
   async company(ctx:Context,body?:unknown){
     const tid=tenant(ctx);requirePermission(ctx,'company',body?'EDIT':'VIEW');
-    if(!body)return this.db.tenant.findUnique({where:{id:tid}});
+    if(!body){const [company,branding]=await Promise.all([this.db.tenant.findUnique({where:{id:tid}}),this.db.platformSetting.findUnique({where:{key:'branding'}})]);return company?{...company,defaultLogo:effectiveCompanyLogo(null,(branding?.value as any)?.logo)}:null;}
     const schema=z.object({name:z.string().trim().min(1).max(200),currency:z.string().regex(/^[A-Z]{3}$/),timezone:z.string().refine(v=>{try{new Intl.DateTimeFormat('en',{timeZone:v});return true}catch{return false}}),profile:z.object({legalName:z.string().max(200).optional(),industry:z.string().max(100).optional(),companyType:z.string().max(100).optional(),registrationNumber:z.string().max(80).optional(),foundedYear:z.string().max(4).optional(),contactPerson:z.string().max(120).optional(),contactDesignation:z.string().max(120).optional(),billingEmail:z.string().max(200).optional(),website:z.string().max(200).optional(),email:z.string().max(200).optional(),phone:z.string().max(40).optional(),address:z.string().max(1000).optional(),city:z.string().max(100).optional(),state:z.string().max(100).optional(),country:z.string().max(100).optional(),postalCode:z.string().max(20).optional(),taxId:z.string().max(50).optional(),pan:z.string().max(20).optional(),dateFormat:z.string().max(40).optional(),financialYear:z.string().max(40).optional(),supportEmail:z.string().max(200).optional(),footer:z.string().max(200).optional(),primaryColor:z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),salaryDay:z.number().int().min(1).max(31).optional(),autoPayroll:z.boolean().optional(),payoutProvider:z.enum(['NONE','MANUAL','BANK_FILE','BANK_API','RAZORPAYX','CASHFREE','CUSTOM']).optional(),payoutMode:z.enum(['IMPS','NEFT','RTGS']).optional(),payoutAccountLabel:z.string().max(120).optional()}).strict(),logo:z.string().max(8_000_000).nullable().optional()}).strict();
     const input=schema.parse(body);
     if(input.logo){

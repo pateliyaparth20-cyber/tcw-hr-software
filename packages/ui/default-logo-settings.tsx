@@ -1,0 +1,11 @@
+'use client';
+import {useState} from 'react';
+import {Upload,RefreshCw} from 'lucide-react';
+import {api,useApp,useData,Loading,Failure,TCW_PRODUCT_LOGO} from './core';
+import {publishProductLogo} from './product-logo';
+export function DefaultLogoSettings(){
+ const {can,session,notify}=useApp(),q=useData('system/branding',can('system'),false),[draft,setDraft]=useState<string|null|undefined>(),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const preview=draft===undefined?q.data?.logo||TCW_PRODUCT_LOGO:draft||TCW_PRODUCT_LOGO;
+ async function save(){setBusy(true);setError('');try{const result=await api('system/branding','PUT',{logo:draft??null},session.csrf);publishProductLogo(result.logo);setDraft(undefined);await q.refetch();notify('Default company logo saved. Companies with their own logo keep it.')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
+ return <section className="ps-card default-logo-settings"><header className="ps-card-head"><div><span className="ps-eyebrow">PLATFORM BRANDING</span><h2>Default company logo</h2><p>Used across the product and by companies that have not uploaded their own logo.</p></div></header>{q.isLoading?<Loading/>:q.error?<Failure error={q.error} retry={()=>q.refetch()}/>:<div className="default-logo-content"><img src={preview} alt="Default company logo preview"/><div><label className="btn secondary"><Upload size={16}/>Choose logo<input className="sr-only" type="file" accept="image/png,image/jpeg" disabled={!can('system','EDIT')||busy} onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg'].includes(file.type)||file.size>5*1024*1024){setError('Choose a PNG or JPEG up to 5 MB.');return;}const reader=new FileReader();reader.onload=()=>{setDraft(String(reader.result));setError('')};reader.onerror=()=>setError('Unable to read the logo. Try another file.');reader.readAsDataURL(file);e.target.value='';}}/></label><button type="button" className="btn secondary" disabled={busy||!can('system','EDIT')} onClick={()=>setDraft(null)}><RefreshCw size={16}/>Use TCW default</button><button type="button" className="btn primary" disabled={busy||draft===undefined||!can('system','EDIT')} onClick={save}>{busy?'Saving…':'Save default logo'}</button>{error&&<p className="form-error" role="alert">{error}</p>}</div></div>}</section>;
+}
