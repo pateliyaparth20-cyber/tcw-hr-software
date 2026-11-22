@@ -1,0 +1,21 @@
+'use client';
+import {createPortal} from 'react-dom';
+import {Printer} from 'lucide-react';
+import {Modal,TCW_PRODUCT_LOGO,currencyValue} from './core';
+import {payslipLines} from '../payslip';
+import type {Row} from './config';
+import './employee-payslip.css';
+export function EmployeePayslip({item,month,status,company,currency='INR'}:{item:Row;month:string;status:string;company:Row;currency?:string}){
+ const components:Row[]=Array.isArray(item.components)?item.components:[],settings=components.find(c=>c.type==='SETTINGS_SNAPSHOT')?.payslip??{},person=components.find(c=>c.type==='EMPLOYEE_SNAPSHOT')??{},lines=payslipLines(item as {gross:number;deductions:number;components:unknown}),money=(v:number)=>currencyValue(v,currency);
+ const field=(label:string,value:unknown)=><div className="es-field" key={label}><dt>{label}</dt><dd>{value===null||value===undefined||value===''?'—':String(value)}</dd></div>;
+ const period=/^\d{4}-\d{2}$/.test(month)?new Date(month+'-01T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'}):month;
+ return <article className="employee-slip">
+  <header className="es-header"><div className="es-heading"><span aria-hidden="true">◆◆◆</span><h2><b>EMPLOYEE</b> PAYSLIP</h2><img src={person.logo||company.logo||TCW_PRODUCT_LOGO} alt="Company logo" onError={e=>{if(!e.currentTarget.src.endsWith(TCW_PRODUCT_LOGO))e.currentTarget.src=TCW_PRODUCT_LOGO}}/></div><div className="es-company"><h3>{settings.legalName||company.name||'TCW HR Software'}</h3>{settings.address&&<p>{settings.address}</p>}<p>{period} · {status==='LOCKED'?'Finalized payslip':'DRAFT · Not an issued payslip'}</p></div></header>
+  <div className="es-details"><dl>{field('Employee ID',item.employeeCode)}{field('Employee name',item.employeeName)}{field('Department',person.department)}{field('Job title',person.designation)}{field('Bank name',person.bankName)}{field('Bank A/C number',person.accountNumber)}{field('PF A/C number',person.pfNumber)}{field('UAN number',person.uan)}{field('ESI number',person.esicNumber)}</dl><dl>{field('Joining date',person.joiningDate?new Date(person.joiningDate).toLocaleDateString('en-IN'):null)}{field('Working days',item.scheduledDays)}{field('Present days',item.presentDays)}{field('Half days',item.halfDays)}{field('Holiday days',person.holidayDays)}{field('Weekoff days',person.weekoffDays)}{field('Paid leave',Number(item.paidLeaveUnits??0)/100)}{field('Unpaid leave',Number(item.unpaidLeaveUnits??0)/100)}{field('Paid days',Number(item.payableUnits??0)/100)}</dl></div>
+  <div className="es-body">{[['Earnings',lines.earnings,item.gross],['Deductions',lines.deductions,item.deductions]].map(([label,rows,total])=><section className="es-section" key={String(label)}><h3>{String(label)}</h3><table><thead><tr><th>Description</th><th>Amount ({currency})</th></tr></thead><tbody>{(rows as {name:string;amount:number}[]).map((r,i)=><tr key={i}><td>{r.name}</td><td>{money(r.amount)}</td></tr>)}{!(rows as unknown[]).length&&<tr><td>No {String(label).toLowerCase()}</td><td>{money(0)}</td></tr>}</tbody><tfoot><tr><th>Total {String(label).toLowerCase()}</th><td>{money(Number(total))}</td></tr></tfoot></table></section>)}<div className="es-net"><span>Net pay</span><strong>{money(item.net)}</strong></div>{settings.payslipNote&&<p className="es-note">{settings.payslipNote}</p>}<p className="es-note">Amounts are from the saved payroll record. — indicates information not recorded in this payslip. This payslip is not a bank payment receipt.</p></div>
+ </article>;
+}
+export function PayslipModal({items,month,status,company,currency,onClose,canPrint=true}:{items:Row[];month:string;status:string;company:Row;currency:string;onClose:()=>void;canPrint?:boolean}){
+ if(typeof document==='undefined')return null;
+ return createPortal(<Modal title="Employee payslips" wide onClose={onClose} className="employee-slip-modal"><div className="modal-body no-print es-tools"><span>{items.length} payslip(s) · {status==='LOCKED'?'Finalized':'Draft preview'}</span>{canPrint&&<button className="btn secondary" onClick={()=>window.print()}><Printer size={16}/>Print / Save PDF</button>}</div><div className="printable es-pages">{items.map(item=><EmployeePayslip key={item.id} item={item} month={month} status={status} company={company} currency={currency}/>)}</div></Modal>,document.body);
+}

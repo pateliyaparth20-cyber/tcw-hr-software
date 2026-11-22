@@ -57,6 +57,7 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
     ]);
     if(!employees.length)throw new BadRequestException('No employees are eligible for this payroll month.');
 
+    const departments=await tx.department.findMany({where:{tenantId},select:{id:true,name:true}});
     let totalGross=0,totalDeductions=0,totalNet=0,itemCount=0;
     const appliedAdjustmentIds:string[]=[];
     const appliedInstallmentIds:string[]=[];
@@ -83,7 +84,9 @@ export async function preparePayrollMonth(db:Database,tenantId:string,month:stri
       if(result.gross>1e9||result.deductions>1e9)throw new BadRequestException(`Salary exceeds the supported amount for ${employee.employeeCode}.`);
       const override=manualByEmployee.get(employee.id);
       const values=override?manualSalaryValues(override.net,result.deductions):result;
-      const components=[...(configured?.earnings??earnings),...(!configured&&overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...(configured?.deductions??[]),...(configured?.snapshots??[]),...result.components.map(c=>({...c,type:c.type==='EMPLOYER'?'EMPLOYER':c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:configured?.payableUnits??payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:configured?.monthlySalary??monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
+      const personal=(employee.personal??{}) as Record<string,unknown>;
+      const employeeSnapshot={type:'EMPLOYEE_SNAPSHOT',name:'Employee details at payroll preparation',designation:employee.designation,department:departments.find(d=>d.id===employee.departmentId)?.name??'',joiningDate:employee.joiningDate.toISOString(),bankName:String(personal.bankName??''),accountNumber:personal.accountNumber?'•••• '+String(personal.accountNumber).slice(-4):'',pfNumber:String(personal.pfNumber??''),uan:String(personal.uan??''),esicNumber:String(personal.esicNumber??'')};
+      const components=[employeeSnapshot,...(configured?.earnings??earnings),...(!configured&&overtime?[{type:'EARNING',name:'Overtime',amount:overtime,minutes:attendance.overtimeMinutes,hourlyRate:salary!.overtimeHourly}]:[]),...(configured?.deductions??[]),...(configured?.snapshots??[]),...result.components.map(c=>({...c,type:c.type==='EMPLOYER'?'EMPLOYER':c.name==='Adjustment'?'ADJUSTMENT':'DEDUCTION'})),...recoveries.map(i=>({type:'DEDUCTION',name:'Loan recovery',amount:i.amount,loanId:i.loanId})),{name:'Attendance',units:configured?.payableUnits??payableUnits,eligibleScheduledDays:eligibleDays,monthlySalary:configured?.monthlySalary??monthlySalary},...(override?[{...override,type:MANUAL_SALARY,calculatedGross:result.gross,calculatedNet:result.net}]:[])];
       await tx.payrollItem.create({data:{
         tenantId,runId:run.id,employeeId:employee.id,employeeName:`${employee.firstName} ${employee.lastName}`,employeeCode:employee.employeeCode,
         gross:values.gross,deductions:values.deductions,net:values.net,
