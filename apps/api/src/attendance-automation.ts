@@ -1,3 +1,4 @@
+import {coreCompanyAccess} from '../../../packages/billing-access';
 import {employeePolicyThresholds,workforceConfig} from './workforce-settings';
 import {policyAttendanceStatus,effectivePolicy,type LeaveSettings} from '../../../packages/workforce-rules';
 import {BadRequestException,ConflictException,NotFoundException} from '@nestjs/common';
@@ -27,14 +28,14 @@ export async function employeeShift(db:Database,tenantId:string,employeeId:strin
   return shift;
 }
 
-export function attendanceAutomationTenantStatus(status:string){return ['ACTIVE','TRIAL'].includes(String(status));}
+export function attendanceAutomationTenantStatus(status:string,profile?:any){return coreCompanyAccess({status,profile});}
 
 const noPunchRefreshAt=new Map<string,number>();
 export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId:string,now=new Date(),minIntervalMs=30000){
   const last=noPunchRefreshAt.get(tenantId)??0;
   if(minIntervalMs>0&&now.getTime()-last<minIntervalMs)return {tenantId,skipped:true,updated:0};
-  const company=await db.tenant.findUnique({where:{id:tenantId},select:{id:true,status:true,timezone:true}});
-  if(!company||!attendanceAutomationTenantStatus(company.status))return {tenantId,skipped:true,updated:0};
+  const company=await db.tenant.findUnique({where:{id:tenantId},select:{id:true,status:true,profile:true,timezone:true}});
+  if(!company||!attendanceAutomationTenantStatus(company.status,company.profile))return {tenantId,skipped:true,updated:0};
   const timezone=company.timezone||'Asia/Kolkata',today=localDate(now,timezone),previous=new Date(Date.parse(today)-86400000).toISOString().slice(0,10);
   const windowStart=atDate(previous),windowEnd=new Date(+atDate(today)+2*86400000);
   const months=[...new Set([previous.slice(0,7),today.slice(0,7)])];
@@ -90,7 +91,7 @@ export async function refreshTenantCurrentNoPunchAttendance(db:Database,tenantId
   return {tenantId,skipped:false,updated};
 }
 export async function refreshCurrentNoPunchAttendance(db:Database,now=new Date()){
-  const companies=await db.tenant.findMany({where:{status:{in:['ACTIVE','TRIAL']}},select:{id:true}});
+  const companies=await db.tenant.findMany({where:{OR:[{status:{in:['ACTIVE','TRIAL','EXPIRED']}},{status:'SUSPENDED',profile:{path:['suspensionReason'],equals:'BILLING'}}]},select:{id:true}});
   let updated=0;
   for(const company of companies)updated+=(await refreshTenantCurrentNoPunchAttendance(db,company.id,now,0)).updated;
   return {companies:companies.length,updated};

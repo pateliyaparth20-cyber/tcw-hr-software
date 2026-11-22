@@ -1,3 +1,4 @@
+import {billingLimited,billingRouteBlocked} from '../../../packages/billing-access';
 import {publicLoading,loadingSettings} from './loading-branding';
 import {salesPipeline} from './sales-pipeline';
 import {subscriptionInvoice} from './subscription-invoices';
@@ -109,8 +110,7 @@ export class Api {
     const body=req.body;
     if(ctx.tenantId){
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
-      const billingLocked=company&&(company.status==='EXPIRED'||(company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason==='BILLING')||(company.expiresAt&&company.expiresAt<new Date()));
-      if(billingLocked&&!ctx.session.proxyParentSessionId&&!['auth','subscription','push'].includes(resource))throw new ForbiddenException('Your trial or subscription has ended. Complete payment to unlock HR modules.');
+      if(billingLimited(company)&&!ctx.session.proxyParentSessionId&&billingRouteBlocked(resource,key,action,method,req.query))throw new ForbiddenException('Your plan has ended. Renew to process payroll, use reports or exports, or add employees. Login, employee profiles and attendance remain available.');
     }
     if(resource==='push'&&key==='config'&&method==='GET')return pushConfig();
     if(resource==='push'&&key==='subscription'&&method==='POST'){

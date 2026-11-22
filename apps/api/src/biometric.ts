@@ -1,3 +1,4 @@
+import {coreCompanyAccess} from '../../../packages/billing-access';
 import {policyAttendanceStatus} from '../../../packages/workforce-rules';
 import {employeePolicyThresholds} from './workforce-settings';
 import {BadRequestException,ConflictException,ForbiddenException,NotFoundException} from '@nestjs/common';
@@ -214,7 +215,7 @@ export class BiometricService{
 
   private async assertCompanyActive(tenantId:string){
     const company=await this.db.tenant.findUnique({where:{id:tenantId}});
-    if(!company||!['ACTIVE','TRIAL'].includes(company.status)||!!(company.expiresAt&&company.expiresAt<new Date()))throw new ForbiddenException('Company access is not active.');
+    if(!coreCompanyAccess(company))throw new ForbiddenException('Company access is not active.');
   }
 
   private async mappingFor(device:any,userId:string){

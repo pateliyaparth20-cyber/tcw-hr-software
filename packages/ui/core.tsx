@@ -1,4 +1,5 @@
 'use client';
+import {billingLimited,billingPermissionBlocked} from '../billing-access';
 import {BrandedLoading} from './loading-branding';
 import React,{createContext,useContext,useEffect,useRef,useState,useId} from 'react';
 import {useQuery,QueryClient,QueryClientProvider,useQueryClient} from '@tanstack/react-query';
@@ -208,7 +209,7 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
     if(path.startsWith('subscription/gateway-')&&r?.status==='PAID')window.dispatchEvent(new Event('tcw-subscription-updated'));
     notify(message);return r;
   }catch(e:any){notify(e.message,true);throw e;}};
-  return <QueryClientProvider client={client}><Context.Provider value={{session,can:(r:string,a='VIEW')=>r==='self'||session.user.permissions.includes(`${r}:${a}`),notify,mutate,currency:session.company?.currency??'INR'}}>{children}{toast&&<div role={toast.error?'alert':'status'} className={'toast '+(toast.error?'error':'')}>{toast.error?<AlertCircle size={19}/>:<Check size={19}/>}<span>{toast.text}</span><button aria-label="Dismiss notification" onClick={()=>setToast(null)}><X size={16}/></button></div>}</Context.Provider></QueryClientProvider>;
+  return <QueryClientProvider client={client}><Context.Provider value={{session,can:(r:string,a='VIEW')=>(r==='self'||session.user.permissions.includes(`${r}:${a}`))&&!(session.user.scope==='TENANT'&&!session.proxy&&billingLimited(session.company)&&billingPermissionBlocked(r,a)),notify,mutate,currency:session.company?.currency??'INR'}}>{children}{toast&&<div role={toast.error?'alert':'status'} className={'toast '+(toast.error?'error':'')}>{toast.error?<AlertCircle size={19}/>:<Check size={19}/>}<span>{toast.text}</span><button aria-label="Dismiss notification" onClick={()=>setToast(null)}><X size={16}/></button></div>}</Context.Provider></QueryClientProvider>;
 }
 export function useData(path:string,enabled=true,refetchInterval?:number|false){const interval=refetchInterval===undefined?liveRefreshInterval(path):refetchInterval;return useQuery<Row>({queryKey:[path],queryFn:()=>api(path),enabled,refetchInterval:enabled?interval:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true,refetchOnReconnect:true});}
 export function Loading(){return <BrandedLoading/>}

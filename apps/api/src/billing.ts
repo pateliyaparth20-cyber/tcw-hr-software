@@ -18,7 +18,7 @@ export async function syncCompanyAccess(db:Database,tenantId?:string){
     const trialProfile=isTrial?{...profile,trialFollowupStatus:['CONTACTED','NO_ANSWER','FOLLOW_UP','INTERESTED','NOT_INTERESTED'].includes(String(profile.trialFollowupStatus))?profile.trialFollowupStatus:'CALL_DUE',trialNextFollowupAt:profile.trialNextFollowupAt??now.toISOString(),trialExpiredAt:profile.trialExpiredAt??now.toISOString()}:profile;
     await db.$transaction(async tx=>{
       await tx.tenant.update({where:{id:company.id},data:{status:'EXPIRED',profile:trialProfile}});
-      await tx.session.deleteMany({where:{tenantId:company.id}});
+      // Keep core HR sessions valid when only billing features are limited.
       await tx.auditLog.create({data:{tenantId:company.id,action:isTrial?'TRIAL_EXPIRED':'SUBSCRIPTION_EXPIRED',entity:'tenants',entityId:company.id}});
     });
   }
@@ -36,7 +36,7 @@ export async function syncCompanyAccess(db:Database,tenantId?:string){
     if(overdue>0&&['ACTIVE','TRIAL'].includes(company.status)&&profile.billingManualActive!==true){
       await db.$transaction(async tx=>{
         await tx.tenant.update({where:{id:company.id},data:{status:'SUSPENDED',profile:{...profile,suspensionReason:'BILLING',billingPreviousStatus:company.status,billingSuspendedAt:now.toISOString()}}});
-        await tx.session.deleteMany({where:{tenantId:company.id}});
+        // Keep core HR sessions valid when only billing features are limited.
         await tx.auditLog.create({data:{tenantId:company.id,action:'BILLING_AUTO_SUSPENDED',entity:'tenants',entityId:company.id,after:{overdueInvoices:overdue,graceDays:graceDays()}}});
       });
     }else if(overdue===0&&company.status==='SUSPENDED'&&profile.suspensionReason==='BILLING'){

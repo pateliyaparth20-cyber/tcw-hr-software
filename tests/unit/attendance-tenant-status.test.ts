@@ -9,6 +9,8 @@ test('attendance automation runs for active and trial companies',()=>{
 
 test('attendance automation skips unavailable company statuses',()=>{
   assert.equal(attendanceAutomationTenantStatus('SUSPENDED'),false);
-  assert.equal(attendanceAutomationTenantStatus('EXPIRED'),false);
+  assert.equal(attendanceAutomationTenantStatus('EXPIRED'),true);
+  assert.equal(attendanceAutomationTenantStatus('SUSPENDED',{suspensionReason:'BILLING'}),true);
+  assert.equal(attendanceAutomationTenantStatus('SUSPENDED',{suspensionReason:'MANUAL'}),false);
   assert.equal(attendanceAutomationTenantStatus('ARCHIVED'),false);
 });

@@ -594,7 +594,7 @@ export class DataService {
         else if(input.status==='SUSPENDED')profile.suspensionReason='MANUAL';
         const cleanProfile=Object.fromEntries(Object.entries(profile).filter(([,v])=>v!==undefined)) as Prisma.InputJsonObject;
         const after=await tx.tenant.update({where:{id:recordId},data:{...input,profile:cleanProfile}});
-        if(!['ACTIVE','TRIAL'].includes(after.status))await tx.session.deleteMany({where:{tenantId:recordId}});
+        if(['SUSPENDED','ARCHIVED'].includes(after.status))await tx.session.deleteMany({where:{tenantId:recordId}});
         await audit(tx,ctx,'SUBSCRIPTION_CHANGED','tenants',recordId,before,after);return after;
       });
     }
