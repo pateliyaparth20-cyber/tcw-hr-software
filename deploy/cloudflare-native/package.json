@@ -1,0 +1,7 @@
+{
+  "name": "tcw-cloudflare-runtime-check",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node runtime-check.mjs"},
+  "devDependencies": {"esbuild": "0.28.2", "miniflare": "4.20260730.0"}
+}

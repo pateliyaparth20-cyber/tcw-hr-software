@@ -1,9 +1,0 @@
-[build]
-  command = "node scripts/build-netlify.mjs hr"
-  publish = "apps/web/.next"
-
-[build.environment]
-  NODE_VERSION = "24"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
