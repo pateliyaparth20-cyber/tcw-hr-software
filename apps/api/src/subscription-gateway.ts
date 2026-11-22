@@ -34,9 +34,10 @@ export class SubscriptionGateway{
   if(method==='GET'){
    const mode=modeSchema.parse(query.mode??config.mode??'TEST'),revision=config.revisions?.[mode],v=revision?await this.version(revision):null;
    const [count,last]=revision?await Promise.all([this.db.billingGatewayEvent.count({where:{gatewayRevision:revision}}),this.db.billingGatewayEvent.findFirst({where:{gatewayRevision:revision},orderBy:{createdAt:'desc'},select:{createdAt:true}})]):[0,null];
-   return {enabled:config.enabled===true,autoPayEnabled:config.autoPayEnabled===true,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,webhookVerified:count>0,signedEventCount:count,lastSignedAt:last?.createdAt??null,revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};
+   return {enabled:config.enabled===true,autoPayEnabled:false,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,webhookVerified:count>0,signedEventCount:count,lastSignedAt:last?.createdAt??null,revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};
   }
   const input=z.object({mode:modeSchema,enabled:z.boolean(),autoPayEnabled:z.boolean(),keyId:z.string().regex(/^rzp_(test|live)_[A-Za-z0-9]+$/),keySecret:z.string().min(8).max(250).optional(),webhookSecret:z.string().min(16).max(250).optional(),expectedRevision:z.string().uuid().nullable()}).strict().parse(body);
+  if(input.autoPayEnabled)throw new BadRequestException('AutoPay has been removed. Only one-time payments are available.');
   if(!input.keyId.startsWith(input.mode==='LIVE'?'rzp_live_':'rzp_test_'))throw new BadRequestException('The key must match the selected Test or Live mode.');
   return this.db.$transaction(async tx=>{
    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('tcw-subscription-gateway'))`;
@@ -45,13 +46,13 @@ export class SubscriptionGateway{
    const keySecret=input.keySecret??previous.keySecret,webhookSecret=input.webhookSecret??previous.webhookSecret;if(!keySecret||!webhookSecret)throw new BadRequestException('Enter the API secret and a webhook secret of at least 16 characters.');
    const reuse=oldId&&old?.keyId===input.keyId&&!input.keySecret&&!input.webhookSecret,revision=reuse?String(oldId):randomUUID(),settingsRevision=randomUUID();
    if(!reuse)await tx.platformSetting.create({data:{key:'billing-gateway-version:'+revision,value:{mode:input.mode,keyId:input.keyId,ciphertext:sealPayoutCredentials('SUBSCRIPTIONS:'+input.mode,{keySecret,webhookSecret})}}});
-   if(input.autoPayEnabled&&!await tx.billingGatewayEvent.count({where:{gatewayRevision:revision}}))throw new BadRequestException('Save credentials with AutoPay off, register this webhook in Razorpay and send a test event, then enable AutoPay.');
-   const next={revision:settingsRevision,mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled,revisions:{...current.revisions,[input.mode]:revision}};await tx.platformSetting.upsert({where:{key:'billing-gateway'},create:{key:'billing-gateway',value:next},update:{value:next}});
-   await audit(tx,ctx,'SUBSCRIPTION_GATEWAY_CONFIGURED','system',revision,undefined,{mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled});return {ok:true,revision:settingsRevision,webhookUrl:this.webhookUrl(revision)};
+
+   const next={revision:settingsRevision,mode:input.mode,enabled:input.enabled,autoPayEnabled:false,revisions:{...current.revisions,[input.mode]:revision}};await tx.platformSetting.upsert({where:{key:'billing-gateway'},create:{key:'billing-gateway',value:next},update:{value:next}});
+   await audit(tx,ctx,'SUBSCRIPTION_GATEWAY_CONFIGURED','system',revision,undefined,{mode:input.mode,enabled:input.enabled,autoPayEnabled:false});return {ok:true,revision:settingsRevision,webhookUrl:this.webhookUrl(revision)};
   });
  }
  webhookUrl(revision:string){return new URL('/api/billing/razorpay/webhook/'+revision,process.env.WEB_URL??'https://hr.techcyberwarrior.in').toString();}
- async summary(ctx:Context){const tid=tenant(ctx),company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}}),c=await this.config(),rows=await this.db.billingCheckout.findMany({where:{tenantId:tid,kind:'AUTOPAY',state:{not:'QUOTED'}},orderBy:{createdAt:'desc'},take:8});return {currentSubscription:{plan:company.plan,status:company.status,cycle:jsonObject(company.profile).subscriptionCycle??null,expiresAt:company.expiresAt,isTrial:company.status==='TRIAL'},gateway:{configured:c.enabled===true&&!!c.revisions?.[c.mode],mode:c.mode??'TEST',autoPayEnabled:c.autoPayEnabled===true},autopay:rows.map(r=>({id:r.id,planName:r.planName,cycle:r.cycle,mode:r.mode,status:r.mandateStatus??r.state,amount:r.amount,cancelScheduled:r.cancelScheduled,providerRef:r.providerRef,createdAt:r.createdAt})),recentCharges:await this.db.billingCharge.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:12})};}
+ async summary(ctx:Context){const tid=tenant(ctx),company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}}),c=await this.config(),rows=await this.db.billingCheckout.findMany({where:{tenantId:tid,kind:'AUTOPAY',state:{not:'QUOTED'}},orderBy:{createdAt:'desc'},take:8});return {currentSubscription:{plan:company.plan,status:company.status,cycle:jsonObject(company.profile).subscriptionCycle??null,expiresAt:company.expiresAt,isTrial:company.status==='TRIAL'},gateway:{configured:c.enabled===true&&!!c.revisions?.[c.mode],mode:c.mode??'TEST',autoPayEnabled:false},autopay:rows.map(r=>({id:r.id,planName:r.planName,cycle:r.cycle,mode:r.mode,status:r.mandateStatus??r.state,amount:r.amount,cancelScheduled:r.cancelScheduled,providerRef:r.providerRef,createdAt:r.createdAt})),recentCharges:await this.db.billingCharge.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:12})};}
  async contactSales(ctx:Context,body:unknown){
   const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
   const input=z.object({contactName:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200),phone:z.string().trim().max(40).default(''),employees:z.number().int().min(1).max(1000000),requirements:z.string().trim().min(10).max(3000),cycle:z.enum(['MONTHLY','YEARLY'])}).strict().parse(body);
@@ -67,8 +68,8 @@ export class SubscriptionGateway{
   });
  }
  async checkout(ctx:Context,body:any,preview=false){
-  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.enum(['ONETIME','AUTOPAY']),requestKey:id}).strict().parse(body),config=await this.config();
-  if(!config.enabled||!config.revisions?.[config.mode])throw new ServiceUnavailableException('Razorpay checkout is not connected yet.');if(!preview&&input.kind==='AUTOPAY'&&!config.autoPayEnabled)throw new ServiceUnavailableException('AutoPay has not been enabled by the administrator.');
+  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');if(body?.kind==='AUTOPAY')throw new BadRequestException('AutoPay has been removed. Use one-time checkout.');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.literal('ONETIME'),requestKey:id}).strict().parse(body),config=await this.config();
+  if(!config.enabled||!config.revisions?.[config.mode])throw new ServiceUnavailableException('Razorpay checkout is not connected yet.');
   const revision=String(config.revisions[config.mode]);let version=await this.version(revision);
   let row=await this.db.$transaction(async tx=>{
    await tx.$queryRaw`SELECT id FROM tenants WHERE id=${tid}::uuid FOR UPDATE`;

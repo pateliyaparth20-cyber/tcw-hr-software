@@ -10,7 +10,7 @@ export async function subscriptionQuote(db:any,company:any,rawPlan:any,cycle:str
  if(!price)throw new BadRequestException('The selected billing cycle has no published price yet.');
  if(price<100||price>100000000)throw new BadRequestException('This plan price needs administrator review before checkout.');
  const recurring=taxedPrice(price,rate,inclusive),paidTerm=company.status!=='TRIAL'&&company.expiresAt&&company.expiresAt>now,upgrade=paidTerm&&company.plan!==plan.name;
- if(paidTerm&&!upgrade&&kind==='ONETIME')throw new BadRequestException('Your paid plan is still running. Authorize AutoPay for renewal at expiry, or pay once after the current plan ends.');
+ if(paidTerm&&!upgrade&&kind==='ONETIME')throw new BadRequestException('Your paid plan is still running. Renew with a one-time payment after it ends, or upgrade to a higher plan now.');
  let credit=0,creditSubtotal=0,creditTax=0,basisInvoiceId:string|null=null;
  if(upgrade){
   // Credit only a fully paid, immutable service-period receipt. Never estimate
