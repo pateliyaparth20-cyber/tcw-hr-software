@@ -28,6 +28,7 @@ export function PeopleDirectory(){
  const canImport=can('employees','IMPORT')&&!restricted&&(canCreate||canEdit);
  const [search,setSearch]=useState(params.get('search')??''),[query,setQuery]=useState(search),[status,setStatus]=useState(''),[department,setDepartment]=useState(''),[branch,setBranch]=useState(''),[shift,setShift]=useState(''),[team,setTeam]=useState(params.get('teamId')??''),[sort,setSort]=useState('recent'),[page,setPage]=useState(1),[view,setView]=useState<'list'|'cards'>('list');
  const [editing,setEditing]=useState<Row|null>(null),[profile,setProfile]=useState<Row|null>(null),[deleting,setDeleting]=useState<Row|null>(null),[importing,setImporting]=useState(false),[tasks,setTasks]=useState<Row|null>(null),[access,setAccess]=useState<Row|null>(null),[photo,setPhoto]=useState<{src:string;name:string}|null>(null);
+ useEffect(()=>{if(params.get('new')==='1'&&canCreate)setEditing({})},[params,canCreate]);
  useEffect(()=>{setSearch(params.get('search')??'');setTeam(params.get('teamId')??'');setPage(1)},[params]);
  useEffect(()=>{const timer=setTimeout(()=>{setQuery(search.trim());setPage(1)},250);return()=>clearTimeout(timer)},[search]);
  const filters=new URLSearchParams({q:query,status,departmentId:department,branchId:branch,shiftId:shift,teamId:team,sort,page:String(page),pageSize:'24',includeSummary:'true'});

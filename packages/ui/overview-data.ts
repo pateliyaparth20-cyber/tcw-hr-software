@@ -11,3 +11,21 @@ export function overviewSnapshot(data:Row,today:string){
  const alerts=records.filter(r=>Number(r.lateMinutes)>0||r.exceptionCode||r.status==='MISSING_PUNCH').length;
  return {people,records,present,halfDay,insufficient,absent,notChecked,other,pending,onLeave,alerts,late:records.filter(r=>Number(r.lateMinutes)>0).length,attendanceRate:people.length?Math.round(present/people.length*100):0,overtimeMinutes:records.reduce((n,r)=>n+(Number(r.overtimeMinutes)||0),0)};
 }
+
+/** Disjoint person counts for the overview ring; approved leave is not a missing punch. */
+export function overviewDistribution(data:Row,today:string){
+ const people:Row[]=data.employees??[],records=new Map<string,Row>();
+ for(const r of data.attendance??[])if(String(r.date).slice(0,10)===today)records.set(r.employeeId,r);
+ const leaveIds=new Set((data.leave??[]).filter((r:Row)=>r.status==='APPROVED'&&String(r.startDate).slice(0,10)<=today&&String(r.endDate).slice(0,10)>=today).map((r:Row)=>r.employeeId));
+ const counts={present:0,onLeave:0,notChecked:0,halfDay:0,insufficient:0,absent:0,other:0};
+ for(const employee of people){const status=records.get(employee.id)?.status;
+  if(status==='PRESENT')counts.present++;
+  else if(status==='HALF_DAY')counts.halfDay++;
+  else if(['INSUFFICIENT_HOURS','SHORT_HOURS'].includes(status??''))counts.insufficient++;
+  else if(status==='ABSENT')counts.absent++;
+  else if(['PAID_LEAVE','UNPAID_LEAVE','LEAVE'].includes(status??'')||leaveIds.has(employee.id))counts.onLeave++;
+  else if(!status||['NOT_CLOCKED_IN','PENDING','VOID'].includes(status))counts.notChecked++;
+  else counts.other++;
+ }
+ return counts;
+}
