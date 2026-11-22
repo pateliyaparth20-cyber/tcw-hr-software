@@ -1,3 +1,6 @@
+import {publicLoading,loadingSettings} from './loading-branding';
+import {salesPipeline} from './sales-pipeline';
+import {subscriptionInvoice} from './subscription-invoices';
 import {SubscriptionGateway} from './subscription-gateway';
 import {statutoryImport,statutoryColumns} from './statutory-import';
 import {WorkforceSettings} from './workforce-settings';
@@ -74,7 +77,7 @@ export class Api {
     if(resource==='branding'&&method==='GET'){
       const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});
       const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};
-      return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};
+      return {logo:value.logo??'/tcw-logo.png',loading:await publicLoading(this.db),updatedAt:row?.updatedAt??null};
     }
     if(resource==='tenant-branding'&&key&&method==='GET'){
       const code=z.string().trim().toUpperCase().min(3).max(60).regex(/^[A-Z0-9-]+$/).parse(key);
@@ -118,6 +121,11 @@ export class Api {
     if(resource==='push'&&key==='subscription'&&method==='DELETE'){
       const input=z.object({endpoint:z.string().url().max(4000)}).strict().parse(body);
       return deletePushSubscription(this.db,ctx.user.id,input.endpoint);
+    }
+    if(resource==='system'&&key==='loading-branding'&&['GET','PUT'].includes(method))return loadingSettings(this.db,ctx,method,body);
+    if(resource==='platform'&&key==='sales-pipeline'&&['GET','PATCH'].includes(method))return salesPipeline(this.db,ctx,method,action,body);
+    if(((resource==='subscription'&&key==='invoices'&&action&&parts[3]==='download')||(resource==='platform'&&key==='invoices'&&action&&parts[3]==='download'))&&method==='GET'){
+      const file=await subscriptionInvoice(this.db,ctx,action);res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',`attachment; filename="${file.filename}"`);res.setHeader('Cache-Control','private, no-store');res.end(file.bytes);return;
     }
     if(resource==='system'&&key==='billing-gateway')return this.billing.settings(ctx,method,body,req.query);
     if(resource==='subscription'&&key==='contact-sales'&&method==='POST')return this.billing.contactSales(ctx,body);

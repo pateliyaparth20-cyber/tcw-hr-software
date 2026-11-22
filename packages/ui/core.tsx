@@ -1,4 +1,5 @@
 'use client';
+import {BrandedLoading} from './loading-branding';
 import React,{createContext,useContext,useEffect,useRef,useState,useId} from 'react';
 import {useQuery,QueryClient,QueryClientProvider,useQueryClient} from '@tanstack/react-query';
 import {io} from 'socket.io-client';
@@ -204,12 +205,13 @@ export function Providers({children,session}:{children:React.ReactNode;session:S
     const noun=labels[root]??'Record';
     const nested=path.split('/').length>1;
     const message=verb==='DELETE'?noun+' deleted.':verb==='POST'?(nested?'Action completed.':noun+' added.'):verb==='PATCH'||verb==='PUT'?noun+' updated.':'Done.';
+    if(path.startsWith('subscription/gateway-')&&r?.status==='PAID')window.dispatchEvent(new Event('tcw-subscription-updated'));
     notify(message);return r;
   }catch(e:any){notify(e.message,true);throw e;}};
   return <QueryClientProvider client={client}><Context.Provider value={{session,can:(r:string,a='VIEW')=>r==='self'||session.user.permissions.includes(`${r}:${a}`),notify,mutate,currency:session.company?.currency??'INR'}}>{children}{toast&&<div role={toast.error?'alert':'status'} className={'toast '+(toast.error?'error':'')}>{toast.error?<AlertCircle size={19}/>:<Check size={19}/>}<span>{toast.text}</span><button aria-label="Dismiss notification" onClick={()=>setToast(null)}><X size={16}/></button></div>}</Context.Provider></QueryClientProvider>;
 }
 export function useData(path:string,enabled=true,refetchInterval?:number|false){const interval=refetchInterval===undefined?liveRefreshInterval(path):refetchInterval;return useQuery<Row>({queryKey:[path],queryFn:()=>api(path),enabled,refetchInterval:enabled?interval:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true,refetchOnReconnect:true});}
-export function Loading(){return <div className="loading" role="status"><LoaderCircle className="spin" size={24}/><span>Loading your workspace…</span></div>}
+export function Loading(){return <BrandedLoading/>}
 export function Failure({error,retry}:{error:Error;retry?:()=>void}){return <div className="empty error-state" role="alert"><AlertCircle aria-hidden="true"/><h3>Unable to load this view</h3><p>{error.message}</p>{retry&&<button className="btn secondary" onClick={retry}>Try again</button>}</div>}
 export function Empty({title='Nothing here yet',description='New records will appear here.',action}:{title?:string;description?:string;action?:React.ReactNode}){return <div className="empty"><span className="empty-icon"><Inbox size={26}/></span><h3>{title}</h3><p>{description}</p>{action}</div>}
 export function Badge({value}:{value:any}){const str=String(value??'—'),label=str==='HALF_DAY'?'Half Day':['INSUFFICIENT_HOURS','SHORT_HOURS'].includes(str)?'Insufficient Time':str==='NOT_CLOCKED_IN'?'Not Checked In':readable(str.toLowerCase());return <span className={'badge '+(['ACTIVE','PRESENT','APPROVED','PAID','COMPLETED','HIRED','WON','AVAILABLE','WORKING','CONNECTED','ONLINE','LOCKED','RESOLVED','INFO','CLEAR','OPEN','PAID_LEAVE','CONTACTED','INTERESTED','CONVERTED','HOLIDAY','WEEK_OFF','LOW'].includes(str)?'green':['PENDING','TRIAL','REVIEW','PROBATION','MEETING','PART_PAID','IN_PROGRESS','AWAITING_CONNECTION','DEGRADED','WARN','NORMAL','HIGH','FOLLOW_UP','NO_ANSWER','HALF_DAY','SHORT_HOURS','INSUFFICIENT_HOURS','NOT_CLOCKED_IN'].includes(str)?'amber':['REJECTED','ABSENT','SUSPENDED','EXPIRED','ARCHIVED','OVERDUE','MISSING_PUNCH','LOST','OFFLINE','ERROR','URGENT','CALL_DUE','NOT_INTERESTED'].includes(str)?'red':'blue')}>{label}</span>}

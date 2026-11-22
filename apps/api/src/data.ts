@@ -1,3 +1,5 @@
+import {recordSubscriptionInvoice} from './subscription-invoices';
+import {activeSalesCompany,salesCompany} from './sales-pipeline';
 import {faceEnrollmentSummary} from './face-profile';
 import {closeFieldSessions} from './field-work';
 import {localDate} from '../../../packages/attendance-engine';
@@ -549,6 +551,8 @@ export class DataService {
         await tx.candidate.deleteMany({where:{tenantId:companyId}});
         await tx.document.deleteMany({where:{tenantId:companyId}});
         await tx.payment.deleteMany({where:{tenantId:companyId}});
+        const invoiceKeys=(await tx.invoice.findMany({where:{tenantId:companyId},select:{id:true}})).map(i=>'subscription-invoice:'+i.id);
+        if(invoiceKeys.length)await tx.platformSetting.deleteMany({where:{key:{in:invoiceKeys}}});
         await tx.invoice.deleteMany({where:{tenantId:companyId}});
         await tx.supportTicket.deleteMany({where:{tenantId:companyId}});
         await tx.meghnaConversation.deleteMany({where:{tenantId:companyId}});
@@ -574,7 +578,7 @@ export class DataService {
         await tx.location.deleteMany({where:{tenantId:companyId}});
         await tx.branch.deleteMany({where:{tenantId:companyId}});
         await tx.shift.deleteMany({where:{tenantId:companyId}});
-        await tx.lead.deleteMany({where:{OR:[{notes:{contains:before.code}},...(owner?.email?[{company:before.name,email:owner.email}]:[])]}});
+        await tx.lead.deleteMany({where:{OR:[{notes:{contains:before.code}},{notes:{startsWith:'[TCW_COMPANY:'+companyId+']'}},{notes:{startsWith:'[CUSTOM_PLAN:'+companyId+']'}},...(owner?.email?[{company:before.name,email:owner.email}]:[])]}});
         await tx.tenant.delete({where:{id:companyId}});
         await audit(tx,ctx,'COMPANY_PERMANENTLY_DELETED','tenants',companyId,undefined,{permanent:true});
         return {ok:true,deleted:true,id:companyId};
@@ -595,8 +599,10 @@ export class DataService {
       });
     }
     if(type==='leads'||type==='plans'){
-      const input=(type==='leads'?leadSchema:planSchema).parse(body);
-      return this.db.$transaction(async tx=>{const table=(tx as any)[model];const before=recordId?await table.findUnique({where:{id:id.parse(recordId)}}):null;if(recordId&&!before)throw new NotFoundException();const after=recordId?await table.update({where:{id:recordId},data:input}):await table.create({data:input});await audit(tx,ctx,'UPDATED',type,after.id,before,after);return after;});
+      const parsed=(type==='leads'?leadSchema.extend({companyId:id.nullable().optional(),expectedUpdatedAt:z.string().datetime().optional()}):planSchema).parse(body) as any;
+      const {companyId:linkedCompanyId,expectedUpdatedAt,...input}=parsed;
+      if(linkedCompanyId)requirePermission(ctx,'tenants','VIEW');
+      return this.db.$transaction(async tx=>{if(type==='leads'&&recordId)await tx.$queryRaw`SELECT id FROM leads WHERE id=${id.parse(recordId)}::uuid FOR UPDATE`;const table=(tx as any)[model];const before=recordId?await table.findUnique({where:{id:id.parse(recordId)}}):null;if(recordId&&!before)throw new NotFoundException();if(type==='leads'&&before&&expectedUpdatedAt&&before.updatedAt.toISOString()!==expectedUpdatedAt)throw new ConflictException('This lead changed in another window. Refresh before saving.');if(type==='leads'&&linkedCompanyId){const company=await tx.tenant.findUnique({where:{id:linkedCompanyId}});if(!company)throw new BadRequestException('Linked company not found.');const existing=before?salesCompany(before,await tx.tenant.findMany({select:{id:true,code:true,status:true,expiresAt:true}})):null;if(existing&&existing.id!==company.id)throw new ConflictException('This lead is already linked to another company.');input.notes='[TCW_COMPANY:'+company.id+']\n'+String(input.notes??'').replace(/^\[(?:CUSTOM_PLAN|TCW_COMPANY):[a-f0-9-]{36}\]\n?/i,'');}if(type==='leads'&&before){const linked=salesCompany(before,await tx.tenant.findMany({select:{id:true,code:true,status:true,expiresAt:true}}));if(linked){if(activeSalesCompany(linked)&&(input as any).stage!==before.stage)throw new ConflictException('Active customers are grouped automatically. Change subscriptions from Companies.');(input as any).notes=(before.notes.match(/^\[(?:CUSTOM_PLAN|TCW_COMPANY):[a-f0-9-]{36}\]/i)?.[0]??'[TCW_COMPANY:'+linked.id+']')+'\n'+String((input as any).notes??'').replace(/^\[(?:CUSTOM_PLAN|TCW_COMPANY):[a-f0-9-]{36}\]\n?/i,'');}}const after=recordId?await table.update({where:{id:recordId},data:input}):await table.create({data:input});await audit(tx,ctx,'UPDATED',type,after.id,before,after);return after;});
     }
     if(type==='invoices'&&method==='POST'){
       const input=z.object({tenantId:id,number:z.string().min(1).max(100),amount:z.number().int().min(1).max(1e9),tax:z.number().int().min(0).max(1e9),dueDate:date}).strict().parse(body);
@@ -626,7 +632,7 @@ export class DataService {
         await tx.invoice.update({where:{id:invoice.id},data:{paidAmount,status:paidAmount===invoice.total?'PAID':overdue?'OVERDUE':'PART_PAID'}});
         if(paidAmount===invoice.total){
           const company=await tx.tenant.findUnique({where:{id:invoice.tenantId}});
-          if(company){const nextExpiry=new Date(Math.max(Date.now(),company.expiresAt?.getTime()??0));nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile),pending=profile.pendingInvoiceId===invoice.id?await tx.plan.findUnique({where:{name:String(profile.pendingPlan??'')}}):null;delete profile.pendingPaymentProof;delete profile.suspensionReason;delete profile.pendingInvoiceId;delete profile.pendingPlan;await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,...(pending?{plan:pending.name,employeeLimit:pending.employeeLimit}:{}),profile}});}
+          if(company){const nextExpiry=new Date(Math.max(Date.now(),company.expiresAt?.getTime()??0));nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile),pending=profile.pendingInvoiceId===invoice.id?await tx.plan.findUnique({where:{name:String(profile.pendingPlan??'')}}):null;delete profile.pendingPaymentProof;delete profile.suspensionReason;delete profile.pendingInvoiceId;delete profile.pendingPlan;profile.subscriptionCycle='MONTHLY';await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,...(pending?{plan:pending.name,employeeLimit:pending.employeeLimit}:{}),profile}});await recordSubscriptionInvoice(tx,company,{...invoice,paidAmount,status:'PAID'},{planName:pending?.name??company.plan,cycle:'MONTHLY',snapshot:{}},new Date(nextExpiry.getTime()-30*86400000),nextExpiry);}
         }
         await audit(tx,ctx,'PAYMENT_RECORDED','payments',payment.id,undefined,payment);return payment;
       });

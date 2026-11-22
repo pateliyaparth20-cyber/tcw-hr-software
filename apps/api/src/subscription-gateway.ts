@@ -1,3 +1,4 @@
+import {recordSubscriptionInvoice} from './subscription-invoices';
 import {BadRequestException,ConflictException,ForbiddenException,NotFoundException,ServiceUnavailableException} from '@nestjs/common';
 import {createHash,createHmac,randomUUID,timingSafeEqual} from 'node:crypto';
 import {z} from 'zod';
@@ -24,9 +25,15 @@ export class SubscriptionGateway{
   const result=await response.json().catch(()=>null) as any;if(!response.ok||!result)throw new ServiceUnavailableException('Razorpay: '+String(result?.error?.description??'request unavailable').slice(0,220));return result;
  }
  async config(){return jsonObject((await this.db.platformSetting.findUnique({where:{key:'billing-gateway'}}))?.value);}
+ async settings(ctx:Context,method:'GET',body:any,query?:any):Promise<{enabled:boolean;autoPayEnabled:boolean;mode:'TEST'|'LIVE';activeMode:'TEST'|'LIVE';keyId:string;hasCredentials:boolean;webhookVerified:boolean;signedEventCount:number;lastSignedAt:Date|null;revision:string|null;webhookUrl:string|null}>;
+ async settings(ctx:Context,method:string,body:any,query?:any):Promise<any>;
  async settings(ctx:Context,method:string,body:any,query:any={}){
   platform(ctx);requirePermission(ctx,'system',method==='GET'?'VIEW':'EDIT');const config=await this.config();
-  if(method==='GET'){const mode=modeSchema.parse(query.mode??config.mode??'TEST'),revision=config.revisions?.[mode],v=revision?await this.version(revision):null;return {enabled:config.enabled===true,autoPayEnabled:config.autoPayEnabled===true,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,webhookVerified:!!revision&&!!await this.db.billingGatewayEvent.count({where:{gatewayRevision:revision}}),revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};}
+  if(method==='GET'){
+   const mode=modeSchema.parse(query.mode??config.mode??'TEST'),revision=config.revisions?.[mode],v=revision?await this.version(revision):null;
+   const [count,last]=revision?await Promise.all([this.db.billingGatewayEvent.count({where:{gatewayRevision:revision}}),this.db.billingGatewayEvent.findFirst({where:{gatewayRevision:revision},orderBy:{createdAt:'desc'},select:{createdAt:true}})]):[0,null];
+   return {enabled:config.enabled===true,autoPayEnabled:config.autoPayEnabled===true,mode,activeMode:config.mode??'TEST',keyId:v?.keyId??'',hasCredentials:!!v,webhookVerified:count>0,signedEventCount:count,lastSignedAt:last?.createdAt??null,revision:config.revision??null,webhookUrl:revision?this.webhookUrl(revision):null};
+  }
   const input=z.object({mode:modeSchema,enabled:z.boolean(),autoPayEnabled:z.boolean(),keyId:z.string().regex(/^rzp_(test|live)_[A-Za-z0-9]+$/),keySecret:z.string().min(8).max(250).optional(),webhookSecret:z.string().min(16).max(250).optional(),expectedRevision:z.string().uuid().nullable()}).strict().parse(body);
   if(!input.keyId.startsWith(input.mode==='LIVE'?'rzp_live_':'rzp_test_'))throw new BadRequestException('The key must match the selected Test or Live mode.');
   return this.db.$transaction(async tx=>{
@@ -42,7 +49,7 @@ export class SubscriptionGateway{
   });
  }
  webhookUrl(revision:string){return new URL('/api/billing/razorpay/webhook/'+revision,process.env.WEB_URL??'https://hr.techcyberwarrior.in').toString();}
- async summary(ctx:Context){const tid=tenant(ctx),c=await this.config(),rows=await this.db.billingCheckout.findMany({where:{tenantId:tid,kind:'AUTOPAY'},orderBy:{createdAt:'desc'},take:8});return {gateway:{configured:c.enabled===true&&!!c.revisions?.[c.mode],mode:c.mode??'TEST',autoPayEnabled:c.autoPayEnabled===true},autopay:rows.map(r=>({id:r.id,planName:r.planName,cycle:r.cycle,mode:r.mode,status:r.mandateStatus??r.state,amount:r.amount,cancelScheduled:r.cancelScheduled,providerRef:r.providerRef,createdAt:r.createdAt})),recentCharges:await this.db.billingCharge.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:12})};}
+ async summary(ctx:Context){const tid=tenant(ctx),company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}}),c=await this.config(),rows=await this.db.billingCheckout.findMany({where:{tenantId:tid,kind:'AUTOPAY'},orderBy:{createdAt:'desc'},take:8});return {currentSubscription:{plan:company.plan,status:company.status,cycle:jsonObject(company.profile).subscriptionCycle??null,expiresAt:company.expiresAt,isTrial:company.status==='TRIAL'},gateway:{configured:c.enabled===true&&!!c.revisions?.[c.mode],mode:c.mode??'TEST',autoPayEnabled:c.autoPayEnabled===true},autopay:rows.map(r=>({id:r.id,planName:r.planName,cycle:r.cycle,mode:r.mode,status:r.mandateStatus??r.state,amount:r.amount,cancelScheduled:r.cancelScheduled,providerRef:r.providerRef,createdAt:r.createdAt})),recentCharges:await this.db.billingCharge.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:12})};}
  async contactSales(ctx:Context,body:unknown){
   const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
   const input=z.object({contactName:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200),phone:z.string().trim().max(40).default(''),employees:z.number().int().min(1).max(1000000),requirements:z.string().trim().min(10).max(3000),cycle:z.enum(['MONTHLY','YEARLY'])}).strict().parse(body);
@@ -102,6 +109,7 @@ export class SubscriptionGateway{
    const start=periodStart??new Date(Math.max(+captured,company.expiresAt?.getTime()??0)),end=periodEnd??addBillingMonths(start,row.cycle==='YEARLY'?12:1);let invoiceId:string|null=null;
    if(row.mode==='LIVE'){
     const invoice=await tx.invoice.create({data:{tenantId:row.tenantId,number:'TCW-'+p.id,amount:row.subtotal,tax:row.tax,total:row.amount,paidAmount:row.amount,status:'PAID',dueDate:captured}});invoiceId=invoice.id;await tx.payment.create({data:{tenantId:row.tenantId,invoiceId:invoice.id,amount:row.amount,reference:'RAZORPAY:'+p.id,date:captured}});
+    await recordSubscriptionInvoice(tx,company,invoice,row,start,end);
     const profile=jsonObject(company.profile);const last=Number(profile.gatewayLastPaidPeriodStart??0);if(+start>=last){delete profile.suspensionReason;delete profile.billingPreviousStatus;delete profile.billingSuspendedAt;delete profile.pendingPaymentProof;delete profile.pendingPlan;profile.gatewayLastPaidPeriodStart=+start;profile.subscriptionCycle=row.cycle;await tx.tenant.update({where:{id:company.id},data:{status:company.status==='ARCHIVED'||company.status==='SUSPENDED'&&jsonObject(company.profile).suspensionReason!=='BILLING'?company.status:'ACTIVE',plan:row.planName,employeeLimit:jsonObject(row.snapshot).employeeLimit,expiresAt:new Date(Math.max(company.expiresAt?.getTime()??0,+end)),profile}});}
    }
    await tx.billingCharge.create({data:{tenantId:row.tenantId,checkoutId:row.id,providerPaymentId:p.id,providerInvoiceId,invoiceId,amount:row.amount,mode:row.mode,periodStart:start,periodEnd:end}});await tx.billingCheckout.update({where:{id:row.id},data:{state:row.mode==='LIVE'?'PAID':'TEST_PAID'}});
