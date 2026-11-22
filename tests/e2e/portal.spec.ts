@@ -531,3 +531,22 @@ test('employee field sharing requires consent and persists across navigation unt
  // The server closes the session on checkout; the shell refresh must remove the watcher/banner.
  active=null;await page.evaluate(()=>window.dispatchEvent(new Event('tcw-field-session')));await expect(page.locator('.field-sharing-banner')).toHaveCount(0);expect(stopRequests).toBe(0);
 });
+
+test('navigation and nested payroll sections survive refresh and browser history',async({page})=>{
+ await login(page);
+ await page.goto('/attendance?tab=monthly');
+ await expect(page.getByRole('button',{name:'Monthly automation',exact:true})).toHaveClass(/active/);
+ await page.reload();await expect(page).toHaveURL(/\/attendance\?tab=monthly$/);
+ await expect(page.getByRole('button',{name:'Monthly automation',exact:true})).toHaveClass(/active/);
+ await page.goto('/payroll?tab=payments&payrollSection=settings&payrollTab=statutory');
+ await expect(page.getByRole('heading',{name:'Deductions',exact:true})).toBeVisible();
+ await page.reload();await expect(page.getByRole('heading',{name:'Deductions',exact:true})).toBeVisible();
+ const sections=page.getByRole('navigation',{name:'Payment settings sections'});
+ await sections.getByRole('button',{name:'Salary structures',exact:true}).click();
+ await expect(page).toHaveURL(/payrollSection=structures/);await page.reload();
+ await expect(sections.getByRole('button',{name:'Salary structures',exact:true})).toHaveAttribute('aria-pressed','true');
+ await sections.getByRole('button',{name:'Contribution rules',exact:true}).click();await expect(page).toHaveURL(/payrollSection=rules/);
+ await page.goBack();await expect(sections.getByRole('button',{name:'Salary structures',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.goto('/employees');await page.reload();await expect(page).toHaveURL(/\/employees$/);
+ await expect(page.locator('a[aria-current="page"][href="/employees"]').first()).toBeVisible();
+});

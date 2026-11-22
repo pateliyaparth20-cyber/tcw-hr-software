@@ -1,4 +1,5 @@
 'use client';
+import {useUrlTab} from './use-url-tab';
 import {PayrollOverview,PayrollEmployeeTable} from './payroll-overview';
 import {PayrollSettingsPage,TaxPanel} from './workforce-settings';
 import {PayrollSettingsHub} from './payroll-settings-hub';
@@ -80,7 +81,7 @@ function AttendanceDailyTable({rows,employeeRecord,employeeName,attendanceTimezo
 }
 export function AttendancePage(){
  const{can,mutate,session}=useApp();const employeeSelf=session.user.role==='EMPLOYEE',browserTimezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',attendanceTimezone=session.company?.timezone??browserTimezone,attendanceToday=new Intl.DateTimeFormat('en-CA',{timeZone:attendanceTimezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const[tab,setTab]=useState('attendance'),[open,setOpen]=useState(false),[faceOpen,setFaceOpen]=useState(false),[removeAttendance,setRemoveAttendance]=useState<Row|null>(null),[viewAttendance,setViewAttendance]=useState<Row|null>(null),[correctAttendance,setCorrectAttendance]=useState<Row|null>(null),[from,setFrom]=useState(attendanceToday),[to,setTo]=useState(attendanceToday),[month,setMonth]=useState(attendanceToday.slice(0,7)),[employeeSearch,setEmployeeSearch]=useState(''),[statusFilter,setStatusFilter]=useState(''),[page,setPage]=useState(1),[removeMonth,setRemoveMonth]=useState(false);
+ const[tab,setTab]=useUrlTab('tab',['attendance','monthly',...(can('shifts')?['shifts']:[])],'attendance'),[open,setOpen]=useState(false),[faceOpen,setFaceOpen]=useState(false),[removeAttendance,setRemoveAttendance]=useState<Row|null>(null),[viewAttendance,setViewAttendance]=useState<Row|null>(null),[correctAttendance,setCorrectAttendance]=useState<Row|null>(null),[from,setFrom]=useState(attendanceToday),[to,setTo]=useState(attendanceToday),[month,setMonth]=useState(attendanceToday.slice(0,7)),[employeeSearch,setEmployeeSearch]=useState(''),[statusFilter,setStatusFilter]=useState(''),[page,setPage]=useState(1),[removeMonth,setRemoveMonth]=useState(false);
  const q=useData(`attendance?from=${from}&to=${to}${employeeSearch.trim()?`&employeeSearch=${encodeURIComponent(employeeSearch.trim())}`:''}`,tab==='attendance',5000),employees=useData('employees?pageSize=500',can('employees')),summary=useData(`attendance/summary?month=${month}`,tab==='monthly'),devices=useData('devices?pageSize=100',tab==='attendance'&&!employeeSelf,10000);
  useEffect(()=>{if(tab!=='attendance'||from!==attendanceToday||to!==attendanceToday)return;let timer:ReturnType<typeof setTimeout>|undefined;const schedule=()=>{const delay=60_000-(Date.now()%60_000)+125;timer=setTimeout(async()=>{await q.refetch();schedule()},delay)};schedule();return()=>{if(timer)clearTimeout(timer)}},[attendanceToday,from,q.refetch,tab,to]);
  useEffect(()=>{setViewAttendance(previous=>previous?(q.data?.items??[]).find((row:Row)=>row.id===previous.id)??previous:null)},[q.data]);
@@ -115,7 +116,9 @@ export function PayrollPage(){
  const timezone=session.company?.timezone??'Asia/Kolkata';
  const currentMonth=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit'}).format(new Date());
  const previousMonth=(()=>{const[y,m]=currentMonth.split('-').map(Number),d=new Date(Date.UTC(y,m-2,1));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})();
- const[tab,setTab]=useState(()=>!restricted&&['settings','payments','rules','structures','reconciliation'].includes(String(params.get('tab')))?'payments':'runs'),[month,setMonth]=useState(previousMonth),[detail,setDetail]=useState<Row|null>(null),[confirm,setConfirm]=useState<{row:Row;action:string}|null>(null),[removeRun,setRemoveRun]=useState<Row|null>(null),[adjust,setAdjust]=useState<Row|null>(null),[challanRun,setChallanRun]=useState<string|null>(null),[payout,setPayout]=useState<Row|null>(null),[payoutMode,setPayoutMode]=useState('IMPS'),[payoutConfirmed,setPayoutConfirmed]=useState(false),[paying,setPaying]=useState(false),[manualEdit,setManualEdit]=useState<Row|null>(null),[manualReset,setManualReset]=useState<Row|null>(null);
+ const[requestedTab,setTab]=useUrlTab('tab',restricted?['runs','tax']:['runs','payments','settings','rules','structures','reconciliation'],'runs');
+ const tab=['settings','rules','structures','reconciliation'].includes(requestedTab)?'payments':requestedTab;
+ const[month,setMonth]=useState(previousMonth),[detail,setDetail]=useState<Row|null>(null),[confirm,setConfirm]=useState<{row:Row;action:string}|null>(null),[removeRun,setRemoveRun]=useState<Row|null>(null),[adjust,setAdjust]=useState<Row|null>(null),[challanRun,setChallanRun]=useState<string|null>(null),[payout,setPayout]=useState<Row|null>(null),[payoutMode,setPayoutMode]=useState('IMPS'),[payoutConfirmed,setPayoutConfirmed]=useState(false),[paying,setPaying]=useState(false),[manualEdit,setManualEdit]=useState<Row|null>(null),[manualReset,setManualReset]=useState<Row|null>(null);
  const selected=restricted?null:rows.find(r=>r.month===month)??null;
  const selectedStatus=String(selected?.status??'NOT_PREPARED');
  const payoutTarget=payout??(selectedStatus==='LOCKED'?selected:null);
@@ -190,7 +193,7 @@ export function PayrollPage(){
 function WalletIcon(){return <span className="rupee-symbol">₹</span>}
 export function CalendarPage(){
  const{can,mutate}=useApp();
- const[qdate,setQdate]=useState(new Date()),[view,setView]=useState('month'),[kind,setKind]=useState(''),[edit,setEdit]=useState<Row|null|undefined>(undefined),[remove,setRemove]=useState<Row|null>(null),[createDate,setCreateDate]=useState('');
+ const[qdate,setQdate]=useState(new Date()),[view,setView]=useUrlTab('view',['month','week','day'],'month'),[kind,setKind]=useState(''),[edit,setEdit]=useState<Row|null|undefined>(undefined),[remove,setRemove]=useState<Row|null>(null),[createDate,setCreateDate]=useState('');
  const q=useData('calendar?pageSize=500'),shiftsQ=useData('shifts?pageSize=500',can('shifts'));const rows:Row[]=q.data?.items??[],shiftRows:Row[]=shiftsQ.data?.items??[]; const shiftName=(id:any)=>shiftRows.find(s=>s.id===id)?.name??'Selected shift';
  const key=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
  const eventStart=(r:Row)=>String(r.date??'').slice(0,10);
@@ -231,7 +234,7 @@ export function CalendarPage(){
  {remove&&<Confirm title="Delete event?" description="This removes the event from every date in the company calendar." onClose={()=>setRemove(null)} onConfirm={async()=>{await mutate('calendar/'+remove.id,'DELETE');setRemove(null)}}/>}</>;
 }
 export function WorkforcePage(){
- const{session,mutate,can}=useApp();const q=useData('workforce');const[status,setStatus]=useState('OFFLINE'),[tab,setTab]=useState('live'),[search,setSearch]=useState(''),[statusFilter,setStatusFilter]=useState('');
+ const{session,mutate,can}=useApp();const q=useData('workforce');const[status,setStatus]=useState('OFFLINE'),[tab,setTab]=useUrlTab('tab',['live',...(can('workforce','MANAGE')?['rules']:[])],'live'),[search,setSearch]=useState(''),[statusFilter,setStatusFilter]=useState('');
  useEffect(()=>{const poll=setInterval(()=>q.refetch(),5000);return()=>clearInterval(poll)},[q.refetch]);
  useEffect(()=>{if(status==='OFFLINE')return;const heartbeat=setInterval(()=>{api('workforce','POST',{status,sourceId:crypto.randomUUID()},session.csrf).catch(()=>{})},45000);return()=>clearInterval(heartbeat)},[status,session.csrf]);
  const rows:Row[]=q.data?.items??[];const filtered=rows.filter(r=>{const s=search.trim().toLowerCase();return(!s||[r.firstName,r.lastName,r.employeeCode,r.departmentName,r.branchName].some(v=>String(v??'').toLowerCase().includes(s)))&&(!statusFilter||r.status===statusFilter)});

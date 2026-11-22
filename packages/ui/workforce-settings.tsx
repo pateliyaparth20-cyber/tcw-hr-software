@@ -1,5 +1,6 @@
 'use client';
 import React,{useEffect,useState} from 'react';
+import {useUrlTab} from './use-url-tab';
 import {api,useApp,useData,Loading,Failure,Table,Modal,Confirm,Badge,currencyValue,Empty} from './core';
 import type {Row} from './config';
 import {defaultPayrollSettings,defaultLeaveSettings,financialYear,monthlyContractCtc} from '../workforce-rules';
@@ -14,7 +15,7 @@ const options=(values:string[])=>values.map(value=>({value,label:value.replaceAl
 function NumberField({label,value,onChange,money=false,min=0,max}:{label:string;value:number;onChange:(n:number)=>void;money?:boolean;min?:number;max?:number}){return <label><span>{label}</span><input type="number" min={min} max={max} step={money?'.01':'any'} value={money?value/100:value} onChange={e=>onChange(money?Math.round(Number(e.target.value)*100):Number(e.target.value))}/></label>}
 function Check({label,value,onChange}:{label:string;value:boolean;onChange:(v:boolean)=>void}){return <label className="wf-check"><input type="checkbox" checked={value} onChange={e=>onChange(e.target.checked)}/><span>{label}</span></label>}
 export function PayrollSettingsPage(){
- const {mutate,currency,can}=useApp(),[period,P]=useState(currentMonth),q=useData('payroll-settings?month='+period,can('payroll','MANAGE'),false),[tab,T]=useState('company'),[value,V]=useState<Row>(structuredClone(defaultPayrollSettings)),[busy,B]=useState(false),[error,E]=useState(''),[saved,S]=useState(false),[edit,X]=useState<Row|null>(null);
+ const {mutate,currency,can}=useApp(),[period,P]=useState(currentMonth),q=useData('payroll-settings?month='+period,can('payroll','MANAGE'),false),[tab,T]=useUrlTab('payrollTab',['company','structure','statutory','tax','rules','contracts','items'],'company'),[value,V]=useState<Row>(structuredClone(defaultPayrollSettings)),[busy,B]=useState(false),[error,E]=useState(''),[saved,S]=useState(false),[edit,X]=useState<Row|null>(null);
  useEffect(()=>{if(q.data){V(structuredClone(q.data.value));S(false)}},[q.data?.id,period]);
  const patch=(key:string,v:any)=>{V({...value,[key]:v});S(false)},nested=(key:string,k:string,v:any)=>patch(key,{...value[key],[k]:v});
  async function save(){B(true);E('');try{await mutate('payroll-settings','POST',{effectiveMonth:period,expectedId:(q.data?.expectedId??null),value});await q.refetch();S(true)}catch(e:any){E(e.message)}finally{B(false)}}

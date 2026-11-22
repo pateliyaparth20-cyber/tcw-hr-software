@@ -6,7 +6,8 @@ import './dashboard-shell.css';
 import {ApprovalSettings} from './hr-operations';
 import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
+import {useRouter,useSearchParams} from 'next/navigation';
+import {workspaceReturnPath,workspaceSignInPath} from '../navigation-state';
 import {useQueryClient} from '@tanstack/react-query';
 import {io} from 'socket.io-client';
 import {LayoutDashboard,Users,Building2,CalendarDays,Clock3,Monitor,Activity,CalendarClock,Wallet,Briefcase,Target,GraduationCap,Package,Receipt,Plane,Files,DoorOpen,BarChart3,Sparkles,Headphones,Settings,ShieldCheck,ScrollText,Search,Bell,ChevronDown,ChevronRight,PanelLeft,LogOut,ArrowUpRight,Layers,TrendingUp,CreditCard,Server,LockKeyhole,ArrowRight,Command,X,PhoneCall,Send,RefreshCw,AlertTriangle,CheckCircle2,UserCircle,History,Trash2,Plus,UserCheck,Eye,EyeOff,UserRound,FileText} from 'lucide-react';
@@ -52,7 +53,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
   const activeKey=`tcw_active_window_${scope.toLowerCase()}`,rememberKey=`tcw_remember_${scope.toLowerCase()}`;
   let windowActive=false,remembered=false;
   try{windowActive=window.sessionStorage.getItem(activeKey)==='1';remembered=!!window.localStorage.getItem(rememberKey)}catch{}
-  if(!windowActive&&!remembered&&!isLocalBrowser()&&new URLSearchParams(window.location.search).get('proxy')!=='1'){clearLocalSessionState();setSession(null);setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return()=>{active=false};}
+  if(!windowActive&&!remembered&&!isLocalBrowser()&&new URLSearchParams(window.location.search).get('proxy')!=='1'){clearLocalSessionState();setSession(null);setChecking(false);router.replace(workspaceSignInPath(scope,window.location.pathname+window.location.search));return()=>{active=false};}
   const cached=getLocalSessionSnapshot(scope);
   const localToken=getLocalSessionToken();
   if(cached&&scope==='TENANT'&&isHrPortalHost()&&cached.user?.role==='EMPLOYEE'){
@@ -69,7 +70,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
   }
   if(cached&&isEmployeeNativeApp()&&cached.user?.role!=='EMPLOYEE'){clearLocalSessionState();setSession(null);setChecking(false);setError('TCW Employee APK is only for Employee accounts. Use the TCW HR Software app for HR/Admin access.');return()=>{active=false};}
   if(cached){setSession(cached);setChecking(false)}
-  else if(isLocalBrowser()&&!localToken&&new URLSearchParams(window.location.search).get('proxy')!=='1'){setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return()=>{active=false};}
+  else if(isLocalBrowser()&&!localToken&&new URLSearchParams(window.location.search).get('proxy')!=='1'){setChecking(false);router.replace(workspaceSignInPath(scope,window.location.pathname+window.location.search));return()=>{active=false};}
   setError('');
   if(!cached){setChecking(true);const local=isLocalBrowser();slowTimer=setTimeout(()=>{if(active){setChecking(false);setError(local?'The local test server did not answer. Keep npm run demo running on the PC, then try again.':'The secure server is taking longer than expected. Please try again.')}},local?7000:18000)}
   (async()=>{try{
@@ -80,7 +81,7 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
       else throw e;
     }
     if(!active)return;
-    if(scope!=='ANY'&&r.user?.scope!==scope){clearLocalSessionState();setSession(null);setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return;}
+    if(scope!=='ANY'&&r.user?.scope!==scope){clearLocalSessionState();setSession(null);setChecking(false);router.replace(workspaceSignInPath(scope,window.location.pathname+window.location.search));return;}
     if(scope==='TENANT'&&isHrPortalHost()&&r.user?.role==='EMPLOYEE'){
       const companyCode=String(r.company?.code??''),user=String(r.user?.loginId??r.user?.email??'');
       try{await api('auth/logout','POST',{},r.csrf)}catch{}
@@ -99,14 +100,14 @@ export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';pa
     if(!active)return;
     const status=Number(e?.status??0);
     if(cached&&![401,403].includes(status)){setChecking(false);return;}
-    if(status===401){clearLocalSessionState();setSession(null);setError('');setChecking(false);router.replace(scope==='PLATFORM'?'/admin-login':'/login');return;}if(status===403){setSession(null);setError('Your access could not be verified. Please sign in again.');setChecking(false);return;}
+    if(status===401){clearLocalSessionState();setSession(null);setError('');setChecking(false);router.replace(workspaceSignInPath(scope,window.location.pathname+window.location.search));return;}if(status===403){setSession(null);setError('Your access could not be verified. Please sign in again.');setChecking(false);return;}
     if(!cached){setError(e?.message??'Your session could not be verified.');setChecking(false)}
    }})();
   return()=>{active=false;if(slowTimer)clearTimeout(slowTimer)}
  },[scope,attempt,router]);
  if(session)return <Portal session={session} page={page}/>;
  if(!checking&&!error)return null;
- return <div className="auth-session-loader"><div className="auth-session-loader-card"><span className="auth-session-logo"><BrandLogo/></span>{checking&&!error&&<span className="auth-spinner"/>}<strong>{error?'Unable to open workspace':'Opening your workspace'}</strong><small>{error||'Checking your secure session…'}</small>{error&&<div className="auth-session-actions"><button className="btn secondary" onClick={()=>{setError('');setChecking(true);setAttempt(v=>v+1)}}>Try again</button><button className="btn primary" onClick={()=>{clearLocalSessionState();router.replace(scope==='PLATFORM'?'/admin-login':'/login')}}>Sign in again</button></div>}</div></div>;
+ return <div className="auth-session-loader"><div className="auth-session-loader-card"><span className="auth-session-logo"><BrandLogo/></span>{checking&&!error&&<span className="auth-spinner"/>}<strong>{error?'Unable to open workspace':'Opening your workspace'}</strong><small>{error||'Checking your secure session…'}</small>{error&&<div className="auth-session-actions"><button className="btn secondary" onClick={()=>{setError('');setChecking(true);setAttempt(v=>v+1)}}>Try again</button><button className="btn primary" onClick={()=>{clearLocalSessionState();router.replace(workspaceSignInPath(scope,window.location.pathname+window.location.search))}}>Sign in again</button></div>}</div></div>;
 }
 function FirstPasswordChange(){
  const{session}=useApp();const branding=useData('company/branding',session.user.scope==='TENANT');
@@ -142,7 +143,7 @@ function Shell({page}:{page:string}){
  useEffect(()=>{if(session.user.scope!=='TENANT')return;const timer=window.setInterval(()=>notices.refetch().catch(()=>{}),30000);return()=>window.clearInterval(timer)},[session.user.scope,notices.refetch]);
  useEffect(()=>{if(session.user.scope!=='TENANT')return;const rows:Row[]=notices.data?.items??[];const latest=rows[0];if(!latest)return;const storageKey='tcw_last_status_notification:'+session.user.id;let previous=lastNoticeRef.current;try{previous=previous??window.localStorage.getItem(storageKey)}catch{}if(!previous){lastNoticeRef.current=latest.id;try{window.localStorage.setItem(storageKey,latest.id)}catch{}return;}if(previous!==latest.id){lastNoticeRef.current=latest.id;try{window.localStorage.setItem(storageKey,latest.id)}catch{};if(!(window as any).__tcwPushActive)(window as any).__tcwSystemNotify?.(String(latest.title??'TCW HR Software'),String(latest.message??''),notificationTarget(latest),'tcw-'+latest.id)}},[notices.data,session.user.scope,session.user.id]);
 
- useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
+ useEffect(()=>{const onExpired=()=>{queryClient.clear();router.replace(workspaceSignInPath(session.user.scope,window.location.pathname+window.location.search))};window.addEventListener('tcw-session-expired',onExpired);return()=>window.removeEventListener('tcw-session-expired',onExpired)},[queryClient,router,session.user.scope]);
  useEffect(()=>{if(page==='ai')router.replace('/dashboard')},[page,router]);
  useEffect(()=>{if(session.user.role!=='EMPLOYEE')return;preloadFaceEngine();try{setFaceEnrollmentHint(window.localStorage.getItem(faceEnrollmentKey)==='1')}catch{}},[session.user.role,faceEnrollmentKey]);
  useEffect(()=>{
@@ -282,6 +283,7 @@ function TCWAgent(){
 }
 
 export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',prefillUser=''}:{scope:'TENANT'|'PLATFORM';mode?:string;resetToken?:string;prefillCompanyCode?:string;prefillUser?:string}){
+ const returnParams=useSearchParams();const returnPath=workspaceReturnPath(returnParams.get('next'),scope);
  const router=useRouter();
  const[twoFactorRequired,setTwoFactorRequired]=useState(false),[twoFactorCode,setTwoFactorCode]=useState('');
  const[companyCode,setCompanyCode]=useState(prefillCompanyCode),[email,setEmail]=useState(prefillUser),[password,setPassword]=useState(''),[confirmPassword,setConfirmPassword]=useState(''),[showPassword,setShowPassword]=useState(false),[remember,setRemember]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[resetReady,setResetReady]=useState(mode!=='reset-password'),[resetChecking,setResetChecking]=useState(mode==='reset-password');
@@ -298,7 +300,7 @@ export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',pr
    if(scope==='TENANT'&&isHrPortalHost()&&current.user?.role==='EMPLOYEE'){const code=String(current.company?.code??''),user=String(current.user?.loginId??current.user?.email??'');try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();window.location.replace(portalLoginUrl('EMPLOYEE',code,user));return;}
    if(scope==='TENANT'&&isEmployeePortalHost()&&current.user?.role!=='EMPLOYEE'){const code=String(current.company?.code??''),user=String(current.user?.loginId??current.user?.email??'');try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();window.location.replace(portalLoginUrl('HR',code,user));return;}
    if(isEmployeeNativeApp()&&current.user?.role!=='EMPLOYEE'){try{await api('auth/logout','POST',{},current.csrf)}catch{}clearLocalSessionState();setError('This is the TCW Employee app. Sign in with an Employee account.');return;}
-   try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(activeKey,'1')}catch{}router.replace('/dashboard')}}catch{}})();return()=>{active=false}},[mode,scope,router]);
+   try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(activeKey,'1')}catch{}router.replace(returnPath)}}catch{}})();return()=>{active=false}},[mode,scope,router,returnPath]);
  useEffect(()=>{if(mode!=='reset-password')return;let active=true;(async()=>{try{if(!resetToken)throw new Error('This reset link is invalid or expired.');await api('auth/reset-password/claim','POST',{token:resetToken});if(active){setResetReady(true);setResetChecking(false)}}catch(e:any){if(active){setResetReady(false);setResetChecking(false);setError(e?.message??'This reset link is invalid, expired, or already used.')}}})();return()=>{active=false}},[mode,resetToken]);
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{
   if(signup){if(!terms)throw new Error('Accept the Terms and Privacy notice to start a trial.');if(!contactConsent)throw new Error('Please allow us to contact you about your trial.');const r=await api('auth/signup','POST',{companyName,ownerName,ownerEmail:email.trim(),phone:phone.trim(),plan,acceptTerms:true,contactConsent:true});setCreated(r);setMessage(`Your company workspace is ready. Your Company Code, User ID and temporary password have been sent to ${email.trim()}.`)}
@@ -307,7 +309,7 @@ export function Login({scope,mode='login',resetToken='',prefillCompanyCode='',pr
   else{const r=await api('auth/login','POST',{email:email.trim(),password,remember,...(twoFactorRequired?{twoFactorCode}:{}),...(scope==='TENANT'?{companyCode:companyCode.trim().toUpperCase()}: {})});if(r.twoFactorRequired){setTwoFactorRequired(true);return;}if(r.user.scope!==scope){await api('auth/logout','POST',{},r.csrf);throw new Error('Use the correct portal for this account.')}
    if(scope==='TENANT'&&isHrPortalHost()&&r.user.role==='EMPLOYEE'){await api('auth/logout','POST',{},r.csrf).catch(()=>{});clearLocalSessionState();window.location.replace(portalLoginUrl('EMPLOYEE',companyCode,email));return;}
    if(scope==='TENANT'&&isEmployeePortalHost()&&r.user.role!=='EMPLOYEE'){await api('auth/logout','POST',{},r.csrf).catch(()=>{});clearLocalSessionState();window.location.replace(portalLoginUrl('HR',companyCode,email));return;}
-   if(isEmployeeNativeApp()&&r.user.role!=='EMPLOYEE'){await api('auth/logout','POST',{},r.csrf).catch(()=>{});clearLocalSessionState();throw new Error('This is the TCW Employee app. Sign in with your Employee account.')}try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(`tcw_active_window_${scope.toLowerCase()}`,'1');const key=`tcw_remember_${scope.toLowerCase()}`;if(remember)window.localStorage.setItem(key,JSON.stringify({companyCode:scope==='TENANT'?companyCode.trim().toUpperCase():'',email:email.trim()}));else window.localStorage.removeItem(key)}catch{}router.replace('/dashboard')}
+   if(isEmployeeNativeApp()&&r.user.role!=='EMPLOYEE'){await api('auth/logout','POST',{},r.csrf).catch(()=>{});clearLocalSessionState();throw new Error('This is the TCW Employee app. Sign in with your Employee account.')}try{window.localStorage.setItem('tcw_portal_scope',scope);window.sessionStorage.setItem(`tcw_active_window_${scope.toLowerCase()}`,'1');const key=`tcw_remember_${scope.toLowerCase()}`;if(remember)window.localStorage.setItem(key,JSON.stringify({companyCode:scope==='TENANT'?companyCode.trim().toUpperCase():'',email:email.trim()}));else window.localStorage.removeItem(key)}catch{}router.replace(returnPath)}
  }catch(e:any){setError(e?.message??'Sign in failed. Please try again.')}finally{setBusy(false)}}
  const title=signup?'Create your company workspace':mode==='forgot-password'?'Forgot password':mode==='reset-password'?'Create password':'Sign in';
  const subtitle=signup?'Start your 3-day trial. We’ll email your company code and sign-in details.':mode==='login'?(scope==='PLATFORM'?'Use your TCW platform administrator credentials.':employeeApp?'Use your Company Code, Employee ID and password to access your personal attendance and self-service workspace.':'Welcome back. Sign in to your company workspace.'):mode==='forgot-password'?'Reset access to your TCW HR Software account.':mode==='reset-password'?'Create and confirm your new password. This one-time link expires after 10 minutes.':'Secure access to your TCW HR Software account.';
