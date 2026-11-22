@@ -43,6 +43,20 @@ export class SubscriptionGateway{
  }
  webhookUrl(revision:string){return new URL('/api/billing/razorpay/webhook/'+revision,process.env.WEB_URL??'https://hr.techcyberwarrior.in').toString();}
  async summary(ctx:Context){const tid=tenant(ctx),c=await this.config(),rows=await this.db.billingCheckout.findMany({where:{tenantId:tid,kind:'AUTOPAY'},orderBy:{createdAt:'desc'},take:8});return {gateway:{configured:c.enabled===true&&!!c.revisions?.[c.mode],mode:c.mode??'TEST',autoPayEnabled:c.autoPayEnabled===true},autopay:rows.map(r=>({id:r.id,planName:r.planName,cycle:r.cycle,mode:r.mode,status:r.mandateStatus??r.state,amount:r.amount,cancelScheduled:r.cancelScheduled,providerRef:r.providerRef,createdAt:r.createdAt})),recentCharges:await this.db.billingCharge.findMany({where:{tenantId:tid},orderBy:{createdAt:'desc'},take:12})};}
+ async contactSales(ctx:Context,body:unknown){
+  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
+  const input=z.object({contactName:z.string().trim().min(1).max(120),email:z.string().trim().email().max(200),phone:z.string().trim().max(40).default(''),employees:z.number().int().min(1).max(1000000),requirements:z.string().trim().min(10).max(3000),cycle:z.enum(['MONTHLY','YEARLY'])}).strict().parse(body);
+  return this.db.$transaction(async tx=>{
+   await tx.$queryRaw`SELECT id FROM tenants WHERE id=${tid}::uuid FOR UPDATE`;
+   const company=await tx.tenant.findUniqueOrThrow({where:{id:tid}}),marker='[CUSTOM_PLAN:'+tid+']';
+   const existing=await tx.lead.findFirst({where:{notes:{startsWith:marker},stage:{notIn:['WON','LOST']}},orderBy:{createdAt:'desc'}});
+   const notes=marker+'\nCustom subscription request · '+company.code+'\nBilling preference: '+input.cycle+'\nEmployees: '+input.employees+'\nRequirements: '+input.requirements;
+   const values={company:company.name,contactName:input.contactName,email:input.email,phone:input.phone,notes};
+   const lead=existing?await tx.lead.update({where:{id:existing.id},data:values}):await tx.lead.create({data:{...values,stage:'LEAD'}});
+   await audit(tx,ctx,'CUSTOM_PLAN_REQUESTED','sales',lead.id,undefined,{companyId:tid,employees:input.employees,cycle:input.cycle});
+   return {ok:true,reference:lead.id,message:'Your custom plan request is saved for the sales team. No payment or subscription change has been made.'};
+  });
+ }
  async checkout(ctx:Context,body:any){
   const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.enum(['ONETIME','AUTOPAY']),requestKey:id}).strict().parse(body),config=await this.config();
   if(!config.enabled||!config.revisions?.[config.mode])throw new ServiceUnavailableException('Razorpay checkout is not connected yet.');if(input.kind==='AUTOPAY'&&!config.autoPayEnabled)throw new ServiceUnavailableException('AutoPay has not been enabled by the administrator.');
