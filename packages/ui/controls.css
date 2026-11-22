@@ -8,3 +8,6 @@ html body input[type="checkbox"]::before,html body input[type="checkbox"]::after
 @media print{.shared-pagination{display:none!important}.table-page-hidden{display:table-row!important}}
 .collection-print-only{display:none!important}@media print{.collection-screen{display:none!important}.collection-print-only{display:block!important}}
 .collection-screen{display:contents}.shared-pagination{grid-column:1/-1}
+/* PNG brand marks use the requested round presentation; JPEG logos stay square. */
+html body img[data-logo-format="png"]{border-radius:50%!important}html body img[data-logo-format="jpeg"]{border-radius:0!important}
+html body :is(.brand-mark.brand-logo,.concept-brand-mark,.entry-logo,.platform-profile-logo-preview,.company-profile-v2-logo){background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important}html body :is(.brand-mark.brand-logo,.concept-brand-mark,.entry-logo,.platform-profile-logo-preview,.company-profile-v2-logo) img[data-logo-format="png"]{border-radius:50%!important}html body :is(.brand-mark.brand-logo,.concept-brand-mark,.entry-logo,.platform-profile-logo-preview,.company-profile-v2-logo) img[data-logo-format="jpeg"]{border-radius:0!important}

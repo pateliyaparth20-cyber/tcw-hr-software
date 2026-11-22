@@ -3,8 +3,8 @@ import {z} from 'zod';
 import type {Database} from '../../../packages/database';
 import {audit,platform,requirePermission,type Context} from './context';
 
-export const defaultLoading={title:'TCW HR Software',message:'Preparing your workspace…',logo:null as string|null,animation:'ORBIT',accent:'#7c3aed',background:'#f7f4fc'};
-const schema=z.object({title:z.string().trim().min(1).max(80),message:z.string().trim().min(1).max(140),logo:z.string().max(2_900_000).nullable(),animation:z.enum(['ORBIT','PULSE','SPINNER','NONE']),accent:z.string().regex(/^#[a-f0-9]{6}$/i),background:z.string().regex(/^#[a-f0-9]{6}$/i)}).strict();
+export const defaultLoading={appearanceVersion:2,title:'Loading workspace',message:'Please wait…',logo:null as string|null,animation:'SPINNER',accent:'#245cf4',background:'#ffffff'};
+const schema=z.object({appearanceVersion:z.literal(2).default(2),title:z.string().trim().min(1).max(80),message:z.string().trim().min(1).max(140),logo:z.string().max(2_900_000).nullable(),animation:z.enum(['ORBIT','PULSE','SPINNER','NONE']),accent:z.string().regex(/^#[a-f0-9]{6}$/i),background:z.string().regex(/^#[a-f0-9]{6}$/i)}).strict();
 export function validateLoading(value:unknown){
  const input=schema.parse(value);
  if(input.logo){
@@ -14,7 +14,7 @@ export function validateLoading(value:unknown){
  }
  return input;
 }
-export async function publicLoading(db:Database){const row=await db.platformSetting.findUnique({where:{key:'loading-branding'}});const parsed=schema.safeParse(row?.value);return {...(parsed.success?parsed.data:defaultLoading),updatedAt:row?.updatedAt?.toISOString()??null};}
+export async function publicLoading(db:Database){const row=await db.platformSetting.findUnique({where:{key:'loading-branding'}});const parsed=schema.safeParse((row?.value as any)?.appearanceVersion===2?row?.value:undefined);return {...(parsed.success?parsed.data:defaultLoading),updatedAt:row?.updatedAt?.toISOString()??null};}
 export async function loadingSettings(db:Database,ctx:Context,method:string,body:any){
  platform(ctx);requirePermission(ctx,'system',method==='GET'?'VIEW':'EDIT');
  if(method==='GET')return publicLoading(db);

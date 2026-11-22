@@ -1,6 +1,7 @@
 import {pricedPlan,isPlanDowngrade} from '../../../packages/subscription-policy';
 import {billingLimited,billingRouteBlocked} from '../../../packages/billing-access';
-import {effectiveCompanyLogo} from '../../../packages/branding';
+import {workspaceWeather} from './workspace-weather';
+import {DEFAULT_PRODUCT_LOGO,effectiveCompanyLogo} from '../../../packages/branding';
 import {publicLoading,loadingSettings} from './loading-branding';
 import {salesPipeline} from './sales-pipeline';
 import {subscriptionInvoice} from './subscription-invoices';
@@ -111,6 +112,7 @@ export class Api {
     if(resource==='releases'&&key==='update'&&method==='POST')return this.releases.update(ctx,z.object({version:z.string().regex(/^[a-f0-9]{40}$/)}).strict().parse(req.body).version);
     if(resource==='releases')throw new NotFoundException('Software update route not found.');
     const body=req.body;
+    if(resource==='weather'&&method==='GET')return workspaceWeather(this.db,ctx);
     if(ctx.tenantId){
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
       if(billingLimited(company)&&!ctx.session.proxyParentSessionId&&billingRouteBlocked(resource,key,action,method,req.query))throw new ForbiddenException('Your plan has ended. Renew to process payroll, use reports or exports, or add employees. Login, employee profiles and attendance remain available.');
@@ -342,7 +344,7 @@ export class Api {
     
     if(resource==='system'&&key==='platform-profile'){
       platform(ctx);
-      const defaults={companyName:'Tech Cyber Warrior',legalName:'',companyType:'',registrationNumber:'',foundedYear:'',contactPerson:'',contactDesignation:'',billingEmail:'',email:'',phone:'',website:'https://techcyberwarrior.in',address:'',city:'',state:'Gujarat',country:'India',postalCode:'',taxId:'',pan:'',supportEmail:'',logo:'/tcw-logo.png'};
+      const defaults={companyName:'Tech Cyber Warrior',legalName:'',companyType:'',registrationNumber:'',foundedYear:'',contactPerson:'',contactDesignation:'',billingEmail:'',email:'',phone:'',website:'https://techcyberwarrior.in',address:'',city:'',state:'Gujarat',country:'India',postalCode:'',taxId:'',pan:'',supportEmail:'',logo:DEFAULT_PRODUCT_LOGO};
       if(method==='GET'){
         requirePermission(ctx,'system','VIEW');
         const [profileRow,brandingRow]=await Promise.all([
@@ -351,7 +353,7 @@ export class Api {
         ]);
         const profile=profileRow?.value&&typeof profileRow.value==='object'&&!Array.isArray(profileRow.value)?profileRow.value as any:{};
         const branding=brandingRow?.value&&typeof brandingRow.value==='object'&&!Array.isArray(brandingRow.value)?brandingRow.value as any:{};
-        return {...defaults,...profile,logo:branding.logo??profile.logo??defaults.logo,updatedAt:profileRow?.updatedAt??null};
+        return {...defaults,...profile,logo:effectiveCompanyLogo(branding.logo??profile.logo,null),updatedAt:profileRow?.updatedAt??null};
       }
       if(method==='PUT'){
         requirePermission(ctx,'system','EDIT');
@@ -387,17 +389,17 @@ export class Api {
         const {logo,...profile}=input;
         const [profileRow]=await Promise.all([
           this.db.platformSetting.upsert({where:{key:'platform-profile'},update:{value:profile},create:{key:'platform-profile',value:profile}}),
-          this.db.platformSetting.upsert({where:{key:'branding'},update:{value:{logo:logo??'/tcw-logo.png'}},create:{key:'branding',value:{logo:logo??'/tcw-logo.png'}}})
+          this.db.platformSetting.upsert({where:{key:'branding'},update:{value:{logo:logo??null}},create:{key:'branding',value:{logo:logo??null}}})
         ]);
         await audit(this.db,ctx,'PLATFORM_PROFILE_UPDATED','system');
-        return {...profile,logo:logo??'/tcw-logo.png',updatedAt:profileRow.updatedAt};
+        return {...profile,logo:effectiveCompanyLogo(null,logo),updatedAt:profileRow.updatedAt};
       }
       throw new NotFoundException();
     }
     if(resource==='system'&&key==='branding'){
       platform(ctx);
-      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {logo:value.logo??'/tcw-logo.png',updatedAt:row?.updatedAt??null};}
-      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({logo:z.string().max(8_000_000).nullable()}).strict().parse(body);if(input.logo){if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.logo))throw new BadRequestException('Use a PNG or JPEG logo up to 5 MB.');const raw=Buffer.from(input.logo.split(',')[1],'base64');const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG logo up to 5 MB.');}const value={logo:input.logo??'/tcw-logo.png'};const row=await this.db.platformSetting.upsert({where:{key:'branding'},update:{value},create:{key:'branding',value}});await audit(this.db,ctx,'PLATFORM_BRANDING_UPDATED','system');return {logo:(row.value as any)?.logo??'/tcw-logo.png',updatedAt:row.updatedAt};}
+      if(method==='GET'){requirePermission(ctx,'system','VIEW');const row=await this.db.platformSetting.findUnique({where:{key:'branding'}});const value=row?.value&&typeof row.value==='object'&&!Array.isArray(row.value)?row.value as any:{};return {logo:effectiveCompanyLogo(null,value.logo),updatedAt:row?.updatedAt??null};}
+      if(method==='PUT'){requirePermission(ctx,'system','EDIT');const input=z.object({logo:z.string().max(8_000_000).nullable()}).strict().parse(body);if(input.logo){if(!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(input.logo))throw new BadRequestException('Use a PNG or JPEG logo up to 5 MB.');const raw=Buffer.from(input.logo.split(',')[1],'base64');const png=raw.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));const jpg=raw[0]===255&&raw[1]===216&&raw[2]===255;if(raw.length>5*1024*1024||(!png&&!jpg))throw new BadRequestException('Use a valid PNG or JPEG logo up to 5 MB.');}const value={logo:input.logo??null};const row=await this.db.platformSetting.upsert({where:{key:'branding'},update:{value},create:{key:'branding',value}});await audit(this.db,ctx,'PLATFORM_BRANDING_UPDATED','system');return {logo:(row.value as any)?.logo??null,updatedAt:row.updatedAt};}
       throw new NotFoundException();
     }
     if(resource==='system'&&key==='payment-settings'){

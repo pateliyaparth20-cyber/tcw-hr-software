@@ -558,3 +558,14 @@ test('Super Admin phone branding stays readable without clipping',async({page})=
  await page.setViewportSize({width:393,height:900});await dashboard.getByRole('button',{name:'Open navigation menu',exact:true}).click();await expect(page.locator('#workspace-sidebar')).toHaveClass(/open/);await page.keyboard.press('Escape');await expect(page.locator('#workspace-sidebar')).not.toHaveClass(/open/);
  await page.setViewportSize({width:1280,height:900});await expect(dashboard).not.toBeVisible();
 });
+
+test('phone dashboard is edge-to-edge with a clock, company weather and neutral missing logo',async({page})=>{
+ await page.route('**/api/weather',route=>route.fulfill({json:{status:'AVAILABLE',city:'Synthetic City',country:'India',timezone:'Asia/Kolkata',temperature:25,condition:'Cloudy',humidity:60,windKmph:9,fetchedAt:new Date().toISOString(),source:'https://wttr.in'}}));
+ await page.route('**/api/branding?logoOnly=1',route=>route.fulfill({json:{logo:'/tcw-logo.png'}}));
+ await page.addInitScript(()=>{localStorage.setItem('tcw_brand_logo','/tcw-logo.png');localStorage.setItem('tcw_loading_brand',JSON.stringify({logo:'/tcw-logo.png',title:'Old loader'}))});
+ await login(page,true);await page.setViewportSize({width:393,height:900});
+ const dashboard=page.locator('.platform-mobile-dashboard');await expect(dashboard.locator('.workspace-weather')).toContainText('Synthetic City');await expect(dashboard.locator('.workspace-weather')).toContainText('25°C');await expect(dashboard.locator('.workspace-clock')).toContainText(/\d{2}:\d{2}:\d{2}/);
+ await expect(dashboard.locator('.mobile-unified-logo img')).toHaveAttribute('src','/logo-placeholder.svg');
+ const box=await dashboard.locator('.mobile-unified-hero').boundingBox();expect(box!.x).toBeGreaterThanOrEqual(-1);expect(box!.x).toBeLessThanOrEqual(1);expect(box!.width).toBeGreaterThanOrEqual(391);
+ expect(await page.evaluate(()=>localStorage.getItem('tcw_brand_logo'))).toBeNull();expect(await page.evaluate(()=>localStorage.getItem('tcw_loading_brand'))).toBeNull();
+});

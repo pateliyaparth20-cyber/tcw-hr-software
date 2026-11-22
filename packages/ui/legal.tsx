@@ -1,6 +1,7 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
+import {BrandLogo} from './core';
 import {Cookie,ShieldCheck} from 'lucide-react';
 
 const CONSENT_KEY='tcw_cookie_consent_v1';
@@ -35,5 +36,5 @@ export function LegalPage({kind}:{kind:'privacy'|'cookies'|'terms'}){
    ['Third-party integrations','SMS, AI, payout, storage and attendance-device functions depend on separately configured providers and may be subject to provider limits, fees, KYC and availability.'],
    ['Availability and backups','TCW HR Software is operated with production monitoring and managed infrastructure. Each customer organization remains responsible for reviewing its HR, payroll and business records and for keeping authorized user access up to date.']
   ]};
- return <main className="legal-page"><div className="legal-shell"><Link href="/login" className="legal-brand"><img src="/tcw-logo.png" alt="TCW HR Software"/><span><strong>TCW HR Software</strong><small>TECH CYBER WARRIOR</small></span></Link><div className="legal-title"><ShieldCheck size={24}/><div><h1>{content.title}</h1><p>{content.subtitle}</p></div></div>{content.sections.map(([title,text])=><section key={title}><h2>{title}</h2><p>{text}</p></section>)}<footer><span>© TCW HR Software</span><a href="https://techcyberwarrior.in" target="_blank" rel="noreferrer">techcyberwarrior.in</a></footer></div></main>;
+ return <main className="legal-page"><div className="legal-shell"><Link href="/login" className="legal-brand"><BrandLogo/><span><strong>TCW HR Software</strong><small>TECH CYBER WARRIOR</small></span></Link><div className="legal-title"><ShieldCheck size={24}/><div><h1>{content.title}</h1><p>{content.subtitle}</p></div></div>{content.sections.map(([title,text])=><section key={title}><h2>{title}</h2><p>{text}</p></section>)}<footer><span>© TCW HR Software</span><a href="https://techcyberwarrior.in" target="_blank" rel="noreferrer">techcyberwarrior.in</a></footer></div></main>;
 }

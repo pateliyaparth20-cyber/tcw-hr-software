@@ -1,5 +1,6 @@
 'use client';
 import './platform-mobile-polish.css';
+import {ClockWeather} from './clock-weather';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
 import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building2,Wallet,TrendingUp,ChevronRight,Sparkles,RefreshCw,Server,Headphones,Bell,AlertTriangle,CircleDollarSign,Activity as ActivityIcon,PhoneCall,Receipt,CreditCard,Camera,Menu,Home} from 'lucide-react';
@@ -45,7 +46,7 @@ export function MobilePlatformDashboard({session,companies,trials,trialSummary,p
  return <section className="platform-mobile-dashboard">
   <div className="mobile-unified-hero mobile-unified-hero-platform">
    <div className="mobile-unified-brand"><span className="mobile-unified-logo"><BrandLogo alt="TCW HR Software"/></span><div className="mobile-unified-brand-copy"><strong>TCW HR Software</strong><small>Super Admin</small></div><div className="mobile-hero-actions"><Link href="/notifications" className="mobile-unified-action" aria-label="Notifications"><Bell size={19}/></Link><button type="button" className="mobile-unified-action" aria-label="Open navigation menu" aria-controls="workspace-sidebar" onClick={()=>window.dispatchEvent(new Event('tcw-open-navigation'))}><Menu size={20}/></button></div></div>
-   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>Platform Administrator</span></div><div className="mobile-hero-date"><time dateTime={new Date().toISOString()}>{new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</time><small>IST</small></div></div>
+   <div className="mobile-unified-user"><Avatar name={session.user.name} src={session.user.avatar}/><div><small>{greeting} 👋</small><strong>{firstName}!</strong><span>Platform Administrator</span></div><div className="mobile-hero-date"><ClockWeather/></div></div>
   </div>
   <Link href="/companies" className="mobile-business-banner"><div><strong>Manage Your<br/>Business Smarter</strong><small>All-in-One HR Management Platform</small></div><TrendingUp size={52}/><ChevronRight size={20}/></Link>
   <div className="platform-mobile-stats">

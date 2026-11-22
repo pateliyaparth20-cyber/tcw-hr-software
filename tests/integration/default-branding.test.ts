@@ -16,5 +16,8 @@ test('Super Admin default branding is inherited without changing company logo re
  assert.equal((await call('tenant-branding/BRAND')).data.logo,logo);assert.equal((await call('company/branding','TENANT','GET',undefined,owner)).data.logo,logo);
  const profile=await call('company','TENANT','GET',undefined,owner);assert.equal(profile.status,200);assert.equal(profile.data.defaultLogo,logo);assert.equal(profile.data.logo,null);
  const tenant=await db.tenant.findUniqueOrThrow({where:{code:'BRAND'}});await db.tenant.update({where:{id:tenant.id},data:{logo:'data:image/png;base64,custom-company'}});assert.equal((await call('company/branding','TENANT','GET',undefined,owner)).data.logo,'data:image/png;base64,custom-company');assert.equal((await db.tenant.findUniqueOrThrow({where:{id:tenant.id}})).logo,'data:image/png;base64,custom-company');
+ assert.equal((await call('weather','PLATFORM','GET',undefined,admin)).data.status,'LOCATION_REQUIRED');assert.equal((await call('weather')).status,401);
+ await db.tenant.update({where:{id:tenant.id},data:{profile:{city:'',country:'India'}}});assert.equal((await call('weather','TENANT','GET',undefined,owner)).data.status,'LOCATION_REQUIRED');
+ assert.equal((await call('system/branding','PLATFORM','PUT',{logo:null},admin)).status,200);assert.equal((await call('branding?logoOnly=1')).data.logo,'/logo-placeholder.svg');
  }finally{io.close();await app.close();await f.close()}
 });

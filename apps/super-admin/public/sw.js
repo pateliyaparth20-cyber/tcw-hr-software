@@ -1,7 +1,7 @@
-const CACHE='tcw-shell-v1.12.3-notifications';
-const STATIC=['/offline.html','/tcw-logo.png','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
+const CACHE='tcw-shell-v1.16-neutral-logo';
+const STATIC=['/offline.html','/logo-placeholder.svg','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(
-  caches.open(CACHE).then(cache=>cache.addAll(STATIC))
+  caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting())
 ));
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
@@ -20,7 +20,7 @@ self.addEventListener('fetch',event=>{
   // normal HTTP cache. Intercepting /_next/ here can keep an old JS bundle alive
   // while the server renders newer HTML, causing a hydration mismatch.
   if(url.pathname.startsWith('/_next/')) return;
-  if(url.pathname.startsWith('/icons/')||['/tcw-logo.png','/favicon.svg'].includes(url.pathname)){
+  if(url.pathname.startsWith('/icons/')||['/logo-placeholder.svg','/favicon.svg'].includes(url.pathname)){
     event.respondWith(fetch(req).then(res=>{
       const clone=res.clone();
       caches.open(CACHE).then(c=>c.put(req,clone));

@@ -1,4 +1,7 @@
 'use client';
+import {DEFAULT_PRODUCT_LOGO} from '../branding';
+import {LogoImage} from './image-brand';
+export {LogoImage} from './image-brand';
 import {fetchCompleteResponse} from './api-request';
 import {useProductLogo} from './product-logo';
 import './controls.css';
@@ -39,10 +42,10 @@ export function notificationTarget(row:Row){
   return routes.find(([rx])=>rx.test(text))?.[1]??'/notifications';
 }
 
-export const TCW_PRODUCT_LOGO='/tcw-logo.png';
+export const TCW_PRODUCT_LOGO=DEFAULT_PRODUCT_LOGO;
 export function BrandLogo({alt='TCW HR Software',className}:{alt?:string;className?:string}){
  const src=useProductLogo();
- return <img src={src} alt={alt} className={className} decoding="async" draggable={false} onError={e=>{if(!e.currentTarget.src.endsWith(TCW_PRODUCT_LOGO))e.currentTarget.src=TCW_PRODUCT_LOGO}}/>;
+ return <LogoImage src={src} alt={alt} className={className} decoding="async" draggable={false}/>;
 }
 
 const LOCAL_SESSION_KEY='tcw_local_session';
