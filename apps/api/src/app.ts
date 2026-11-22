@@ -1,3 +1,4 @@
+import {pricedPlan,isPlanDowngrade} from '../../../packages/subscription-policy';
 import {billingLimited,billingRouteBlocked} from '../../../packages/billing-access';
 import {publicLoading,loadingSettings} from './loading-branding';
 import {salesPipeline} from './sales-pipeline';
@@ -129,6 +130,7 @@ export class Api {
     }
     if(resource==='system'&&key==='billing-gateway')return this.billing.settings(ctx,method,body,req.query);
     if(resource==='subscription'&&key==='contact-sales'&&method==='POST')return this.billing.contactSales(ctx,body);
+    if(resource==='subscription'&&key==='quote'&&method==='POST')return this.billing.checkout(ctx,body,true);
     if(resource==='subscription'&&key==='gateway-checkout'&&method==='POST')return this.billing.checkout(ctx,body);
     if(resource==='subscription'&&key==='gateway-verify'&&method==='POST')return this.billing.verify(ctx,body);
     if(resource==='subscription'&&key==='gateway-status'&&method==='POST')return this.billing.reconcile(ctx,body);
@@ -144,11 +146,11 @@ export class Api {
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
       const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)));
-      return {...await this.billing.summary(ctx),company,plans,invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
+      return {...await this.billing.summary(ctx),company,plans:plans.map(pricedPlan),invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
-      if(await this.db.billingCheckout.count({where:{tenantId:tid,mode:'LIVE',kind:'AUTOPAY',state:{notIn:['FAILED','ABANDONED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:['cancelled','completed','expired']}}]}}))throw new ConflictException('Cancel the existing AutoPay mandate before starting another subscription payment.');
+      if(await this.db.billingCheckout.count({where:{tenantId:tid,mode:'LIVE',kind:'AUTOPAY',state:{notIn:['FAILED','ABANDONED','QUOTED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:['cancelled','completed','expired']}}]}}))throw new ConflictException('Cancel the existing AutoPay mandate before starting another subscription payment.');
       const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),mode:z.enum(['GATEWAY','UPI']).default('UPI')}).strict().parse(body);
       const [company,plan,payRow]=await Promise.all([
         this.db.tenant.findUniqueOrThrow({where:{id:tid}}),
@@ -156,13 +158,16 @@ export class Api {
         this.db.platformSetting.findUnique({where:{key:'billing-payment'}})
       ]);
       if(!plan)throw new BadRequestException('Selected subscription plan is unavailable.');
+      if(isPlanDowngrade(company.plan,plan.name))throw new BadRequestException('Plan downgrades are not available. Choose your current plan or upgrade.');
+      if(company.status!=='TRIAL'&&company.expiresAt&&company.expiresAt>new Date())throw new BadRequestException('Use secure checkout for unused-time upgrade credit or renewal at expiry.');
+      const offered=pricedPlan(plan);if(offered.monthlyPrice<100)throw new BadRequestException('This price needs administrator review.');
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const base=String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim();
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
       const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)));
       if(input.mode==='GATEWAY')throw new BadRequestException('Use the verified Razorpay checkout flow for online payments.');
       if(input.mode==='UPI'&&!upiId)throw new ServiceUnavailableException('UPI payment is not configured yet.');
-      const amount=pay.pricesIncludeGst===true?Math.round(plan.monthlyPrice/(1+gstPercent/100)):plan.monthlyPrice,tax=pay.pricesIncludeGst===true?plan.monthlyPrice-amount:Math.round(amount*gstPercent/100),total=amount+tax;
+      const amount=pay.pricesIncludeGst===true?Math.round(offered.monthlyPrice/(1+gstPercent/100)):offered.monthlyPrice,tax=pay.pricesIncludeGst===true?offered.monthlyPrice-amount:Math.round(amount*gstPercent/100),total=amount+tax;
       const open=await this.db.invoice.findFirst({where:{tenantId:tid,status:{in:['DRAFT','ISSUED','OVERDUE','PART_PAID']},amount,tax,total},orderBy:{createdAt:'desc'}});
       const invoice=open??await this.db.invoice.create({data:{tenantId:tid,number:`TCW-${Date.now()}-${Math.floor(1000+Math.random()*9000)}`,amount,tax,total,status:'DRAFT',dueDate:new Date(new Date().toISOString().slice(0,10))}});
       await this.db.tenant.update({where:{id:tid},data:{profile:{...(company.profile as any??{}),pendingPlan:plan.name,paymentRequestedAt:new Date().toISOString(),paymentMode:input.mode,pendingInvoiceId:invoice.id}}});

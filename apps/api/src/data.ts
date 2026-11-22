@@ -1,3 +1,4 @@
+import {isPlanDowngrade} from '../../../packages/subscription-policy';
 import {recordSubscriptionInvoice} from './subscription-invoices';
 import {activeSalesCompany,salesCompany} from './sales-pipeline';
 import {faceEnrollmentSummary} from './face-profile';
@@ -515,7 +516,7 @@ export class DataService {
       return this.db.$transaction(async tx=>{
         await tx.$queryRaw`SELECT id FROM tenants WHERE id=${companyId}::uuid FOR UPDATE`;
         const before=await tx.tenant.findUnique({where:{id:companyId}});if(!before)throw new NotFoundException('Company not found.');
-        if(await tx.billingCheckout.count({where:{tenantId:companyId,kind:'AUTOPAY',state:{notIn:['FAILED','ABANDONED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:['cancelled','completed','expired']}}]}}))throw new BadRequestException('Cancel and reconcile all AutoPay mandates before permanently deleting this company.');
+        if(await tx.billingCheckout.count({where:{tenantId:companyId,kind:'AUTOPAY',state:{notIn:['FAILED','ABANDONED','QUOTED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:['cancelled','completed','expired']}}]}}))throw new BadRequestException('Cancel and reconcile all AutoPay mandates before permanently deleting this company.');
         const owner=await tx.user.findFirst({where:{tenantId:companyId},orderBy:{createdAt:'asc'},select:{email:true}});
         await tx.$queryRaw`SELECT set_config('app.raw_punch_delete_tenant', ${companyId}, true), set_config('app.allow_raw_punch_delete', 'on', true), set_config('app.audit_delete_tenant', ${companyId}, true), set_config('app.allow_audit_delete', 'on', true)`;
         const securityUsers=await tx.user.findMany({where:{tenantId:companyId},select:{id:true}});await tx.userSecurity.deleteMany({where:{userId:{in:securityUsers.map(u=>u.id)}}});
@@ -632,7 +633,7 @@ export class DataService {
         await tx.invoice.update({where:{id:invoice.id},data:{paidAmount,status:paidAmount===invoice.total?'PAID':overdue?'OVERDUE':'PART_PAID'}});
         if(paidAmount===invoice.total){
           const company=await tx.tenant.findUnique({where:{id:invoice.tenantId}});
-          if(company){const nextExpiry=new Date(Math.max(Date.now(),company.expiresAt?.getTime()??0));nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile),pending=profile.pendingInvoiceId===invoice.id?await tx.plan.findUnique({where:{name:String(profile.pendingPlan??'')}}):null;delete profile.pendingPaymentProof;delete profile.suspensionReason;delete profile.pendingInvoiceId;delete profile.pendingPlan;profile.subscriptionCycle='MONTHLY';await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,...(pending?{plan:pending.name,employeeLimit:pending.employeeLimit}:{}),profile}});await recordSubscriptionInvoice(tx,company,{...invoice,paidAmount,status:'PAID'},{planName:pending?.name??company.plan,cycle:'MONTHLY',snapshot:{}},new Date(nextExpiry.getTime()-30*86400000),nextExpiry);}
+          if(company&&!(this.object(company.profile).pendingInvoiceId===invoice.id&&isPlanDowngrade(company.plan,String(this.object(company.profile).pendingPlan??company.plan)))){const nextExpiry=new Date(Math.max(Date.now(),company.expiresAt?.getTime()??0));nextExpiry.setUTCDate(nextExpiry.getUTCDate()+30);const profile=this.object(company.profile),pending=profile.pendingInvoiceId===invoice.id?await tx.plan.findUnique({where:{name:String(profile.pendingPlan??'')}}):null;delete profile.pendingPaymentProof;delete profile.suspensionReason;delete profile.pendingInvoiceId;delete profile.pendingPlan;profile.subscriptionCycle='MONTHLY';await tx.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:nextExpiry,...(pending?{plan:pending.name,employeeLimit:pending.employeeLimit}:{}),profile}});await recordSubscriptionInvoice(tx,company,{...invoice,paidAmount,status:'PAID'},{planName:pending?.name??company.plan,cycle:'MONTHLY',snapshot:{}},new Date(nextExpiry.getTime()-30*86400000),nextExpiry);}
         }
         await audit(tx,ctx,'PAYMENT_RECORDED','payments',payment.id,undefined,payment);return payment;
       });

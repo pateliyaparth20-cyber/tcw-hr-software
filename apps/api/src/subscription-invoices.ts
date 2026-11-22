@@ -10,7 +10,7 @@ const money=(n:number)=>'INR '+(n/100).toFixed(2),date=(v:Date|string)=>new Date
 // and webhook retries therefore cannot queue a second receipt.
 export async function recordSubscriptionInvoice(tx:any,company:any,invoice:any,checkout:any,start:Date,end:Date){
  const seller=jsonObject((await tx.platformSetting.findUnique({where:{key:'platform-profile'}}))?.value),profile=jsonObject(company.profile);
- const snapshot={sellerName:String(seller.legalName||seller.companyName||'Tech Cyber Warrior'),sellerAddress:String(seller.address??''),sellerTaxId:String(seller.taxId??''),buyerName:company.name,buyerCode:company.code,buyerAddress:String(profile.address??''),buyerTaxId:String(profile.gstNumber??profile.gstin??profile.taxId??''),plan:checkout.planName,cycle:checkout.cycle,periodStart:start.toISOString(),periodEnd:end.toISOString(),gstPercent:jsonObject(checkout.snapshot).gstPercent??null};
+ const billing=jsonObject(checkout.snapshot);const snapshot={serviceSubtotal:invoice.amount+Number(billing.appliedCreditSubtotal??0),serviceTax:invoice.tax+Number(billing.appliedCreditTax??0),appliedCredit:Number(billing.appliedCredit??0),needsReview:billing.needsReview===true,sellerName:String(seller.legalName||seller.companyName||'Tech Cyber Warrior'),sellerAddress:String(seller.address??''),sellerTaxId:String(seller.taxId??''),buyerName:company.name,buyerCode:company.code,buyerAddress:String(profile.address??''),buyerTaxId:String(profile.gstNumber??profile.gstin??profile.taxId??''),plan:checkout.planName,cycle:checkout.cycle,periodStart:start.toISOString(),periodEnd:end.toISOString(),gstPercent:jsonObject(checkout.snapshot).gstPercent??null};
  await tx.platformSetting.create({data:{key:'subscription-invoice:'+invoice.id,value:snapshot}});
  const owner=await tx.user.findFirst({where:{tenantId:company.id,active:true,role:{code:{in:['COMPANY_OWNER','HR_ADMIN']}}},orderBy:[{createdAt:'asc'},{id:'asc'}],select:{email:true}});
  const email=z.string().email().safeParse(profile.billingEmail||owner?.email);
@@ -31,7 +31,9 @@ export async function subscriptionInvoice(db:Database,ctx:Context,invoiceId:stri
   {Detail:'Billed to',Value:String(snapshot.buyerName??company.name)},{Detail:'Company code',Value:String(snapshot.buyerCode??company.code)},{Detail:'Billing address',Value:String(snapshot.buyerAddress??'')},{Detail:'Buyer GST / tax ID',Value:String(snapshot.buyerTaxId??'')},
   {Detail:'Plan',Value:String(snapshot.plan??checkout?.planName??'See invoice reference')},{Detail:'Billing cycle',Value:String(snapshot.cycle??checkout?.cycle??'—')},
   ...(charge?[{Detail:'Service period',Value:date(snapshot.periodStart??charge.periodStart)+' to '+date(snapshot.periodEnd??charge.periodEnd)},{Detail:'Payment reference',Value:charge.providerPaymentId}]:[]),
-  {Detail:'Subtotal',Value:money(invoice.amount)},{Detail:'Tax',Value:money(invoice.tax)},{Detail:'Total',Value:money(invoice.total)},{Detail:'Paid',Value:money(invoice.paidAmount)},{Detail:'Outstanding',Value:money(Math.max(0,invoice.total-invoice.paidAmount))}
+  ...(snapshot.appliedCredit?[{Detail:'Unused paid-time credit applied',Value:money(Number(snapshot.appliedCredit))}]:[]),
+  ...(snapshot.needsReview?[{Detail:'Access',Value:'Payment received; billing review required. Current plan was kept unchanged.'}]:[]),
+  {Detail:'Subtotal after credit',Value:money(invoice.amount)},{Detail:'Tax',Value:money(invoice.tax)},{Detail:'Total',Value:money(invoice.total)},{Detail:'Paid',Value:money(invoice.paidAmount)},{Detail:'Outstanding',Value:money(Math.max(0,invoice.total-invoice.paidAmount))}
  ];
  return {bytes:toPdf(rows,'TCW HR · Subscription invoice'),filename:invoice.number.replace(/[^a-zA-Z0-9._-]/g,'-')+'.pdf'};
 }
