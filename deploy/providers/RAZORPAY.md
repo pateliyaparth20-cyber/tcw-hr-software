@@ -43,3 +43,9 @@ Actual merchant activation and sandbox acceptance remain separate from these aut
 - https://razorpay.com/docs/payments/payment-gateway/web-integration/custom/build-integration/
 - https://razorpay.com/docs/payments/payment-gateway/web-integration/custom/payment-methods/
 - https://razorpay.com/docs/webhooks/validate-test/
+
+## Recover an unfinished upgrade
+
+Plans and billing lists the original pending upgrade. Check payment status to reconcile a captured payment, or continue the original checkout while its quote is valid. Unused verified paid time is shown as a negative credit in the upgrade total. The lower-plan button says “Choose plan” but remains disabled; the downgrade policy is unchanged.
+
+“Replace unpaid checkout” requires explicit confirmation. The server checks the original order and its payment attempts first. Captured payments are reconciled; authorized, created, incomplete or uncertain attempts prevent replacement. Only confirmed unpaid sessions are marked closed in TCW. No provider cancellation or refund is claimed. Any later capture on a replaced order is ledgered and invoiced for billing review without changing the current plan or consuming its upgrade credit. An expired quote cannot launch a new payment from the TCW page; return to plans to replace an unpaid session and review a fresh quote.

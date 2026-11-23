@@ -138,6 +138,7 @@ export class Api {
     if(resource==='subscription'&&key==='checkout'&&action&&method==='GET')return this.billing.checkoutDetails(ctx,action);
     if(resource==='subscription'&&key==='gateway-checkout'&&method==='POST')return this.billing.checkout(ctx,body);
     if(resource==='subscription'&&key==='gateway-verify'&&method==='POST')return this.billing.verify(ctx,body);
+    if(resource==='subscription'&&key==='replace-unpaid'&&method==='POST')return this.billing.replaceUnpaid(ctx,body);
     if(resource==='subscription'&&key==='gateway-status'&&method==='POST')return this.billing.reconcile(ctx,body);
     if(resource==='subscription'&&key==='autopay-cancel'&&method==='POST')return this.billing.cancel(ctx,body);
     if(resource==='subscription'&&!key&&method==='GET'){

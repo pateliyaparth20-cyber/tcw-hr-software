@@ -11,14 +11,15 @@ import {subscriptionInvoice} from '../../apps/api/src/subscription-invoices';
 test('subscription gateway verifies money, tenant boundaries, renewals and raw webhooks',async t=>{
  process.env.CONFIG_ENCRYPTION_KEY='synthetic-subscription-test-key-at-least-32-characters';process.env.NODE_ENV='test';
  const f=await embeddedDatabase(),db=f.db,secret='synthetic_api_secret_123',webhookSecret='synthetic_webhook_secret_123',payments:Record<string,any>={},invoices:Record<string,any>={},subscriptions:Record<string,any>={},calls:string[]=[];
- const payloads:any[]=[];let n=0,failOrders=false;
+ const payloads:any[]=[],orders:Record<string,any>={};let n=0,failOrders=false;
  const mock=async(url:any,options:any)=>{const target=new URL(String(url)),path=target.pathname.replace('/v1/',''),body=options.body?JSON.parse(options.body):null;calls.push((body?'POST ':'GET ')+path);if(body)payloads.push({path,body});
-  if(path==='orders'&&body){if(failOrders)throw new Error('Synthetic timeout');return Response.json({id:'order_Synthetic'+(++n)});}
+  if(path==='orders'&&body){if(failOrders)throw new Error('Synthetic timeout');const id='order_Synthetic'+(++n);orders[id]={id,currency:body.currency,amount:body.amount,status:'created',amount_paid:0,attempts:0};return Response.json(orders[id]);}
   if(path==='plans'&&body)return Response.json({id:'plan_Synthetic'+(++n)});
   if(path==='subscriptions'&&body){const id='sub_Synthetic'+(++n);subscriptions[id]={id,status:'created',plan_id:body.plan_id};return Response.json(subscriptions[id]);}
   if(path.startsWith('payments/'))return Response.json(payments[path.split('/')[1]]??{error:{description:'Synthetic payment missing'}},{status:payments[path.split('/')[1]]?200:404});
   if(path.startsWith('invoices/'))return Response.json(invoices[path.split('/')[1]]??{}, {status:invoices[path.split('/')[1]]?200:404});
   if(path.startsWith('subscriptions/')){const id=path.split('/')[1];if(body&&path.endsWith('/cancel'))subscriptions[id].status='cancelled';return Response.json(subscriptions[id]??{});}
+  if(path.startsWith('orders/')&&!path.endsWith('/payments')){const order=orders[path.split('/')[1]];if(!order)return Response.json({}, {status:404});const attempts=Object.values(payments).filter((p:any)=>p.order_id===order.id),paid=attempts.filter((p:any)=>p.status==='captured').reduce((n:number,p:any)=>n+p.amount,0);return Response.json({...order,attempts:attempts.length,amount_paid:paid,status:paid?'paid':attempts.length?'attempted':'created'});}
   if(path.endsWith('/payments'))return Response.json({items:Object.values(payments).filter(p=>p.order_id===path.split('/')[1])});
   if(path==='invoices')return Response.json({items:Object.values(invoices).filter(i=>i.subscription_id===target.searchParams.get('subscription_id'))});
   throw new Error('Unexpected synthetic request '+path);
@@ -89,6 +90,29 @@ test('subscription gateway verifies money, tenant boundaries, renewals and raw w
    await db.tenant.update({where:{id:a.tenant.id},data:{plan:'ENTERPRISE'}});const before=calls.length;await assert.rejects(()=>gateway.checkout(a.ctx,input()),/downgrades/);assert.equal(calls.length,before);
   });
   async function paidStarter(){const a=await company(),now=Date.now(),start=new Date(now-15*86400000),end=new Date(now+15*86400000);await db.tenant.update({where:{id:a.tenant.id},data:{status:'ACTIVE',expiresAt:end}});const invoice=await db.invoice.create({data:{tenantId:a.tenant.id,number:'OLD-'+randomUUID(),amount:100000,tax:18000,total:118000,paidAmount:118000,status:'PAID',dueDate:start}});await db.platformSetting.create({data:{key:'subscription-invoice:'+invoice.id,value:{plan:'STARTER',cycle:'MONTHLY',periodStart:start.toISOString(),periodEnd:end.toISOString()}}});return a;}
+  await t.test('unpaid upgrade recovery preserves paid access, credit and late-payment safety',async()=>{
+   const a=await paidStarter(),b=await company(),before=await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}}),order=await gateway.checkout(a.ctx,input());
+   const summary=await gateway.summary(a.ctx);assert.equal(summary.pendingCheckouts.length,1);assert.equal(summary.pendingCheckouts[0].id,order.id);
+   await assert.rejects(()=>gateway.replaceUnpaid(b.ctx,{checkoutId:order.id,confirm:true}),/not found/i);
+   await assert.rejects(()=>gateway.replaceUnpaid(a.ctx,{checkoutId:order.id,confirm:false}));
+   const stale=await db.billingCheckout.findUniqueOrThrow({where:{id:order.id}}),result=await gateway.replaceUnpaid(a.ctx,{checkoutId:order.id,confirm:true});assert.equal(result.status,'ABANDONED');assert.equal((await gateway.summary(a.ctx)).pendingCheckouts.length,0);
+   const unchanged=await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}});assert.equal(unchanged.plan,before.plan);assert.equal(unchanged.expiresAt?.toISOString(),before.expiresAt?.toISOString());
+   const replacement=await gateway.checkout(a.ctx,input());assert.ok(replacement.quote.credit>58000);assert.equal(replacement.amount,replacement.renewalAmount-replacement.quote.credit);
+   payments.pay_LateReplaced=captured('pay_LateReplaced',order.providerRef,order.amount);
+   await gateway.acceptPayment(stale,'pay_LateReplaced',await gateway.version(stale.gatewayRevision));
+   const late=await gateway.checkoutDetails(a.ctx,order.id);assert.equal(late.verified,true);assert.equal(late.reviewRequired,true);assert.equal((await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}})).plan,'STARTER');
+   payments.pay_Replacement=captured('pay_Replacement',replacement.providerRef,replacement.amount);await gateway.verify(a.ctx,{checkoutId:replacement.id,paymentId:'pay_Replacement',signature:signature(replacement.providerRef+'|pay_Replacement')});
+   assert.equal((await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}})).plan,'GROWTH');assert.equal((await gateway.checkoutDetails(a.ctx,replacement.id)).reviewRequired,false);
+  });
+  await t.test('received and processing payments cannot be discarded to start another upgrade',async()=>{
+   const a=await paidStarter(),order=await gateway.checkout(a.ctx,input());payments.pay_Processing={...captured('pay_Processing',order.providerRef,order.amount),status:'authorized',captured:false};
+   await assert.rejects(()=>gateway.replaceUnpaid(a.ctx,{checkoutId:order.id,confirm:true}),/still processing/);assert.equal((await db.billingCheckout.findUniqueOrThrow({where:{id:order.id}})).state,'READY');
+   payments.pay_Processing=captured('pay_Processing',order.providerRef,order.amount);const result=await gateway.replaceUnpaid(a.ctx,{checkoutId:order.id,confirm:true});assert.equal(result.status,'PAID');assert.equal((await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}})).plan,'GROWTH');
+   assert.equal((await db.billingCheckout.findUniqueOrThrow({where:{id:order.id}})).state,'PAID');assert.equal((await gateway.summary(a.ctx)).pendingCheckouts.length,0);
+   const b=await paidStarter(),failed=await gateway.checkout(b.ctx,input());payments.pay_FailedOnly={...captured('pay_FailedOnly',failed.providerRef,failed.amount),status:'failed',captured:false};assert.equal((await gateway.replaceUnpaid(b.ctx,{checkoutId:failed.id,confirm:true})).status,'ABANDONED');
+   const c=await paidStarter(),expired=await gateway.checkout(c.ctx,input()),stored=await db.billingCheckout.findUniqueOrThrow({where:{id:expired.id}});await db.billingCheckout.update({where:{id:expired.id},data:{snapshot:{...(stored.snapshot as any),quote:{...expired.quote,validUntil:new Date(Date.now()-1000).toISOString()}}}});assert.equal((await gateway.summary(c.ctx)).pendingCheckouts[0].canResume,false);assert.equal((await gateway.replaceUnpaid(c.ctx,{checkoutId:expired.id,confirm:true})).status,'ABANDONED');
+
+  });
   await t.test('preview makes no provider charge and locks verified unused-time credit for immediate upgrade',async()=>{
    const a=await paidStarter(),request=input(),before=calls.length,quote=await gateway.checkout(a.ctx,request,true);assert.equal(calls.length,before);assert.equal(quote.quote.upgrade,true);assert.ok(quote.quote.credit>=58990&&quote.quote.credit<=59000);assert.equal(quote.amount,quote.renewalAmount-quote.quote.credit);const order=await gateway.checkout(a.ctx,request);assert.equal(order.amount,quote.amount);assert.equal(payloads.at(-1).body.amount,quote.amount);
    payments.pay_Credit=captured('pay_Credit',order.providerRef,order.amount);const body={checkoutId:order.id,paymentId:'pay_Credit',signature:signature(order.providerRef+'|pay_Credit')};await gateway.verify(a.ctx,body);const current=await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}});assert.equal(current.plan,'GROWTH');assert.equal(current.expiresAt?.toISOString(),quote.quote.serviceEnd);await gateway.verify(a.ctx,body);assert.equal(await db.billingCharge.count({where:{tenantId:a.tenant.id}}),1);const receipt=await db.platformSetting.findFirstOrThrow({where:{key:{startsWith:'subscription-invoice:'},value:{path:['plan'],equals:'GROWTH'}}});
