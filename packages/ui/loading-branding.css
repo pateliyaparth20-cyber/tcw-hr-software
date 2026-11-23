@@ -2,3 +2,11 @@
 .loading-settings-fields{border:0;min-width:0;margin:0;padding:0}
 
 .tcw-loading-art img{border-radius:0!important;background:transparent!important}.tcw-branded-loading.animation-spinner .tcw-loading-art{width:64px;height:64px}.tcw-branded-loading.animation-spinner .tcw-loading-orbit{border-width:2px}.tcw-branded-loading.animation-spinner .tcw-loading-art img{width:40px;height:40px}
+
+/* One initial loader centered in the usable workspace, without stacked cards. */
+.page-stage:has(>.tcw-group-loader){min-height:calc(100dvh - 160px);display:grid;place-items:center}
+.page-stage:has(>.tcw-group-loader)>:not(.tcw-group-loader){display:none!important}
+.tcw-group-loader{width:100%;display:grid;place-items:center;align-self:stretch}
+.tcw-group-loader>.tcw-branded-loading{min-height:0;background:transparent;border-radius:0;padding:28px 16px}
+.tcw-group-loader .tcw-loading-card{margin:auto}
+@media(max-width:760px){.page-stage:has(>.tcw-group-loader){min-height:calc(100dvh - 180px)}}

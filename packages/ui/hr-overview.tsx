@@ -7,6 +7,7 @@ import {Row,readable} from './config';
 import {attendanceTrendData} from './dashboard-chart';
 import {overviewSnapshot,overviewDistribution} from './overview-data';
 import './hr-overview.css';
+import {AIOrb} from './ai-orb';
 
 type Series=ReturnType<typeof attendanceTrendData>;
 function Trend({series}:{series:Series}){
@@ -23,7 +24,7 @@ function AttendanceGauge({rate,present,total}:{rate:number;present:number;total:
 function Assistant({session}:{session:any}){
  const [question,setQuestion]=useState(''),[answer,setAnswer]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function ask(e:React.FormEvent){e.preventDefault();if(question.trim().length<3||busy)return;setBusy(true);setError('');try{const result=await api('ai','POST',{question:question.trim()},session.csrf);setAnswer(result.answer??'No response was returned.')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
- return <section className="ov-panel an-assistant"><div className="an-card-head"><h2>HR Assistant</h2><Sparkles size={15}/></div><div className={'an-orb '+(busy?'thinking':'')} aria-hidden="true"><i/><i/></div>{answer&&<p className="an-ai-answer" aria-live="polite">{answer}</p>}{error&&<p className="an-ai-error" role="alert">{error}</p>}<form onSubmit={ask}><Sparkles size={14}/><input aria-label="Ask HR assistant" value={question} maxLength={1000} onChange={e=>setQuestion(e.target.value)} placeholder="Ask about your workforce…"/><button aria-label="Send assistant question" disabled={busy||question.trim().length<3}>{busy?<Loader2 size={14} className="spin"/>:<ArrowRight size={15}/>}</button></form></section>;
+ return <section className="ov-panel an-assistant"><div className="an-card-head"><h2>HR Assistant</h2><Sparkles size={15}/></div><AIOrb active={busy}/>{answer&&<p className="an-ai-answer" aria-live="polite">{answer}</p>}{error&&<p className="an-ai-error" role="alert">{error}</p>}<form onSubmit={ask}><Sparkles size={14}/><input aria-label="Ask HR assistant" value={question} maxLength={1000} onChange={e=>setQuestion(e.target.value)} placeholder="Ask about your workforce…"/><button aria-label="Send assistant question" disabled={busy||question.trim().length<3}>{busy?<Loader2 size={14} className="spin"/>:<ArrowRight size={15}/>}</button></form></section>;
 }
 const widgetDefinitions=[{id:'trend',name:'Attendance overview',detail:'Present employees and employment breakdown',permission:'attendance'},{id:'days',name:'Most active day',detail:'Daily present employee counts',permission:'attendance'},{id:'rate',name:'Attendance rate',detail:'Today’s verified attendance snapshot',permission:'attendance'},{id:'leave',name:'Leave requests',detail:'Review current leave requests',permission:'leave'},{id:'assistant',name:'HR Assistant',detail:'Ask about the HR facts available to your role',permission:'ai'},{id:'events',name:'Upcoming events',detail:'Your company calendar at a glance',permission:'calendar'},{id:'shortcuts',name:'Quick actions',detail:'People, attendance, payroll and reports',permission:'dashboard'}];
 const initialWidgets=['trend','days','rate','leave','assistant'];
