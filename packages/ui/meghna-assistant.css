@@ -1,0 +1,108 @@
+/* Scoped assistant layout: one content view, one composer, no nested chat panels. */
+html body .tcw-agent.meghna-redesign{position:fixed!important;right:22px!important;bottom:24px!important;left:auto!important;z-index:80!important;isolation:isolate}
+html body .tcw-agent.meghna-redesign.open{z-index:120!important}
+html body .tcw-agent.meghna-redesign::before{display:none!important}
+html body .meghna-redesign .meghna-backdrop{position:fixed;inset:0;z-index:0;border:0;background:#21173538;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);cursor:default;animation:meghna-shade-in .2s ease both}
+html body .meghna-redesign .tcw-agent-panel{position:fixed!important;right:22px!important;bottom:24px!important;top:auto!important;left:auto!important;width:min(450px,calc(100vw - 44px))!important;height:min(720px,calc(100dvh - 48px))!important;max-height:calc(100dvh - 48px)!important;display:flex!important;flex-direction:column!important;border:1px solid #e9e1f2!important;border-radius:27px!important;background:#fff!important;box-shadow:0 28px 90px #2110372e!important;overflow:hidden!important;backdrop-filter:none!important;outline:none;z-index:1!important;transform-origin:90% 100%;transition:opacity .18s ease,transform .22s ease,visibility .22s!important;contain:layout}
+html body .meghna-redesign .tcw-agent-panel.is-open{visibility:visible!important;opacity:1!important;transform:none!important;pointer-events:auto;animation:meghna-window-in .3s cubic-bezier(.18,.8,.25,1) both!important}
+html body .meghna-redesign .tcw-agent-panel.is-closed{visibility:hidden!important;opacity:0!important;transform:translateY(14px) scale(.97)!important;pointer-events:none!important;animation:none!important}
+html body .meghna-redesign .tcw-agent-panel>header{position:relative!important;display:flex;align-items:center;justify-content:space-between;min-height:76px!important;flex:0 0 auto;padding:17px 19px!important;gap:12px!important;background:linear-gradient(120deg,#faf6ff,#fff 80%)!important;border-bottom:1px solid #f0eaf5!important;backdrop-filter:none!important}
+html body .meghna-redesign .meghna-identity{display:flex!important;align-items:center;gap:11px!important;min-width:0;flex:1}
+html body .meghna-redesign .meghna-identity>.tcw-ai-energy-orb{width:39px!important;height:39px!important;box-shadow:0 3px 12px #2548a72b}
+html body .meghna-redesign .meghna-identity>span{display:flex;flex-direction:column;min-width:0;gap:4px}
+html body .meghna-redesign .meghna-identity strong{display:flex;align-items:center;gap:7px;color:#3c2d4b!important;font-size:17px!important;line-height:1.3;letter-spacing:-.035em}
+html body .meghna-redesign .meghna-identity strong i{display:inline-flex;align-items:center;font-size:8px;font-weight:700;font-style:normal;line-height:1;padding:4px 5px;border:1px solid #e4d8f5;border-radius:6px;color:#9265c3;background:#f5efff;letter-spacing:.04em}
+html body .meghna-redesign .meghna-identity small{font-size:10px!important;line-height:1.4;color:#7f6c8f!important;margin:0!important;white-space:nowrap}
+html body .meghna-redesign .meghna-header-actions{display:flex;align-items:center;gap:5px!important;flex-shrink:0}
+html body .meghna-redesign .meghna-header-actions .icon-button{width:32px!important;height:32px!important;border:1px solid #eee8f5!important;border-radius:11px!important;background:#ffffffb3!important;color:#927ba6!important;transition:background .15s,color .15s,transform .15s}
+html body .meghna-redesign .meghna-header-actions .icon-button:hover,html body .meghna-redesign .meghna-header-actions .icon-button.active{background:#f1e8ff!important;color:#7843bd!important;border-color:#e1cef7!important}
+html body .meghna-redesign .meghna-header-actions .icon-button:active{transform:scale(.93)}
+html body .meghna-redesign .meghna-mode-strip{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;padding:10px 20px!important;background:#fff!important;border-bottom:1px solid #f3edf8!important;min-height:36px!important}
+html body .meghna-redesign .meghna-mode-strip>span{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;color:#776386!important}
+html body .meghna-redesign .meghna-live-dot{width:6px;height:6px;display:inline-block;border-radius:50%;background:#2eb997;box-shadow:0 0 0 4px #ecf8f3;flex-shrink:0}
+html body .meghna-redesign .meghna-mode-strip>small{font-size:9px;color:#a191b0;line-height:1.4}
+html body .meghna-redesign .meghna-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden;background:radial-gradient(ellipse at 80% 0%,#f4edff80,transparent 60%),#fff}
+html body .meghna-redesign .tcw-agent-welcome{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;flex:1 1 auto;min-height:0;padding:24px 24px 18px!important;text-align:center!important;gap:0!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin}
+html body .meghna-redesign .meghna-welcome-mark{position:relative;display:grid!important;place-items:center;width:54px;height:54px;background:linear-gradient(145deg,#f2e9ff,#fff);border:1px solid #e9dafb;border-radius:21px;box-shadow:0 6px 22px #9a68dc10;color:#9862d8;margin:2px 0 13px;flex:0 0 auto;animation:meghna-mark-float 5s ease-in-out infinite}
+.meghna-welcome-mark i{position:absolute;width:6px;height:6px;display:block;border-radius:50%;background:#d7c2f6;right:-7px;top:9px}.meghna-welcome-mark i:last-child{width:4px;height:4px;left:-8px;top:auto;bottom:11px;right:auto;background:#bcccf2}
+html body .meghna-redesign .meghna-eyebrow{font-size:8px;font-weight:700;letter-spacing:.11em;color:#9c83b2;margin-bottom:10px;line-height:1.5}
+html body .meghna-redesign .tcw-agent-welcome h3{font-size:24px!important;font-weight:700;line-height:1.25;letter-spacing:-.045em;color:#40304f!important;margin:0 0 10px!important}
+html body .meghna-redesign .tcw-agent-welcome>p{font-size:12px!important;line-height:1.7!important;color:#7e6c8d!important;margin:0!important;max-width:290px}
+html body .meghna-redesign .meghna-suggestions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:10px!important;margin-top:22px;flex-wrap:unset!important}
+html body .meghna-redesign .meghna-suggestions button{display:flex!important;align-items:flex-start;gap:10px;position:relative;text-align:left;border:1px solid #eae3f2!important;padding:15px 12px!important;border-radius:17px!important;background:#ffffffd9!important;min-height:88px;color:#9872bf!important;transition:transform .18s,background .18s,border-color .18s;animation:meghna-suggestion-in .3s ease backwards}
+.meghna-suggestions button:nth-child(2){animation-delay:40ms}.meghna-suggestions button:nth-child(3){animation-delay:80ms}.meghna-suggestions button:nth-child(4){animation-delay:120ms}
+html body .meghna-redesign .meghna-suggestions button>svg:first-child{width:18px;height:18px;flex-shrink:0;margin-top:1px;color:#a784c9}
+html body .meghna-redesign .meghna-suggestions button>svg:last-child{position:absolute;right:10px;bottom:11px;color:#bca8cf;width:12px;height:12px}
+.meghna-suggestions button>span{display:flex;flex-direction:column;gap:5px;min-width:0;padding-bottom:8px}
+html body .meghna-redesign .meghna-suggestions strong{font-size:11px;line-height:1.4;color:#6e527f;font-weight:650;white-space:normal}
+html body .meghna-redesign .meghna-suggestions small{font-size:9px;line-height:1.5;color:#83718f}
+@media(hover:hover){html body .meghna-redesign .meghna-suggestions button:hover{transform:translateY(-2px);background:#f8f2ff!important;border-color:#dac6ef!important}}
+html body .meghna-redesign .tcw-agent-issues{flex:0 0 auto;max-height:110px!important;overflow-y:auto!important;padding:10px 16px!important;background:#fffaf1;border:0;border-bottom:1px solid #f5e9cf;font-size:10px;overscroll-behavior:contain}
+html body .meghna-redesign .tcw-agent-issues>div{padding:6px 2px}.tcw-agent-issues strong{line-height:1.5}.tcw-agent-issues p{line-height:1.5}
+html body .meghna-redesign .tcw-agent-messages{display:flex;flex-direction:column;gap:16px;flex:1 1 auto;min-height:0;max-height:none!important;padding:24px 20px!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#dac9eb transparent;background:transparent;scrollbar-gutter:auto!important}
+html body .meghna-redesign .tcw-agent-messages>div{max-width:91%!important;padding:13px 15px!important;border:1px solid #eae3f2!important;border-radius:18px!important;background:#fff!important;box-shadow:0 2px 8px #35204d03;color:#5f4b6e;animation:meghna-message-in .2s ease backwards;flex-shrink:0}
+html body .meghna-redesign .tcw-agent-messages>.user{align-self:flex-end;background:#f4ebff!important;border-color:#eadef7!important;border-bottom-right-radius:6px!important}
+html body .meghna-redesign .tcw-agent-messages>.assistant{align-self:flex-start;border-bottom-left-radius:6px!important}
+html body .meghna-redesign .tcw-agent-messages>.error{background:#fff5f5!important;border-color:#f4dada!important;color:#ad5c66}
+html body .meghna-redesign .tcw-agent-messages strong{font-size:9px;font-weight:700;line-height:1.5;color:#997cad;display:block;margin-bottom:5px}
+html body .meghna-redesign .tcw-agent-messages p{font-size:12px!important;line-height:1.8!important;color:#695674!important;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+html body .meghna-redesign .meghna-thinking{display:flex;align-items:center;gap:4px;padding:6px 3px!important;color:#a18ab3;font-size:10px;background:none!important;border:0!important}
+html body .meghna-redesign .meghna-thinking i{width:5px;height:5px;background:#b49acb}.meghna-thinking em{margin-left:5px;font-style:normal}
+html body .meghna-redesign .meghna-compose{display:flex!important;flex-direction:column!important;flex:0 0 auto;padding:14px 17px 12px!important;gap:8px!important;border-top:1px solid #eee7f5!important;background:#fff!important}
+html body .meghna-redesign .meghna-compose-row{display:flex;align-items:flex-end;gap:8px;padding:6px 7px 6px 12px;background:#fbf9fd;border:1px solid #e7deef;border-radius:19px;transition:border-color .15s,box-shadow .15s}
+html body .meghna-redesign .meghna-compose-row:focus-within{border-color:#c3a1e9;box-shadow:0 0 0 3px #dbc6f52b;background:#fff}
+html body .meghna-redesign .meghna-compose textarea{display:block!important;flex:1 1 auto!important;min-width:0;width:100%!important;min-height:40px!important;max-height:128px!important;margin:0!important;padding:10px 0!important;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;color:#60496f!important;font-size:12px!important;line-height:1.65!important;resize:none;overflow-y:auto;overscroll-behavior:contain}
+html body .meghna-redesign .meghna-compose textarea::placeholder{color:#ac9ab9;font-size:11px}
+html body .meghna-redesign .meghna-compose .btn{width:37px!important;height:37px!important;min-width:37px!important;min-height:37px!important;align-self:flex-end!important;flex:0 0 37px!important;padding:0!important;margin-bottom:1px;border-radius:13px!important;background:linear-gradient(135deg,#9d6bdc,#7946bb)!important;border:0!important;box-shadow:0 4px 10px #8d56c829!important;color:#fff!important}
+html body .meghna-redesign .meghna-compose .btn:disabled{opacity:.38!important;box-shadow:none!important}
+html body .meghna-redesign .meghna-compose-note{display:flex;align-items:center;gap:5px;font-size:8px;color:#ab99b7;line-height:1.5;padding:0 3px}
+.meghna-compose-note small{margin-left:auto;font-size:8px;color:#b4a4be}
+html body .meghna-redesign .meghna-history{display:flex!important;flex-direction:column;flex:1 1 auto;min-height:0;max-height:none!important;padding:20px!important;background:transparent!important;border:0!important;overflow-y:auto!important;overscroll-behavior:contain}
+html body .meghna-redesign .meghna-history-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;padding:0!important}
+.meghna-history-head>div{display:flex;flex-direction:column;gap:6px}.meghna-history-head strong{font-size:16px!important;color:#665074}.meghna-history-head small{font-size:10px!important;color:#a18cb1}
+html body .meghna-redesign .meghna-back-chat{display:flex;align-items:center;gap:5px;font-size:10px;color:#9672b6;background:#f6effd;border:1px solid #e8d9f4;padding:8px 10px;border-radius:999px;white-space:nowrap}
+html body .meghna-redesign .meghna-history-list{display:flex;flex-direction:column;gap:10px;max-height:none!important;overflow:visible!important}
+html body .meghna-redesign .meghna-history-row{display:flex;align-items:center;border:1px solid #ece3f5;border-radius:16px;background:#fff;overflow:hidden;padding:4px}
+html body .meghna-redesign .meghna-history-row.active{border-color:#d8c1ef;background:#fcf8ff}
+html body .meghna-redesign .meghna-history-row>button:first-child{padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;flex:1;background:none;border:0;text-align:left}
+html body .meghna-redesign .meghna-history-row strong{font-size:12px;line-height:1.5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#776084}
+html body .meghna-redesign .meghna-history-row small{font-size:9px;line-height:1.5;color:#a592b3}
+html body .meghna-redesign .history-delete{width:34px;height:34px;min-width:34px;display:grid;place-items:center;background:none;border:0;color:#b499c7;border-radius:10px}
+html body .meghna-redesign .history-delete:hover{background:#fff0f3;color:#b8647a}
+html body .meghna-redesign .meghna-history-empty{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:13px;flex:1;min-height:200px;text-align:center;padding:25px!important;color:#b59cc6}
+.meghna-history-empty strong{font-size:17px;color:#80678f}.meghna-history-empty span{font-size:11px;color:#a48fb2}
+html body .meghna-redesign>.tcw-agent-fab{display:grid!important;place-items:center;width:54px!important;height:54px!important;min-width:54px!important;min-height:54px!important;padding:5px!important;border-radius:50%!important;box-shadow:0 7px 24px #6d54aa27!important;transition:transform .2s,opacity .15s,visibility .15s!important}
+html body .meghna-redesign.open>.tcw-agent-fab{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+html body .meghna-redesign :is(button,textarea):focus-visible{outline:2px solid #aa7fda;outline-offset:3px}
+@keyframes meghna-window-in{from{opacity:0;transform:translateY(15px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes meghna-shade-in{from{opacity:0}to{opacity:1}}
+@keyframes meghna-mark-float{50%{transform:translateY(-4px);box-shadow:0 10px 25px #9a68dc1b}}
+@keyframes meghna-suggestion-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes meghna-message-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(max-width:700px){
+ html body .tcw-agent.meghna-redesign{right:17px!important;bottom:calc(114px + env(safe-area-inset-bottom))!important}
+ html body .meghna-redesign .tcw-agent-panel{top:calc(var(--meghna-offset,0px) + max(10px,env(safe-area-inset-top)))!important;left:10px!important;right:10px!important;bottom:auto!important;width:calc(100vw - 20px)!important;height:calc(var(--meghna-vh,100dvh) - max(10px,env(safe-area-inset-top)) - max(10px,env(safe-area-inset-bottom)))!important;max-height:none!important;border-radius:26px!important}
+ html body .meghna-redesign .tcw-agent-panel>header{padding:15px 16px!important;min-height:73px!important;gap:8px!important}
+ html body .meghna-redesign .meghna-identity{gap:9px!important}
+ html body .meghna-redesign .meghna-identity>.tcw-ai-energy-orb{width:35px!important;height:35px!important}
+ html body .meghna-redesign .meghna-identity strong{font-size:16px!important}
+ html body .meghna-redesign .meghna-identity small{font-size:9px!important}
+ html body .meghna-redesign .meghna-header-actions{gap:4px!important}
+ html body .meghna-redesign .meghna-header-actions .icon-button{width:31px!important;height:31px!important;border-radius:10px!important}
+ html body .meghna-redesign .meghna-mode-strip{padding:10px 17px!important}
+ html body .meghna-redesign .tcw-agent-welcome{padding:20px 20px 18px!important}
+ html body .meghna-redesign .tcw-agent-welcome h3{font-size:25px!important;max-width:260px}
+ html body .meghna-redesign .meghna-suggestions{gap:10px!important;margin-top:20px}
+ html body .meghna-redesign .meghna-suggestions button{min-height:84px;padding:13px 11px!important;gap:8px}
+ html body .meghna-redesign .meghna-suggestions strong{font-size:11px}
+ html body .meghna-redesign .meghna-suggestions small{font-size:9px}
+ html body .meghna-redesign .meghna-compose{padding:12px 13px 13px!important}
+ html body .meghna-redesign .meghna-compose textarea{font-size:16px!important;line-height:1.5!important;padding:9px 0!important;min-height:42px!important}
+ html body .meghna-redesign .meghna-compose textarea::placeholder{font-size:13px}
+ html body .meghna-redesign .meghna-compose-note small{display:none}
+ html body .meghna-redesign .tcw-agent-messages{padding:20px 16px!important;gap:14px}
+ html body .meghna-redesign .tcw-agent-messages p{font-size:13px!important;line-height:1.75!important}
+ html body .meghna-redesign .tcw-agent-messages>div{max-width:92%!important}
+}
+@media(max-width:350px){html body .meghna-redesign .meghna-identity small{display:none}html body .meghna-redesign .meghna-suggestions button{flex-direction:column;gap:8px;min-height:105px}html body .meghna-redesign .meghna-header-actions .icon-button{width:29px!important;height:29px!important}}
+@media(prefers-reduced-motion:reduce){html body .meghna-redesign *,html body .meghna-redesign .tcw-agent-panel.is-open{animation:none!important;transition:none!important}}

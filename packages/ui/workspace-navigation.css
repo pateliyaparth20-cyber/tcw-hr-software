@@ -1,6 +1,5 @@
 /* Shared navigation: desktop rail and a mobile dock with a raised action. */
 .navigation-design{--nav-bg:#fff;--nav-text:#535766;--nav-ink:#1c1d24;--nav-line:#ececf0;--nav-active:#f1effa;--nav-accent:#6c35ec}
-.navigation-design[data-nav-dark=true]{--nav-bg:#111214;--nav-text:#b8bbc4;--nav-ink:#fafafa;--nav-line:#2d2e33;--nav-active:#27282d;--nav-accent:#c4aeff}
 .navigation-design :is(.sidebar,.employee-desktop-sidebar){background:var(--nav-bg)!important;border-color:var(--nav-line)!important;transition:width .25s ease,background .2s ease;box-sizing:border-box}
 .navigation-design .nav-collapse-control{display:flex;align-items:center;gap:12px;flex-shrink:0;background:none;border:0;color:var(--nav-text);min-height:44px;margin:12px 18px 0;padding:10px 12px;border-radius:13px;font-size:12px;cursor:pointer}
 .navigation-design .nav-collapse-control:hover{background:var(--nav-active)}
@@ -19,10 +18,7 @@
 .navigation-design :is(.account strong,.employee-desktop-account strong){color:var(--nav-ink)!important}
 .navigation-design :is(.concept-settings-link,.concept-more,.employee-desktop-label){color:var(--nav-text)!important;border-color:var(--nav-line)!important}
 .navigation-design .concept-settings-link{border-radius:14px;padding:12px 14px;gap:14px}
-.navigation-design .nav-appearance{display:flex;align-items:center;padding:4px;background:var(--nav-active);border-radius:999px;margin:8px 4px 18px;gap:4px;flex-shrink:0}
-.navigation-design .nav-appearance button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:36px;flex:1;border:0;border-radius:999px;background:none;color:var(--nav-text);font-size:11px;cursor:pointer}
-.navigation-design .nav-appearance button[aria-pressed=true]{background:var(--nav-bg);color:var(--nav-ink);box-shadow:0 2px 8px #0000000d}
-.navigation-design :is(.nav-collapse-control,.nav-appearance button,.nav-item,.employee-desktop-sidebar nav a,.dock-link,.dock-fab):focus-visible{outline:2px solid #8b5cf6!important;outline-offset:2px!important}
+.navigation-design :is(.nav-collapse-control,.nav-item,.employee-desktop-sidebar nav a,.dock-link,.dock-fab):focus-visible{outline:2px solid #8b5cf6!important;outline-offset:2px!important}
 .workspace-fab-dock{display:none}
 .navigation-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:4px}
 .navigation-quick-grid>a{display:flex;align-items:center;gap:12px;min-height:82px;padding:16px;border:1px solid #eae5f4;border-radius:20px;color:#322547;background:#fcfbff;transition:background .15s,transform .15s}
@@ -43,15 +39,13 @@
  .navigation-design[data-nav-collapsed=true] .employee-desktop-sidebar{width:86px!important;padding-left:10px!important;padding-right:10px!important}
  .navigation-design .employee-desktop-sidebar>.nav-collapse-control{margin:12px 4px 0}
  .navigation-design .employee-desktop-account{gap:8px;flex-wrap:wrap;padding-top:16px}
- .navigation-design[data-nav-collapsed=true] .employee-desktop-sidebar :is(.employee-desktop-brand strong,.employee-desktop-label,nav a span,.employee-desktop-account>div,.nav-collapse-control span,.nav-appearance span){display:none!important}
+ .navigation-design[data-nav-collapsed=true] .employee-desktop-sidebar :is(.employee-desktop-brand strong,.employee-desktop-label,nav a span,.employee-desktop-account>div,.nav-collapse-control span){display:none!important}
  .navigation-design[data-nav-collapsed=true] .employee-desktop-brand{padding:18px 8px!important;justify-content:center}
  .navigation-design[data-nav-collapsed=true] .employee-desktop-sidebar nav a{justify-content:center;padding:12px!important}
  .navigation-design[data-nav-collapsed=true] .employee-desktop-account{justify-content:center}
- .navigation-design[data-nav-collapsed=true] .employee-desktop-sidebar .nav-appearance{flex-direction:column;border-radius:22px;margin:12px 0}
- .navigation-design[data-nav-collapsed=true] .employee-desktop-sidebar .nav-appearance button{width:38px;flex:none}
 }
 @media(min-width:951px){
- .navigation-design[data-nav-collapsed=true] .sidebar :is(.brand>span:last-child,.nav-group-label,.nav-item>span:not(.concept-more-dots),.concept-more>.nav-item>svg,.sidebar-profile-link>span:not(.avatar),.account>.icon-button,.nav-collapse-control span,.nav-appearance span){display:none!important}
+ .navigation-design[data-nav-collapsed=true] .sidebar :is(.brand>span:last-child,.nav-group-label,.nav-item>span:not(.concept-more-dots),.concept-more>.nav-item>svg,.sidebar-profile-link>span:not(.avatar),.account>.icon-button,.nav-collapse-control span){display:none!important}
  .navigation-design[data-nav-collapsed=true] .sidebar>.brand{padding:18px 10px!important;justify-content:center}
  .navigation-design[data-nav-collapsed=true] .sidebar>nav{padding:16px 12px!important}
  .navigation-design[data-nav-collapsed=true] .sidebar .nav-group{margin:0 0 18px!important}
@@ -60,8 +54,6 @@
  .navigation-design[data-nav-collapsed=true] .sidebar .sidebar-bottom{padding:12px!important}
  .navigation-design[data-nav-collapsed=true] .sidebar .concept-settings-link{font-size:0;gap:0;justify-content:center}
  .navigation-design[data-nav-collapsed=true] .sidebar .account{justify-content:center;padding:12px 0!important}
- .navigation-design[data-nav-collapsed=true] .sidebar .nav-appearance{flex-direction:column;border-radius:24px;margin:4px 0 12px}
- .navigation-design[data-nav-collapsed=true] .sidebar .nav-appearance button{flex:none;width:38px}
 }
 @media(max-width:950px){
  .navigation-design.app-shell .nav-collapse-control{display:none}
