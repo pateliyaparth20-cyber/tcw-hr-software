@@ -11,7 +11,7 @@ export function publishLoadingBrand(value:LoadingBrand){cached=value;loadedAt=Da
 function fetchBrand(){if(cached&&Date.now()-loadedAt<30000)return Promise.resolve(cached);return inFlight??=(fetch('/api/branding',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Branding unavailable');return r.json()}).then(v=>{const loading=v.loading?.appearanceVersion===2?v.loading:defaultLoadingBrand;const next={...defaultLoadingBrand,...loading,logo:normalizeLogo(loading.logo)};publishLoadingBrand(next);return next}).finally(()=>{inFlight=undefined}));}
 export function BrandedLoading({full=false,preview}:{full?:boolean;preview?:LoadingBrand}){
  const productLogo=useProductLogo();
- const[brand,setBrand]=useState(defaultLoadingBrand),[reduce,setReduce]=useState(false);
+ const[brand,setBrand]=useState(()=>cached??defaultLoadingBrand),[reduce,setReduce]=useState(false);
  useEffect(()=>{if(preview)return;let active=true;const update=()=>{if(cached&&active)setBrand(cached)};try{localStorage.removeItem('tcw_loading_brand')}catch{}update();fetchBrand().then(v=>{if(active)setBrand(v)}).catch(()=>{});window.addEventListener('tcw-loading-brand-updated',update);return()=>{active=false;window.removeEventListener('tcw-loading-brand-updated',update)}},[!!preview]);
  useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReduce(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[]);
  const value=preview??brand,animation=reduce?'NONE':value.animation,logo=reduce&&value.logo?.startsWith('data:image/gif')?productLogo:normalizeLogo(value.logo)||productLogo;
