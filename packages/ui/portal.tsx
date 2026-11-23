@@ -1,6 +1,7 @@
 'use client';
 import {CloudDrive,CloudDriveSettings} from './cloud-drive';
 import {NavigationDock,SidebarToggle,SidebarAppearance,useNavigationAppearance} from './workspace-navigation';
+import {QuickActions} from './quick-actions';
 import {AIOrb} from './ai-orb';
 import {LoadingBoundary} from './loading-boundary';
 import {billingLimited,coreCompanyAccess} from '../billing-access';
@@ -232,7 +233,7 @@ function Shell({page}:{page:string}){
   if(hasPhoneBiometric()&&!phoneSetupCamera)return <PhoneBiometricSetupGate onCamera={()=>setPhoneSetupCamera(true)} onComplete={async()=>{await faceProfile.refetch()}} onSignOut={logout}/>;
   return <EmployeeFaceEnrollmentGate logo={companyLogo} companyName={workspaceBrand.name??session.company?.name} onComplete={async()=>{setFaceEnrollmentHint(true);faceFalseRetryRef.current=false;try{window.localStorage.setItem(faceEnrollmentKey,'1')}catch{}await faceProfile.refetch()}} onSignOut={logout}/>;
  }
- const quickMenu=quickOpen&&<Modal title="Quick actions" onClose={()=>setQuickOpen(false)}><div className="navigation-quick-grid">{flat.filter(([key])=>['employees','attendance','leave','payroll','calendar','companies','trials','invoices','support','profile'].includes(key)).map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <Link key={key} href={'/'+key} onClick={()=>setQuickOpen(false)}><span><Icon size={24}/></span><strong>{label}</strong><ArrowUpRight size={16}/></Link>})}</div></Modal>;
+ const quickMenu=quickOpen&&<QuickActions items={flat} icons={icons} onClose={()=>setQuickOpen(false)}/>;
  if(session.user.role==='EMPLOYEE'){
   const primaryKeys=['dashboard','attendance','leave','payroll'];
   const moreItems=flat.filter(([key])=>!['dashboard','attendance','leave'].includes(key)&&!['profile','security','notifications'].includes(key));
