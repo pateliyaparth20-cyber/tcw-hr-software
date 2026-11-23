@@ -3,6 +3,7 @@ import {billingLimited,coreCompanyAccess} from '../billing-access';
 import {SalesPipeline} from './sales-pipeline';
 import {SubscriptionPlans} from './subscription-plans';
 import './dashboard-shell.css';
+import {lockBackgroundScroll} from './overlay-scroll';
 import {ApprovalSettings} from './hr-operations';
 import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
@@ -174,7 +175,7 @@ function Shell({page}:{page:string}){
  useEffect(()=>setMobile(false),[page]);
  useEffect(()=>{const open=()=>setMobile(true);window.addEventListener('tcw-open-navigation',open);return()=>window.removeEventListener('tcw-open-navigation',open)},[]);
  useEffect(()=>{if(concept&&(mobile||!primaryKeys.has(page)))setMoreNav(true)},[concept,mobile,page]);
- useEffect(()=>{if(!mobile)return;const previous=document.body.style.overflow;const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};document.body.style.overflow='hidden';window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',onKey)}},[mobile]);
+ useEffect(()=>{if(!mobile)return;const unlock=lockBackgroundScroll();const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false)};window.addEventListener('keydown',onKey);return()=>{unlock();window.removeEventListener('keydown',onKey)}},[mobile]);
  useSidebarPosition(navRef,sidebarKey,page,moreNav,!concept||primaryKeys.has(page)||moreNav);
  async function logout(){try{if(session.user.role==='EMPLOYEE')await api('field-work/session','DELETE',{},session.csrf).catch(()=>{});await api('auth/logout','POST',{},session.csrf)}finally{try{window.sessionStorage.removeItem(`tcw_active_window_${session.user.scope.toLowerCase()}`)}catch{}queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
  let content:React.ReactNode;

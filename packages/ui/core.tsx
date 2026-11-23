@@ -5,6 +5,8 @@ export {LogoImage} from './image-brand';
 import {fetchCompleteResponse} from './api-request';
 import {useProductLogo} from './product-logo';
 import './controls.css';
+import './modal-scroll.css';
+import {lockBackgroundScroll} from './overlay-scroll';
 import {billingLimited,billingPermissionBlocked} from '../billing-access';
 import {BrandedLoading} from './loading-branding';
 import React,{createContext,useContext,useEffect,useRef,useState,useId} from 'react';
@@ -218,12 +220,12 @@ export function Avatar({name,large=false,src}:{name:string;large?:boolean;src?:s
 export function Modal({title,children,onClose,wide=false,className=''}:{title:string;children:React.ReactNode;onClose:()=>void;wide?:boolean;className?:string}){
   const ref=useRef<HTMLDialogElement>(null);
   const titleId=useId();
-  useEffect(()=>{const d=ref.current;d?.showModal();return()=>{if(d?.open)d.close()}},[]);
-  return <dialog ref={ref} className={'modal '+(wide?'wide':'')+' '+className} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target!==ref.current)return;const rect=e.currentTarget.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)onClose()}}><div className="modal-head"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
+  useEffect(()=>{const d=ref.current;if(!d)return;d.showModal();const unlock=lockBackgroundScroll();return()=>{if(d.open)d.close();unlock()}},[]);
+  return <dialog ref={ref} className={'modal '+(wide?'wide':'')+' '+className} aria-modal="true" aria-labelledby={titleId} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target!==ref.current)return;const rect=e.currentTarget.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)onClose()}}><div className="modal-head"><h2 id={titleId}>{title}</h2><button className="icon-button" type="button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div><div className="tcw-modal-content">{children}</div></dialog>;
 }
 export function PhotoViewer({src,name,onClose}:{src:string;name:string;onClose:()=>void}){
   const ref=useRef<HTMLDialogElement>(null);
-  useEffect(()=>{const d=ref.current;d?.showModal();return()=>{if(d?.open)d.close()}},[]);
+  useEffect(()=>{const d=ref.current;if(!d)return;d.showModal();const unlock=lockBackgroundScroll();return()=>{if(d.open)d.close();unlock()}},[]);
   return <dialog ref={ref} className="tcw-photo-viewer-dialog" aria-label={name+' photo'} onCancel={e=>{e.preventDefault();onClose()}} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}}} onClick={e=>{if(e.target===ref.current)onClose()}}>
     <button type="button" className="tcw-photo-viewer-close" aria-label="Close photo" onClick={onClose}><X size={24}/></button>
     <img src={src} alt={name+' profile photo'}/>

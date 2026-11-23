@@ -1,0 +1,11 @@
+/* Every shared dialog owns one bounded scrolling area, including custom forms. */
+@media screen {
+ html body dialog.modal[open]{display:flex!important;flex-direction:column!important;box-sizing:border-box;max-height:calc(100dvh - 24px)!important;overflow:hidden!important;overscroll-behavior:none}
+ html body dialog.modal[open]>.modal-head{flex:0 0 auto!important;position:relative!important;top:auto!important;min-height:0;z-index:3}
+ html body dialog.modal[open]>.tcw-modal-content{flex:1 1 auto;min-height:0;min-width:0;width:100%;overflow:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
+ html body dialog.modal[open]>.tcw-modal-content>.modal-body{max-height:none!important;overflow:visible!important}
+ html body dialog.modal[open]>.tcw-modal-content>.record-form{max-height:none!important;overflow:visible!important}
+ html body dialog.modal[open]>.tcw-modal-content .form-footer{position:sticky;bottom:0;z-index:2;background:#fff}
+ @media(max-width:760px){html body dialog.modal[open]{max-height:calc(100dvh - 12px)!important;margin:auto!important}html body dialog.modal[open]>.tcw-modal-content{padding-bottom:env(safe-area-inset-bottom)}}
+}
+@media print{.tcw-modal-content{display:block!important;overflow:visible!important;max-height:none!important}}
