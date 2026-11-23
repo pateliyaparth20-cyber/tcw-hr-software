@@ -1,3 +1,4 @@
+import {CloudStorage} from './cloud-storage';
 import {planAllowsResource,planAccessMessage,planModuleFeatures} from '../../../packages/plan-access';
 import {pricedPlan,isPlanDowngrade} from '../../../packages/subscription-policy';
 import {billingLimited,billingRouteBlocked} from '../../../packages/billing-access';
@@ -327,7 +328,8 @@ export class Api {
     if(resource==='devices'&&key&&action==='punches'&&method==='GET')return this.biometric.punches(ctx,id.parse(key));
     if(resource==='devices'&&key&&action==='setup'&&method==='GET')return this.biometric.setup(ctx,id.parse(key));
     if(resource==='documents'){
-      if(method==='GET'&&!key)return this.files.list(ctx);
+      if(method==='GET'&&key==='storage')return this.files.status(ctx);
+      if(method==='GET'&&!key)return this.files.list(ctx,req.query);
       if(method==='GET'&&key){const result=await this.files.download(ctx,key);res.setHeader('Content-Type',result.row.mimeType);res.setHeader('Content-Disposition',`attachment; filename="${result.row.fileName}"`);res.send(result.bytes);return undefined;}
       if(method==='POST'){await new Promise<void>((resolve,reject)=>upload(req,res,e=>e?reject(e):resolve()));return this.files.upload(ctx,req.file,req.body);}
     }
@@ -346,6 +348,7 @@ export class Api {
       if(method==='PATCH'&&key){await this.db.notification.updateMany({where:{...where,id:id.parse(key)},data:{readAt:new Date()}});return {ok:true};}
     }
     
+    if(resource==='system'&&key==='cloud-drive'&&['GET','PUT'].includes(method))return new CloudStorage(this.db).settings(ctx,method,body);
     if(resource==='system'&&key==='platform-profile'){
       platform(ctx);
       const defaults={companyName:'Tech Cyber Warrior',legalName:'',companyType:'',registrationNumber:'',foundedYear:'',contactPerson:'',contactDesignation:'',billingEmail:'',email:'',phone:'',website:'https://techcyberwarrior.in',address:'',city:'',state:'Gujarat',country:'India',postalCode:'',taxId:'',pan:'',supportEmail:'',logo:DEFAULT_PRODUCT_LOGO};

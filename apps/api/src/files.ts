@@ -3,11 +3,13 @@ import {S3Client,PutObjectCommand,GetObjectCommand,DeleteObjectCommand} from '@a
 import {randomUUID} from 'node:crypto';
 import type {Database} from '../../../packages/database';
 import {audit,assertEmployee,employeeScope,requirePermission,tenant,Context} from './context';
+import {CloudStorage,storageClient} from './cloud-storage';
 import {id,date} from '../../../packages/validation';
 export class FilesService {
-  constructor(private db:Database){}
-  private client(){if(!process.env.S3_ENDPOINT||!process.env.S3_BUCKET||!process.env.S3_ACCESS_KEY||!process.env.S3_SECRET_KEY)throw new ServiceUnavailableException('Document storage is not configured.');return new S3Client({endpoint:process.env.S3_ENDPOINT,region:process.env.S3_REGION??'us-east-1',forcePathStyle:true,credentials:{accessKeyId:process.env.S3_ACCESS_KEY,secretAccessKey:process.env.S3_SECRET_KEY}});}
-  async list(ctx:Context){const tid=tenant(ctx);requirePermission(ctx,'documents','VIEW');const scope=await employeeScope(this.db,ctx);return {items:await this.db.document.findMany({where:{tenantId:tid,...(scope?{employeeId:{in:scope}}:{})},orderBy:{createdAt:'desc'},take:500})};}
+  constructor(private db:Database,private createClient=storageClient){}
+  private async connection(){const config=await new CloudStorage(this.db).connection();if(!config)throw new ServiceUnavailableException('TCW Cloud Drive is not connected. Ask Super Admin to configure storage.');return {client:this.createClient(config),bucket:config.bucket};}
+  async status(ctx:Context){tenant(ctx);requirePermission(ctx,'documents','VIEW');return new CloudStorage(this.db).status();}
+  async list(ctx:Context,query:any={}){const tid=tenant(ctx);requirePermission(ctx,'documents','VIEW');const scope=await employeeScope(this.db,ctx),base={tenantId:tid,...(scope?{employeeId:{in:scope}}:{})};const q=String(query.q??'').trim().slice(0,200),page=Math.max(1,Math.min(100000,Number.parseInt(query.page)||1)),pageSize=Math.max(1,Math.min(100,Number.parseInt(query.pageSize)||25));const where={...base,...(q?{OR:[{title:{contains:q,mode:'insensitive' as const}},{fileName:{contains:q,mode:'insensitive' as const}},{category:{contains:q,mode:'insensitive' as const}}]}:{})};const [items,total,usage]=await Promise.all([this.db.document.findMany({where,select:{id:true,employeeId:true,title:true,category:true,fileName:true,mimeType:true,size:true,expiresAt:true,createdAt:true,updatedAt:true},orderBy:[{createdAt:'desc'},{id:'desc'}],skip:(page-1)*pageSize,take:pageSize}),this.db.document.count({where}),this.db.document.aggregate({where:base,_sum:{size:true},_count:{_all:true}})]);return {items,total,page,pageSize,totalFiles:usage._count._all,totalBytes:usage._sum.size??0};}
   async upload(ctx:Context,file:Express.Multer.File|undefined,body:any){
     const tid=tenant(ctx);requirePermission(ctx,'documents','CREATE');if(!file)throw new BadRequestException('Choose a document.');
     if(file.size>10*1024*1024)throw new BadRequestException('Maximum file size is 10 MB.');
@@ -17,15 +19,15 @@ export class FilesService {
     const employeeId=body.employeeId?id.parse(body.employeeId):null;if(employeeId)await assertEmployee(this.db,ctx,employeeId);
     const title=String(body.title??file.originalname).trim().slice(0,200);if(!title)throw new BadRequestException('A title is required.');
     const expiresAt=body.expiresAt?date.parse(body.expiresAt):null;
-    const key=`${tid}/${randomUUID()}`;const client=this.client();
-    await client.send(new PutObjectCommand({Bucket:process.env.S3_BUCKET,Key:key,Body:b,ContentType:file.mimetype}));
+    const key=`${tid}/${randomUUID()}`;const {client,bucket}=await this.connection();
+    await client.send(new PutObjectCommand({Bucket:bucket,Key:key,Body:b,ContentType:file.mimetype}));
     try{return await this.db.$transaction(async tx=>{const after=await tx.document.create({data:{tenantId:tid,employeeId,title,category:String(body.category??'General').slice(0,100),objectKey:key,fileName:file.originalname.replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,150),mimeType:file.mimetype,size:file.size,expiresAt}});await audit(tx,ctx,'DOCUMENT_UPLOADED','documents',after.id,undefined,after);return after;});}
-    catch(e){await client.send(new DeleteObjectCommand({Bucket:process.env.S3_BUCKET,Key:key})).catch(()=>{});throw e;}
+    catch(e){await client.send(new DeleteObjectCommand({Bucket:bucket,Key:key})).catch(()=>{});throw e;}
   }
   async download(ctx:Context,recordId:string){
     const tid=tenant(ctx);requirePermission(ctx,'documents','VIEW');const scope=await employeeScope(this.db,ctx);
     const row=await this.db.document.findFirst({where:{id:id.parse(recordId),tenantId:tid,...(scope?{employeeId:{in:scope}}:{})}});if(!row)throw new NotFoundException();
-    const result=await this.client().send(new GetObjectCommand({Bucket:process.env.S3_BUCKET,Key:row.objectKey}));
+    const {client,bucket}=await this.connection();const result=await client.send(new GetObjectCommand({Bucket:bucket,Key:row.objectKey}));
     return {row,bytes:Buffer.from(await result.Body!.transformToByteArray())};
   }
 }

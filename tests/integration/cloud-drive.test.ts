@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {embeddedDatabase} from '../helpers/database';
+import {seed} from '../../prisma/seed';
+import {CloudStorage} from '../../apps/api/src/cloud-storage';
+import {FilesService} from '../../apps/api/src/files';
+import type {Context} from '../../apps/api/src/context';
+test('Cloud Drive protects credentials, storage location and company file pagination',async()=>{
+ process.env.CONFIG_ENCRYPTION_KEY='synthetic-cloud-drive-key-not-a-real-secret-at-least-32';
+ const envKeys=['S3_ENDPOINT','S3_BUCKET','S3_ACCESS_KEY','S3_SECRET_KEY'],saved=envKeys.map(k=>process.env[k]);for(const k of envKeys)delete process.env[k];
+ const f=await embeddedDatabase(),db=f.db;try{
+ await seed(db,{companyCode:'CLOUD-TEST',ownerEmail:'cloud-owner@example.test',ownerPassword:'Synthetic-cloud-owner',adminEmail:'cloud-admin@example.test',adminPassword:'Synthetic-cloud-admin'});
+ const owner=await db.user.findFirstOrThrow({where:{email:'cloud-owner@example.test'},include:{role:true}}),admin=await db.user.findFirstOrThrow({where:{email:'cloud-admin@example.test'},include:{role:true}});
+ const root={user:admin,session:{},tenantId:null,ip:'127.0.0.1'} as Context,company={user:owner,session:{},tenantId:owner.tenantId,ip:'127.0.0.1',planName:'ENTERPRISE'} as Context;
+ let checks=0;const storage=new CloudStorage(db,async c=>{checks++;assert.equal(c.region,'auto');assert.equal(c.endpoint,'https://'+'a'.repeat(32)+'.r2.cloudflarestorage.com')});
+ assert.equal((await storage.status()).configured,false);
+ await assert.rejects(()=>storage.settings(company,'GET'),/platform account/);
+ const input={accountId:'a'.repeat(32),bucket:'tcw-cloud-drive-test',accessKeyId:'synthetic-r2-access-key',secretAccessKey:'synthetic-r2-secret-value',expectedRevision:null};
+ const connected=await storage.settings(root,'PUT',input);assert.equal(checks,1);assert.equal(connected.configured,true);
+ const safe=await storage.settings(root,'GET');assert.equal(safe.hasCredentials,true);for(const secret of [input.accessKeyId,input.secretAccessKey])assert.equal(JSON.stringify(safe).includes(secret),false);
+ const stored=await db.platformSetting.findUniqueOrThrow({where:{key:'tcw-cloud-drive'}});for(const secret of [input.accessKeyId,input.secretAccessKey])assert.equal(JSON.stringify(stored.value).includes(secret),false);
+ const audit=await db.auditLog.findMany({where:{action:'CLOUD_DRIVE_CONFIGURED'}});assert.equal(audit.length,1);assert.equal(JSON.stringify(audit).includes(input.secretAccessKey),false);
+ assert.equal((await storage.connection())?.secretAccessKey,input.secretAccessKey);
+ await assert.rejects(()=>storage.settings(root,'PUT',input),/changed/);
+ const rotated=await storage.settings(root,'PUT',{accountId:input.accountId,bucket:input.bucket,expectedRevision:connected.revision});assert.notEqual(rotated.revision,connected.revision);assert.equal((await storage.connection())?.secretAccessKey,input.secretAccessKey);
+ await assert.rejects(()=>storage.settings(root,'PUT',{...input,bucket:'different-bucket',expectedRevision:rotated.revision}),/separate migration/);
+ const bad=new CloudStorage(db,async()=>{throw Error('synthetic provider denied')});await assert.rejects(()=>bad.settings(root,'PUT',{...input,expectedRevision:rotated.revision}),/Could not access/);assert.equal((await storage.settings(root,'GET')).revision,rotated.revision);
+ const tid=owner.tenantId!;for(let i=0;i<27;i++)await db.document.create({data:{tenantId:tid,title:'Company file '+i,category:'Policies',objectKey:tid+'/'+randomUUID(),fileName:'file-'+i+'.pdf',mimeType:'application/pdf',size:100}});
+ const other=await db.tenant.create({data:{name:'Other cloud company',code:'CLOUD-OTHER',status:'ACTIVE',plan:'ENTERPRISE'}});const foreign=await db.document.create({data:{tenantId:other.id,title:'Private other company',category:'Private',objectKey:other.id+'/'+randomUUID(),fileName:'private.pdf',mimeType:'application/pdf',size:500}});
+ const files=new FilesService(db),first=await files.list(company,{pageSize:24}),second=await files.list(company,{page:2,pageSize:24});assert.equal(first.items.length,24);assert.equal(second.items.length,3);assert.equal(first.total,27);assert.equal(first.totalBytes,2700);assert.equal(first.totalFiles,27);assert.equal(first.items.some(r=>r.id===foreign.id),false);assert.equal(JSON.stringify(first).includes('objectKey'),false);
+ const matching=await files.list(company,{q:'Company file 26'});assert.equal(matching.total,1);assert.equal(matching.totalFiles,27);assert.equal(matching.totalBytes,2700);
+ assert.equal((await files.list(company,{q:'Private other'})).total,0);await assert.rejects(()=>files.download(company,foreign.id),/Not Found/);
+ const objects=new Map<string,Buffer>();let objectCalls=0;const transport=new FilesService(db,()=>({send:async(command:any)=>{objectCalls++;const name=command.constructor.name,key=command.input.Key;assert.equal(command.input.Bucket,input.bucket);if(name==='PutObjectCommand'){objects.set(key,command.input.Body);return {}}if(name==='GetObjectCommand')return {Body:{transformToByteArray:async()=>objects.get(key)!}};if(name==='DeleteObjectCommand'){objects.delete(key);return {}}throw Error('Unexpected storage operation');}} as any));
+ const content=Buffer.from('%PDF-1.7 synthetic document');const uploaded=await transport.upload(company,{size:content.length,buffer:content,mimetype:'application/pdf',originalname:'policy.pdf'} as Express.Multer.File,{title:'Upload round trip',category:'Policies'});assert.equal(uploaded.tenantId,tid);assert.deepEqual((await transport.download(company,uploaded.id)).bytes,content);assert.equal(objectCalls,2);
+ await assert.rejects(()=>transport.download({...company,tenantId:other.id},uploaded.id),/Not Found/);assert.equal(objectCalls,2);
+ await assert.rejects(()=>transport.upload(company,{size:20,buffer:Buffer.from('fake file'),mimetype:'application/pdf',originalname:'bad.pdf'} as Express.Multer.File,{}),/valid PDF/);assert.equal(objectCalls,2);
+ const growth={...company,planName:'GROWTH'};await assert.rejects(()=>files.list(growth),/not included/);await assert.rejects(()=>files.status(growth),/not included/);
+ assert.deepEqual(Object.keys(await files.status(company)).sort(),['acceptedTypes','configured','maxFileBytes','name']);
+ }finally{await f.close();envKeys.forEach((k,i)=>{if(saved[i]===undefined)delete process.env[k];else process.env[k]=saved[i]})}
+});

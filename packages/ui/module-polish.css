@@ -1,0 +1,39 @@
+/* Consistent module surfaces, without changing operational layouts or controls. */
+.navigation-design{--module-border:#e8e7ef;--module-muted:#7d8494}
+.navigation-design .page-stage>.page-title{padding-top:4px;margin-bottom:24px!important;align-items:center}
+.navigation-design .page-title h1{letter-spacing:-.035em;line-height:1.2}
+.navigation-design .page-title p{line-height:1.6;color:var(--module-muted)}
+.navigation-design :is(.workspace-main,.employee-app-main) :is(.panel,.stat,.record-card,.report-card,.trial-card){border-color:var(--module-border)!important;border-radius:20px!important;box-shadow:0 4px 22px #23203904!important}
+.navigation-design :is(.workspace-main,.employee-app-main) .stat{padding:22px!important;min-width:0}
+.navigation-design :is(.workspace-main,.employee-app-main) .stat>strong{font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.navigation-design :is(.workspace-main,.employee-app-main) .panel-heading{padding:22px 24px!important;align-items:center}
+.navigation-design :is(.workspace-main,.employee-app-main) .panel-heading h2{font-size:15px;letter-spacing:-.015em;line-height:1.4}
+.navigation-design :is(.workspace-main,.employee-app-main) .toolbar{padding:18px 22px!important;gap:12px!important;border-color:var(--module-border)!important;align-items:center;flex-wrap:wrap}
+.navigation-design :is(.workspace-main,.employee-app-main) .search-field{border-radius:13px!important;min-height:42px;border-color:var(--module-border)!important;background:#fafbfe}
+.navigation-design :is(.workspace-main,.employee-app-main) :is(.btn,.toolbar select){border-radius:12px!important}
+.navigation-design :is(.workspace-main,.employee-app-main) .btn{min-height:42px;gap:8px}
+.navigation-design :is(.workspace-main,.employee-app-main) .btn.small{min-height:34px;font-size:12px}
+.navigation-design :is(.workspace-main,.employee-app-main) .btn.primary{box-shadow:0 4px 12px #6d28d91a}
+.navigation-design :is(.workspace-main,.employee-app-main) .table-scroll{overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#d3cee2 transparent}
+.navigation-design :is(.workspace-main,.employee-app-main) .table-scroll thead th{background:#fafafd!important;border-bottom:1px solid var(--module-border)!important;color:#7b8191;font-size:11px;letter-spacing:.025em;padding-top:15px;padding-bottom:15px}
+.navigation-design :is(.workspace-main,.employee-app-main) .table-scroll tbody td{padding-top:16px;padding-bottom:16px;border-bottom-color:#f0eff5;vertical-align:middle}
+.navigation-design :is(.workspace-main,.employee-app-main) .table-scroll tbody tr:hover{background:#fbfaff}
+.navigation-design :is(.workspace-main,.employee-app-main) .table-footer{padding:16px 22px!important;background:#fff;border-color:var(--module-border)!important;min-height:64px}
+.navigation-design :is(.workspace-main,.employee-app-main) .table-footer button{border-radius:10px;min-height:34px;min-width:34px}
+.navigation-design :is(.workspace-main,.employee-app-main) .empty-state{padding:42px 24px;line-height:1.6}
+.navigation-design :is(.workspace-main,.employee-app-main) .record-card{padding:22px}
+.navigation-design :is(.workspace-main,.employee-app-main) .record-card h3{letter-spacing:-.015em;line-height:1.4}
+.navigation-design :is(.workspace-main,.employee-app-main) :is(.field input:not([type=checkbox]):not([type=radio]),.field select,.field textarea){border-radius:12px!important;border-color:var(--module-border);line-height:1.5}
+.navigation-design :is(.workspace-main,.employee-app-main) :is(.field input,.field select,.field textarea):focus-visible{outline:2px solid #b69afa;outline-offset:2px}
+.navigation-design :is(.workspace-main,.employee-app-main) .field>span{line-height:1.5}
+@media(max-width:650px){
+ .navigation-design :is(.workspace-main,.employee-app-main) :is(.panel,.stat,.record-card,.report-card,.trial-card){border-radius:18px!important}
+ .navigation-design :is(.workspace-main,.employee-app-main) .stat{padding:17px!important}
+ .navigation-design :is(.workspace-main,.employee-app-main) .panel-heading{padding:18px 16px!important;gap:12px}
+ .navigation-design :is(.workspace-main,.employee-app-main) .toolbar{padding:14px!important}
+ .navigation-design :is(.workspace-main,.employee-app-main) .toolbar-actions{gap:8px;flex-wrap:wrap}
+ .navigation-design :is(.workspace-main,.employee-app-main) .table-footer{padding:14px!important}
+ .navigation-design :is(.workspace-main,.employee-app-main) .record-card{padding:18px}
+ .navigation-design :is(.workspace-main,.employee-app-main) .empty-state{padding:32px 18px}
+ .navigation-design :is(.workspace-main,.employee-app-main) .btn{min-height:44px}
+}

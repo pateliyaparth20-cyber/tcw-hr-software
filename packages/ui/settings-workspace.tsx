@@ -2,7 +2,7 @@
 import React,{createContext,useContext,useEffect,useState} from 'react';
 import {Settings2,Wallet,Image,LoaderCircle,CreditCard,ChevronRight} from 'lucide-react';
 import './settings-workspace.css';
-const platformLinks=[{id:'razorpay-gateway',label:'Payment gateway',icon:CreditCard},{id:'manual-upi',label:'Receiving account & tax',icon:Wallet},{id:'default-branding',label:'Default logo',icon:Image},{id:'loading-appearance',label:'Loading appearance',icon:LoaderCircle}];
+const platformLinks=[{id:'razorpay-gateway',label:'Payment gateway',icon:CreditCard},{id:'manual-upi',label:'Receiving account & tax',icon:Wallet},{id:'cloud-storage',label:'Cloud Drive',icon:Wallet},{id:'default-branding',label:'Default logo',icon:Image},{id:'loading-appearance',label:'Loading appearance',icon:LoaderCircle}];
 const WizardContext=createContext<{setSaving:(value:boolean)=>void}|null>(null);
 export const useSettingsWizard=()=>useContext(WizardContext);
 export function SettingsWorkspace({platform=false,children}:{platform?:boolean;children:React.ReactNode}){

@@ -38,7 +38,7 @@ export const modules:Record<string,Module>={
 export const navigation=[
  {group:'Workspace',items:[['dashboard','Overview','dashboard'],['employees','People','employees'],['organization','Organization','organization'],['calendar','Calendar','calendar']]},
  {group:'Time & work',items:[['attendance','Attendance','attendance'],['devices','Devices','devices'],['workforce','Live workforce','workforce'],['field-work','Field work','workforce'],['leave','Time off','leave']]},
- {group:'Talent & finance',items:[['payroll','Payroll','payroll'],['recruitment','Recruitment','recruitment'],['goals','Performance','performance'],['courses','Training','training'],['assets','Assets','assets'],['expenses','Expenses','expenses'],['travel','Travel','travel'],['documents','Documents','documents'],['exit','Offboarding','exit']]},
+ {group:'Talent & finance',items:[['payroll','Payroll','payroll'],['recruitment','Recruitment','recruitment'],['goals','Performance','performance'],['courses','Training','training'],['assets','Assets','assets'],['expenses','Expenses','expenses'],['travel','Travel','travel'],['documents','TCW Cloud Drive','documents'],['exit','Offboarding','exit']]},
  {group:'Intelligence',items:[['reports','Reports','reports'],['support','Support','support'],['profile','My profile','self'],['settings','Company profile','company'],['subscription','Subscription','company'],['software-update','Software update','self'],['users','Users & roles','users'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
 export const employeeNavigation=[
@@ -49,6 +49,6 @@ export const employeeNavigation=[
 export const adminNavigation=[
  {group:'Platform',items:[['dashboard','Overview','dashboard'],['trials','Trial follow-up','tenants'],['companies','Companies','tenants'],['plans','Plans','plans']]},
  {group:'Business',items:[['leads','Sales pipeline','sales'],['invoices','Invoices','billing'],['payments','Payments','billing'],['support','Support tickets','support']]},
- {group:'Administration',items:[['profile','My profile','self'],['settings','Settings','system'],['software-update','Software update','self'],['system','System health','system'],['audit','Audit log','audit'],['security','My security','self']]}
+ {group:'Administration',items:[['profile','My profile','self'],['settings','Settings','system'],['software-update','Software update','self'],['cloud-drive','TCW Cloud Drive','system'],['system','System health','system'],['audit','Audit log','audit'],['security','My security','self']]}
 ];
 export const readable=(value:string)=>value.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' ').replaceAll('-',' ').replace(/^./,s=>s.toUpperCase()).replace(/\bHr\b/g,'HR').replace(/\bAi\b/g,'AI').replace(/\bApi\b/g,'API').replace(/\bId\b/g,'ID').replace(/\bCsv\b/g,'CSV').replace(/\bGst\b/g,'GST').replace(/\bPan\b/g,'PAN').replace(/\bIfsc\b/g,'IFSC');
