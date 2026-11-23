@@ -22,13 +22,13 @@ export function SubscriptionPayment({checkoutId}:{checkoutId:string}){
   paymentSdk(custom?'CUSTOM':'STANDARD').then(Constructor=>{
    if(!active)return;
    const instance=new Constructor({key:row.keyId,name:'TCW HR Software',description:planTitle(row.planName)+' plan',order_id:row.providerRef,amount:row.amount,currency:'INR',redirect:false,prefill:{name:session.user.name,email:session.user.email},theme:{color:'#3065e8'},handler:success,modal:{ondismiss:()=>{if(active){sending.current=false;setBusy(false);setMessage('Payment window closed. Check status if your account was debited.')}}}});sdk.current=instance;
-   const failed=(response:any)=>{if(!active)return;sending.current=false;setBusy(false);setQr(null);const reason=String(response?.error?.description??response?.description??response?.message??'Payment was not completed. Check its status before retrying.');setError(/feature.*not.*enabled/i.test(reason)?'In-page UPI QR is not activated for this merchant account. Ask Razorpay to enable Custom Checkout non-redirect UPI QR, then retry.':reason);};
+   const failed=(response:any)=>{if(!active)return;sending.current=false;setBusy(false);setQr(null);const reason=String(response?.error?.description??response?.description??response?.message??'Payment was not completed. Check its status before retrying.');setError(/feature.*not.*enabled|non-redirection flow not supported/i.test(reason)?'In-page UPI QR is not activated for this merchant account. Ask Razorpay to enable Custom Checkout non-redirect UPI QR, then retry.':reason);};
    instance.on(custom?'payment.error':'payment.failed',failed);
    if(custom){
     instance.on('payment.success',success);
     instance.on('payment.upi.qr',(event:any)=>{if(!active)return;try{if(event.status==='expired'){setQr(null);sending.current=false;setBusy(false);setMessage('QR expired. Check status before generating another QR.');return;}const uri=checkedUpiUri(event.qr_url,row.amount),expires=Number(event.expires_on);if(!Number.isFinite(expires)||expires<=Date.now()||expires>Date.now()+11*60*1000)throw new Error('Payment QR has expired or is invalid.');const code=qrcode(0,'M');code.addData(uri);code.make();setQr({image:code.createDataURL(6,8),expires});setBusy(false);setMessage('Scan this QR with your UPI app. Approve the payment in your bank app.');}catch(e:any){failed(e)}});
     timeout=setTimeout(()=>{if(active&&!ready)setError('Payment methods could not load. Reload this payment page to retry.');},20000);
-    instance.once('ready',(response:any)=>{if(!active)return;clearTimeout(timeout);const available=response?.methods??{};setMethods(available);setMethod(available.upi?'upi':'netbanking');setReady(true)});
+    instance.once('ready',(response:any)=>{if(!active)return;clearTimeout(timeout);const available=response?.methods??instance.methods??{};setMethods(available);setMethod(available.upi?'upi':'netbanking');setReady(true)});
    }else setReady(true);
   }).catch(e=>{if(active)setError(e.message)});
   return()=>{active=false;clearTimeout(timeout);sdk.current=null};
