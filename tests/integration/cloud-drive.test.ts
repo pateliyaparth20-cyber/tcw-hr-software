@@ -36,6 +36,6 @@ test('Cloud Drive protects credentials, storage location and company file pagina
  await assert.rejects(()=>transport.download({...company,tenantId:other.id},uploaded.id),/Not Found/);assert.equal(objectCalls,2);
  await assert.rejects(()=>transport.upload(company,{size:20,buffer:Buffer.from('fake file'),mimetype:'application/pdf',originalname:'bad.pdf'} as Express.Multer.File,{}),/valid PDF/);assert.equal(objectCalls,2);
  const growth={...company,planName:'GROWTH'};await assert.rejects(()=>files.list(growth),/not included/);await assert.rejects(()=>files.status(growth),/not included/);
- assert.deepEqual(Object.keys(await files.status(company)).sort(),['acceptedTypes','configured','maxFileBytes','name']);
+ assert.deepEqual(Object.keys(await files.status(company)).sort(),['acceptedTypes','configured','freeStorageBytes','maxFileBytes','name','provider']);
  }finally{await f.close();envKeys.forEach((k,i)=>{if(saved[i]===undefined)delete process.env[k];else process.env[k]=saved[i]})}
 });
