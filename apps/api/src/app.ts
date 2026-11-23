@@ -135,6 +135,7 @@ export class Api {
     if(resource==='system'&&key==='billing-gateway')return this.billing.settings(ctx,method,body,req.query);
     if(resource==='subscription'&&key==='contact-sales'&&method==='POST')return this.billing.contactSales(ctx,body);
     if(resource==='subscription'&&key==='quote'&&method==='POST')return this.billing.checkout(ctx,body,true);
+    if(resource==='subscription'&&key==='checkout'&&action&&method==='GET')return this.billing.checkoutDetails(ctx,action);
     if(resource==='subscription'&&key==='gateway-checkout'&&method==='POST')return this.billing.checkout(ctx,body);
     if(resource==='subscription'&&key==='gateway-verify'&&method==='POST')return this.billing.verify(ctx,body);
     if(resource==='subscription'&&key==='gateway-status'&&method==='POST')return this.billing.reconcile(ctx,body);

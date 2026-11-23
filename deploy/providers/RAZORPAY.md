@@ -1,40 +1,45 @@
-# Subscription billing with Razorpay
+# TCW subscription payments
 
-This receives customer subscription payments. Company salary payouts retain their separate connection and approval flow.
+Customer subscription payments use their own TCW review and payment/receipt routes. Salary payouts remain a separate connection.
 
-## Configure
+## Pages
 
-1. Super Admin → Plans: set the monthly price, optional yearly price, employee/device limits and features. Values are entered in rupees. A blank yearly price leaves yearly checkout unavailable.
-2. Super Admin → Settings → UPI receiving account: set the GST percentage and whether published prices include GST. A zero GST rate is supported. Direct UPI remains a separately verified monthly payment option.
-3. Settings → Razorpay checkout & UPI AutoPay: choose **Test**, enter its Key ID, API Secret and a webhook secret of at least 16 characters, and save with AutoPay off. Secrets are encrypted with the existing `CONFIG_ENCRYPTION_KEY` and never returned to the browser or audit log.
-4. Copy the configuration-specific webhook URL into the same mode in the Razorpay dashboard. Configure the same webhook secret and these events: `payment.captured`, `payment.failed`, `subscription.authenticated`, `subscription.activated`, `subscription.charged`, `subscription.updated`, `subscription.pending`, `subscription.halted`, `subscription.cancelled`, `subscription.paused`, `subscription.resumed`, `subscription.completed`.
-5. Send a test event from Razorpay and confirm “Signed webhook received” in TCW settings. Enable Subscriptions and UPI AutoPay on the merchant account, including its required checkout features. Test checkout, mandate authorization, a successful cycle, duplicate webhook delivery, failure and cancellation.
-6. Enter the corresponding **Live** credentials and configure its separate webhook URL before enabling live checkout. Enabling AutoPay only offers the option; every customer must authorize their mandate through Razorpay and their payment app.
+- `/subscription/checkout?plan=GROWTH&cycle=MONTHLY`: server quote, discount, GST, unused-time upgrade credit and explicit consent.
+- `/subscription/payment/<checkout UUID>`: method selection, pending status, verified receipt and private invoice PDF download. The session is company-scoped and survives a page reload.
+- Only a verified server ledger entry marks the receipt paid. A URL, client callback or client-entered amount cannot activate access. Test receipts never activate the live plan or create a production invoice.
 
-Each credential configuration has an immutable version and webhook URL. Enabling/disabling checkout or AutoPay retains that URL; changing secrets or keys creates a new one. AutoPay requires a valid signed webhook test before it can be offered. Retain old webhook routes and usable API credentials for existing mandates and retries. Secret rotation or merchant account changes require planning for those existing mandates.
+## Merchant setup
 
-## Behavior
+1. Configure catalog prices in Super Admin → Plans and GST in Payment Settings. AutoPay is removed; renewals are manual.
+2. In Payment Settings → Razorpay checkout, configure Test keys and a webhook secret of at least 16 characters. Secrets are encrypted and never returned to the browser.
+3. Register the exact configuration-specific webhook URL in the same Razorpay mode with the same secret. Enable `payment.captured` and `payment.failed`. Retain subscription lifecycle events and old webhook URLs for any historical mandates.
+4. Verify an actual signed webhook delivery. Saving credentials does not verify delivery.
+5. Choose a payment experience:
+   - **TCW pages + hosted payment window** is the backward-compatible default. TCW owns the review, pending status and receipt; Razorpay hosts sensitive payment entry.
+   - **TCW pages + in-page payment methods** uses Razorpay Custom Checkout. Ask Razorpay to activate Custom Checkout for the registered website and **UPI QR non-redirect flow**. The latter is an on-demand desktop feature. Test mode selection does not prove Live activation.
+6. In Custom mode, TCW shows the available UPI QR and netbanking methods reported by the SDK. QR images are generated locally from the provider's validated UPI URI. A phone can scan from another device. Netbanking can open the bank's approval page. Raw card numbers, CVV and UPI PIN are never collected by TCW. Cards remain in the hosted experience.
+7. Test success, pending, cancellation/failure, QR expiry, reload, duplicate callback/webhook, correct invoice, and credited upgrade with the actual merchant sandbox. Only then explicitly select the matching Live experience. No automatic fallback to a different checkout experience occurs.
 
-- The server quotes prices, GST and plan limits. Starting checkout does not change a company's plan or create an overdue invoice.
-- Razorpay signatures, captured payment amount/currency and order or subscription invoice ownership are verified server-side. Repeated callbacks and webhook events cannot renew access twice.
-- Test payments have a separate ledger and never activate a production company or create paid production invoices.
-- One-time paid terms carry forward unused paid time. AutoPay for an existing paid company starts after its current expiry. AutoPay charges use the provider invoice's actual billing period, so delayed old events do not move a company back to an older plan.
-- Authorizing a mandate or paying an authorization fee does not activate a paid term. A full captured billing-period payment is required.
-- A company cannot start a second payment path while a mandate in the same mode remains open. Cancel and reconcile the original mandate first.
-- Cancellation must be acknowledged by Razorpay. It does not revoke previously paid access. Declined and halted renewals do not add a paid term; normal expiry rules continue to apply.
-- A creation timeout is marked uncertain and never automatically retried with the same request key. Reconcile through Razorpay/support rather than creating duplicate mandates.
-- Plans use up to 120 monthly or 10 yearly cycles. Actual available payment methods and mandate limits depend on the merchant account, bank and app. Changing a plan's published price does not reprice an existing mandate's agreed amount.
-- Refunds and disputes are managed in the Razorpay dashboard; this integration does not issue refunds or bank transfers.
+Changing the experience retains credential and webhook versions. Each payment session snapshots its experience so existing orders continue through their original flow. Rotating keys or secrets creates a new credential version; preserve old routes and valid credentials for existing orders and historical mandates.
 
-## Sources
+## Verification and limits
 
-- https://razorpay.com/docs/payments/subscriptions/integration-guide
-- https://razorpay.com/docs/api/payments/subscriptions/create-subscription
-- https://razorpay.com/docs/webhooks/validate-test
-- https://razorpay.com/docs/api/payments/subscriptions/fetch-invoices
+The server checks signatures, captured status, exact INR amount and stored order ownership. Duplicate payments cannot grant access twice. Only verified live payments create invoices and paid terms. Immediate upgrades apply verified unused-time credit once; downgrades are unavailable. Late payments that conflict with a newer plan require review rather than reverting access.
 
-## Validation
+A provider creation timeout remains uncertain and is never blindly retried. Reconcile the original order before starting another. Refunds and disputes are managed in Razorpay; this integration does not issue refunds or bank transfers.
 
-`node --import tsx --test tests/integration/subscription-gateway.test.ts`
+Automated checks use synthetic provider responses and never move money:
 
-The automated tests use synthetic provider responses and do not create external orders or move money. Merchant sandbox verification is still required with the user's actual account before enabling live collection.
+```
+node --import tsx --test tests/unit/payment-provider.test.ts tests/integration/subscription-gateway.test.ts
+npm run typecheck
+npm run build
+```
+
+Actual merchant activation and sandbox acceptance remain separate from these automated checks.
+
+## Primary references
+
+- https://razorpay.com/docs/payments/payment-gateway/web-integration/custom/build-integration/
+- https://razorpay.com/docs/payments/payment-gateway/web-integration/custom/payment-methods/
+- https://razorpay.com/docs/webhooks/validate-test/
