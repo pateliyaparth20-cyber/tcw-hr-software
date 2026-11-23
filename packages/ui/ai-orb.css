@@ -19,3 +19,7 @@
 @keyframes ai-surface-drift{from{transform:translateY(-8px);opacity:.45}to{transform:translateY(8px);opacity:.9}}
 @media(max-width:760px){.an-assistant:has(>.is-surface){min-height:300px}.an-assistant:has(>.is-surface)>form input{font-size:16px!important}}
 @media(prefers-reduced-motion:reduce){.tcw-ai-energy-orb.is-surface *{animation:none!important}}
+
+/* The assistant composer has one boundary; the inner input stays borderless. */
+html body .an-assistant:has(>.is-surface)>form input,html body .an-assistant:has(>.is-surface)>form input:focus,html body .an-assistant:has(>.is-surface)>form input:focus-visible{border:0!important;outline:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important}
+html body .an-assistant:has(>.is-surface)>form:focus-within{outline:none!important;box-shadow:none!important;border-color:#81b0ff!important}
