@@ -42,8 +42,10 @@ Actual merchant activation and sandbox acceptance remain separate from these aut
 - https://razorpay.com/docs/payments/payment-gateway/web-integration/custom/payment-methods/
 - https://razorpay.com/docs/webhooks/validate-test/
 
-## Recover an unfinished upgrade
+## Monthly/yearly billing and retry
 
-Plans and billing lists the original pending upgrade. Check payment status to reconcile a captured payment, or continue the original checkout while its quote is valid. Unused verified paid time is shown as a negative credit in the upgrade total. The lower-plan button says “Choose plan” but remains disabled; the downgrade policy is unchanged.
+Customer pages label the chosen billing period as Monthly or Yearly, with manual renewal and no AutoPay. The internal ONETIME order kind still represents one charge for that billing period. Plan activation and invoices require verified captured payment.
 
-“Replace unpaid checkout” requires explicit confirmation. The server checks the original order and its payment attempts first. Captured payments are reconciled; authorized, created, incomplete or uncertain attempts prevent replacement. Only confirmed unpaid sessions are marked closed in TCW. No provider cancellation or refund is claimed. Any later capture on a replaced order is ledgered and invoiced for billing review without changing the current plan or consuming its upgrade credit. An expired quote cannot launch a new payment from the TCW page; return to plans to replace an unpaid session and review a fresh quote.
+The pending-upgrade banner is removed. On checkout, the server reconciles an earlier attempt before continuing. A valid unpaid session for the same plan and period is reused without creating another order. Expired or different-plan sessions are replaced only after the provider confirms they are unpaid; processing and uncertain payments remain protected. Late captures on replaced orders are recorded for billing review without changing access or consuming credit.
+
+The payment page offers retry using the same order and checks payment status before reopening Razorpay. Verified unused paid-time credit is subtracted in the review calculation. An unpaid or failed attempt does not change the current plan or expiry. Downgrades remain disabled.

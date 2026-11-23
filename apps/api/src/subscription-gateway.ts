@@ -71,9 +71,26 @@ export class SubscriptionGateway{
   const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');if(body?.kind==='AUTOPAY')throw new BadRequestException('AutoPay has been removed. Use one-time checkout.');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.literal('ONETIME'),requestKey:id}).strict().parse(body),config=await this.config();
   if(!config.enabled||!config.revisions?.[config.mode])throw new ServiceUnavailableException('Razorpay checkout is not connected yet.');
   const revision=String(config.revisions[config.mode]);let version=await this.version(revision);
+  if(!preview){
+   const pending=await this.db.billingCheckout.findMany({where:{tenantId:tid,mode:config.mode,kind:'ONETIME',requestKey:{not:input.requestKey},state:{in:['CREATING','INITIALIZING','READY','UNCERTAIN']},snapshot:{path:['quote','upgrade'],equals:true}},orderBy:{createdAt:'asc'}});
+   for(const previous of pending){
+    if(previous.state!=='READY'||!previous.providerRef)throw new ConflictException('The payment service is still confirming an earlier attempt. Check its status shortly before retrying.');
+    const result=await this.reconcile(ctx,{checkoutId:previous.id});
+    if(['PAID','TEST_PAID'].includes(result.status))throw new ConflictException('Your earlier payment is verified. Refresh your plan and review the updated upgrade total before paying again.');
+    const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}}),saved=jsonObject(previous.snapshot).quote;
+    if(previous.planName===input.plan&&previous.cycle===input.cycle&&saved&&new Date(saved.validUntil)>new Date()&&saved.companyRevision===company.updatedAt.toISOString()){
+     const fresh=await this.db.billingCheckout.findUniqueOrThrow({where:{id:previous.id}});
+     if(fresh.state==='READY')return this.checkoutPublic(fresh,await this.version(fresh.gatewayRevision));
+     throw new ConflictException('Payment status changed. Refresh your plan before retrying.');
+    }
+    const replaced=await this.replaceUnpaid(ctx,{checkoutId:previous.id,confirm:true});
+    if(replaced.status!=='ABANDONED')throw new ConflictException('Your earlier payment is verified. Refresh your plan and review the updated upgrade total before paying again.');
+   }
+  }
+
   let row=await this.db.$transaction(async tx=>{
    await tx.$queryRaw`SELECT id FROM tenants WHERE id=${tid}::uuid FOR UPDATE`;
-   if(!preview&&await tx.billingCheckout.count({where:{tenantId:tid,mode:config.mode,kind:'ONETIME',requestKey:{not:input.requestKey},state:{in:['CREATING','INITIALIZING','READY','UNCERTAIN']},snapshot:{path:['quote','upgrade'],equals:true}}}))throw new ConflictException('An upgrade payment is already pending. Reconcile it before starting another upgrade.');
+   if(!preview&&await tx.billingCheckout.count({where:{tenantId:tid,mode:config.mode,kind:'ONETIME',requestKey:{not:input.requestKey},state:{in:['CREATING','INITIALIZING','READY','UNCERTAIN']},snapshot:{path:['quote','upgrade'],equals:true}}}))throw new ConflictException('Another payment attempt is being checked. Please try again shortly.');
    const existing=await tx.billingCheckout.findUnique({where:{tenantId_requestKey:{tenantId:tid,requestKey:input.requestKey}}});if(existing){if(existing.planName!==input.plan||existing.cycle!==input.cycle||existing.kind!==input.kind)throw new ConflictException('Checkout request already belongs to another plan.');if(!preview&&existing.state==='QUOTED'){const company=await tx.tenant.findUniqueOrThrow({where:{id:tid}}),quote=jsonObject(existing.snapshot).quote;if(!quote||new Date(quote.validUntil)<new Date()||quote.companyRevision!==company.updatedAt.toISOString())throw new ConflictException('Your quote expired or workspace changed. Review a fresh quote before paying.');const others=await tx.billingCheckout.count({where:{tenantId:tid,id:{not:existing.id},kind:'AUTOPAY',mode:config.mode,state:{notIn:['FAILED','ABANDONED','QUOTED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:closed}}]}});if(others)throw new ConflictException('An AutoPay mandate already exists. Stop its future payments before replacing it.');return tx.billingCheckout.update({where:{id:existing.id},data:{state:'CREATING'}});}return existing;}
    const mandate=await tx.billingCheckout.findFirst({where:{tenantId:tid,kind:'AUTOPAY',mode:config.mode,state:{notIn:['FAILED','ABANDONED','QUOTED']},OR:[{mandateStatus:null},{mandateStatus:{notIn:closed}}]}});if(mandate&&!preview)throw new ConflictException('An AutoPay mandate already exists. Manage or cancel it before starting another payment.');
    const [company,plan,payRow,employees,devices]=await Promise.all([tx.tenant.findUniqueOrThrow({where:{id:tid}}),tx.plan.findUnique({where:{name:input.plan}}),tx.platformSetting.findUnique({where:{key:'billing-payment'}}),tx.employee.count({where:{tenantId:tid,deletedAt:null}}),tx.attendanceDevice.count({where:{tenantId:tid,connectionMode:{not:'EMPLOYEE_APP'}}})]);
