@@ -34,15 +34,15 @@ test('subscription gateway verifies money, tenant boundaries, renewals and raw w
  try{
   await db.plan.create({data:{name:'GROWTH',monthlyPrice:100000,yearlyPrice:1000000,employeeLimit:100,deviceLimit:5,features:['Core HR','Payroll']}});
   await connect();
-  await t.test('all sessions use in-app checkout, including old hosted sessions; receipts require a tenant-scoped verified charge',async()=>{
+  await t.test('hosted checkout is restored for new and older custom sessions; receipts require a tenant-scoped verified charge',async()=>{
    const a=await company(),b=await company(),before=await gateway.settings(root,'GET',null,{mode:'LIVE'});
-   assert.equal(before.checkoutExperience,'CUSTOM');
+   assert.equal(before.checkoutExperience,'STANDARD');
    const request=input(),quote=await gateway.checkout(a.ctx,request,true);
    await gateway.settings(root,'PUT',{mode:'LIVE',enabled:true,autoPayEnabled:false,keyId:before.keyId,checkoutExperience:'CUSTOM',expectedRevision:before.revision});
-   assert.equal((await gateway.settings(root,'GET',null,{mode:'LIVE'})).checkoutExperience,'CUSTOM');
-   assert.equal((await gateway.settings(root,'GET',null,{mode:'TEST'})).checkoutExperience,'CUSTOM');
-   const historical=await db.billingCheckout.findUniqueOrThrow({where:{id:quote.id}});await db.billingCheckout.update({where:{id:quote.id},data:{snapshot:{...(historical.snapshot as any),checkoutExperience:'STANDARD'}}});
-   const order=await gateway.checkout(a.ctx,request);assert.equal(order.checkoutExperience,'CUSTOM','Even old hosted sessions use the own-page payment UI');assert.equal(order.amount,quote.amount);
+   assert.equal((await gateway.settings(root,'GET',null,{mode:'LIVE'})).checkoutExperience,'STANDARD');
+   assert.equal((await gateway.settings(root,'GET',null,{mode:'TEST'})).checkoutExperience,'STANDARD');
+   const historical=await db.billingCheckout.findUniqueOrThrow({where:{id:quote.id}});await db.billingCheckout.update({where:{id:quote.id},data:{snapshot:{...(historical.snapshot as any),checkoutExperience:'CUSTOM'}}});
+   const order=await gateway.checkout(a.ctx,request);assert.equal(order.checkoutExperience,'STANDARD','Older custom sessions return to the hosted payment window');assert.equal(order.amount,quote.amount);
    const pending=await gateway.checkoutDetails(a.ctx,order.id);assert.equal(pending.verified,false);assert.equal(pending.receipt,null);
    await assert.rejects(()=>gateway.checkoutDetails(b.ctx,order.id),/not found/i);
    assert.ok(!JSON.stringify(pending).includes(secret));assert.ok(!JSON.stringify(pending).includes(webhookSecret));
@@ -52,9 +52,9 @@ test('subscription gateway verifies money, tenant boundaries, renewals and raw w
    payments.pay_BrandedReceipt=captured('pay_BrandedReceipt',order.providerRef,order.amount);
    await gateway.verify(a.ctx,{checkoutId:order.id,paymentId:'pay_BrandedReceipt',signature:signature(order.providerRef+'|pay_BrandedReceipt')});
    const paid=await gateway.checkoutDetails(a.ctx,order.id);assert.equal(paid.verified,true);assert.equal(paid.receipt?.paymentId,'pay_BrandedReceipt');assert.equal(paid.receipt?.invoice?.status,'PAID');assert.equal(paid.receipt?.amount,order.amount);
-   const c=await company(),custom=await gateway.checkout(c.ctx,input());assert.equal(custom.checkoutExperience,'CUSTOM');
-   const saved=await gateway.settings(root,'GET',null,{mode:'LIVE'});await assert.rejects(()=>gateway.settings(root,'PUT',{mode:'LIVE',enabled:true,autoPayEnabled:false,keyId:saved.keyId,checkoutExperience:'STANDARD',expectedRevision:saved.revision}));
-   assert.equal((await gateway.checkoutDetails(c.ctx,custom.id)).checkoutExperience,'CUSTOM');
+   const c=await company(),custom=await gateway.checkout(c.ctx,input());assert.equal(custom.checkoutExperience,'STANDARD');
+   const saved=await gateway.settings(root,'GET',null,{mode:'LIVE'});await gateway.settings(root,'PUT',{mode:'LIVE',enabled:true,autoPayEnabled:false,keyId:saved.keyId,checkoutExperience:'STANDARD',expectedRevision:saved.revision});
+   assert.equal((await gateway.checkoutDetails(c.ctx,custom.id)).checkoutExperience,'STANDARD');
   });
   await t.test('custom quote requests reach sales without changing access, stay tenant-scoped and deduplicate retries',async()=>{
    const a=await company(),b=await company(),body={contactName:'Synthetic Buyer',email:'buyer@example.test',phone:'',employees:240,requirements:'Payroll and attendance integrations for several branches',cycle:'YEARLY'};
