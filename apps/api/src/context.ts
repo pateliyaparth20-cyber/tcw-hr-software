@@ -3,7 +3,8 @@ import type { Request } from 'express';
 import type { Database } from '../../../packages/database';
 import { hasPermission, restrictedRoles } from '../../../packages/permissions';
 import { digest, safeEqual } from '../../../packages/auth';
-export interface Context {user:any;session:any;tenantId:string|null;ip:string;}
+import {planAllowsResource,planAccessMessage} from '../../../packages/plan-access';
+export interface Context {user:any;session:any;tenantId:string|null;ip:string;planName?:string;}
 export type PortalScope='TENANT'|'PLATFORM';
 export const sessionCookieName=(scope:PortalScope)=>scope==='PLATFORM'?'tcw_admin_session_v2':'tcw_hr_session_v2';
 export function requestPortalScope(req:Pick<Request,'headers'>):PortalScope|null{
@@ -18,6 +19,7 @@ export function requestPortalScope(req:Pick<Request,'headers'>):PortalScope|null
   return null;
 }
 export function requirePermission(ctx:Context,resource:string,action:string) {
+  if(ctx.tenantId&&ctx.planName&&!planAllowsResource(ctx.planName,resource))throw new ForbiddenException(planAccessMessage(ctx.planName,resource));
   if(!hasPermission(ctx.user.role.permissions,resource,action)) throw new ForbiddenException('You do not have permission for this action.');
 }
 export function tenant(ctx:Context) {if(!ctx.tenantId||ctx.user.role.scope!=='TENANT') throw new ForbiddenException('A company account is required.');return ctx.tenantId;}
@@ -65,8 +67,10 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
     await db.session.update({where:{id:session.id},data:{expiresAt:nextExpiry}});
     session.expiresAt=nextExpiry;
   }
+  let planName:string|undefined;
   if(session.user.tenantId){
     const company=await db.tenant.findUnique({where:{id:session.user.tenantId}});
+    planName=company?.plan;
     if(!company||company.status==='ARCHIVED')throw new ForbiddenException('This company account is unavailable.');
     if(company.status==='SUSPENDED'&&(company.profile as any)?.suspensionReason!=='BILLING')throw new ForbiddenException('This company is suspended. Contact your software administrator.');
     if(session.user.role?.code==='COMPANY_OWNER'){
@@ -76,8 +80,9 @@ export async function authenticate(db:Database,req:Request):Promise<Context>{
       }
     }
   }
+  if(planName)session.user={...session.user,role:{...session.user.role,permissions:session.user.role.permissions.filter((p:string)=>planAllowsResource(planName,p.split(':')[0]))}};
   if(!['GET','HEAD','OPTIONS'].includes(req.method)&&!safeEqual(String(req.headers['x-csrf-token']??''),session.csrf))throw new ForbiddenException('Session verification failed. Refresh and try again.');
-  return {user:session.user,session,tenantId:session.user.tenantId,ip:req.ip??''};
+  return {user:session.user,session,tenantId:session.user.tenantId,ip:req.ip??'',planName};
 }
 export async function employeeScope(db:any,ctx:Context):Promise<string[]|null>{
   if(!restrictedRoles.has(ctx.user.role.code))return null;

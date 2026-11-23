@@ -1,3 +1,4 @@
+import {planAllowsResource,planAccessMessage,planModuleFeatures} from '../../../packages/plan-access';
 import {pricedPlan,isPlanDowngrade} from '../../../packages/subscription-policy';
 import {billingLimited,billingRouteBlocked} from '../../../packages/billing-access';
 import {workspaceWeather} from './workspace-weather';
@@ -117,6 +118,7 @@ export class Api {
       const company=await this.db.tenant.findUnique({where:{id:ctx.tenantId}});
       if(billingLimited(company)&&!ctx.session.proxyParentSessionId&&billingRouteBlocked(resource,key,action,method,req.query))throw new ForbiddenException('Your plan has ended. Renew to process payroll, use reports or exports, or add employees. Login, employee profiles and attendance remain available.');
     }
+    if(ctx.tenantId&&ctx.planName&&!planAllowsResource(ctx.planName,resource))throw new ForbiddenException(planAccessMessage(ctx.planName,resource));
     if(resource==='push'&&key==='config'&&method==='GET')return pushConfig();
     if(resource==='push'&&key==='subscription'&&method==='POST'){
       const input=z.object({endpoint:z.string().url().max(4000),keys:z.object({p256dh:z.string().min(10).max(1000),auth:z.string().min(5).max(1000)}).strict()}).strict().parse(body);
@@ -152,7 +154,7 @@ export class Api {
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
       const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)));
-      return {...await this.billing.summary(ctx),company,plans:plans.map(pricedPlan),invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
+      return {...await this.billing.summary(ctx),company,plans:plans.map(p=>({...pricedPlan(p),moduleFeatures:planModuleFeatures(p.name)})),invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');

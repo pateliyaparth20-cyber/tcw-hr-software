@@ -2,6 +2,7 @@
 import {AIOrb} from './ai-orb';
 import {LoadingBoundary} from './loading-boundary';
 import {billingLimited,coreCompanyAccess} from '../billing-access';
+import {planAllowsResource,planAccessMessage} from '../plan-access';
 import {SalesPipeline} from './sales-pipeline';
 import {SubscriptionPlans} from './subscription-plans';
 import './dashboard-shell.css';
@@ -54,7 +55,7 @@ export function Portal({session,page}:{session:Session;page:string}){return <Pro
 export function ProtectedPortal({scope,page}:{scope:'TENANT'|'PLATFORM'|'ANY';page:string}){
  const router=useRouter();
  const[session,setSession]=useState<Session|null>(null),[error,setError]=useState(''),[checking,setChecking]=useState(true),[attempt,setAttempt]=useState(0);
- useEffect(()=>{const refresh=()=>setAttempt(n=>n+1);window.addEventListener('tcw-subscription-updated',refresh);return()=>window.removeEventListener('tcw-subscription-updated',refresh)},[]);
+ useEffect(()=>{const refresh=()=>setAttempt(n=>n+1);window.addEventListener('tcw-subscription-updated',refresh);window.addEventListener('focus',refresh);return()=>{window.removeEventListener('tcw-subscription-updated',refresh);window.removeEventListener('focus',refresh)}},[]);
  useEffect(()=>{let active=true;let slowTimer:ReturnType<typeof setTimeout>|undefined;
   const activeKey=`tcw_active_window_${scope.toLowerCase()}`,rememberKey=`tcw_remember_${scope.toLowerCase()}`;
   let windowActive=false,remembered=false;
@@ -133,10 +134,10 @@ function Shell({page}:{page:string}){
  const[moreNav,setMoreNav]=useState(()=>concept&&!primaryKeys.has(page)||readSidebarState(sidebarSessionStorage(),sidebarKey)?.expanded===true);
  const[mobile,setMobile]=useState(false),[search,setSearch]=useState(false),[query,setQuery]=useState(''),[logoutConfirm,setLogoutConfirm]=useState(false);
  const allNavigation=session.user.scope==='PLATFORM'?adminNavigation:session.user.role==='EMPLOYEE'?employeeNavigation:navigation;
- const nav=allNavigation.map(g=>({...g,items:g.items.filter(([, ,p])=>can(p)&&!(session.user.role==='EMPLOYEE'&&p==='support'))})).filter(g=>g.items.length);
+ const nav=allNavigation.map(g=>({...g,items:g.items.filter(([key, ,p])=>can(p)&&(session.user.scope!=='TENANT'||planAllowsResource(session.company?.plan,key))&&!(session.user.role==='EMPLOYEE'&&p==='support'))})).filter(g=>g.items.length);
  const conceptNav=[{group:'Workspace',keys:['dashboard','employees','organization','calendar']},{group:'Time & work',keys:['attendance','workforce','leave']},{group:'Management',keys:['payroll','reports']}].map(g=>({group:g.group,items:nav.flatMap(s=>s.items).filter(([key])=>g.keys.includes(key)).sort((a,b)=>g.keys.indexOf(a[0])-g.keys.indexOf(b[0]))})).filter(g=>g.items.length);
  const extraNav=nav.map(g=>({...g,items:g.items.filter(([key])=>!primaryKeys.has(key)&&key!=='settings')})).filter(g=>g.items.length);
- const flat=nav.flatMap(g=>g.items);const current=flat.find(([key])=>key===page);const navRef=useRef<HTMLElement>(null);
+ const flat=nav.flatMap(g=>g.items);const current=allNavigation.flatMap(g=>g.items).find(([key])=>key===page);const navRef=useRef<HTMLElement>(null);
  const employees=useData('employees?q='+encodeURIComponent(query)+'&pageSize=6',search&&query.length>1&&session.user.scope==='TENANT'&&can('employees'));
  const notices=useData('notifications',session.user.scope==='TENANT');
  const faceProfile=useData('attendance/face-profile',session.user.role==='EMPLOYEE'&&!session.user.mustChangePassword&&(!session.company||coreCompanyAccess(session.company)));
@@ -181,7 +182,8 @@ function Shell({page}:{page:string}){
  useSidebarPosition(navRef,sidebarKey,page,moreNav,!concept||primaryKeys.has(page)||moreNav);
  async function logout(){try{if(session.user.role==='EMPLOYEE')await api('field-work/session','DELETE',{},session.csrf).catch(()=>{});await api('auth/logout','POST',{},session.csrf)}finally{try{window.sessionStorage.removeItem(`tcw_active_window_${session.user.scope.toLowerCase()}`)}catch{}queryClient.clear();router.replace(session.user.scope==='PLATFORM'?'/admin-login':'/login')}}
  let content:React.ReactNode;
- if(current&&!can(current[2]))content=<Empty title="Access restricted"/>;
+ if(current&&session.user.scope==='TENANT'&&(!planAllowsResource(session.company?.plan,current[2])||!planAllowsResource(session.company?.plan,current[0])))content=<div className="panel"><h2>Upgrade to unlock this module</h2><p>{planAccessMessage(String(session.company?.plan??'STARTER'),!planAllowsResource(session.company?.plan,current[0])?current[0]:current[2])}</p><Link className="btn primary" href="/subscription">View plans</Link></div>;
+ else if(current&&!can(current[2]))content=<Empty title="Access restricted"/>;
  else if(page==='dashboard')content=<Dashboard/>;
  else if(page==='trials')content=<TrialsPage/>;
  else if(page==='leads')content=<SalesPipeline/>;
@@ -254,7 +256,7 @@ function Shell({page}:{page:string}){
  </aside>
  <div className="main-shell"><header className="topbar"><div className="header-left">{concept&&<Link href="/dashboard" className="concept-mobile-brand"><span><LogoImage src={companyLogo} alt="Company logo" onError={e=>{if(!e.currentTarget.src.endsWith(TCW_PRODUCT_LOGO))e.currentTarget.src=TCW_PRODUCT_LOGO}}/></span>TCW HR</Link>}<button className="icon-button mobile-toggle" aria-label={mobile?'Close navigation':'Open navigation'} aria-expanded={mobile} onClick={()=>setMobile(v=>!v)}><PanelLeft size={21}/></button><span className="breadcrumb">Workspace <span>/</span><strong>{page==='settings'?'Settings':current?.[1]??'Notifications'}</strong></span></div><div className="header-right"><button className="command-button compact-search-button" onClick={()=>setSearch(true)} aria-label="Search workspace" title="Search workspace"><Search size={18}/><span>{concept?'Search people, requests, etc.':'Search'}</span></button>{session.user.scope==='TENANT'&&<Link className="notification-button icon-button" href="/notifications" aria-label="Notifications"><Bell size={20}/></Link>}<span className="header-divider"/><Link href="/security" className="header-avatar" aria-label="My account security"><Avatar name={session.user.name} src={session.user.avatar}/></Link></div></header>{session.proxy&&<div className="company-proxy-banner" role="status"><ShieldCheck size={18}/><div><strong>Super Admin proxy · {session.company?.name}</strong><small>Actions are recorded as {session.proxy.actorName}. Ends at {new Date(session.proxy.expiresAt).toLocaleTimeString()}.</small></div><button type="button" className="btn secondary small" onClick={async()=>{try{await api("auth/logout","POST",{},session.csrf)}finally{clearLocalSessionState();window.location.assign(session.proxy!.returnUrl)}}}>End proxy / Super Admin</button></div>}<main className="workspace-main"><div key={page} className="page-stage"><LoadingBoundary>{isAllowed?content:<Empty title="Access restricted" description="Your role does not have access to this workspace."/>}</LoadingBoundary></div><footer className="app-footer"><span>© TCW HR Software</span><span>{session.user.scope==='PLATFORM'?'Platform administration':session.user.role==='EMPLOYEE'?'Employee self service':'HR & workforce management'}</span></footer></main></div>
  <nav className="mobile-bottom-nav" aria-label="Mobile shortcuts">{(session.user.scope==='PLATFORM'?['dashboard','trials','companies','invoices']:session.user.role==='EMPLOYEE'?['dashboard','attendance','leave','payroll']:['dashboard','employees','attendance',concept?'payroll':'leave']).map(key=>{const item=flat.find(([k])=>k===key);if(!item)return null;const Icon=icons[key]??LayoutDashboard;return <Link key={key} href={'/'+key} className={page===key?'active':''} onClick={()=>setMobile(false)}><Icon size={20}/><span>{concept&&key==='dashboard'?'Home':item[1]}</span></Link>})}<button type="button" className={mobile?'active':''} aria-expanded={mobile} aria-label={mobile?'Close menu':'Open menu'} onClick={()=>setMobile(v=>!v)}><PanelLeft size={20}/><span>{mobile?'Close':'More'}</span></button></nav>
- {!(concept&&page==='dashboard')&&<TCWAgent/>}
+ {!(concept&&page==='dashboard')&&(session.user.scope==='PLATFORM'||can('ai'))&&<TCWAgent/>}
  {logoutConfirm&&<Confirm title="Sign out of TCW HR Software?" description="You will be signed out on this device and will need to sign in again to continue." onClose={()=>setLogoutConfirm(false)} onConfirm={logout}/>}
  {search&&<Modal title="Search your workspace" onClose={()=>setSearch(false)}><div className="command-search"><Search size={21}/><input autoFocus aria-label="Search pages and employees" placeholder="Search pages or employees…" value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="command-results"><span className="nav-group-label">Pages</span>{flat.filter(([,title])=>title.toLowerCase().includes(query.toLowerCase())).map(([key,label])=>{const Icon=icons[key]??LayoutDashboard;return <button key={key} onClick={()=>{router.push('/'+key);setSearch(false)}}><Icon size={18}/><span>{label}</span><ArrowUpRight size={16}/></button>})}{searchEmployees.length>0&&<><span className="nav-group-label">People</span>{searchEmployees.map((e:Row)=><button key={e.id} onClick={()=>{router.push('/employees?search='+encodeURIComponent(e.employeeCode));setSearch(false)}}><Avatar name={e.firstName+' '+e.lastName} src={e.photo}/><span>{e.firstName} {e.lastName}<small>{e.email}</small></span><ArrowUpRight size={16}/></button>)}</>}</div></Modal>}
  </div>;

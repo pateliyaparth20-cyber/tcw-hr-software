@@ -23,7 +23,7 @@ test('expired subscriptions retain core HR while restricting paid operations',as
   const employee=await db.employee.create({data:{tenantId:company.id,employeeCode:'EX01',firstName:'Expiry',lastName:'Test',email:'expiry@example.test',joiningDate:new Date('2025-01-01'),shiftId:shift.id}});
   const role=await db.role.findUniqueOrThrow({where:{code:'EMPLOYEE'}});
   await db.user.create({data:{tenantId:company.id,name:'Expiry employee',email:'expiry-login@example.test',passwordHash:await hashPassword('Strong-employee-test-password'),employeeId:employee.id,roleId:role.id}});
-  await db.tenant.update({where:{id:company.id},data:{status:'ACTIVE',expiresAt:new Date(Date.now()-60000)}});
+  await db.tenant.update({where:{id:company.id},data:{plan:'ENTERPRISE',status:'ACTIVE',expiresAt:new Date(Date.now()-60000)}});
   await syncCompanyAccess(db,company.id);
   await t.test('existing sessions survive expiry and new sign-ins succeed',async()=>{assert.equal((await call('auth/me')).r.status,200);assert.equal((await db.tenant.findUniqueOrThrow({where:{id:company.id}})).status,'EXPIRED');await login();});
   await t.test('profiles and attendance remain usable with normal validation and CSRF',async()=>{

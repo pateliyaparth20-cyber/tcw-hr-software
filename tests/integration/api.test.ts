@@ -11,6 +11,7 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
  process.env.NODE_ENV='test';process.env.REPORTS_MAINTENANCE='false';process.env.APP_ORIGINS='http://localhost:3000,http://localhost:3001';
  const fixture=await embeddedDatabase();const db=fixture.db;
  await seed(db,{adminEmail:'admin@example.test',adminPassword:'test-admin-strong-password',ownerEmail:'owner@example.test',ownerPassword:'test-owner-strong-password',companyCode:'ALPHA'});
+ await db.tenant.update({where:{code:'ALPHA'},data:{plan:'ENTERPRISE'}});
  const {app,io}=await createApp(db);await app.listen(0,'127.0.0.1');const address=app.getHttpServer().address();const base=`http://127.0.0.1:${address.port}/api/`;
   type Auth={cookie:string;csrf:string;scope:'TENANT'|'PLATFORM'};
   async function call(path:string,method='GET',body?:any,auth?:Auth){const origin=auth?.scope==='PLATFORM'?'http://localhost:3001':'http://localhost:3000';const response=await fetch(base+path,{method,headers:{Origin:origin,...(body!==undefined?{'Content-Type':'application/json'}:{}),...(auth?{Cookie:auth.cookie,'X-CSRF-Token':auth.csrf,'X-PeopleOS-Portal':auth.scope}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});const text=await response.text();let data:any;try{data=JSON.parse(text)}catch{data=text}return {status:response.status,data,response};}
@@ -20,7 +21,7 @@ test('API workflows and tenant isolation against embedded PostgreSQL',async t=>{
   await t.test('anonymous requests and missing CSRF are rejected',async()=>{assert.equal((await call('employees')).status,401);assert.equal((await call('employees','POST',{}, {...alpha,csrf:''})).status,403)});
   let betaTenant:string,betaCode:string,betaTempPassword:string;
   await t.test('platform provisions tenant owner atomically with generated credentials',async()=>{
-   const r=await call('platform/companies','POST',{name:'Beta',ownerName:'Beta owner',ownerEmail:'owner@example.test'},root);
+   const r=await call('platform/companies','POST',{name:'Beta',plan:'ENTERPRISE',ownerName:'Beta owner',ownerEmail:'owner@example.test'},root);
    assert.equal(r.status,200,JSON.stringify(r.data));
    betaTenant=r.data.company.id;betaCode=r.data.credentials.companyCode;betaTempPassword=r.data.credentials.tempPassword;
    assert.match(betaCode,/^TCW-/);assert.equal(betaTempPassword.length,8);assert.equal(r.data.credentials.loginId.length,7);
