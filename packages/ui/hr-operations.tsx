@@ -65,11 +65,12 @@ export function EmployeeImportModal({onClose}:{onClose:()=>void}){
   </div></Modal>;
 }
 
-export function ApprovalSettings(){
-  const {can,mutate}=useApp();const q=useData('approval-policies',can('company')),[busy,setBusy]=useState(false);
+export function ApprovalSettings({deferred=false,onSaveReady}:{deferred?:boolean;onSaveReady?:(save:()=>Promise<void>)=>void}={}){
+  const {can,mutate}=useApp();const q=useData('approval-policies',can('company')),[busy,setBusy]=useState(false),[draft,setDraft]=useState<Record<string,string>>({});
+  useEffect(()=>{if(!deferred||!onSaveReady)return;onSaveReady(async()=>{if(q.isLoading||q.error)throw new Error('Approval settings are unavailable. Please retry after they load.');if(Object.keys(draft).length&&!can('company','MANAGE'))throw new Error('You do not have permission to change approval workflows.');setBusy(true);try{for(const[resource,mode]of Object.entries(draft)){await mutate('approval-policies','POST',{resource,mode});setDraft(previous=>{const next={...previous};if(next[resource]===mode)delete next[resource];return next})}}finally{setBusy(false)}})},[deferred,onSaveReady,draft,q.isLoading,q.error,can,mutate]);
   if(!can('company'))return null;
-  return <section className="panel hr-approval-settings"><div className="panel-heading"><div><small>REQUEST WORKFLOWS</small><h2>Approval levels</h2><p>New requests keep their assigned workflow even if this setting changes later. Without a reporting manager, requests go directly to HR.</p></div><ShieldCheck size={22}/></div>
-    {q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.map((r:Row)=><label className="hr-policy-row" key={r.resource}><strong>{r.resource==='leave'?'Time off':r.resource==='expenses'?'Expenses':'Travel'}</strong><select aria-label={r.resource+' approval policy'} value={r.mode} disabled={busy||!can('company','MANAGE')} onChange={async e=>{setBusy(true);try{await mutate('approval-policies','POST',{resource:r.resource,mode:e.target.value})}catch{}finally{setBusy(false)}}}><option value="SINGLE">One authorized reviewer</option><option value="MANAGER_HR">Reporting manager → HR / Finance</option></select></label>)}
+  return <section className="panel hr-approval-settings"><div className="panel-heading"><div><small>REQUEST WORKFLOWS</small><h2>Approval levels</h2><p>New requests keep their assigned workflow even if this setting changes later. Without a reporting manager, requests go directly to HR.{deferred?' Changes apply when you choose Save changes on this final step.':''}</p></div><ShieldCheck size={22}/></div>
+    {q.isLoading?<Loading/>:q.error?<Failure error={q.error}/>:q.data?.items?.map((r:Row)=><label className="hr-policy-row" key={r.resource}><strong>{r.resource==='leave'?'Time off':r.resource==='expenses'?'Expenses':'Travel'}</strong><select aria-label={r.resource+' approval policy'} value={draft[r.resource]??r.mode} disabled={busy||!can('company','MANAGE')} onChange={async e=>{const mode=e.target.value;if(deferred){setDraft(previous=>({...previous,[r.resource]:mode}));return;}setBusy(true);try{await mutate('approval-policies','POST',{resource:r.resource,mode})}catch{}finally{setBusy(false)}}}><option value="SINGLE">One authorized reviewer</option><option value="MANAGER_HR">Reporting manager → HR / Finance</option></select></label>)}
   </section>;
 }
 
