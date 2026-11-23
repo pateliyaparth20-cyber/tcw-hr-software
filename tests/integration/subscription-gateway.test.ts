@@ -104,6 +104,9 @@ test('subscription gateway verifies money, tenant boundaries, renewals and raw w
    payments.pay_Replacement=captured('pay_Replacement',replacement.providerRef,replacement.amount);await gateway.verify(a.ctx,{checkoutId:replacement.id,paymentId:'pay_Replacement',signature:signature(replacement.providerRef+'|pay_Replacement')});
    assert.equal((await db.tenant.findUniqueOrThrow({where:{id:a.tenant.id}})).plan,'GROWTH');assert.equal((await gateway.checkoutDetails(a.ctx,replacement.id)).reviewRequired,false);
   });
+  await t.test('a closed historical mandate cannot leave an invisible pending-upgrade blocker',async()=>{
+   const a=await paidStarter(),old=await legacyAuthorization(a);subscriptions[old.providerRef!].status='cancelled';await db.billingCheckout.update({where:{id:old.id},data:{mandateStatus:'cancelled',snapshot:{...(old.snapshot as any),quote:{upgrade:true}}}});assert.equal((await gateway.summary(a.ctx)).pendingCheckouts.length,0);const order=await gateway.checkout(a.ctx,input());assert.equal(order.state,'READY');assert.equal(order.kind,'ONETIME');
+  });
   await t.test('received and processing payments cannot be discarded to start another upgrade',async()=>{
    const a=await paidStarter(),order=await gateway.checkout(a.ctx,input());payments.pay_Processing={...captured('pay_Processing',order.providerRef,order.amount),status:'authorized',captured:false};
    await assert.rejects(()=>gateway.replaceUnpaid(a.ctx,{checkoutId:order.id,confirm:true}),/still processing/);assert.equal((await db.billingCheckout.findUniqueOrThrow({where:{id:order.id}})).state,'READY');
