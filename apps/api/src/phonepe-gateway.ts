@@ -32,7 +32,7 @@ export class PhonePeGateway{
    if((active.revision??null)!==input.expectedRevision)throw new ConflictException('PhonePe settings changed in another window. Refresh first.');
    const oldId=String(active.revisions?.[input.mode]??''),oldRow=oldId?await tx.platformSetting.findUnique({where:{key:'billing-phonepe-version:'+oldId}}):null;
    const old=oldRow?.value as unknown as PhonePeVersion|undefined;
-   const previous=old&&old.clientId===input.clientId&&old.clientVersion===input.clientVersion?openPayoutCredentials('PHONEPE:'+input.mode,old.ciphertext) as PhonePeCredentials:{};
+   const previous:Partial<PhonePeCredentials>=old&&old.clientId===input.clientId&&old.clientVersion===input.clientVersion?openPayoutCredentials('PHONEPE:'+input.mode,old.ciphertext) as PhonePeCredentials:{};
    const clientSecret=input.clientSecret??previous.clientSecret;
    if(!clientSecret)throw new BadRequestException('Enter the PhonePe Client Secret for this Client ID and version.');
    const revision=randomUUID(),settingsRevision=randomUUID(),version:PhonePeVersion={provider:'PHONEPE',mode:input.mode,clientId:input.clientId,clientVersion:input.clientVersion,ciphertext:sealPayoutCredentials('PHONEPE:'+input.mode,{clientId:input.clientId,clientVersion:input.clientVersion,clientSecret})};
