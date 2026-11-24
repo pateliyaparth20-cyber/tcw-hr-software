@@ -70,7 +70,8 @@ export class SubscriptionGateway{
   });
  }
  async checkout(ctx:Context,body:any,preview=false){
-  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.enum(['ONETIME','AUTOPAY']),requestKey:id}).strict().parse(body),config=await this.config();
+  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({plan:z.enum(['STARTER','GROWTH','ENTERPRISE']),cycle:z.enum(['MONTHLY','YEARLY']),kind:z.enum(['ONETIME','AUTOPAY']),requestKey:id,autopayConsent:z.literal(true).optional()}).strict().parse(body),config=await this.config();
+  if(input.kind==='AUTOPAY'&&input.autopayConsent!==true)throw new BadRequestException('Explicit customer consent is required before setting up AutoPay.');
   if(input.kind==='AUTOPAY'&&!config.autoPayEnabled)throw new ServiceUnavailableException('AutoPay has not been enabled by the administrator.');
   if(!config.enabled||!config.revisions?.[config.mode])throw new ServiceUnavailableException('Razorpay checkout is not connected yet.');
   const revision=String(config.revisions[config.mode]);let version=await this.version(revision);
