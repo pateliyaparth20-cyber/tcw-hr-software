@@ -13,3 +13,8 @@ export function paymentSdk(mode:CheckoutMode):Promise<any>{
  if(constructors[mode])return Promise.resolve(constructors[mode]);
  const pending=loading.then(()=>{if(constructors[mode])return constructors[mode];return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://checkout.razorpay.com/v1/'+(mode==='CUSTOM'?'razorpay.js':'checkout.js');script.async=true;script.onload=()=>{const ctor=(window as any).Razorpay;if(typeof ctor!=='function'){reject(new Error('Payment service did not initialize. Please retry.'));return;}constructors[mode]=ctor;resolve(ctor)};script.onerror=()=>{script.remove();reject(new Error('Payment service could not load. Check your connection and retry.'))};document.head.appendChild(script)})});loading=pending.then(()=>{},()=>{});return pending;
 }
+
+export function checkedSubscriptionPayment(response:any,subscriptionId:string){
+ if(response?.razorpay_subscription_id!==subscriptionId||!/^pay_[A-Za-z0-9]+$/.test(response?.razorpay_payment_id??'')||!/^[a-f0-9]{64}$/i.test(response?.razorpay_signature??''))throw new Error('AutoPay authorization did not match this subscription. Check payment status before retrying.');
+ return response as PaymentResponse&{razorpay_subscription_id:string};
+}
