@@ -45,12 +45,12 @@ export function SubscriptionPlans({manage=false}:{manage?:boolean}){
 
 
 function PlanComparison({plans,currentPlan,cycle,includeGst,rate,currency,canPay,canCheckout,onPick,onContactSales}:{plans:Row[];currentPlan:string;cycle:string;includeGst:boolean;rate:number;currency:string;canPay:boolean;canCheckout:boolean;onPick:(p:Row)=>void;onContactSales:()=>void}){
- const money=(n:number)=>currencyValue(n,currency),year=cycle==='YEARLY',features=(p:Row):string[]=>p.moduleFeatures??p.features??[];
+ const money=(n:number)=>currencyValue(n,currency),year=cycle==='YEARLY',discount=(p:Row)=>Number(year?p.yearlyDiscountPercent??p.discountPercent??0:p.monthlyDiscountPercent??0),features=(p:Row):string[]=>p.moduleFeatures??p.features??[];
  const descriptions=['For teams getting started','For growing teams','For larger organizations'];
  const card=(p:Row,i:number)=><article key={p.id??p.name} className={'pc-plan-card '+(i===1?'is-popular ':'')+(p.name===currentPlan?'is-current':'')}>
   {i===1&&<div className="pc-popular-ribbon">POPULAR</div>}
   <div className="pc-plan-card-head"><div className="pc-plan-name"><h2>{title(p.name)}</h2>{p.name===currentPlan&&<span>Current plan</span>}</div><p className="pc-card-description">{descriptions[i]??'A flexible plan for your team'}</p></div>
-  <div className="pc-discount">{(year?p.yearlyListPrice:p.monthlyListPrice)>(year?p.yearlyPrice:p.monthlyPrice)&&<><del>{money(year?p.yearlyListPrice:p.monthlyListPrice)}</del><b>{p.discountPercent}% off</b></>}</div>
+  <div className="pc-discount">{(year?p.yearlyListPrice:p.monthlyListPrice)>(year?p.yearlyPrice:p.monthlyPrice)&&<><del>{money(year?p.yearlyListPrice:p.monthlyListPrice)}</del><b>{discount(p)}% off</b></>}</div>
   <div className="pc-price">{(year?p.yearlyPrice:p.monthlyPrice)?<><strong>{money(year?p.yearlyPrice:p.monthlyPrice)}</strong><span>/{year?'year':'month'}</span></>:<strong>Unavailable</strong>}</div>
   <p className="pc-tax">{includeGst?'GST included':'Plus '+rate+'% GST · Billed '+(year?'yearly':'monthly')}</p>
   <button className={'pc-plan-action '+(p.name===currentPlan?'primary':'')} disabled={!(year?p.yearlyPrice:p.monthlyPrice)||!canPay||!canCheckout||isPlanDowngrade(currentPlan,p.name)} onClick={()=>onPick(p)}>{isPlanDowngrade(currentPlan,p.name)?'Choose plan':p.name===currentPlan?'Manage plan':'Get started'}</button>
