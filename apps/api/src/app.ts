@@ -156,7 +156,7 @@ export class Api {
       const pay=payRow?.value&&typeof payRow.value==='object'&&!Array.isArray(payRow.value)?payRow.value as any:{};
       const upiId=String(pay.upiId??process.env.PAYMENT_UPI_ID??'').trim(),payeeName=String(pay.payeeName??process.env.PAYMENT_UPI_NAME??'TCW HR Software').trim();
       const gstPercent=Math.max(0,Math.min(100,Number(pay.gstPercent??process.env.PAYMENT_GST_PERCENT??18)));
-      return {...await this.billing.summary(ctx),company,plans:plans.map(p=>({...pricedPlan(p),moduleFeatures:planModuleFeatures(p.name)})),invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
+      const billing=await this.billing.summary(ctx);return {...billing,company,plans:plans.map(p=>({...pricedPlan(p),moduleFeatures:planModuleFeatures(p.name)})),invoices,usage:{employeesUsed,devicesUsed},gatewayConfigured:billing.gateway.configured||!!String(process.env.PAYMENT_CHECKOUT_BASE_URL??'').trim(),upiConfigured:!!upiId,upi:{payeeName},gstPercent,pricesIncludeGst:pay.pricesIncludeGst===true};
     }
     if(resource==='subscription'&&!key&&method==='POST'){
       const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
