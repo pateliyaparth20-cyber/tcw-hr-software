@@ -85,3 +85,28 @@
 .tp-payment-choice .tp-method-note{margin-top:12px}
 @media(max-width:650px){.tp-customer-fields{gap:9px}.tp-customer-fields input{height:40px}.tp-payment-choice .tp-method-grid>button{min-height:76px;padding:10px}}
 @media(max-width:370px){.tp-customer-fields{grid-template-columns:1fr}.tp-customer-fields .tp-address-field{grid-column:auto}.tp-customer-values{grid-template-columns:1fr}.tp-customer-values>div:last-child{grid-column:auto}}
+
+/* Clear payment options and activated-plan receipt. */
+.tp-payment-choice .tp-method-options{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important}
+.tp-payment-choice .tp-method-options>button{display:grid;grid-template-columns:40px minmax(0,1fr) 15px;grid-template-rows:auto auto;min-height:88px;padding:12px;column-gap:10px;row-gap:6px}
+.tp-payment-choice .tp-method-options .tp-method-icon{width:38px;height:38px;grid-column:1;grid-row:1 / span 2}
+.tp-payment-choice .tp-method-options .tp-method-copy{grid-column:2;grid-row:1;align-self:end}
+.tp-payment-choice .tp-method-options .tp-method-copy strong{font-size:12px}
+.tp-payment-choice .tp-method-options .tp-method-copy small{font-size:10px;line-height:1.4}
+.tp-payment-choice .tp-method-options .tp-method-radio{grid-column:3;grid-row:1;align-self:center}
+.tp-payment-choice .tp-method-options .tp-method-marks{grid-column:2 / 4;grid-row:2;display:flex;align-items:center;gap:9px;margin:0;min-height:22px}
+.tp-payment-choice .tp-method-options .tp-method-marks img{width:27px;height:22px;object-fit:contain}
+.tp-payment-choice .tp-method-options .tp-method-marks b{min-height:17px;padding:2px 6px;font-size:8px}
+.tp-method-guidance{margin-top:13px}
+.tp-method-guidance strong{font-size:11px}
+.tp-method-guidance p{font-size:10px}
+.tp-activated-plan{margin:18px 0;padding:16px;border:1px solid #e6dcf4;border-radius:11px;background:#fcfaff;text-align:left}
+.tp-activated-plan h3{margin:0 0 12px;color:#39234f;font-size:12px;font-weight:700}
+.tp-activated-plan ul{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;list-style:none;margin:0;padding:0}
+.tp-activated-plan li{display:flex;align-items:flex-start;gap:7px;color:#514560;font-size:10px;line-height:1.5}
+.tp-activated-plan li svg{flex:0 0 14px;color:#7c3aed;margin-top:1px}
+.tp-activated-limits{display:flex;flex-wrap:wrap;gap:12px;margin-top:13px;padding-top:12px;border-top:1px solid #ece5f4}
+.tp-activated-limits span{display:flex;align-items:center;gap:6px;color:#655875;font-size:9px}
+.tp-activated-limits svg{color:#7c3aed}
+@media(max-width:520px){.tp-payment-choice .tp-method-options{gap:8px!important}.tp-payment-choice .tp-method-options>button{grid-template-columns:32px minmax(0,1fr) 13px;min-height:84px;padding:10px;column-gap:8px}.tp-payment-choice .tp-method-options .tp-method-icon{width:31px;height:31px}.tp-payment-choice .tp-method-options .tp-method-marks{gap:6px}.tp-payment-choice .tp-method-options .tp-method-marks img{width:22px;height:20px}.tp-activated-plan ul{grid-template-columns:1fr}}
+@media(max-width:360px){.tp-payment-choice .tp-method-options{grid-template-columns:1fr!important}}
