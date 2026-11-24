@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {ArrowLeft,ArrowRight,CheckCircle2,Clock3,Download,CreditCard,Loader2,LockKeyhole,RefreshCw,ShieldCheck,Wallet,Smartphone,Landmark,QrCode,Pencil,Save} from 'lucide-react';
+import {ArrowLeft,ArrowRight,CheckCircle2,Clock3,Download,CreditCard,Loader2,LockKeyhole,RefreshCw,ShieldCheck,Wallet,Smartphone,Landmark,QrCode,Pencil,Save,Users,Monitor} from 'lucide-react';
 import {api,useApp,useData,Loading,Failure,currencyValue,displayDate} from './core';
 import {checkedPayment,paymentSdk} from './payment-provider';
 import type {Row} from './config';
