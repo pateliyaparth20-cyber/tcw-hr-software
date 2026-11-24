@@ -113,6 +113,17 @@ export class SubscriptionGateway{
   }catch(e){await this.db.billingCheckout.update({where:{id:row.id},data:{state:'UNCERTAIN'}});throw e;}
  }
  checkoutPublic(row:any,version:Version,preview=false){if(!preview&&(!row.providerRef||!['READY','PAID','TEST_PAID'].includes(row.state)))throw new ConflictException('Checkout is awaiting confirmation. Do not start a second mandate; contact support to reconcile it.');const quote=jsonObject(row.snapshot).quote;return {id:row.id,keyId:version.keyId,checkoutExperience:'STANDARD',mode:row.mode,kind:row.kind,cycle:row.cycle,planName:row.planName,amount:quote?.due.amount??row.amount,subtotal:quote?.due.subtotal??row.subtotal,tax:quote?.due.tax??row.tax,renewalAmount:row.amount,state:row.state,providerRef:row.providerRef,gstPercent:jsonObject(row.snapshot).gstPercent,startAt:jsonObject(row.snapshot).startAt,totalCycles:row.cycle==='YEARLY'?10:120,quote};}
+ async saveCustomerDetails(ctx:Context,body:unknown){
+  const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
+  const input=z.object({name:z.string().trim().min(2).max(120),phone:z.string().trim().min(7).max(30).refine(v=>v.replace(/\\D/g,'').length>=7,'Enter a valid phone number.'),email:z.email().trim().max(200),address:z.string().trim().min(5).max(1000)}).strict().parse(body);
+  return this.db.$transaction(async tx=>{
+   const before=await tx.tenant.findUnique({where:{id:tid}});if(!before)throw new NotFoundException('Workspace not found.');
+   const profile=jsonObject(before.profile),billingContact={name:input.name,phone:input.phone,email:input.email.toLowerCase(),address:input.address};
+   const after=await tx.tenant.update({where:{id:tid},data:{profile:{...profile,billingContact}}});
+   await audit(tx,ctx,'BILLING_DETAILS_UPDATED','company',tid,before,after);
+   return {billingContact};
+  });
+ }
  async checkoutDetails(ctx:Context,checkoutId:string){
   const tid=tenant(ctx);requirePermission(ctx,'company','VIEW');id.parse(checkoutId);
   const row=await this.db.billingCheckout.findFirst({where:{id:checkoutId,tenantId:tid,kind:'ONETIME'}});if(!row)throw new NotFoundException('Payment session not found.');
