@@ -79,7 +79,7 @@ export class SubscriptionGateway{
    const pending=await this.db.billingCheckout.findMany({where:{tenantId:tid,mode:config.mode,kind:'ONETIME',requestKey:{not:input.requestKey},state:{in:['CREATING','INITIALIZING','READY','UNCERTAIN']},snapshot:{path:['quote','upgrade'],equals:true}},orderBy:{createdAt:'asc'}});
    for(const previous of pending){
     if(previous.state!=='READY'||!previous.providerRef)throw new ConflictException('The payment service is still confirming an earlier attempt. Check its status shortly before retrying.');
-    const result=await this.reconcile(ctx,{checkoutId:previous.id});
+    const result=await this.reconcile(ctx,{checkoutId:previous.id},version);
     if(['PAID','TEST_PAID'].includes(result.status))throw new ConflictException('Your earlier payment is verified. Refresh your plan and review the updated upgrade total before paying again.');
     const company=await this.db.tenant.findUniqueOrThrow({where:{id:tid}}),saved=jsonObject(previous.snapshot).quote;
     if(previous.planName===input.plan&&previous.cycle===input.cycle&&saved&&new Date(saved.validUntil)>new Date()&&saved.companyRevision===company.updatedAt.toISOString()){
@@ -87,7 +87,7 @@ export class SubscriptionGateway{
      if(fresh.state==='READY')return this.checkoutPublic(fresh,await this.version(fresh.gatewayRevision));
      throw new ConflictException('Payment status changed. Refresh your plan before retrying.');
     }
-    const replaced=await this.replaceUnpaid(ctx,{checkoutId:previous.id,confirm:true});
+    const replaced=await this.replaceUnpaid(ctx,{checkoutId:previous.id,confirm:true},version);
     if(replaced.status!=='ABANDONED')throw new ConflictException('Your earlier payment is verified. Refresh your plan and review the updated upgrade total before paying again.');
    }
   }
@@ -169,10 +169,10 @@ export class SubscriptionGateway{
   if(row.kind==='AUTOPAY')await this.syncMandate(row,version);return result;
  }
  async syncMandate(row:any,version:Version){return this.db.$transaction(async tx=>{await tx.$queryRaw`SELECT id FROM tenants WHERE id=${row.tenantId}::uuid FOR UPDATE`;const s=await this.request(version,'subscriptions/'+ref.parse(row.providerRef));if(s.id!==row.providerRef)throw new BadRequestException('Invalid mandate response.');return tx.billingCheckout.update({where:{id:row.id},data:{mandateStatus:String(s.status),...(closed.includes(s.status)?{cancelScheduled:false}:{})}});},{timeout:22000});}
- async reconcile(ctx:Context,body:any){const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({checkoutId:id}).strict().parse(body),row=await this.db.billingCheckout.findFirst({where:{id:input.checkoutId,tenantId:tid}});if(!row?.providerRef)throw new NotFoundException('Checkout is not ready.');const version=await this.version(row.gatewayRevision);let items:any[]=[];if(row.kind==='ONETIME')items=(await this.request(version,'orders/'+ref.parse(row.providerRef)+'/payments')).items??[];else{await this.syncMandate(row,version);for(let skip=0;skip<200;skip+=100){const list=await this.request(version,'invoices?subscription_id='+encodeURIComponent(row.providerRef)+'&count=100&skip='+skip);items.push(...(list.items??[]).filter((i:any)=>i.status==='paid'&&i.payment_id).map((i:any)=>({id:i.payment_id})));if((list.items??[]).length<100)break;}}
+ async reconcile(ctx:Context,body:any,credentialVersion?:Version){const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');const input=z.object({checkoutId:id}).strict().parse(body),row=await this.db.billingCheckout.findFirst({where:{id:input.checkoutId,tenantId:tid}});if(!row?.providerRef)throw new NotFoundException('Checkout is not ready.');const version=credentialVersion??await this.version(row.gatewayRevision);if(version.mode!==row.mode)throw new BadRequestException('Checkout and gateway modes do not match.');let items:any[]=[];if(row.kind==='ONETIME')items=(await this.request(version,'orders/'+ref.parse(row.providerRef)+'/payments')).items??[];else{await this.syncMandate(row,version);for(let skip=0;skip<200;skip+=100){const list=await this.request(version,'invoices?subscription_id='+encodeURIComponent(row.providerRef)+'&count=100&skip='+skip);items.push(...(list.items??[]).filter((i:any)=>i.status==='paid'&&i.payment_id).map((i:any)=>({id:i.payment_id})));if((list.items??[]).length<100)break;}}
   let result:any={ok:true,status:'PENDING',message:'No captured subscription payment yet.'};for(const p of items){const recorded=await this.db.billingCharge.findUnique({where:{providerPaymentId:p.id}});if(recorded){if(recorded.checkoutId!==row.id)throw new ForbiddenException('Payment belongs to another checkout.');result={ok:true,status:recorded.mode==='LIVE'?'PAID':'TEST_PAID'};continue;}const next=await this.acceptPayment(row,p.id,version);if(['PAID','TEST_PAID'].includes(next.status)||!['PAID','TEST_PAID'].includes(result.status))result=next;}return result;
  }
- async replaceUnpaid(ctx:Context,body:any){
+ async replaceUnpaid(ctx:Context,body:any,credentialVersion?:Version){
   const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
   const {checkoutId}=z.object({checkoutId:id,confirm:z.literal(true)}).strict().parse(body);
   const row=await this.db.billingCheckout.findFirst({where:{id:checkoutId,tenantId:tid,kind:'ONETIME'}});
@@ -180,11 +180,11 @@ export class SubscriptionGateway{
   if(['PAID','TEST_PAID'].includes(row.state)){if(!await this.db.billingCharge.count({where:{checkoutId,tenantId:tid}}))throw new ConflictException('The recorded payment needs verification. Check payment status before replacing it.');return {ok:true,status:row.state,message:'This payment is already recorded. Your current plan has been refreshed.'};}
   if(row.state==='ABANDONED')return {ok:true,status:'ABANDONED',message:'This unpaid checkout is already closed.'};
   if(row.state!=='READY')throw new ConflictException('This payment is awaiting provider confirmation. Check its status or contact support before replacing it.');
-  const version=await this.version(row.gatewayRevision),order=await this.request(version,'orders/'+ref.parse(row.providerRef)),list=await this.request(version,'orders/'+ref.parse(row.providerRef)+'/payments?count=100');
+  const version=credentialVersion??await this.version(row.gatewayRevision);if(version.mode!==row.mode)throw new BadRequestException('Checkout and gateway modes do not match.');const order=await this.request(version,'orders/'+ref.parse(row.providerRef)),list=await this.request(version,'orders/'+ref.parse(row.providerRef)+'/payments?count=100');
   const expected=jsonObject(row.snapshot).quote?.due.amount??row.amount;
   if(order.id!==row.providerRef||order.currency!=='INR'||order.amount!==expected||!Number.isSafeInteger(order.amount_paid)||order.amount_paid<0||!Number.isSafeInteger(order.attempts)||order.attempts<0||!Array.isArray(list.items))throw new ServiceUnavailableException('The provider did not confirm the original order. Try checking its status again.');
   if(list.items.some((p:any)=>!ref.safeParse(p.id).success||p.order_id!==row.providerRef))throw new ServiceUnavailableException('The provider returned an invalid payment list.');
-  if(order.status==='paid'||order.amount_paid>0||list.items.some((p:any)=>p.status==='captured')){const result=await this.reconcile(ctx,{checkoutId});if(!['PAID','TEST_PAID'].includes(result.status))throw new ConflictException('A payment was received and is awaiting confirmation. Do not start another payment.');return result;}
+  if(order.status==='paid'||order.amount_paid>0||list.items.some((p:any)=>p.status==='captured')){const result=await this.reconcile(ctx,{checkoutId},version);if(!['PAID','TEST_PAID'].includes(result.status))throw new ConflictException('A payment was received and is awaiting confirmation. Do not start another payment.');return result;}
   if(!['created','attempted'].includes(order.status)||order.attempts>list.items.length||list.items.some((p:any)=>p.status!=='failed'))throw new ConflictException('A bank payment is still processing or its status is uncertain. Check payment status before replacing this checkout.');
   return this.db.$transaction(async tx=>{
    await tx.$queryRaw`SELECT id FROM tenants WHERE id=${tid}::uuid FOR UPDATE`;
