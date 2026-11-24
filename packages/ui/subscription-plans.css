@@ -206,3 +206,11 @@
 .pc-custom-card .pc-card-features li svg{color:#34482d}
 @media(max-width:1100px){.pc-plan-cards .pc-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-plan-card{padding-inline:23px}.pc-plan-card.is-popular{padding-top:37px}}
 @media(max-width:600px){.pc-plan-cards .pc-card-grid{grid-template-columns:1fr;gap:16px}.pc-plan-card{padding:26px 22px 23px}.pc-plan-card.is-popular{padding-top:35px}.pc-plan-card-head{min-height:62px}.pc-plan-card .pc-plan-name h2{font-size:22px}.pc-plan-card .pc-price strong{font-size:31px}.pc-card-capacity{grid-template-columns:1fr 1fr}.pc-plan-card .pc-card-features{grid-template-columns:1fr}}
+
+/* Keep all plan card content in natural, consistent top-to-bottom order. */
+.pc-plan-card .pc-plan-action{margin:0;flex:0 0 auto;align-self:stretch;max-width:none}
+.pc-plan-card .pc-plan-card-head{flex:0 0 auto}
+.pc-plan-card .pc-price,.pc-plan-card .pc-tax{flex:0 0 auto}
+.pc-plan-card .pc-card-capacity{flex:0 0 auto}
+.pc-plan-card h3{flex:0 0 auto}
+.pc-plan-card .pc-card-features{flex:0 0 auto}
