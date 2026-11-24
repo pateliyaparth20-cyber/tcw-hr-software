@@ -161,3 +161,48 @@
 .pc-comparison .pc-table tbody td.pc-excluded-cell svg{color:#e5484d}
 .pc-comparison .pc-table-scroll:focus-visible{outline-color:#a9cafa;border-radius:14px}
 @media(max-width:760px){.pc-comparison .pc-table thead th{padding:19px 10px 16px}.pc-comparison .pc-table thead th.pc-feature-heading{padding-left:14px}.pc-comparison .pc-table .pc-price strong{font-size:23px}.pc-comparison .pc-table .pc-custom-column .pc-price strong{font-size:16px}.pc-comparison .pc-table tbody th,.pc-comparison .pc-table tbody td{height:45px}}
+
+/* Subscription pricing cards styled to match the supplied reference. */
+.pc-plan-cards{margin-top:6px}
+.pc-plan-cards .pc-card-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch}
+.pc-plan-card{position:relative;display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:30px 20px 25px;border:1px solid #d7d7d7;border-radius:15px;background:#fff;box-shadow:0 2px 7px #15284208}
+.pc-plan-card.is-current{border-color:#f0cf30;box-shadow:0 3px 12px #15284212}
+.pc-plan-card.is-popular{border-color:#f0cf30;padding-top:37px}
+.pc-plan-card-head{min-height:78px}
+.pc-plan-card .pc-plan-name{justify-content:flex-start;align-items:center;min-height:0;gap:8px;margin:0 0 4px}
+.pc-plan-card .pc-plan-name h2{font-size:21px;font-weight:700;letter-spacing:-.35px;color:#16253b}
+.pc-plan-card .pc-plan-name>span{font-size:9px;background:#eaf1ff;color:#2868c8;padding:5px 7px;border-radius:20px}
+.pc-card-description{margin:0;color:#626c78;font-size:11px;line-height:1.5}
+.pc-popular-ribbon{position:absolute;inset:0 18px auto;height:20px;background:#142640;color:#f5d12b;border-radius:0 0 6px 6px;text-align:center;font-size:8px;font-weight:800;letter-spacing:3px;line-height:20px}
+.pc-plan-card .pc-discount{justify-content:flex-start;min-height:19px;margin:9px 0 0;font-size:10px}
+.pc-plan-card .pc-discount b{font-size:9px;color:#168746;background:#e8f6e9}
+.pc-plan-card .pc-price{justify-content:flex-start;min-height:38px;margin-top:1px}
+.pc-plan-card .pc-price strong{font-size:27px;color:#14253d;letter-spacing:-.8px;font-weight:750}
+.pc-plan-card .pc-price span{font-size:10px;color:#596a7e;font-weight:600}
+.pc-plan-card .pc-tax{min-height:30px;margin:2px 0 12px;font-size:9px;color:#737e8c;line-height:1.5}
+.pc-plan-card .pc-plan-action{max-width:none;min-height:39px;border-radius:5px;border:0;background:#f4cf2b;color:#15253c;font-weight:700;font-size:10px}
+.pc-plan-card .pc-plan-action:hover:not(:disabled){background:#e9c31e}
+.pc-plan-card .pc-plan-action.primary{border:0;background:#f4cf2b;color:#15253c;box-shadow:none}
+.pc-plan-card .pc-plan-action:disabled{opacity:.53}
+.pc-card-capacity{display:grid;gap:8px;padding:19px 0 15px;margin-top:13px;border-bottom:1px solid #e9edf1;color:#596575;font-size:10px}
+.pc-card-capacity>span{gap:6px}
+.pc-card-capacity svg{color:#596b7e}
+.pc-card-capacity strong{color:#26384e}
+.pc-plan-card h3{margin:15px 0 12px;color:#526176;font-size:9px;font-weight:700;letter-spacing:.65px;text-transform:uppercase}
+.pc-plan-card .pc-card-features{display:grid;gap:8px;margin:0}
+.pc-plan-card .pc-card-features li{gap:7px;font-size:10px;line-height:1.45;color:#566574}
+.pc-plan-card .pc-card-features li svg{color:#158954;margin-top:0;width:13px;height:13px}
+.pc-custom-card{background:#f3d02b;border-color:#f3d02b}
+.pc-custom-card .pc-plan-name h2{color:#14253d}
+.pc-custom-card .pc-plan-name>span{background:#14253d;color:#fff}
+.pc-custom-card .pc-card-description,.pc-custom-card .pc-tax{color:#51502d}
+.pc-custom-card .pc-custom-price{min-height:38px;display:flex;align-items:center;font-size:25px;font-weight:750;letter-spacing:-.7px;color:#14253d}
+.pc-custom-card .pc-plan-action.pc-custom-action{background:#14253d;color:#fff;border:0}
+.pc-custom-card .pc-plan-action.pc-custom-action:hover:not(:disabled){background:#233b5d}
+.pc-custom-card .pc-card-capacity{border-color:#d9bd26}
+.pc-custom-card .pc-card-capacity svg,.pc-custom-card .pc-card-capacity strong{color:#28354b}
+.pc-custom-card h3{color:#534e27}
+.pc-custom-card .pc-card-features li{color:#41472e}
+.pc-custom-card .pc-card-features li svg{color:#34482d}
+@media(max-width:1100px){.pc-plan-cards .pc-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-plan-card{padding-inline:23px}.pc-plan-card.is-popular{padding-top:37px}}
+@media(max-width:600px){.pc-plan-cards .pc-card-grid{grid-template-columns:1fr;gap:16px}.pc-plan-card{padding:26px 22px 23px}.pc-plan-card.is-popular{padding-top:35px}.pc-plan-card-head{min-height:62px}.pc-plan-card .pc-plan-name h2{font-size:22px}.pc-plan-card .pc-price strong{font-size:31px}.pc-card-capacity{grid-template-columns:1fr 1fr}.pc-plan-card .pc-card-features{grid-template-columns:1fr}}
