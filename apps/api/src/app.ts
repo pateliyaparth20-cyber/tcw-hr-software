@@ -252,6 +252,7 @@ export class Api {
       const branding=await this.db.platformSetting.findUnique({where:{key:'branding'}});
       return {id:company.id,name:company.name,code:company.code,logo:effectiveCompanyLogo(company.logo,(branding?.value as any)?.logo),status:company.status,expiresAt:company.expiresAt,timezone:company.timezone,primaryColor:String(profile.primaryColor??'#3474ef')};
     }
+    if(resource==='company'&&key==='billing-details'&&method==='PATCH')return this.billing.saveCustomerDetails(ctx,body);
     if(resource==='company'&&['GET','PATCH'].includes(method))return this.data.company(ctx,method==='PATCH'?body:undefined);
     if(resource==='payroll'&&key&&action==='payment-challan'&&method==='GET'){
       const format=z.enum(['json','pdf']).parse(String(req.query.format??'json'));
