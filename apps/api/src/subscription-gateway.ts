@@ -117,10 +117,11 @@ export class SubscriptionGateway{
   const tid=tenant(ctx);requirePermission(ctx,'company','EDIT');
   const input=z.object({name:z.string().trim().min(2).max(120),phone:z.string().trim().min(7).max(30).refine(v=>v.replace(/\D/g,'').length>=7,'Enter a valid phone number.'),email:z.email().trim().max(200),address:z.string().trim().min(5).max(1000)}).strict().parse(body);
   return this.db.$transaction(async tx=>{
+   await tx.$queryRaw`SELECT id FROM tenants WHERE id=${tid}::uuid FOR UPDATE`;
    const before=await tx.tenant.findUnique({where:{id:tid}});if(!before)throw new NotFoundException('Workspace not found.');
    const profile=jsonObject(before.profile),billingContact={name:input.name,phone:input.phone,email:input.email.toLowerCase(),address:input.address};
    const after=await tx.tenant.update({where:{id:tid},data:{profile:{...profile,billingContact}}});
-   await audit(tx,ctx,'BILLING_DETAILS_UPDATED','company',tid,before,after);
+   await audit(tx,ctx,'BILLING_DETAILS_UPDATED','company',tid,{billingContact:jsonObject(profile.billingContact)},{billingContact});
    return {billingContact};
   });
  }
