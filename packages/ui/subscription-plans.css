@@ -100,3 +100,29 @@
 @media(max-width:1050px){.pc-card-grid{gap:16px}.pc-card{padding:24px 20px}.pc-card .pc-price strong{font-size:30px}.pc-card .pc-plan-name{min-height:50px;align-content:center;margin-bottom:15px}.pc-card .pc-plan-name h2{font-size:23px}}@media(max-width:760px){.pc-card-grid{grid-template-columns:1fr;gap:21px}.pc-card{padding:25px}.pc-card .pc-plan-name{min-height:0;margin-bottom:18px}.pc-card-icon{width:42px;height:42px;margin-bottom:18px}.pc-card .pc-price strong{font-size:35px}.pc-card .pc-plan-name h2{font-size:25px}.pc-card-features{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 17px}.pc-card-features li{font-size:11px}.pc-card-capacity{padding:18px 0}.pc-card h3{margin-top:20px}.pc-card-compare{margin-top:13px}.pc-comparison>.pc-table-scroll.expanded{display:block;margin-top:9px}}@media(max-width:370px){.pc-card-features{grid-template-columns:1fr}.pc-card{padding:23px 20px}}@media(prefers-reduced-motion:reduce){.pc-card{transition:none}}
 /* Keep feature rows comparable across the plan cards. */
 .pc-card-grid{align-items:stretch}.pc-card-features .is-unavailable{color:#a1adbd}.pc-feature-dash{display:inline-flex;justify-content:center;align-items:center;flex:0 0 16px;width:16px;height:16px;margin-top:2px;color:#aab5c4;font-size:17px;line-height:1}.pc-card-features li>span:last-child{min-width:0;overflow-wrap:anywhere}@media(max-width:760px){.pc-card-features{grid-template-columns:1fr}}
+
+/* Feature-first plan matrix with a contact-sales custom plan. */
+.pc-comparison .pc-live-matrix{display:block;overflow-x:auto;overscroll-behavior-x:contain;border:1px solid #dfe5ee;border-radius:9px;background:#fff;scrollbar-color:#c4cfdd #f5f7fa;scrollbar-width:thin}
+.pc-comparison .pc-table{width:100%;min-width:960px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.pc-comparison .pc-table th:first-child{width:25%}
+.pc-comparison .pc-table thead th{background:#fff;padding:21px 13px 19px;border-bottom:1px solid #e3e8f0;vertical-align:top}
+.pc-comparison .pc-table thead th.pc-feature-heading{position:sticky;left:0;z-index:2;width:25%;background:#f8fafc;text-align:left;vertical-align:middle;padding:18px 20px;color:#334155;font-size:14px;font-weight:600}
+.pc-comparison .pc-table thead th.pc-selected{background:#f1f6ff}
+.pc-comparison .pc-table thead th.pc-custom-column,.pc-comparison .pc-table tbody td.pc-custom-column{background:#f6f9ff}
+.pc-comparison .pc-table .pc-custom-column .pc-plan-name h2{color:#2868c8}
+.pc-comparison .pc-table .pc-custom-column .pc-price strong{font-size:17px;letter-spacing:-.3px}
+.pc-comparison .pc-table .pc-custom-action{color:#fff;background:#2371ee;border-color:#2371ee}
+.pc-comparison .pc-table .pc-custom-action:hover:not(:disabled){background:#1463df}
+.pc-comparison .pc-table tbody th,.pc-comparison .pc-table tbody td{height:46px;padding:11px 16px;border-bottom:1px solid #e8edf3;font-size:12px}
+.pc-comparison .pc-table tbody th{position:sticky;left:0;z-index:1;background:#fff;text-align:left;color:#435165;font-weight:500}
+.pc-comparison .pc-table tbody tr:nth-child(even) th,.pc-comparison .pc-table tbody tr:nth-child(even) td{background-color:#fafbfd}
+.pc-comparison .pc-table tbody tr:nth-child(even) td.pc-custom-column{background:#f1f6ff}
+.pc-comparison .pc-table tbody td{text-align:center;color:#65758a}
+.pc-comparison .pc-table tbody td.pc-selected{background:#f1f6ff}
+.pc-comparison .pc-table tbody td.pc-included-cell svg{display:block;margin:auto;color:#23a875;stroke-width:2.1}
+.pc-comparison .pc-table tbody td.pc-excluded-cell svg{display:block;margin:auto;color:#ef4444;stroke-width:2}
+.pc-comparison .pc-table tbody tr:last-child th,.pc-comparison .pc-table tbody tr:last-child td{border-bottom:0}
+.pc-comparison .pc-table thead th:first-child{border-top-left-radius:9px}
+.pc-comparison .pc-table thead th:last-child{border-top-right-radius:9px}
+.pc-comparison .pc-table-scroll:focus-visible{outline:3px solid #bdd5fa;outline-offset:3px}
+@media(max-width:760px){.pc-comparison .pc-live-matrix{margin:0 0 18px}.pc-comparison .pc-table{min-width:850px}.pc-comparison .pc-table thead th{padding:17px 10px 15px}.pc-comparison .pc-table thead th.pc-feature-heading{padding:16px 14px}.pc-comparison .pc-table tbody th,.pc-comparison .pc-table tbody td{padding:10px 12px;font-size:11px}}
