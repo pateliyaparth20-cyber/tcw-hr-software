@@ -1,0 +1,106 @@
+/* Meghna Studio: a light, centred workspace with an organic animated identity. */
+html body .meghna-redesign.meghna-studio .tcw-agent-panel{--studio-accent:#7654af;position:fixed!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;width:min(860px,calc(100vw - 72px))!important;height:min(720px,calc(100dvh - 64px))!important;max-height:calc(100dvh - 64px)!important;transform:translate(-50%,-50%)!important;transform-origin:center!important;border:1px solid #e9e2f1!important;border-radius:30px!important;background:#fdfcfa!important;box-shadow:0 40px 120px #30233c30!important}
+html body .meghna-redesign.meghna-studio .tcw-agent-panel.is-open{transform:translate(-50%,-50%)!important;animation:meghna-studio-in .36s cubic-bezier(.18,.85,.25,1) both!important}
+html body .meghna-redesign.meghna-studio .tcw-agent-panel.is-closed{transform:translate(-50%,calc(-50% + 18px)) scale(.98)!important}
+html body .meghna-redesign.meghna-studio .meghna-backdrop{background:#29233340;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+html body .meghna-redesign.meghna-studio .tcw-agent-panel>header{padding:20px 28px!important;min-height:84px!important;background:#fdfcfa!important;border-bottom:1px solid #eee8f1!important}
+html body .meghna-redesign.meghna-studio .meghna-identity{gap:12px!important}
+html body .meghna-redesign.meghna-studio .meghna-brand-glyph{display:grid!important;place-items:center;width:43px;height:43px;flex:0 0 43px;background:linear-gradient(145deg,#e8def5,#f8f4fe);border:1px solid #e2d5ef;border-radius:15px;color:#8c69b5;box-shadow:inset 0 1px #fff}
+.meghna-studio .meghna-brand-glyph.thinking svg{animation:meghna-glyph-turn 3s ease-in-out infinite}
+html body .meghna-redesign.meghna-studio .meghna-identity strong{font-size:19px!important;letter-spacing:-.04em;color:#3f354a!important}
+html body .meghna-redesign.meghna-studio .meghna-identity strong i{font-size:8px;letter-spacing:.03em;border:0;background:#f0eaf5;color:#9478b0;padding:5px 6px;border-radius:999px}
+html body .meghna-redesign.meghna-studio .meghna-identity small{font-size:11px!important;color:#8e829a!important;letter-spacing:.01em}
+html body .meghna-redesign.meghna-studio .meghna-header-actions{gap:8px!important}
+html body .meghna-redesign.meghna-studio .meghna-header-actions .icon-button{width:36px!important;height:36px!important;border-radius:50%!important;background:#fdfcfa!important;border-color:#e7e0ec!important;color:#95869f!important}
+html body .meghna-redesign.meghna-studio .meghna-header-actions .icon-button:hover{background:#eee7f6!important;border-color:#d6c5e7!important;color:#7c55a5!important}
+html body .meghna-redesign.meghna-studio .meghna-mode-strip{padding:9px 29px!important;background:#fdfcfa!important;border-bottom:0!important;min-height:32px!important}
+html body .meghna-redesign.meghna-studio .meghna-mode-strip>span{font-size:9px;font-weight:500;color:#8b7b96!important}
+html body .meghna-redesign.meghna-studio .meghna-mode-strip>small{font-size:9px;color:#ab9fb3}
+html body .meghna-redesign.meghna-studio .meghna-live-dot{width:5px;height:5px;background:#80ad9b;box-shadow:0 0 0 3px #edf4ee}
+html body .meghna-redesign.meghna-studio .meghna-body{background:radial-gradient(ellipse at 15% 20%,#eee4fb7a,transparent 52%),radial-gradient(ellipse at 100% 100%,#f5e9e075,transparent 55%),#fdfcfa}
+html body .meghna-redesign.meghna-studio .tcw-agent-welcome{display:grid!important;grid-template-columns:1fr 1fr;align-items:center;justify-content:stretch;gap:38px!important;min-height:0;padding:26px 42px 32px!important;overflow-y:auto!important;text-align:left!important}
+.meghna-studio-intro{display:flex;flex-direction:column;align-items:flex-start;min-width:0;padding:6px 0}
+.meghna-aura{position:relative;width:118px;height:118px;display:grid;place-items:center;margin:0 0 20px;isolation:isolate;flex-shrink:0}
+.meghna-aura:before{content:'';position:absolute;inset:15px -5px -7px;background:#dcccf350;filter:blur(18px);border-radius:50%;z-index:-1}
+.meghna-aura>span{position:absolute;inset:8px;border-radius:37% 63% 61% 39% / 42% 39% 61% 58%;background:linear-gradient(140deg,#d0b6f3bb,#ece2fb80 65%,#bda3e3b5);border:1px solid #ffffffb0;box-shadow:inset 0 0 22px #ffffff80,0 10px 22px #a988ce16;animation:meghna-aura-morph 10s ease-in-out infinite}
+.meghna-aura>span:nth-child(2){inset:17px 6px;background:linear-gradient(50deg,#c4b4e580,#f1e7fc80);transform:rotate(65deg);animation-delay:-3s;animation-duration:13s}
+.meghna-aura>span:nth-child(3){inset:23px 17px;background:linear-gradient(160deg,#f5edffcc,#d1b9efb3);transform:rotate(-30deg);animation-delay:-6s;animation-duration:16s}
+.meghna-aura>svg{position:relative;z-index:2;color:#fff;filter:drop-shadow(0 2px 5px #9c79c454);animation:meghna-aura-breathe 5s ease-in-out infinite}
+.meghna-greeting{display:block;font-size:12px;line-height:1.5;color:#96849f;font-weight:500;margin-bottom:12px}
+html body .meghna-redesign.meghna-studio .tcw-agent-welcome h3{font-size:36px!important;font-weight:550;line-height:1.13!important;letter-spacing:-.065em!important;color:#4d3b59!important;margin:0 0 17px!important;max-width:340px}
+.meghna-studio-intro h3 em{font-family:Georgia,'Times New Roman',serif;font-size:1.08em;font-weight:400;font-style:italic;letter-spacing:-.045em;color:#9b79bb}
+html body .meghna-redesign.meghna-studio .meghna-studio-intro>p{font-size:12px!important;line-height:1.8!important;color:#96849f!important;margin:0}
+html body .meghna-redesign.meghna-studio .meghna-suggestions{display:flex!important;flex-direction:column;grid-template-columns:none!important;align-items:stretch;gap:10px!important;margin:0!important;width:100%;counter-reset:meghna-starter}
+.meghna-suggestions-title{font-size:8px;letter-spacing:.13em;font-weight:650;color:#b2a0bb;margin:0 0 6px 4px;line-height:1.6}
+html body .meghna-redesign.meghna-studio .meghna-suggestions button{counter-increment:meghna-starter;display:flex!important;align-items:center;gap:12px!important;min-height:73px!important;padding:14px 15px!important;border:1px solid #e8dfec!important;border-radius:19px!important;background:#ffffffa6!important;box-shadow:0 2px 6px #53405e03;text-align:left;animation:meghna-starter-enter .32s ease backwards;transition:transform .18s,border-color .18s,background .18s,box-shadow .18s}
+.meghna-studio .meghna-suggestions button:before{content:'0' counter(meghna-starter);font-size:9px;color:#c1adc9;align-self:flex-start;margin-top:2px}
+html body .meghna-redesign.meghna-studio .meghna-suggestions button>svg:first-child{width:19px;height:19px;color:#a58abb;flex-shrink:0;margin:0}
+html body .meghna-redesign.meghna-studio .meghna-suggestions button>svg:last-child{position:static;width:14px;height:14px;flex-shrink:0;color:#c1adc9;margin-left:auto}
+html body .meghna-redesign.meghna-studio .meghna-suggestions button>span{display:flex;flex:1;gap:3px;padding:0;min-width:0}
+html body .meghna-redesign.meghna-studio .meghna-suggestions strong{font-size:12px;font-weight:550;color:#77617f;line-height:1.5}
+html body .meghna-redesign.meghna-studio .meghna-suggestions small{font-size:9px;color:#a48eaf;line-height:1.5}
+@media(hover:hover){html body .meghna-redesign.meghna-studio .meghna-suggestions button:hover{background:#fcf8ff!important;border-color:#ceb5df!important;box-shadow:0 6px 15px #9a79b80d;transform:translateX(3px)}}
+html body .meghna-redesign.meghna-studio .tcw-agent-messages{padding:26px 42px 30px!important;gap:20px;background:transparent}
+html body .meghna-redesign.meghna-studio .tcw-agent-messages>div{max-width:77%!important;padding:16px 19px!important;border-radius:21px!important;background:#fff!important;border-color:#e9e0ee!important;box-shadow:0 3px 10px #725a7d05}
+html body .meghna-redesign.meghna-studio .tcw-agent-messages>.user{background:#eee6f6!important;border-color:#e5d8ee!important;color:#71537e;border-bottom-right-radius:7px!important}
+html body .meghna-redesign.meghna-studio .tcw-agent-messages>.assistant{border-bottom-left-radius:7px!important}
+html body .meghna-redesign.meghna-studio .tcw-agent-messages p{font-size:13px!important;line-height:1.9!important;color:#705d7a!important}
+html body .meghna-redesign.meghna-studio .tcw-agent-messages strong{color:#aa91b9;font-size:9px;font-weight:600;letter-spacing:.03em}
+html body .meghna-redesign.meghna-studio .meghna-compose{padding:16px 30px 17px!important;background:#fdfcfa!important;border-top:1px solid #eee6f2!important;gap:10px!important}
+html body .meghna-redesign.meghna-studio .meghna-compose-row{background:#fff;border:1px solid #dcd0e7;border-radius:22px;padding:7px 8px 7px 17px;gap:12px;box-shadow:0 5px 17px #88709c08}
+html body .meghna-redesign.meghna-studio .meghna-compose-row:focus-within{border-color:#b697cf;box-shadow:0 0 0 4px #e4d5f335;background:#fff}
+html body .meghna-redesign.meghna-studio .meghna-compose textarea{font-size:13px!important;line-height:1.6!important;color:#6c547b!important;min-height:42px!important;padding:11px 0!important}
+html body .meghna-redesign.meghna-studio .meghna-compose textarea::placeholder{font-size:12px;color:#b1a0bc}
+html body .meghna-redesign.meghna-studio .meghna-compose .btn{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;flex-basis:40px!important;border-radius:15px!important;background:#a281bd!important;box-shadow:none!important}
+html body .meghna-redesign.meghna-studio .meghna-compose .btn:not(:disabled):hover{background:#8c65ab!important;transform:translateY(-1px)}
+html body .meghna-redesign.meghna-studio .meghna-compose-note{font-size:9px;color:#b19dbd;padding:0 6px}
+html body .meghna-redesign.meghna-studio .meghna-history{padding:27px 36px!important}
+html body .meghna-redesign.meghna-studio .meghna-history-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+html body .meghna-redesign.meghna-studio .meghna-history-row{border-radius:18px;border-color:#e8dfec;background:#ffffffd9}
+html body .meghna-redesign.meghna-studio>.tcw-agent-fab{display:flex!important;align-items:center;gap:10px;width:auto!important;min-width:0!important;height:53px!important;min-height:53px!important;padding:7px 16px 7px 8px!important;border:1px solid #ded0ed!important;border-radius:999px!important;background:#fdfaff!important;box-shadow:0 6px 25px #7c549d20!important}
+.meghna-launch-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(140deg,#e3d5f4,#f3eaff);color:#9a72b7;flex-shrink:0}
+.meghna-launch-label{font-size:12px;font-weight:600;color:#8c64a6;letter-spacing:-.01em}
+.meghna-studio .tcw-agent-fab b{position:absolute;top:-5px;right:1px}
+@keyframes meghna-studio-in{from{opacity:0;transform:translate(-50%,calc(-50% + 20px)) scale(.97)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes meghna-starter-enter{from{opacity:0;transform:translateX(9px)}to{opacity:1;transform:none}}
+@keyframes meghna-aura-morph{0%,100%{border-radius:37% 63% 61% 39% / 42% 39% 61% 58%;transform:rotate(0deg)}50%{border-radius:65% 35% 36% 64% / 58% 65% 35% 42%;transform:rotate(28deg)}}
+@keyframes meghna-aura-breathe{50%{opacity:.6;transform:scale(.88)}}
+@keyframes meghna-glyph-turn{50%{transform:rotate(12deg) scale(.9)}}
+@media(max-width:700px){
+ html body .meghna-redesign.meghna-studio .tcw-agent-panel{left:8px!important;right:8px!important;top:calc(var(--meghna-offset,0px) + max(8px,env(safe-area-inset-top)))!important;bottom:auto!important;width:calc(100vw - 16px)!important;height:calc(var(--meghna-vh,100dvh) - max(8px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))!important;max-height:none!important;border-radius:27px!important;transform:none!important}
+ html body .meghna-redesign.meghna-studio .tcw-agent-panel.is-open{transform:none!important;animation:meghna-studio-mobile-in .3s cubic-bezier(.18,.8,.25,1) both!important}
+ html body .meghna-redesign.meghna-studio .tcw-agent-panel.is-closed{transform:translateY(15px) scale(.98)!important}
+ html body .meghna-redesign.meghna-studio .tcw-agent-panel>header{min-height:72px!important;padding:15px 17px!important}
+ html body .meghna-redesign.meghna-studio .meghna-brand-glyph{width:35px;height:35px;flex-basis:35px;border-radius:12px}
+ html body .meghna-redesign.meghna-studio .meghna-identity strong{font-size:17px!important}
+ html body .meghna-redesign.meghna-studio .meghna-identity small{font-size:9px!important}
+ html body .meghna-redesign.meghna-studio .meghna-header-actions{gap:5px!important}
+ html body .meghna-redesign.meghna-studio .meghna-header-actions .icon-button{width:31px!important;height:31px!important}
+ html body .meghna-redesign.meghna-studio .meghna-mode-strip{padding:8px 19px!important;min-height:30px!important}
+ html body .meghna-redesign.meghna-studio .tcw-agent-welcome{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:23px!important;padding:15px 23px 23px!important}
+ .meghna-studio-intro{align-items:center;text-align:center;padding:0}
+ .meghna-aura{width:82px;height:75px;margin:0 0 13px}.meghna-aura>svg{width:25px;height:25px}
+ .meghna-greeting{font-size:11px;margin-bottom:8px}
+ html body .meghna-redesign.meghna-studio .tcw-agent-welcome h3{font-size:28px!important;max-width:none;line-height:1.12!important;letter-spacing:-.055em!important;margin-bottom:12px!important}
+ html body .meghna-redesign.meghna-studio .meghna-studio-intro>p{font-size:11px!important;line-height:1.6!important}
+ .meghna-studio-intro>p br{display:none}
+ html body .meghna-redesign.meghna-studio .meghna-suggestions{gap:8px!important}
+ .meghna-suggestions-title{font-size:7px;letter-spacing:.12em;margin:0 0 2px 3px}
+ html body .meghna-redesign.meghna-studio .meghna-suggestions button{min-height:61px!important;padding:11px 13px!important;gap:11px!important;border-radius:17px!important}
+ html body .meghna-redesign.meghna-studio .meghna-suggestions button:before{font-size:8px;margin-top:1px}
+ html body .meghna-redesign.meghna-studio .meghna-suggestions strong{font-size:11px;line-height:1.4}
+ html body .meghna-redesign.meghna-studio .meghna-suggestions small{font-size:9px;line-height:1.4}
+ html body .meghna-redesign.meghna-studio .tcw-agent-messages{padding:22px 18px!important;gap:17px}
+ html body .meghna-redesign.meghna-studio .tcw-agent-messages>div{max-width:92%!important;padding:14px 16px!important}
+ html body .meghna-redesign.meghna-studio .meghna-compose{padding:12px 15px 13px!important;gap:8px!important}
+ html body .meghna-redesign.meghna-studio .meghna-compose-row{padding:6px 7px 6px 13px;border-radius:20px;gap:8px}
+ html body .meghna-redesign.meghna-studio .meghna-compose textarea{font-size:16px!important;padding:10px 0!important}
+ html body .meghna-redesign.meghna-studio .meghna-compose textarea::placeholder{font-size:12px}
+ html body .meghna-redesign.meghna-studio .meghna-compose .btn{width:38px!important;height:38px!important;min-height:38px!important;min-width:38px!important;flex-basis:38px!important;border-radius:14px!important}
+ html body .meghna-redesign.meghna-studio .meghna-history{padding:22px!important}
+ html body .meghna-redesign.meghna-studio .meghna-history-list{grid-template-columns:1fr}
+ html body .meghna-redesign.meghna-studio>.tcw-agent-fab{width:53px!important;min-width:53px!important;height:53px!important;min-height:53px!important;padding:7px!important;justify-content:center}
+ .meghna-studio .meghna-launch-label{display:none}
+}
+@keyframes meghna-studio-mobile-in{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){html body .meghna-redesign.meghna-studio *,html body .meghna-redesign.meghna-studio .tcw-agent-panel.is-open{animation:none!important;transition:none!important}}
