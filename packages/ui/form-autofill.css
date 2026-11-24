@@ -1,0 +1,21 @@
+/* Keep browser-autofilled values on the same white surface as other fields.
+   Apply to the input only; field-wrapper focus outlines remain visible. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: currentColor !important;
+  caret-color: currentColor;
+  background-color: #fff !important;
+}
+input:autofill,
+textarea:autofill {
+  background-color: #fff !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  color: inherit;
+}
