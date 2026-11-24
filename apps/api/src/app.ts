@@ -136,6 +136,7 @@ export class Api {
       const file=await subscriptionInvoice(this.db,ctx,action);res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',`attachment; filename="${file.filename}"`);res.setHeader('Cache-Control','private, no-store');res.end(file.bytes);return;
     }
     if(resource==='system'&&key==='billing-gateway')return this.billing.settings(ctx,method,body,req.query);
+    if(resource==='system'&&key==='phonepe-gateway')return this.billing.phonepeSettings(ctx,method,body,req.query);
     if(resource==='subscription'&&key==='contact-sales'&&method==='POST')return this.billing.contactSales(ctx,body);
     if(resource==='subscription'&&key==='quote'&&method==='POST')return this.billing.checkout(ctx,body,true);
     if(resource==='subscription'&&key==='checkout'&&action&&method==='GET')return this.billing.checkoutDetails(ctx,action);
