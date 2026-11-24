@@ -27,3 +27,27 @@
 .tp-method-grid>button:focus-visible{outline:3px solid #bdd5ff;outline-offset:2px}
 @media(max-width:520px){.tp-payment-choice{padding:14px}.tp-method-grid{gap:7px}.tp-method-grid>button{grid-template-columns:29px minmax(0,1fr) 13px;gap:7px;padding:9px;min-height:62px}.tp-method-icon{width:29px;height:29px}.tp-method-copy strong{font-size:10px}.tp-method-copy small{font-size:8px}.tp-method-marks{gap:3px}.tp-method-marks b{font-size:6px;padding-inline:3px}}
 @media(prefers-reduced-motion:reduce){.tp-method-grid>button{transition:none}}
+
+/* Customer details stay in the order summary; TCW brand color carries through checkout. */
+.tp-customer-details{margin:19px 0 17px;padding:15px 0;border-top:1px solid #e8e3ef;border-bottom:1px solid #e8e3ef}
+.tp-customer-details h2{margin:0 0 11px;font-size:10px;font-weight:700;letter-spacing:.65px;text-transform:uppercase;color:#7c3aed}
+.tp-customer-details>div{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:5px 0}
+.tp-customer-details>div span{flex:0 0 auto;font-size:10px;color:#858094}
+.tp-customer-details>div strong{min-width:0;text-align:right;overflow-wrap:anywhere;font-size:10px;font-weight:550;color:#41384e}
+.tp-payment-choice{border-color:#e7dff2;background:#fff;box-shadow:0 5px 18px #3922580b}
+.tp-method-heading>div{color:#7c3aed}
+.tp-method-heading>span{color:#6d28d9;background:#f5edff}
+.tp-method-grid>button:hover:not(:disabled){border-color:#c8a8f1;background:#fcfaff}
+.tp-method-grid>button.selected{border-color:#7c3aed;background:#faf7ff;box-shadow:0 0 0 2px #f0e7fc}
+.tp-method-grid>button.selected .tp-method-icon{color:#7c3aed;background:#f5edff;border-color:#e6d7f7}
+.tp-method-grid>button.selected .tp-method-radio{border-color:#7c3aed}
+.tp-method-guidance{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:12px;border:1px solid #e9e0f4;border-radius:8px;background:#fcfaff}
+.tp-guidance-icon{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:8px;background:#f2eafd;color:#7c3aed}
+.tp-method-guidance strong{display:block;margin:1px 0 4px;font-size:10px;font-weight:650;color:#352247}
+.tp-method-guidance p{margin:0;font-size:9px;line-height:1.65;color:#766b84}
+.tp-method-note{color:#776b85}
+.tp-primary{background:#7c3aed;border-color:#6d28d9;box-shadow:0 3px 10px #7c3aed25}
+.tp-primary:hover:not(:disabled){background:#6d28d9}
+.tp-pay-total strong{color:#352247}
+.tp-method-grid>button:focus-visible,.tp-primary:focus-visible{outline-color:#d9c2f6}
+@media(max-width:650px){.tp-customer-details{margin:15px 0}.tp-customer-details>div{gap:8px}}
