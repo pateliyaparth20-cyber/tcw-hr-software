@@ -987,6 +987,8 @@ model Plan {
   name          String   @unique
   monthlyPrice  Int
   yearlyPrice   Int?
+  monthlyDiscountPercent Int @default(0) @map("monthly_discount_percent")
+  yearlyDiscountPercent  Int @default(15) @map("yearly_discount_percent")
   employeeLimit Int
   deviceLimit   Int
   features      String[]
