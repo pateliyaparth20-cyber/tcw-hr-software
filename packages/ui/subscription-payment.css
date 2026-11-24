@@ -51,3 +51,37 @@
 .tp-pay-total strong{color:#352247}
 .tp-method-grid>button:focus-visible,.tp-primary:focus-visible{outline-color:#d9c2f6}
 @media(max-width:650px){.tp-customer-details{margin:15px 0}.tp-customer-details>div{gap:8px}}
+
+/* Order summary billing form and roomy branded method choices. */
+.tp-customer-details{margin:18px 0;padding:17px 0;border-top:1px solid #ebe7f0;border-bottom:1px solid #ebe7f0}
+.tp-customer-details>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.tp-customer-details>header h2{margin:0;color:#514363;font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase}
+.tp-customer-details>header button{display:flex;align-items:center;gap:5px;border:0;background:transparent;padding:5px;color:#7c3aed;font:inherit;font-size:10px;font-weight:600;cursor:pointer}
+.tp-customer-form{margin:0}
+.tp-customer-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tp-customer-fields label{display:grid;gap:5px;color:#665e71;font-size:9px;font-weight:600}
+.tp-customer-fields input,.tp-customer-fields textarea{width:100%;box-sizing:border-box;border:1px solid #e1dce8;border-radius:7px;background:#fff;padding:9px 10px;color:#30263d;font:inherit;font-size:10px;font-weight:400;outline:none}
+.tp-customer-fields input{height:36px}
+.tp-customer-fields textarea{min-height:54px;resize:vertical;line-height:1.5}
+.tp-customer-fields input:focus,.tp-customer-fields textarea:focus{border-color:#a982e8;box-shadow:0 0 0 3px #f1eafd}
+.tp-customer-fields input::placeholder,.tp-customer-fields textarea::placeholder{color:#aaa3b3}
+.tp-customer-fields .tp-address-field{grid-column:1/-1}
+.tp-customer-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+.tp-customer-actions>span{font-size:8px;color:#8f8898}
+.tp-customer-actions>button{display:inline-flex;justify-content:center;align-items:center;gap:6px;min-height:34px;border:1px solid #7c3aed;border-radius:7px;background:#7c3aed;padding:7px 11px;color:#fff;font:inherit;font-size:9px;font-weight:650;cursor:pointer}
+.tp-customer-actions>button:disabled{opacity:.6}
+.tp-customer-values{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;margin:0}
+.tp-customer-values>div{min-width:0}
+.tp-customer-values dt{margin-bottom:4px;color:#8b8494;font-size:9px}
+.tp-customer-values dd{margin:0;color:#352d40;font-size:10px;font-weight:550;line-height:1.5;overflow-wrap:anywhere}
+.tp-customer-values>div:last-child{grid-column:1/-1}
+.tp-payment-choice .tp-method-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tp-payment-choice .tp-method-grid>button{grid-template-columns:37px minmax(0,1fr) 15px;min-height:82px;padding:12px;column-gap:9px}
+.tp-payment-choice .tp-method-icon{width:35px;height:35px}
+.tp-method-copy small{font-size:9px;white-space:normal}
+.tp-method-marks{min-height:20px;gap:8px}
+.tp-method-marks img{display:block;width:25px;height:20px;object-fit:contain}
+.tp-method-marks b{min-height:16px;padding:2px 6px;font-size:8px}
+.tp-payment-choice .tp-method-note{margin-top:12px}
+@media(max-width:650px){.tp-customer-fields{gap:9px}.tp-customer-fields input{height:40px}.tp-payment-choice .tp-method-grid>button{min-height:76px;padding:10px}}
+@media(max-width:370px){.tp-customer-fields{grid-template-columns:1fr}.tp-customer-fields .tp-address-field{grid-column:auto}.tp-customer-values{grid-template-columns:1fr}.tp-customer-values>div:last-child{grid-column:auto}}
