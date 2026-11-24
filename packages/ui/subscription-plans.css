@@ -214,3 +214,22 @@
 .pc-plan-card .pc-card-capacity{flex:0 0 auto}
 .pc-plan-card h3{flex:0 0 auto}
 .pc-plan-card .pc-card-features{flex:0 0 auto}
+
+/* Use TCW HR's purple brand palette in subscription plans. */
+.pc-plan-card.is-current,.pc-plan-card.is-popular{border-color:#7c3aed}
+.pc-plan-card.is-current{box-shadow:0 0 0 1px #7c3aed,0 8px 24px #7c3aed14;background:linear-gradient(180deg,#faf7ff 0,#fff 210px)}
+.pc-popular-ribbon{background:#7c3aed;color:#fff}
+.pc-plan-card .pc-plan-action,.pc-plan-card .pc-plan-action.primary{background:#7c3aed;border-color:#7c3aed;color:#fff;box-shadow:0 3px 9px #7c3aed22}
+.pc-plan-card .pc-plan-action:hover:not(:disabled),.pc-plan-card .pc-plan-action.primary:hover:not(:disabled){background:#6d28d9;border-color:#6d28d9}
+.pc-plan-card .pc-plan-action:disabled{background:#eee8f7;border-color:#eee8f7;color:#887aa0;opacity:1}
+.pc-custom-card{background:#f5edff;border-color:#d9c5f6}
+.pc-custom-card .pc-plan-name h2{color:#2d1d43}
+.pc-custom-card .pc-plan-name>span{background:#7c3aed;color:#fff}
+.pc-custom-card .pc-card-description,.pc-custom-card .pc-tax{color:#70617f}
+.pc-custom-card .pc-custom-price{color:#2d1d43}
+.pc-custom-card .pc-plan-action.pc-custom-action,.pc-custom-card .pc-plan-action.pc-custom-action:hover:not(:disabled){background:#7c3aed;border-color:#7c3aed;color:#fff}
+.pc-custom-card .pc-card-capacity{border-color:#e0d3f1}
+.pc-custom-card .pc-card-capacity svg,.pc-custom-card .pc-card-capacity strong{color:#55416c}
+.pc-custom-card h3{color:#735990}
+.pc-custom-card .pc-card-features li{color:#57496b}
+.pc-custom-card .pc-card-features li svg{color:#7c3aed}
