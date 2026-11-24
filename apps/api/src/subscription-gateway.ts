@@ -45,7 +45,9 @@ export class SubscriptionGateway{
    const oldId=current.revisions?.[input.mode],old=oldId?(await tx.platformSetting.findUnique({where:{key:'billing-gateway-version:'+oldId}}))?.value as unknown as Version:null,previous=old&&old.keyId===input.keyId?openPayoutCredentials('SUBSCRIPTIONS:'+input.mode,old.ciphertext):{};
    const keySecret=input.keySecret??previous.keySecret,webhookSecret=input.webhookSecret??previous.webhookSecret;if(!keySecret||!webhookSecret)throw new BadRequestException('Enter the API secret and a webhook secret of at least 16 characters.');
    const reuse=oldId&&old?.keyId===input.keyId&&!input.keySecret&&!input.webhookSecret,revision=reuse?String(oldId):randomUUID(),settingsRevision=randomUUID();
+   if(input.autoPayEnabled&&!input.enabled)throw new BadRequestException('Enable checkout before enabling AutoPay.');
    if(!reuse)await tx.platformSetting.create({data:{key:'billing-gateway-version:'+revision,value:{mode:input.mode,keyId:input.keyId,ciphertext:sealPayoutCredentials('SUBSCRIPTIONS:'+input.mode,{keySecret,webhookSecret})}}});
+   if(input.autoPayEnabled&&!await tx.billingGatewayEvent.count({where:{gatewayRevision:revision}}))throw new BadRequestException('Save credentials with AutoPay off, register this webhook in Razorpay and send a test event, then enable AutoPay.');
 
    const next={revision:settingsRevision,mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled,experiences:{...current.experiences,[input.mode]:'STANDARD'},revisions:{...current.revisions,[input.mode]:revision}};await tx.platformSetting.upsert({where:{key:'billing-gateway'},create:{key:'billing-gateway',value:next},update:{value:next}});
    await audit(tx,ctx,'SUBSCRIPTION_GATEWAY_CONFIGURED','system',revision,undefined,{mode:input.mode,enabled:input.enabled,autoPayEnabled:input.autoPayEnabled,checkoutExperience:next.experiences[input.mode]});return {ok:true,revision:settingsRevision,webhookUrl:this.webhookUrl(revision)};
