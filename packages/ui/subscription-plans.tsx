@@ -28,10 +28,10 @@ export function SubscriptionPlans({manage=false}:{manage?:boolean}){
  return <div className={'tcw-pricing '+(!manage?'tcw-pricing-locked':'')}>
   <div className="pricing-path"><span>Workspace</span><span>/</span><strong>{routePlan?'Upgrade plan / Checkout':'Subscription Plans'}</strong>{!manage&&<button onClick={async()=>{await api('auth/logout','POST',undefined,session.csrf);window.location.href='/login';}}>Sign out</button>}</div>
   {routePlan?<SubscriptionCheckout key={String(company.updatedAt??'')+routePlan.name+routeCycle} onRefresh={()=>q.refetch()} data={data} selected={routePlan} cycle={routeCycle} onCycle={value=>router.replace('/subscription/checkout?plan='+routePlan.name+'&cycle='+value)} onClose={()=>router.push('/subscription')}/>:<>
-   <header className="pc-hero"><div><h1>Your next chapter starts here.</h1><p>Compare plans. Choose what fits your team.</p></div><div className="pc-cycle" role="group" aria-label="Billing cycle"><button aria-pressed={!isYear} className={!isYear?'active':''} onClick={()=>setCycle('MONTHLY')}>Monthly</button><button aria-pressed={isYear} className={isYear?'active':''} onClick={()=>setCycle('YEARLY')}>Yearly</button></div></header>
+   <header className="pc-hero"><div><h1>Subscription plan</h1><p>Simple, transparent pricing for your team.</p></div><div className="pc-cycle" role="group" aria-label="Billing cycle"><button aria-pressed={!isYear} className={!isYear?'active':''} onClick={()=>setCycle('MONTHLY')}>Monthly</button><button aria-pressed={isYear} className={isYear?'active':''} onClick={()=>setCycle('YEARLY')}>Yearly</button></div></header>
    <section className="pc-current" aria-label="Current subscription"><strong>{title(String(company.plan??'STARTER'))} plan</strong><Badge value={company.status}/><span className="pc-current-divider"/><span>Manual renewal</span>{company.expiresAt&&<small>Ends {displayDate(company.expiresAt)}</small>}<a href="#billing-history">Manage billing</a></section>
    <PlanComparison plans={plans} currentPlan={company.plan} cycle={cycle} includeGst={data.pricesIncludeGst} rate={rate} currency={currency} canPay={canPay} canCheckout={canCheckout} onPick={pick} onContactSales={()=>setSalesOpen(true)}/>
-   <section className="pc-custom"><strong>Need a plan built around you?</strong><p>Tell us your requirements and we’ll create a custom plan for your team.</p><button disabled={!canPay} onClick={()=>setSalesOpen(true)}>Contact sales</button></section>
+   
    {!canCheckout&&<p className="pricing-inline-note">{isYear?'Yearly checkout becomes available after annual prices and the gateway are configured.':'Online payment setup is in progress. Contact your administrator for billing assistance.'}</p>}
    <section id="billing-history" className="pricing-surface pricing-history pc-history"><div className="pricing-section-title"><div><h2>Billing history</h2><p>Invoices and verified subscription payments.</p></div><span>{invoices.length} invoices</span></div><div className="pricing-history-scroll"><table><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th><th>Invoice PDF</th></tr></thead><tbody>{invoices.map(inv=><tr key={inv.id}><td>{inv.number}</td><td>{displayDate(inv.createdAt)}</td><td>{money(inv.total)}</td><td><Badge value={inv.status}/></td><td><button className="btn secondary small" disabled={!!downloading} onClick={()=>downloadInvoice(inv)}><Download size={14}/>{downloading===inv.id?'Preparing…':'Download'}</button></td></tr>)}{!invoices.length&&<tr><td colSpan={5}><div className="pc-invoice-empty"><Download size={29}/><strong>No invoices yet</strong><p>Your invoices will appear here once a live payment is verified.</p></div></td></tr>}</tbody></table></div>{charges.some(c=>c.mode==='TEST')&&<small className="pricing-test-history">Sandbox payments are recorded separately and do not appear as paid production invoices.</small>}</section>
   </>}
@@ -45,19 +45,25 @@ export function SubscriptionPlans({manage=false}:{manage?:boolean}){
 
 
 function PlanComparison({plans,currentPlan,cycle,includeGst,rate,currency,canPay,canCheckout,onPick,onContactSales}:{plans:Row[];currentPlan:string;cycle:string;includeGst:boolean;rate:number;currency:string;canPay:boolean;canCheckout:boolean;onPick:(p:Row)=>void;onContactSales:()=>void}){
- const money=(n:number)=>currencyValue(n,currency),year=cycle==='YEARLY',features=(p:Row):string[]=>p.moduleFeatures??p.features??[],allFeatures=Array.from(new Set(plans.flatMap(features)));
- const planHead=(p:Row)=><th scope="col" className={p.name===currentPlan?'pc-selected':''}><div className="pc-plan-name"><h2>{title(p.name)}</h2>{p.name===currentPlan&&<span>Current plan</span>}</div><div className="pc-discount">{(year?p.yearlyListPrice:p.monthlyListPrice)>(year?p.yearlyPrice:p.monthlyPrice)&&<><del>{money(year?p.yearlyListPrice:p.monthlyListPrice)}</del><b>{p.discountPercent}% off</b></>}</div><div className="pc-price">{(year?p.yearlyPrice:p.monthlyPrice)?<><strong>{money(year?p.yearlyPrice:p.monthlyPrice)}</strong><span>/{year?'year':'month'}</span></>:<strong>Unavailable</strong>}</div><p className="pc-tax">{includeGst?'GST included':'Plus '+rate+'% GST'}</p><button className={'pc-plan-action '+(p.name===currentPlan?'primary':'')} disabled={!(year?p.yearlyPrice:p.monthlyPrice)||!canPay||!canCheckout||isPlanDowngrade(currentPlan,p.name)} onClick={()=>onPick(p)}>{isPlanDowngrade(currentPlan,p.name)?'Choose plan':p.name===currentPlan?'Manage plan':'Upgrade plan'}</button></th>;
- const featureCell=(included:boolean)=><td className={included?'pc-included-cell':'pc-excluded-cell'}>{included?<Check size={17} aria-label="Included"/>:<X size={17} aria-label="Not included"/>}</td>;
- return <section className="pc-comparison" aria-label="Compare subscription plans">
-  <div className="pc-table-scroll pc-live-matrix" tabIndex={0} role="region" aria-label="Subscription plan comparison. Scroll horizontally to compare all plans.">
-   <table className="pc-table">
-    <thead><tr><th scope="col" className="pc-feature-heading">Features</th>{plans.map(p=><React.Fragment key={p.id??p.name}>{planHead(p)}</React.Fragment>)}<th scope="col" className="pc-custom-column"><div className="pc-plan-name"><h2>Custom</h2><span>Tailored plan</span></div><div className="pc-discount"/><div className="pc-price"><strong>Custom quote</strong></div><p className="pc-tax">Built around your team</p><button className="pc-plan-action pc-custom-action" disabled={!canPay} onClick={onContactSales}>Contact sales</button></th></tr></thead>
-    <tbody>
-     <tr><th scope="row">Employees</th>{plans.map(p=><td key={p.id??p.name} className={p.name===currentPlan?'pc-selected':''}>{p.employeeLimit}</td>)}<td className="pc-custom-column">Custom</td></tr>
-     <tr><th scope="row">Attendance devices</th>{plans.map(p=><td key={p.id??p.name} className={p.name===currentPlan?'pc-selected':''}>{p.deviceLimit}</td>)}<td className="pc-custom-column">Custom</td></tr>
-     {allFeatures.map(f=><tr key={f}><th scope="row">{f}</th>{plans.map(p=><React.Fragment key={p.id??p.name}>{featureCell(features(p).includes(f))}</React.Fragment>)}{featureCell(true)}</tr>)}
-    </tbody>
-   </table>
+ const money=(n:number)=>currencyValue(n,currency),year=cycle==='YEARLY',features=(p:Row):string[]=>p.moduleFeatures??p.features??[];
+ const descriptions=['For teams getting started','For growing teams','For larger organizations'];
+ const card=(p:Row,i:number)=><article key={p.id??p.name} className={'pc-plan-card '+(i===1?'is-popular ':'')+(p.name===currentPlan?'is-current':'')}>
+  {i===1&&<div className="pc-popular-ribbon">POPULAR</div>}
+  <div className="pc-plan-card-head"><div className="pc-plan-name"><h2>{title(p.name)}</h2>{p.name===currentPlan&&<span>Current plan</span>}</div><p className="pc-card-description">{descriptions[i]??'A flexible plan for your team'}</p></div>
+  <div className="pc-discount">{(year?p.yearlyListPrice:p.monthlyListPrice)>(year?p.yearlyPrice:p.monthlyPrice)&&<><del>{money(year?p.yearlyListPrice:p.monthlyListPrice)}</del><b>{p.discountPercent}% off</b></>}</div>
+  <div className="pc-price">{(year?p.yearlyPrice:p.monthlyPrice)?<><strong>{money(year?p.yearlyPrice:p.monthlyPrice)}</strong><span>/{year?'year':'month'}</span></>:<strong>Unavailable</strong>}</div>
+  <p className="pc-tax">{includeGst?'GST included':'Plus '+rate+'% GST · Billed '+(year?'yearly':'monthly')}</p>
+  <button className={'pc-plan-action '+(p.name===currentPlan?'primary':'')} disabled={!(year?p.yearlyPrice:p.monthlyPrice)||!canPay||!canCheckout||isPlanDowngrade(currentPlan,p.name)} onClick={()=>onPick(p)}>{isPlanDowngrade(currentPlan,p.name)?'Choose plan':p.name===currentPlan?'Manage plan':'Get started'}</button>
+  <div className="pc-card-capacity"><span><Users size={14}/><strong>{p.employeeLimit}</strong> employees</span><span><Monitor size={14}/><strong>{p.deviceLimit}</strong> attendance devices</span></div>
+  <h3>Plan features</h3><ul className="pc-card-features">{features(p).map(f=><li key={f}><Check size={15}/><span>{f}</span></li>)}</ul>
+ </article>;
+ return <section className="pc-comparison pc-plan-cards" aria-label="Subscription plans">
+  <div className="pc-card-grid">{plans.map(card)}
+   <article className="pc-plan-card pc-custom-card"><div className="pc-plan-card-head"><div className="pc-plan-name"><h2>Custom</h2><span>Tailored plan</span></div><p className="pc-card-description">Made to fit your business</p></div>
+    <div className="pc-custom-price">Custom quote</div><p className="pc-tax">Built around your team</p><button className="pc-plan-action pc-custom-action" disabled={!canPay} onClick={onContactSales}>Contact sales</button>
+    <div className="pc-card-capacity"><span><Users size={14}/><strong>Custom</strong> employee limit</span><span><Monitor size={14}/><strong>Custom</strong> devices</span></div>
+    <h3>Tailored for you</h3><ul className="pc-card-features">{['Flexible employee and device limits','Choose the modules you need','Dedicated support for your team','Custom billing options'].map(f=><li key={f}><Check size={15}/><span>{f}</span></li>)}</ul>
+   </article>
   </div>
  </section>;
 }
