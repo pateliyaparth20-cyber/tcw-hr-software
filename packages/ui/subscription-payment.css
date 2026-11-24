@@ -111,3 +111,25 @@
 .tp-activated-limits svg{color:#7c3aed}
 @media(max-width:520px){.tp-payment-choice .tp-method-options{gap:8px!important}.tp-payment-choice .tp-method-options>button{grid-template-columns:32px minmax(0,1fr) 13px;min-height:84px;padding:10px;column-gap:8px}.tp-payment-choice .tp-method-options .tp-method-icon{width:31px;height:31px}.tp-payment-choice .tp-method-options .tp-method-marks{gap:6px}.tp-payment-choice .tp-method-options .tp-method-marks img{width:22px;height:20px}.tp-activated-plan ul{grid-template-columns:1fr}}
 @media(max-width:360px){.tp-payment-choice .tp-method-options{grid-template-columns:1fr!important}}
+
+/* Mobile payment rows: keep provider marks horizontal and readable. */
+@media(max-width:650px){
+ .tp-payment-choice .tp-method-heading{gap:8px;}
+ .tp-payment-choice .tp-method-heading strong{font-size:11px;white-space:nowrap;}
+ .tp-payment-choice .tp-method-heading>span{white-space:nowrap;font-size:7px;letter-spacing:.45px;padding:5px 7px;}
+ .tp-payment-choice .tp-method-options>button{grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;min-height:82px;padding:10px 12px;column-gap:9px;row-gap:5px;}
+ .tp-payment-choice .tp-method-options .tp-method-icon{grid-column:1;grid-row:1 / span 2;width:34px;height:34px;align-self:center;}
+ .tp-payment-choice .tp-method-options .tp-method-copy{grid-column:2;grid-row:1;align-self:end;}
+ .tp-payment-choice .tp-method-options .tp-method-copy strong{font-size:12px;}
+ .tp-payment-choice .tp-method-options .tp-method-copy small{font-size:10px;}
+ .tp-payment-choice .tp-method-options .tp-method-marks{grid-column:2;grid-row:2;justify-content:flex-start;flex-wrap:nowrap;gap:8px;min-height:23px;align-self:start;overflow:hidden;}
+ .tp-payment-choice .tp-method-options .tp-method-marks img{flex:0 0 auto;width:26px;height:23px;}
+ .tp-payment-choice .tp-method-options .tp-method-marks img[src*="amazonpay"]{width:54px;height:23px;}
+ .tp-payment-choice .tp-method-options .tp-method-marks:empty{display:none;}
+}
+@media(max-width:380px){
+ .tp-payment-choice .tp-method-heading strong{font-size:10px;}
+ .tp-payment-choice .tp-method-heading>span{font-size:6px;padding:4px 6px;}
+ .tp-payment-choice .tp-method-options .tp-method-marks{gap:6px;}
+ .tp-payment-choice .tp-method-options .tp-method-marks img{width:23px;height:22px;}
+}
