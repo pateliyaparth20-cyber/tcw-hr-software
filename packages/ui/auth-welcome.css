@@ -67,3 +67,5 @@ html body .auth-welcome.entry-signup .entry-card{max-width:510px}
 /* Keep saved Company Code and User ID fields consistent with the sign-in design. */
 html body .auth-welcome .entry-form input:-webkit-autofill,html body .auth-welcome .entry-form input:-webkit-autofill:hover,html body .auth-welcome .entry-form input:-webkit-autofill:focus,html body .auth-welcome .entry-form input:-webkit-autofill:active{-webkit-box-shadow:0 0 0 1000px #fff inset!important;box-shadow:0 0 0 1000px #fff inset!important;-webkit-text-fill-color:#1f2937!important;caret-color:#1f2937;transition:background-color 99999s ease-out 0s}
 html body .auth-welcome .entry-form input{background-color:#fff!important}
+
+html body .auth-welcome .entry-install-cta{width:100%;justify-content:center;margin:0 0 18px;border-color:#d9e0ea;background:#fff;color:#17243a;font-weight:700}
