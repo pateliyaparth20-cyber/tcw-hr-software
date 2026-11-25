@@ -106,3 +106,22 @@ html body .meghna-redesign :is(button,textarea):focus-visible{outline:2px solid 
 }
 @media(max-width:350px){html body .meghna-redesign .meghna-identity small{display:none}html body .meghna-redesign .meghna-suggestions button{flex-direction:column;gap:8px;min-height:105px}html body .meghna-redesign .meghna-header-actions .icon-button{width:29px!important;height:29px!important}}
 @media(prefers-reduced-motion:reduce){html body .meghna-redesign *,html body .meghna-redesign .tcw-agent-panel.is-open{animation:none!important;transition:none!important}}
+
+/* Branded assistant launcher: compact, readable, and aligned with the app dock. */
+html body .tcw-agent.meghna-redesign>.tcw-agent-fab{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;
+ width:auto!important;min-width:142px!important;height:56px!important;min-height:56px!important;
+ padding:7px 16px 7px 8px!important;border:1px solid #ffffff70!important;border-radius:999px!important;
+ background:linear-gradient(135deg,#7738df 0%,#5e2ac7 100%)!important;color:#fff!important;
+ box-shadow:0 8px 24px #5e2ac745,0 2px 6px #31105c24!important;
+}
+html body .tcw-agent.meghna-redesign>.tcw-agent-fab:hover{transform:translateY(-2px)!important;box-shadow:0 11px 28px #5e2ac750,0 3px 8px #31105c26!important}
+html body .tcw-agent.meghna-redesign>.tcw-agent-fab .meghna-launch-mark{display:grid!important;place-items:center!important;width:40px!important;height:40px!important;flex:0 0 40px!important;border-radius:50%!important;background:#ffffff20!important;color:#fff!important}
+html body .tcw-agent.meghna-redesign>.tcw-agent-fab .meghna-launch-label{display:inline!important;color:#fff!important;font-size:13px!important;font-weight:650!important;line-height:1!important;white-space:nowrap!important}
+html body .tcw-agent.meghna-redesign>.tcw-agent-fab>b{position:absolute;top:-4px;right:-4px;display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:99px;background:#ef476f;color:#fff;font-size:10px;line-height:1}
+@media(max-width:700px){
+ html body .tcw-agent.meghna-redesign{right:15px!important;bottom:calc(94px + env(safe-area-inset-bottom))!important}
+ html body .tcw-agent.meghna-redesign>.tcw-agent-fab{min-width:136px!important;height:54px!important;min-height:54px!important;padding:6px 14px 6px 7px!important;gap:8px!important}
+ html body .tcw-agent.meghna-redesign>.tcw-agent-fab .meghna-launch-mark{width:40px!important;height:40px!important;flex-basis:40px!important}
+}
+@media(max-width:350px){html body .tcw-agent.meghna-redesign>.tcw-agent-fab{min-width:124px!important;padding-right:11px!important}.meghna-redesign>.tcw-agent-fab .meghna-launch-label{font-size:12px!important}}
