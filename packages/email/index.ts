@@ -28,7 +28,7 @@ export async function sendEmail(payload:any,idempotencyKey?:string){
   let resendError='';
   if(resendKey){
     try{
-      const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json',...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})},body:JSON.stringify({from:process.env.SMTP_FROM??'TCW HR Software <noreply@techcyberwarrior.in>',to:[String(payload.to)],subject:String(payload.subject??'TCW HR Software'),text:String(payload.text??''),html})});
+      const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json',...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})},body:JSON.stringify({from:'TCW HR Software <noreply@techcyberwarrior.in>',to:[String(payload.to)],subject:String(payload.subject??'TCW HR Software'),text:String(payload.text??''),html})});
       if(response.ok)return;
       let detail='';try{detail=await response.text()}catch{}
       resendError=`Resend API failed (${response.status})${detail?`: ${detail.slice(0,180)}`:''}`;
@@ -37,7 +37,7 @@ export async function sendEmail(payload:any,idempotencyKey?:string){
   // Never switch providers after an ambiguous API failure: it can duplicate mail.
   if(resendKey)throw new Error(resendError||'Resend delivery failed');
   if(transport){
-    try{await transport.sendMail({from:process.env.SMTP_FROM,to:payload.to,subject:payload.subject,text:payload.text,html});return}
+    try{await transport.sendMail({from:'TCW HR Software <noreply@techcyberwarrior.in>',to:payload.to,subject:payload.subject,text:payload.text,html});return}
     catch(e:any){throw new Error(`${resendError?resendError+'; ':''}SMTP fallback failed: ${String(e?.message??e).slice(0,180)}`)}
   }
   if(resendError)throw new Error(resendError);
