@@ -11,7 +11,7 @@ html body .auth-welcome .entry-copy>p{margin-left:auto;max-width:240px;font-size
 html body .auth-welcome :is(.entry-preview,.entry-benefits,.entry-side-foot,.entry-kicker,.entry-head){display:none}
 html body .auth-welcome .entry-side .entry-brand{display:none}
 html body .auth-welcome .entry-mobile-brand{margin-bottom:30px;color:#342c4d}
-html body .auth-welcome .entry-mobile-brand .entry-logo{width:44px;height:44px;background:#f7f3fc;border-color:#ede5f6;border-radius:12px}
+html body .auth-welcome .entry-mobile-brand .entry-logo{width:64px;height:64px;padding:4px;background:#f7f3fc;border-color:#ede5f6;border-radius:16px}
 html body .auth-welcome .entry-mobile-brand small{color:#8b7d9d}
 html body .auth-welcome .entry-card h2{font-size:32px;color:#2c253a;letter-spacing:-.035em;margin-bottom:10px}
 html body .auth-welcome .entry-subtitle{color:#82788e;font-size:13px;line-height:1.7;margin-bottom:28px}
@@ -46,7 +46,7 @@ html body .auth-welcome.entry-signup .entry-card{max-width:510px}
  html body .auth-welcome .entry-side::after{content:"";position:absolute;left:-10%;bottom:-36px;width:120%;height:76px;background:#fff;border-radius:50% 50% 0 0}
  html body .auth-welcome .entry-side .entry-brand{display:flex;justify-content:center;margin-bottom:17px}
  html body .auth-welcome .entry-side .entry-brand>span:last-child{display:none}
- html body .auth-welcome .entry-side .entry-logo{width:54px;height:54px;border-radius:17px;background:#fff;padding:8px;box-shadow:0 5px 18px #45257826}
+ html body .auth-welcome .entry-side .entry-logo{width:68px;height:68px;border-radius:20px;background:#fff;padding:5px;box-shadow:0 5px 18px #45257826}
  html body .auth-welcome .entry-copy{max-width:420px;margin:0;text-align:center}
  html body .auth-welcome .entry-copy h1{font-size:32px;margin:0 0 10px;line-height:1.2;letter-spacing:-.03em}
  html body .auth-welcome .entry-copy h1 br{display:none}
