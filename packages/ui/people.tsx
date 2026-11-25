@@ -66,9 +66,9 @@ function EmployeeEditor({employee,onClose}:{employee:Row;onClose:()=>void}){
  return <Modal title={employee.id?'Edit employee':'Add employee'} onClose={onClose} wide><div className="pd-form-intro"><span><Users size={23}/></span><div><strong>{employee.id?'Keep their story up to date':'Welcome someone new to your team'}</strong><p>Complete the required details. Personal and compliance information can be added later.</p></div></div>{employee.id&&data.isLoading?<Loading/>:employee.id&&data.error?<Failure error={data.error} retry={()=>data.refetch()}/>:row&&<EmployeeRecordForm row={row} onClose={onClose}/>}</Modal>;
 }
 function EmployeeRecordForm({row,onClose}:{row:Row;onClose:()=>void}){
- const {can,mutate}=useApp(),[snapshot]=useState(row);
+ const {can,mutate,notify}=useApp(),[snapshot]=useState(row);
  const fields=modules.employees.fields.filter(f=>can('payroll')||!sensitive.has(f.key));
- return <RecordForm fields={fields} initial={snapshot} sections={sections} formClassName="pd-employee-form" submit={snapshot.id?'Save changes':'Create employee'} onCancel={onClose} onSave={async body=>{await mutate('employees'+(snapshot.id?'/'+snapshot.id:''),snapshot.id?'PATCH':'POST',{...body,...(snapshot.id?{expectedUpdatedAt:snapshot.updatedAt}:{})});onClose()}}/>;
+ return <RecordForm fields={fields} initial={snapshot} sections={sections} formClassName="pd-employee-form" submit={snapshot.id?'Save changes':'Create employee'} onCancel={onClose} onSave={async body=>{const saved=await mutate('employees'+(snapshot.id?'/'+snapshot.id:''),snapshot.id?'PATCH':'POST',{...body,...(snapshot.id?{expectedUpdatedAt:snapshot.updatedAt}:{})});if(saved?.appAccessNote)notify(saved.appAccessNote);onClose()}}/>;
 }
 
 function EmployeeProfile({employee,onClose,onEdit,onTasks,onAccess,onPhoto}:{employee:Row;onClose:()=>void;onEdit?:(p:Row)=>void;onTasks?:(p:Row)=>void;onAccess?:(p:Row)=>void;onPhoto:(src:string,name:string)=>void}){
