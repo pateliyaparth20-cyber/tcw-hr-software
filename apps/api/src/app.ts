@@ -450,71 +450,212 @@ export class Api {
       const first=input.messages.find(m=>m.role==='user')?.text??'Conversation';
       const title=first.replace(/\s+/g,' ').trim().slice(0,72)||'Conversation';
       const row=await this.db.meghnaConversation.create({data:{tenantId:tid,userId:ctx.user.id,title,messages:input.messages}});
-      await audit(this.db,ctx,'MEGHNA_COxÓ‹h‘éì¶»§q«^wšY›ÝÏËœÝ]K™\šYšYYØ[”^KÙ\ÜÚ[Û‹˜ÜÜ™‹Ù[XÝYY]ÙJNÂˆ\ÙQY™™XÝ
-
-
-OOžÚYŠ\›Ýß™\šYšYYXØ[”^_\›ÝËœ›ÝšY\”™YŠ\™]\›ŽØÛÛœÝ[Y\\Ù][\˜[
-
-
-OOžÚYŠØÝ[Y[š\ÚXš[]TÝ]OOOIÝš\ÚX›IÊ]›ÚY™Yœ™\Ú
-
-_KL
-NÜ™]\›Š
-OO˜ÛX\’[\˜[
-[Y\Š_KÜ›ÝÏËšY™\šYšYYØ[”^WJNÂˆ\Þ[˜È[˜Ý[Ûˆ^J
-^ÂˆYŠ\™XY_\Þ_Ù[™[™Ë˜Ý\œ™[\›Ýß™\šYšYYXØ[”^_^\™YY]Z[ÔØ]™Y\ÙË˜Ý\œ™[
-\™]\›ŽÂˆÙ]\œ›ÜŠ	ÉÊNÜÙ]Y\ÜØYÙJ	ÉÊNÜÙ[™[™Ë˜Ý\œ™[]YNÜÙ]\ÞJYJNÂˆž^ÂˆYŠ][\Y
-^ØÛÛœÝÝ]\ÏX]ØZ]\J	ÜÝXœØÜš\[Û‹ÙØ]]Ø^K\Ý]\ÉË	ÔÔÕ	ËØÚXÚÛÝ]YKÙ\ÜÚ[Û‹˜ÜÜ™ŠNÚYŠÉÔRQ	Ë	ÕTÕÔRQ	×Kš[˜ÛY\ÊÝ]\ËœÝ]\ÊJ^ÚYŠÝ]\ËœÝ]\ÏOOIÔRQ	Ê]Ú[™ÝË™\Ü]Ú]™[
-™]È]™[
-	ÝÝË\ÝXœØÜš\[Û‹]\]Y	ÊJNØ]ØZ]Kœ™Y™]Ú
-
-NÜÙ[™[™Ë˜Ý\œ™[Y˜[ÙNÜÙ]\ÞJ˜[ÙJNÜ™]\›Žß_BˆÙ]][\Y
-YJNÜÙË˜Ý\œ™[›Ü[Š
-NÂˆXØ]Ú
-N˜[žJ^ÜÙ[™[™Ë˜Ý\œ™[Y˜[ÙNÜÙ]\ÞJ˜[ÙJNÜÙ]\œ›ÜŠK›Y\ÜØYÙJ_BˆBˆ\Þ[˜È[˜Ý[ÛˆÝÛ›ØY
-
-^ØÛÛœÝ[›ÚXÙO\›ÝÏËœ™XÙZ\Ëš[›ÚXÙNÚYŠZ[›ÚXÙJ\™]\›ŽÜÙ]ÝÛ›ØY[™ÊYJNÝž^ØÛÛœÝ™\ÜÛœÙOX]ØZ]™]Ú
-	ËØ\KÜÝXœØÜš\[Û‹Ú[›ÚXÙ\ËÉÊÙ[˜ÛÙUT’PÛÛ\Û™[
-[›ÚXÙKšY
-JÉËÙÝÛ›ØY	ËØÜ™Y[X[Î‰ÜØ[YK[ÜšYÚ[‰ËØXÚN‰Û›Ë\ÝÜ™IßJNÚYŠ\™\ÜÛœÙK›Úß\™\ÜÛœÙKšXY\œË™Ù]
-	ØÛÛ[]\IÊOËš[˜ÛY\Ê	Ø\XØ][Û‹Ü‰ÊJ]›ÝÈ™]È\œ›ÜŠ	Ò[›ÚXÙHÛÝ[›Ý™HÝÛ›ØYYˆžHYØZ[ˆÚÜK‰ÊNØÛÛœÝ\›UT“˜Ü™X]SØš™XÝT“
-]ØZ]™\ÜÛœÙK˜›ØŠ
-JK[šÏYØÝ[Y[˜Ü™X]Q[[Y[
-	ØIÊNÛ[šËš™Y]\›Û[šË™ÝÛ›ØYZ[›ÚXÙK›[X™\ŠÉËœ‰ÎÛ[šË˜ÛXÚÊ
-NÜÙ][Y[Ý]
-
-
-OO•T“œ™]›ÚÙSØš™XÝT“
-\›
-KÌ
-_XØ]Ú
-N˜[žJ^ÜÙ]\œ›ÜŠK›Y\ÜØYÙJ_Yš[˜[^ÜÙ]ÝÛ›ØY[™Ê˜[ÙJ__BˆYŠKš\ÓØY[™Ê\™]\›ˆØY[™ËÏŽÚYŠK™\œ›ÜŠ\™]\›ˆ˜Z[\™H\œ›Ü^ÜK™\œ›ÜŸKÏŽÚYŠ\›ÝÊ\™]\›ˆ[ÂˆÛÛœÝ™XÙZ\\›ÝËœ™XÙZ\\Ý\›ÝË›[ÙOOOIÕTÕ	Ë™]šY]Ï\›ÝËœ™]šY]Ô™\]Z\™YOO]YNÂˆ™]\›ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHÝË\^K\YÙH‚ˆXY\ˆÛ\ÜÓ˜[YOHZXY\ˆ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
-OOœ›Ý]\‹œ\Ú
-	ËÜÝXœØÜš\[Û‰Ê_H\šXK[X™[H˜XÚÈÈ[œÈ\œ›ÝÓYÚ^™O^ÌM_KÏØ]ÛÜ[”ÝXœØÜš\[ÛˆO‹ÏÚOˆÝ›Û™ÏžÝ™\šYšYYÉÔ™XÙZ\	Î‰ÐÚXÚÛÝ]	ßOÜÝ›Û™ÏÜÜ[]ˆÛ\ÜÓ˜[YOHXœ˜[™[YÈÜ˜Ï^Ü›ÙXÝÙÛßH[Hˆ‹Ï•ÕÈÙ]ÚXY\‚ˆ]ˆÛ\ÜÓ˜[YOH[^[Ý]\ÚYHÛ\ÜÓ˜[YOH\Ý[[X\žH‚ˆO“Ü™\ˆÝ[[X\žHÛX[ŒH[ÜÛX[ÚO‚ˆ]ˆÛ\ÜÓ˜[YOH\[‹Z][H]ˆÛ\ÜÓ˜[YOH\[‹X\[YÈÜ˜Ï^Ü›ÙXÝÙÛßH[H•ÕÈˆÛÙØ\™H‹ÏÙ]]žÜ[•]J›ÝËœ[“˜[YJ_H[Ú•ÕÈˆÛÙØ\™OÜÜ[žÜ›ÝË˜ÞXÛOOOIÖQPT“IÏÉÐ[›X[ÝXœØÜš\[Û‰Î‰Ó[ÛHÝXœØÜš\[Û‰ßOÜÜ[Ù]Ý›Û™ÏžÛ[Û™^J›ÝËœ][ÝOËœ™XÝ\œš[™ÏË˜[[Ý[ÏÜ›ÝËœ™[™]Ø[[[Ý[ÏÜ›ÝË˜[[Ý[
-_OÜÝ›Û™ÏÙ]ÙXÝ[ÛˆÛ\ÜÓ˜[YOHXÝ\ÝÛY\‹Y]Z[Èˆ\šXK[X™[HÝ\ÝÛY\ˆ]Z[ÈXY\Ý\ÝÛY\ˆ]Z[ÏÚžÙ]Z[ÔØ]™Y	‰ˆYY][™ÐÝ\ÝÛY\‰‰ˆ]™\šYšYY	‰]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
-OOœÙ]Y][™ÐÝ\ÝÛY\ŠYJ_O[˜Ú[Ú^™O^ÌLßKÏˆY]Ø]ÛŸOÚXY\žÙY][™ÐÝ\ÝÛY\‰‰ˆ]™\šYšYYÏ›Ü›HÛ\ÜÓ˜[YOHXÝ\ÝÛY\‹Y›Ü›HˆÛ”ÝX›Z]^ÜØ]™PÝ\ÝÛY\ŸO]ˆÛ\ÜÓ˜[YOHXÝ\ÝÛY\‹YšY[ÈX™[‘[˜[YO[œ]]]ÐÛÛ\]OH›˜[YHˆ™\]Z\™YZ[“[™Ý^ÌŸHX^[™Ý^ÌLŒH˜[YO^ØÝ\ÝÛY\‹›˜[Y_HÛÚ[™ÙO^ÙOOœÙ]Ý\ÝÛY\ŠË‹‹˜Ý\ÝÛY\‹˜[YN™K\™Ù]˜[Y_J_HXÙZÛ\H“˜[YHÛˆH^[Y[‹ÏÛX™[X™[”Û™H[X™\[œ]]]ÐÛÛ\]OH[ˆ\OH[ˆ™\]Z\™YZ[“[™Ý^ÍßHX^[™Ý^ÌÌH˜[YO^ØÝ\ÝÛY\‹œÛ™_HÛÚ[™ÙO^ÙOOœÙ]Ý\ÝÛY\ŠË‹‹˜Ý\ÝÛY\‹Û™N™K\™Ù]˜[Y_J_HXÙZÛ\HŠÎLHNÍHÌŒL‹ÏÛX™[X™[‘[XZ[Y™\ÜÏ[œ]]]ÐÛÛ\]OH™[XZ[ˆ\OH™[XZ[ˆ™\]Z\™YX^[™Ý^ÌŒH˜[YO^ØÝ\ÝÛY\‹™[XZ[HÛÚ[™ÙO^ÙOOœÙ]Ý\ÝÛY\ŠË‹‹˜Ý\ÝÛY\‹[XZ[™K\™Ù]˜[Y_J_HXÙZÛ\Hž[ÝPÛÛ\[žK˜ÛÛH‹ÏÛX™[X™[Û\ÜÓ˜[YOHXY™\ÜËYšY[š[[™ÈY™\ÜÏ^\™XH]]ÐÛÛ\]OHœÝ™Y]XY™\ÜÈˆ™\]Z\™YZ[“[™Ý^Í_HX^[™Ý^ÌLH›ÝÜÏ^ÌŸH˜[YO^ØÝ\ÝÛY\‹˜Y™\ÜßHÛÚ[™ÙO^ÙOOœÙ]Ý\ÝÛY\ŠË‹‹˜Ý\ÝÛY\‹Y™\ÜÎ™K\™Ù]˜[Y_J_HXÙZÛ\H”Ý™Y]Ú]KÝ]H[™ÜÝ[ÛÙH‹ÏÛX™[Ù]]ˆÛ\ÜÓ˜[YOHXÝ\ÝÛY\‹XXÝ[ÛœÈÜ[”Ø]™YÙXÝ\™[H›Üˆ[Ý\ˆ™^^[Y[ÜÜ[]Ûˆ\OHœÝX›Z]ˆ\ØX›Y^ÜØ]š[™ÐÝ\ÝÛY\ŸOžÜØ]š[™ÐÝ\ÝÛY\ÏØY\ŒˆÚ^™O^ÌMHÛ\ÜÓ˜[YOHœšXÚ[™Ë\Ü[ˆ‹ÏŽØ]™HÚ^™O^ÌMKÏŸTØ]™H]Z[ÏØ]ÛÙ]Ù›Ü›OŽÛ\ÜÓ˜[YOHXÝ\ÝÛY\‹]˜[Y\È]“˜[YOÙžØÝ\ÝÛY\‹›˜[Y_	ø %	ßOÙÙ]]”Û™OÙžØÝ\ÝÛY\‹œÛ™_	ø %	ßOÙÙ]]‘[XZ[ÙžØÝ\ÝÛY\‹™[XZ[	ø %	ßOÙÙ]]š[[™ÈY™\ÜÏÙžØÝ\ÝÛY\‹˜Y™\Üß	ø %	ßOÙÙ]ÙŸOÜÙXÝ[Û‚ˆ]ˆÛ\ÜÓ˜[YOHZ[˜ÛYYÚXÚÐÚ\˜ÛLˆÚ^™O^ÌMßKÏ]Ý›Û™Ï–[Ý\ˆÛÜšÜÜXÙK™XYH›ÜˆÛÜšÏÜÝ›Û™ÏXØÙ\ÜÈÈH™X]\™\È[˜ÛYY[ˆ[Ý\ˆÙ[XÝY[‹ÜÙ]Ù]‚ˆÛ\ÜÓ˜[YOHXœ™XZÙÝÛˆ]”[ˆÝXÝ[ÙžÛ[Û™^J›ÝËœ][ÝOËœ™XÝ\œš[™ÏËœÝXÝ[ÏÜ›ÝËœÝXÝ[
-_OÙÙ]]‘ÔÕÙžÛ[Û™^J›ÝËœ][ÝOËœ™XÝ\œš[™ÏË^ÏÜ›ÝË^
-_OÙÙ]žÜ›ÝËœ][ÝOË˜Ü™Y]Œ	‰]ˆÛ\ÜÓ˜[YOHXÜ™Y]•[\ÙY[ˆÜ™Y]Ù¸¢$žÛ[Û™^J›ÝËœ][ÝK˜Ü™Y]
-_OÙÙ]ŸO]ˆÛ\ÜÓ˜[YOH]Ý[žÝ™\šYšYYÉÐ[[Ý[ZY	Î‰ÕÝ[YHÙ^IßOÙžÛ[Û™^J™\šYšYYÜ™XÙZ\˜[[Ý[œ›ÝË˜[[Ý[
-_OÙÙ]Ù‚ˆ]ˆÛ\ÜÓ˜[YOH\™[™]Ø[ÛØÚÌÈÚ^™O^ÌMŸKÏ]Ý›Û™ÏžÜ›ÝË˜ÞXÛOOOIÖQPT“IÏÉÐš[YYX\›IÎ‰Ðš[Y[ÛIßOÜÝ›Û™Ï“X[X[™[™]Ø[ˆ›È]]ÛX]XÈXš]ËÜÙ]Ù]‚ˆ]ˆÛ\ÜÓ˜[YOHZ[Ü[“XYH›Üˆ[Ý\ˆ[ÜKÜÜ[][™[˜ÙK^\›Û[™[Ý\ˆX[x %ÙÙ]\ˆ[ˆÛ™HÛÜšÜÜXÙKÜÙ]‚ˆØ\ÚYOXZ[ˆÛ\ÜÓ˜[YOH[XZ[ˆ‚ˆÝ\Ý	‰]ˆÛ\ÜÓ˜[YOH]\Ý•TÕSÑH0­È›È™X[Ú\™ÙHÜˆ]™H[ˆXÝ]˜][ÛÙ]ŸBžÝ™\šYšYYÏ]ˆÛ\ÜÓ˜[YOH\™XÙZ\]ˆÛ\ÜÓ˜[YOH\ÝXØÙ\ÜËZXÛÛˆÚXÚÐÚ\˜ÛLˆÚ^™O^ÌÎKÏÙ]Ü[ˆÛ\ÜÓ˜[YOHY^YXœ›ÝÈžÝ\ÝÉÔÐS‘“Ö‘PÑRT	Îœ™]šY]ÏÉÔVSQS•‘PÑRU‘Q	Î‰ÔVSQS•ÓÓTUIßOÜÜ[žÝ\ÝÉÕ\Ý^[Y[™\šYšYY	Îœ™]šY]ÏÉÔ^[Y[™YYÈH™]šY]ÉÎ‰ÐÛÛ™Ü˜][][ÛœÈH[Ý\ˆ[ˆ\ÈXÝ]™IßOÚžÝ\ÝÉÖ[Ý\ˆ\ÝÝXØÙYYYˆ]Ù\È›ÝÚ[™ÙH[Ý\ˆ]™HÝXœØÜš\[ÛˆÜˆÜ™X]HH›ÙXÝ[Ûˆ[›ÚXÙK‰Îœ™]šY]ÏÉÕÙH™XÙZ]™Y[Ý\ˆ^[Y[][Ý\ˆÛÜšÜÜXÙHÚ[™ÙY\š[™ÈÚXÚÛÝ]ˆÛÛXÝÝ\ÜÈ\HHÛÜœ™XÝ[‹‰Î‰ÕÙ[ÛÛYHÈÕÈ‹ˆ[Ý\ˆ	ÊÜ[•]J›ÝËœ[“˜[YJJÉÈ[ˆ\ÈXÝ]™Kˆ\™H\ÈÚ][ÝHØ[ˆÝ\\Ú[™Ë‰ßOÜžÈ]\Ý	‰ˆ\™]šY]É‰ÙXÝ[ÛˆÛ\ÜÓ˜[YOHXXÝ]˜]Y\[ˆˆ\šXK[X™[HXÝ]˜]Y[ˆ]Z[ÈÏžÜ[•]J›ÝËœ[“˜[YJ_H[ˆ[˜ÛY\ÏÚÏ[žÊ›ÝËœ[‘]Z[ÏË™™X]\™\ÏÏÖ×JK›X\
-
-™X]\™NœÝš[™ÊOOHÙ^O^Ù™X]\™_OÚXÚÐÚ\˜ÛLˆÚ^™O^ÌMKÏžÙ™X]\™_OÛOŠ_OÝ[]ˆÛ\ÜÓ˜[YOHXXÝ]˜]Y[[Z]ÈÜ[\Ù\œÈÚ^™O^ÌM_KÏˆ\ÈÜ›ÝËœ[‘]Z[ÏË™[\ÞYYS[Z]ÏÉø %	ßH[\ÞYY\ÏÜÜ[Ü[[Ûš]ÜˆÚ^™O^ÌM_KÏˆÜ›ÝËœ[‘]Z[ÏË™]šXÙS[Z]ÏÉø %	ßH][™[˜ÙH]šXÙ\ÏÜÜ[Ù]ÜÙXÝ[ÛŸO]”^[Y[™Y™\™[˜ÙOÙžÜ™XÙZ\œ^[Y[YOÙÙ]]”™XÙZ]™YÙžÙ\Ü^Q]J™XÙZ\˜Ü™X]Y]
-_OÙÙ]žÈ]\Ý	‰ˆ\™]šY]É‰]”[ˆ\š[ÙÙžÙ\Ü^Q]J™XÙZ\œ\š[ÙÝ\
-_H8 $ÈÙ\Ü^Q]J™XÙZ\œ\š[Ù[™
-_OÙÙ]Ÿ^Ü™XÙZ\š[›ÚXÙI‰]’[›ÚXÙOÙžÜ™XÙZ\š[›ÚXÙK›[X™\ŸOÙÙ]ŸOÙžÜ™XÙZ\š[›ÚXÙI‰]ÛˆÛ\ÜÓ˜[YOH\š[X\žHˆÛÛXÚÏ^ÙÝÛ›ØYH\ØX›Y^ÙÝÛ›ØY[™ßOÝÛ›ØYÚ^™O^ÌMßKÏžÙÝÛ›ØY[™ÏÉÔ™\\š[™È[›ÚXÙx )‰Î‰ÑÝÛ›ØY[›ÚXÙH‰ßOØ]ÛŸO]ÛˆÛ\ÜÓ˜[YOH\ÙXÛÛ™\žHˆÛÛXÚÏ^Ê
-OOœ›Ý]\‹œ\Ú
-	ËÜÝXœØÜš\[Û‰Ê_O˜XÚÈÈ[œÈ	ˆš[[™È\œ›ÝÔšYÚÚ^™O^ÌMŸKÏØ]ÛÙ]Ž‚ˆ]ˆÛ\ÜÓ˜[YOHXÚXÚÛÝ][X™[ØÚÒÙ^ZÛHÚ^™O^ÌLßKÏˆÙXÝ\™HÚXÚÛÝ]Ù]”^[Y[]Z[ÏÚÛ\ÜÓ˜[YOHY\ØÜš\[ÛˆžÉÐÚÛÜÙHH^[Y[Y]ÙÈÛÛ[YH›ÝYÚ˜^›Üœ^K‰ßOÜ‚ˆˆÙXÝ[ÛˆÛ\ÜÓ˜[YOH\^[Y[XÚÚXÙHˆ\šXK[X™[HÚÛÜÙHH^[Y[Y]Ù]ˆÛ\ÜÓ˜[YOH[Y]ÙZXY[™È]ØÚÒÙ^ZÛHÚ^™O^ÌM_KÏÝ›Û™ÏÚÛÜÙHÝÈ[ÝHØ[È^OÜÝ›Û™ÏÙ]Ü[”ÑPÕT‘HÒPÒÓÕUÜÜ[Ù]]ˆÛ\ÜÓ˜[YOH[Y]ÙYÜšY[Y]Ù[Ü[ÛœÈˆ›ÛOHœ˜Y[ÙÜ›Ý\ˆ\šXK[X™[H”^[Y[Y]ÙžÊÞÚY‰Ý\IËX™[‰ÕTIË]Z[‰ÕTH\ÈÜˆT‰ËXÛÛŽ”ÛX\Û™KX\šÜÎ–ÉÙÛÛÙÛ\^IË	Øš[IË	Ü^]I×_KÚY‰ØØ\™	ËX™[‰ÐØ\™	Ë]Z[‰ÐÜ™Y]ÜˆXš]Ø\™	ËXÛÛŽÜ™Y]Ø\™X\šÜÎ–ÉÝš\ØIË	ÛX\Ý\˜Ø\™	Ë	Ü\^I×_KÚY‰Û™]˜[šÚ[™ÉËX™[‰Ó™]˜[šÚ[™ÉË]Z[‰Ô^H›ÝYÚ[Ý\ˆ˜[šÉËXÛÛŽ“[™X\šËX\šÜÎ–×_KÚY‰ÝØ[]	ËX™[‰ÕØ[]	Ë]Z[‰Õ\ÙHHÝ\ÜYØ[]	ËXÛÛŽ•Ø[]X\šÜÎ–ÉÜ^]IË	Ø[X^›Ûœ^I×_WH\ÈÛÛœÝ
-K™š[\ŠY]ÙOœ›ÝËšÚ[™OOIÐUUÔVIßY]ÙšYOOIÝØ[]	ÊK›X\
-Y]ÙOžØÛÛœÝXÛÛ[Y]Ù’XÛÛ‹XÝ]™O\Ù[XÝYY]ÙOO[Y]ÙšYÜ™]\›ˆ]ÛˆÙ^O^ÛY]ÙšYH\OH˜]Ûˆˆ›ÛOHœ˜Y[Èˆ\šXKXÚXÚÙY^ØXÝ]™_HÛ\ÜÓ˜[YO^ØXÝ]™OÉÜÙ[XÝY	Î‰ÉßH\ØX›Y^Ø\Þ_HÛÛXÚÏ^Ê
-OOžÜÙ]Ù[XÝYY]Ù
-Y]ÙšY
-NÜÙ]\œ›ÜŠ	ÉÊNÜÙ]Y\ÜØYÙJ	ÉÊ__OÜ[ˆÛ\ÜÓ˜[YOH[Y]ÙZXÛÛˆXÛÛˆÚ^™O^ÌNKÏÜÜ[Ü[ˆÛ\ÜÓ˜[YOH[Y]ÙXÛÜHÝ›Û™ÏžÛY]Ù›X™[OÜÝ›Û™ÏÛX[žÛY]Ù™]Z[OÜÛX[ÜÜ[Ü[ˆÛ\ÜÓ˜[YOH[Y]Ù[X\šÜÈžÛY]Ù›X\šÜË›X\
-X\šÏO–ÉÙÛÛÙÛ\^IË	Ü^]IË	Øš[IË	Ø[X^›Ûœ^IË	Ýš\ØIË	ÛX\Ý\˜Ø\™	×Kš[˜ÛY\ÊX\šÊOÏ[YÈÙ^O^ÛX\šßHÜ˜Ï^ÉËÜ^[Y[[ÙÛÜËÉÊÛX\šÊÉËœÝ™ÉßH[^ÛX\šÏOOIÙÛÛÙÛ\^IÏÉÑÛÛÙÛH^IÎ›X\šÏOOIÜ^]IÏÉÔ^]IÎ›X\šÏOOIØš[IÏÉÐ’SIÎ›X\šÏOOIØ[X^›Ûœ^IÏÉÐ[X^›Ûˆ^IÎ›X\šÏOOIÝš\ØIÏÉÕš\ØIÎ‰ÓX\Ý\˜Ø\™	ßKÏŽˆÙ^O^ÛX\šßHÛ\ÜÓ˜[YO^ÛX\šËÓÝÙ\Ø\ÙJ
-_OžÛX\šÏOOIÜ\^IÏÉÔT^IÎ‰ÕØ[]ÉßOØŠ_OÜÜ[Ø]ÛŸJ_OÙ]žÜÙ[XÝYY]ÙOOIÝ\IÏÏ]ˆÛ\ÜÓ˜[YOH[Y]ÙYÝZY[˜ÙHÜ[ˆÛ\ÜÓ˜[YOHYÝZY[˜ÙKZXÛÛˆ\ÛÙHÚ^™O^ÌMßKÏÜÜ[]Ý›Û™ÏžÜ›ÝËšÚ[™OOIÐUUÔVIÏÉÕTH]]Ô^HX[™]IÎ‰ÕTH\ÜˆTˆÛÙIßOÜÝ›Û™ÏžÜ›ÝËšÚ[™OOIÐUUÔVIÏÉÐÚÛÜÙHHÝ\ÜYTH\[™\›Ý™HH™XÝ\œš[™ÈX[™]H›Üˆ[Ý\ˆ	ÊÊ›ÝË˜ÞXÛOOOIÖQPT“IÏÉÞYX\›IÎ‰Û[ÛIÊJÉÈ[‹ˆHX[™]HØ[ˆ™HØ[˜Ù[Y]\‹‰Î‰ÓÛˆ\ÚÝÜØØ[ˆHÚXÚÛÝ]TˆÛÙHÚ][Ý\ˆTH\ˆÛˆ[Øš[KÚÛÜÙHHÝ\ÜYTH\ÈÛÛ[YK‰ßOÜÙ]Ù]Ž]ˆÛ\ÜÓ˜[YOH[Y]ÙYÝZY[˜ÙHÜ[ˆÛ\ÜÓ˜[YOHYÝZY[˜ÙKZXÛÛˆžÜÙ[XÝYY]ÙOOIØØ\™	ÏÏÜ™Y]Ø\™Ú^™O^ÌMßKÏŽœÙ[XÝYY]ÙOOIÛ™]˜[šÚ[™ÉÏÏ[™X\šÈÚ^™O^ÌMßKÏŽØ[]Ú^™O^ÌMßKÏŸOÜÜ[]Ý›Û™ÏžÜ›ÝËšÚ[™OOIÐUUÔVIÏÊÙ[XÝYY]ÙOOIØØ\™	ÏÉÐØ\™™[™]Ø[X[™]IÎœÙ[XÝYY]ÙOOIÛ™]˜[šÚ[™ÉÏÉÓ™]˜[šÚ[™ÈK[X[™]IÎ‰ÕTH]]Ô^HX[™]IÊNœÙ[XÝYY]ÙOOIØØ\™	ÏÉÐØ\™ÈÝ\ÜYžH[Ý\ˆ˜[šÉÎœÙ[XÝYY]ÙOOIÛ™]˜[šÚ[™ÉÏÉÐÚÛÜÙH[Ý\ˆ˜[šÈ[ˆ˜^›Üœ^IÎ‰ÕØ[]È[˜X›YÛˆ[Ý\ˆ˜^›Üœ^HXØÛÝ[	ßOÜÝ›Û™ÏžÜ›ÝËšÚ[™OOIÐUUÔVIÏÉÐ\›Ý™H™XÝ\œš[™È^[Y[È›Üˆ[Ý\ˆ	ÊÊ›ÝË˜ÞXÛOOOIÖQPT“IÏÉÞYX\›IÎ‰Û[ÛIÊJÉÈ[ˆ[ˆ˜^›Üœ^Kˆ[ÝHØ[ˆØ[˜Ù[HX[™]H]\‹‰Î‰Ô˜^›Üœ^HÚ[ÚÝÈH^[Y[Ü[ÛœÈ[˜X›Y›Üˆ\ÈXØÛÝ[‰ßOÜÙ]Ù]ŸOÛ\ÜÓ˜[YOH[Y]Ù[›ÝHžÜ›ÝËšÚ[™OOIÐUUÔVIÏÉÐ]]È^HÝ\ÈÛ›HY\ˆ[ÝH\›Ý™HH™XÝ\œš[™ÈX[™]H[ˆ[Ý\ˆÙ[XÝY^[Y[\‰Î‰Ô^[Y[ÛÛ\]\ÈÙXÝ\™[H[ˆ˜^›Üœ^Kˆ[Ý\ˆ[ˆXÝ]˜]\ÈY\ˆH^[Y[\È™\šYšYY‰ßOÜÜÙXÝ[Û‚ˆÜ›ÝËœÝ]HOOIÔ‘PQIß^\™YÏ]ˆÛ\ÜÓ˜[YOH\[™[™ÈÛØÚÌÈÚ^™O^ÌKÏÏžÜ›ÝËœÝ]OOOIÐPS‘Ó‘Q	ÏÉÐÚXÚÛÝ]™\XÙY	Î™^\™YÉÔ][ÝH^\™Y	Î‰Ð]ØZ][™È^[Y[ÛÛ™š\›X][Û‰ßOÚÏžÙ^\™YÉÔ™]šY]ÈHœ™\Ú][ÝH™Y›Ü™H^Z[™Ëˆ[Ý\ˆÝ\œ™[[ˆ\È[˜Ú[™ÙY‰Îœ›ÝËœÝ]OOOIÐPS‘Ó‘Q	ÏÉÔ™]\›ˆÈ[œÈÈ™]šY]ÈH™]ÈÚXÚÛÝ]‰Î‰ÐÚXÚÈ^[Y[Ý]\È™Y›Ü™HÝ\[™È[›Ý\ˆ^[Y[‰ßOÜÙ]Ž]ˆÛ\ÜÓ˜[YOH\^K]Ý[Ü[•Ý[ÜÜ[Ý›Û™ÏžÛ[Û™^J›ÝË˜[[Ý[
-_OÜÝ›Û™ÏÙ]]ÛˆÛ\ÜÓ˜[YOH\š[X\žHˆÛÛXÚÏ^Ü^_H\ØX›Y^È\™XY_\Þ_XØ[”^_OžØ\Þ_\™XYOÏØY\ŒˆÚ^™O^ÌMŸHÛ\ÜÓ˜[YOHœšXÚ[™Ë\Ü[ˆ‹ÏŽ›[^ÈY]Z[ÔØ]™Y	‰ˆ]™\šYšYYÉÔØ]™HÝ\ÝÛY\ˆ]Z[ÈÈÛÛ[YIÎˆ\™XYOÉÔ™\\š[™ÈÙXÝ\™HÚXÚÛÝ]8 )‰Î˜\ÞOÉÔ^[Y[Ú[™ÝÈÜ[¸ )‰ÎŠ][\YÉÕžH^[Y[YØZ[‰ÎŠ›ÝËšÚ[™OOIÐUUÔVIÏÉÔÙ]\]]È^HÚ]	Î‰ÐÛÛ[YHÚ]	ÊJÊÝ\N‰ÕTIËØ\™‰ØØ\™	Ë™]˜[šÚ[™Î‰Û™]˜[šÚ[™ÉËØ[]‰ÝØ[]	ßH\È™XÛÜ™Ýš[™ËÝš[™ÏŠVÜÙ[XÝYY]ÙJJÉÈ0­È	ÊÛ[Û™^J›ÝË˜[[Ý[
-_OØÚÒÙ^ZÛHÚ^™O^ÌMKÏØ]ÛÛ\ÜÓ˜[YOH[™^[›ÝHžÉÔ˜^›Üœ^HÜ[œÈ™^ˆ[Ý\ˆ[ˆÝ\ÈY\ˆ^[Y[\È™\šYšYY‰ßOÜÏŸBˆÊ^\™Y›ÝËœÝ]OOOIÐPS‘Ó‘Q	ÊI‰]ÛˆÛ\ÜÓ˜[YOH\ÙXÛÛ™\žHˆÛÛXÚÏ^Ê
-OOœ›Ý]\‹œ\Ú
-	ËÜÝXœØÜš\[Û‰Ê_O”™]šY]È[œÈ\œ›ÝÔšYÚÚ^™O^ÌM_KÏØ]ÛŸBˆ]ÛˆÛ\ÜÓ˜[YOH\Ý]\Èˆ\ØX›Y^ÈXØ[”^_HÛÛXÚÏ^Ê
-OO›ÚY™Yœ™\Ú
-
-_O™Yœ™\ÚÝÈÚ^™O^ÌLßKÏˆÚXÚÈ^[Y[Ý]\ÏØ]Û‚ˆÏŸBˆÛY\ÜØYÙI‰ˆ]™\šYšYY	‰Û\ÜÓ˜[YOH[Y\ÜØYÙHˆ›ÛOHœÝ]\ÈžÛY\ÜØYÙ_OÜŸ^Ù\œ›Ü‰‰Û\ÜÓ˜[YOHX[\ˆ›ÛOH˜[\žÙ\œ›ÜŸOÜŸBˆ›ÛÝ\ˆÛ\ÜÓ˜[YOH\ÝÙ\™YÚY[ÚXÚÈÚ^™O^ÌLßKÏˆÙXÝ\™YžH˜^›Üœ^HO°­ÏÚOˆÕÈˆÛÙØ\™OÙ›ÛÝ\‚ˆÛXZ[Ù]‚ˆÜÙXÝ[ÛŽÂŸB
+      await audit(this.db,ctx,'MEGHNA_CONVERSATION_SAVED','meghna-history',row.id,undefined,{title,messageCount:input.messages.length});
+      return row;
+    }
+    if(resource==='agent'&&key==='history'&&method==='PUT'&&action){
+      const tid=tenant(ctx);
+      const input=z.object({messages:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().min(1).max(4000)}).strict()).min(1).max(100)}).strict().parse(body);
+      const existing=await this.db.meghnaConversation.findFirst({where:{id:id.parse(action),tenantId:tid,userId:ctx.user.id}});
+      if(!existing)throw new NotFoundException('Conversation not found.');
+      const first=input.messages.find(m=>m.role==='user')?.text??existing.title;
+      const title=first.replace(/\s+/g,' ').trim().slice(0,72)||existing.title;
+      return this.db.meghnaConversation.update({where:{id:existing.id},data:{title,messages:input.messages}});
+    }
+    if(resource==='agent'&&key==='history'&&method==='DELETE'&&action){
+      const tid=tenant(ctx);
+      const existing=await this.db.meghnaConversation.findFirst({where:{id:id.parse(action),tenantId:tid,userId:ctx.user.id}});
+      if(!existing)throw new NotFoundException('Conversation not found.');
+      await this.db.meghnaConversation.delete({where:{id:existing.id}});
+      await audit(this.db,ctx,'MEGHNA_CONVERSATION_DELETED','meghna-history',existing.id,{title:existing.title},undefined);
+      return {ok:true};
+    }
+    if(resource==='agent'&&key==='status'&&method==='GET'){
+      const tid=tenant(ctx),now=new Date(),company=await this.db.tenant.findUnique({where:{id:tid}});
+      await this.db.$queryRaw`SELECT 1`;
+      const employeeSelf=ctx.user.role.code==='EMPLOYEE',canDevices=!employeeSelf&&hasPermission(ctx.user.role.permissions,'devices','VIEW');
+      const recentCutoff=new Date(now.getTime()-24*3600000);
+      const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim();
+      const [failedEmail,failedSms,deviceIssues]=await Promise.all([
+        employeeSelf?Promise.resolve(0):this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}),
+        employeeSelf?Promise.resolve(0):smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentCutoff}}}):Promise.resolve(0),
+        canDevices?this.db.attendanceDevice.findMany({where:{tenantId:tid,connectionMode:{not:'EMPLOYEE_APP'},OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]},select:{id:true,name:true,status:true,lastError:true},take:10}):Promise.resolve([])
+      ]);
+      const issues:any[]=[];
+      if(failedEmail>0)issues.push({code:'EMAIL_DELIVERY',severity:'warning',title:'Email delivery needs attention',message:failedEmail+' recent email job(s) have failed repeatedly. Check the recipient address and email delivery logs.'});
+      if(failedSms>0)issues.push({code:'SMS_DELIVERY',severity:'warning',title:'SMS delivery needs attention',message:failedSms+' recent SMS job(s) have failed repeatedly. Check the SMS provider configuration and delivery logs.'});
+      if(deviceIssues.length){const first=deviceIssues[0];issues.push({code:'ATTENDANCE_DEVICE',severity:'warning',title:'Attendance device issue',message:deviceIssues.length===1?`${first.name} is ${String(first.status).toLowerCase()}${first.lastError?': '+first.lastError:''}`:`${deviceIssues.length} physical attendance devices need attention.`});}
+      if(company?.status==='EXPIRED'||company?.status==='SUSPENDED')issues.push({code:'COMPANY_ACCESS',severity:'warning',title:'Company access needs attention',message:'Company status is '+company.status+'. Review subscription or platform access.'});
+      const daysRemaining=company?.expiresAt?Math.max(0,Math.ceil((company.expiresAt.getTime()-now.getTime())/86400000)):null;
+      if(company?.status==='TRIAL'&&daysRemaining!==null&&daysRemaining<=1)issues.push({code:'TRIAL_ENDING',severity:'info',title:'Trial ending soon',message:'Trial access ends in '+daysRemaining+' day(s).'});
+      return {healthy:issues.filter(v=>v.severity==='warning').length===0,checkedAt:now,issues,checks:{api:'ONLINE',database:'CONNECTED',email:(process.env.RESEND_API_KEY||process.env.SMTP_HOST)?'CONFIGURED':'NOT_CONFIGURED',sms:process.env.SMS_PROVIDER?'CONFIGURED':'NOT_CONFIGURED',devices:canDevices?(deviceIssues.length?'ATTENTION':'OK'):'ROLE_RESTRICTED'},company:{status:company?.status,daysRemaining},version:process.env.RAILWAY_DEPLOYMENT_ID??process.env.RAILWAY_GIT_COMMIT_SHA??process.env.npm_package_version??'local'};
+    }
+    if(resource==='agent'&&method==='POST'){
+      const tid=tenant(ctx);const {question,history=[]}=z.object({question:z.string().trim().min(2).max(700),history:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().max(1600)}).strict()).max(12).optional()}).strict().parse(body);const q=question.toLowerCase(),now=new Date();
+      const company=await this.db.tenant.findUnique({where:{id:tid}});
+      const scopedEmployees=await employeeScope(this.db,ctx),employeeSelf=ctx.user.role.code==='EMPLOYEE';
+      const canDevices=!employeeSelf&&hasPermission(ctx.user.role.permissions,'devices','VIEW'),canAttendance=hasPermission(ctx.user.role.permissions,'attendance','VIEW'),canPayroll=hasPermission(ctx.user.role.permissions,'payroll','VIEW'),canLeave=hasPermission(ctx.user.role.permissions,'leave','VIEW');
+      const smsConfigured=!!String(process.env.SMS_PROVIDER??'').trim(),recentDeliveryCutoff=new Date(now.getTime()-24*3600000);
+      const [failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview]=await Promise.all([
+        employeeSelf?Promise.resolve(0):this.db.outbox.count({where:{tenantId:tid,kind:'EMAIL',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}),
+        employeeSelf?Promise.resolve(0):smsConfigured?this.db.outbox.count({where:{tenantId:tid,kind:'SMS',sentAt:null,attempts:{gte:3,lt:5},createdAt:{gte:recentDeliveryCutoff}}}):Promise.resolve(0),
+        canDevices?this.db.attendanceDevice.count({where:{tenantId:tid,OR:[{status:{in:['OFFLINE','ERROR','DEGRADED']}},{lastError:{not:null}}]}}):Promise.resolve(0),
+        canLeave?this.db.leaveRequest.count({where:{tenantId:tid,status:'PENDING',...(scopedEmployees?{employeeId:{in:scopedEmployees}}:{})}}):Promise.resolve(0),
+        canPayroll?(employeeSelf&&ctx.user.employeeId?this.db.payrollItem.count({where:{tenantId:tid,employeeId:ctx.user.employeeId,run:{status:'LOCKED'}}}):this.db.payrollRun.count({where:{tenantId:tid,status:{in:['DRAFT','REVIEW']}}})):Promise.resolve(0)
+      ]);
+      const emailConfigured=!!(process.env.RESEND_API_KEY||process.env.SMTP_HOST);
+      const failedMessages=failedEmail+failedSms;
+      const summary='Monitor: API online, database connected, '+failedEmail+' failed email job(s), '+failedSms+' failed SMS job(s), '+deviceIssues+' attendance device issue(s).';
+      let answer='';
+      if(/^(hi|hello|hey|hiya|namaste|namaskar|kem cho|àª•à«‡àª® àª›à«‹|àª¨àª®àª¸à«àª¤à«‡|àª¹àª¾àª¯|à¤¹à¤¾à¤¯|à¤¨à¤®à¤¸à¥à¤¤à¥‡)[!?. ]*$/.test(q))answer=/[\u0A80-\u0AFF]/.test(question)?'àª¹àª¾àª¯! àª¹à«àª‚ àª®à«‡àª˜àª¨àª¾ àª›à«àª‚ ðŸ˜Š àª•àª¹à«‹, àª†àªœà«‡ àª¶à«àª‚ àªµàª¾àª¤ àª•àª°àªµà«€ àª›à«‡?':/[\u0900-\u097F]/.test(question)?'à¤¹à¤¾à¤¯! à¤®à¥ˆà¤‚ à¤®à¥‡à¤˜à¤¨à¤¾ à¤¹à¥‚à¤ ðŸ˜Š à¤¬à¤¤à¤¾à¤‡à¤, à¤†à¤œ à¤•à¥à¤¯à¤¾ à¤¬à¤¾à¤¤ à¤•à¤°à¤¨à¥€ à¤¹à¥ˆ?':'Hi! Iâ€™m Meghna ðŸ˜Š What would you like to talk about?';
+      else if(/^(thanks|thank you|thx|àª†àª­àª¾àª°|à¤§à¤¨à¥à¤¯à¤µà¤¾à¤¦)[!?. ]*$/.test(q))answer=/[\u0A80-\u0AFF]/.test(question)?'àª†àª­àª¾àª°! àªœà«àª¯àª¾àª°à«‡ àª‡àªšà«àª›à«‹ àª¤à«àª¯àª¾àª°à«‡ àªµàª¾àª¤ àª•àª°à«‹ ðŸ˜Š':/[\u0900-\u097F]/.test(question)?'à¤†à¤ªà¤•à¤¾ à¤¸à¥à¤µà¤¾à¤—à¤¤ à¤¹à¥ˆ ðŸ˜Š à¤œà¤¬ à¤šà¤¾à¤¹à¥‡à¤‚ à¤¬à¤¾à¤¤ à¤•à¥€à¤œà¤¿à¤à¥¤':'Youâ€™re welcome ðŸ˜Š Iâ€™m here whenever you want to chat.';
+      else if(q.includes('email')||q.includes('mail'))answer=emailConfigured?(failedEmail?'Email is configured, but '+failedEmail+' recent email delivery job(s) need attention. Verify the recipient address and delivery logs.':'Email delivery is configured and no repeated recent email failure is visible. Check Inbox/Spam for a fresh test message.'):'Email delivery is not configured yet.';
+      else if(q.includes('sms')||q.includes('message'))answer=smsConfigured?('SMS provider is configured. '+(failedSms?failedSms+' recent SMS job(s) need attention.':'No repeated recent SMS delivery failure is visible.')):'SMS provider is not configured. Email works independently and SMS warnings are suppressed.';
+      else if(q.includes('device')||q.includes('biometric')||q.includes('attendance'))answer=canAttendance?(employeeSelf?'Open My attendance to view your own check-in, check-out, work hours and attendance status. Device setup is managed by HR.':((deviceIssues?deviceIssues+' attendance device issue(s) need review. ':'')+'Open Attendance/Devices to check connectivity, mapping, punches and last-seen status.')):'Your role does not have access to attendance diagnostics.';
+      else if(q.includes('payroll')||q.includes('salary'))answer=canPayroll?(employeeSelf?'You have '+payrollReview+' locked payslip(s) available. Open Payslips to view your own finalized salary records.':'There are '+payrollReview+' payroll run(s) in Draft/Review. Check employee monthly salary, locked attendance, leave, deductions and bank details before approval.'):'Your role does not have payroll access.';
+      else if(q.includes('leave'))answer=canLeave?(employeeSelf?'You have '+pendingLeave+' pending leave request(s). Open Time off to view or submit your own request.':'There are '+pendingLeave+' pending leave request(s). Review dates and attendance impact before approval.'):'Your role does not have leave access.';
+      else if(q.includes('login')||q.includes('password')||q.includes('forgot'))answer='For login issues, confirm Company Code + User ID/email. Remember me keeps a valid session on this device. Forgot Password sends a one-time link that expires in 10 minutes.';
+      else if(q.includes('update')||q.includes('version'))answer=employeeSelf?'Software releases are managed by your company administrator. Your employee workspace will use the current production release.':'TCW HR can notify you when a newer production build is available. Updates are manual: open Software Update and choose Update software when you are ready. The software will not auto-install or auto-reload.';
+      else if(q.includes('problem')||q.includes('error')||q.includes('status')||q.includes('monitor')||q.includes('check'))answer=employeeSelf?'Your employee workspace is connected. If a page or request fails, tell me what you were trying to do and Iâ€™ll guide you without exposing administrator-only diagnostics.':((failedMessages||deviceIssues)?summary+' Open the Agent attention items for the exact area that needs review.':summary+' No repeated backend issue is currently detected.');
+      else answer='Iâ€™m Meghna. Ask me anything naturally. I can chat with you or help with TCW HR Software, and Iâ€™ll use the available workspace facts when your question is about HR data.';
+      try{const cfg=await effectiveAIConfig(this.db);if(cfg.enabled){const enhanced=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,{conversationHistory:history,company:{name:company?.name,status:company?.status,plan:company?.plan},failedMessages,failedEmail,failedSms,deviceIssues,pendingLeave,payrollReview,emailConfigured,smsConfigured});if(enhanced)answer=enhanced;}}catch{}
+      let agentAction:any=undefined;
+      if(/\b(open|go to|show)\b/.test(q)){
+        const routes:[RegExp,string][]=[[/employee|people/,'/employees'],[/attendance/,'/attendance'],[/leave|time off/,'/leave'],[/payroll|salary/,'/payroll'],[/company profile|company setting/,'/company-profile'],[/notification/,'/notifications'],[/device|biometric/,'/devices'],[/report/,'/reports'],[/plan|payment|subscription|billing/,'/subscription']];
+        const hit=routes.find(([rx])=>rx.test(q));if(hit)agentAction={type:'navigate',href:hit[1]};
+      }
+      if(/\b(refresh|reload)\b/.test(q))agentAction={type:'refresh'};
+      if(/password|credential|login id|api key|secret/.test(q)&&/(show|tell|give|change|reset|reveal)/.test(q)){answer='I can help you navigate account and security settings, but I will not reveal, request, change, or expose passwords, login IDs, API keys, or other credentials.';agentAction=undefined;}
+      await audit(this.db,ctx,'AGENT_HELP','agent');
+      return {answer,model:'Meghna',action:agentAction};
+    }
+    if(resource==='reports'&&method==='GET'){
+      if(key==='access')return reportsAccess(this.db,ctx);
+      return this.report(ctx,key,req,res);
+    }
+    if(resource==='ai'&&key==='status'&&method==='GET'){tenant(ctx);requirePermission(ctx,'ai','VIEW');return publicAIConfig(this.db);}
+    if(resource==='ai'&&method==='POST'){
+      tenant(ctx);requirePermission(ctx,'ai','VIEW');const {question,history=[]}=z.object({question:z.string().min(3).max(1000),history:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().trim().max(1600)}).strict()).max(10).optional()}).strict().parse(body);
+      const dashboard=await this.data.dashboard(ctx);
+      const facts={conversationHistory:history,employeeCount:dashboard.employees?.length,attendance:dashboard.attendance?.map((r:any)=>({date:r.date,status:r.status,workMinutes:r.workMinutes,lateMinutes:r.lateMinutes,overtimeMinutes:r.overtimeMinutes})),leave:dashboard.leave?.map((r:any)=>({startDate:r.startDate,endDate:r.endDate,status:r.status,days:r.days})),openJobs:dashboard.jobs};
+      try{const cfg=await effectiveAIConfig(this.db);if(!cfg.enabled){const attendance=facts.attendance??[],leave=facts.leave??[];const present=attendance.filter((r:any)=>r.status==='PRESENT').length,late=attendance.filter((r:any)=>(r.lateMinutes??0)>0).length,absent=attendance.filter((r:any)=>r.status==='ABSENT').length,insufficientHours=attendance.filter((r:any)=>['INSUFFICIENT_HOURS','SHORT_HOURS','HALF_DAY'].includes(String(r.status))).length,pendingLeave=leave.filter((r:any)=>r.status==='PENDING').length;const q=question.toLowerCase();let answer='';if(q.includes('payroll')||q.includes('salary'))answer=`Payroll readiness: ${facts.employeeCount??0} employee record(s) are in scope. Review salary amounts, locked attendance, pending leave and bank details before approval. Current attendance snapshot: ${present} present, ${absent} absent, ${insufficientHours} insufficient-hours and ${late} late record(s); ${pendingLeave} leave request(s) pending.`;else if(q.includes('leave'))answer=`Leave overview: ${pendingLeave} request(s) are pending review. Review overlapping dates and attendance before approving leave that affects payroll.`;else if(q.includes('attendance')||q.includes('late')||q.includes('absent')||q.includes('short hours'))answer=`Attendance overview: ${present} present record(s), ${absent} absent record(s), ${insufficientHours} insufficient-hours record(s), and ${late} late record(s) in the available dashboard window. No-punch scheduled days stay Not Checked In during the shift and become Absent only when the shift ends. Review missing-punch exceptions before payroll is locked.`;else answer=`Workforce overview: ${facts.employeeCount??0} employee(s) are in scope, with ${pendingLeave} pending leave request(s). Attendance snapshot shows ${present} present, ${absent} absent, ${insufficientHours} insufficient-hours record(s). Ask about attendance, leave, payroll or salary for a focused summary.`;await audit(this.db,ctx,'AI_LOCAL_SUMMARY','ai');return {answer,model:'TCW HR Insights'};}const answer=await new CompatibleProvider({baseUrl:cfg.baseUrl,apiKey:cfg.apiKey,model:cfg.model}).summarize(question,facts);await audit(this.db,ctx,'AI_SUMMARY','ai');return {answer,model:cfg.model};}catch(e:any){throw new ServiceUnavailableException(e.message);}
+    }
+    return this.data.resource(ctx,resource,method,key,body,req.query);
+  }
+  async report(ctx:Context,type:string,req:Request,res:Response){
+    await requireReportsAccess(this.db,ctx);
+    requirePermission(ctx,'reports','EXPORT');
+    let rows:any[]=[];
+    if(type==='bank-payout'){
+      requirePermission(ctx,'payroll','EXPORT');const tid=tenant(ctx);const runId=id.parse(String(req.query.runId??''));const run=await this.db.payrollRun.findFirst({where:{id:runId,tenantId:tid,status:{in:['APPROVED','LOCKED']}},include:{items:true}});if(!run)throw new BadRequestException('Approve payroll before generating a bank payout file.');
+      const claimed=await this.db.payrollPayout.findMany({where:{tenantId:tid,runId},select:{employeeId:true}}),claimedIds=new Set(claimed.map(p=>p.employeeId));
+      const employees=await this.db.employee.findMany({where:{tenantId:tid,id:{in:run.items.map(i=>i.employeeId)}}});const byId=new Map(employees.map(e=>[e.id,e]));
+      rows=run.items.filter(item=>item.net>0&&!claimedIds.has(item.employeeId)).map(item=>{const employee=byId.get(item.employeeId),personal=(employee?.personal&&typeof employee.personal==='object'&&!Array.isArray(employee.personal)?employee.personal:{}) as any;return {employeeCode:item.employeeCode,employeeName:item.employeeName,accountHolder:personal.accountHolder??item.employeeName,bankName:personal.bankName??'',accountNumber:String(personal.accountNumber??'').trim(),ifsc:String(personal.ifsc??'').trim().toUpperCase(),netAmount:(item.net/100).toFixed(2),reference:`SAL-${run.month}-${item.employeeCode}`};});
+      if(rows.some(r=>!/^[A-Za-z0-9]{5,35}$/.test(String(r.accountNumber))||!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(String(r.ifsc).toUpperCase())))throw new BadRequestException('Complete bank account number and IFSC for every employee before exporting payout data.');
+    }
+    else if(type==='salary-payments'){requirePermission(ctx,'payroll','EXPORT');const result=await this.payouts.reconciliation(ctx);rows=result.items.map(p=>({month:p.month,employeeCode:p.employeeCode,employeeName:p.employeeName,amount:(p.amount/100).toFixed(2),provider:p.provider,status:p.status,providerRef:p.providerRef??'',reference:p.reference,utr:p.utr??'',updatedAt:p.updatedAt.toISOString()}));}
+    else if(type==='attendance-summary'){requirePermission(ctx,'attendance','EXPORT');const tid=tenant(ctx);const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(String(req.query.month??''));rows=(await (await import('./attendance-automation')).attendanceMonthSummary(this.db,tid,month)).items;}
+    else rows=await reportRows(this.db,ctx,type,req.query);
+    if(req.query.preview==='true')return {items:rows.slice(0,500),total:rows.length,limited:rows.length>500};
+    const clean=rows.map(({tenantId,personal,passwordHash,items,...r})=>r),format=z.enum(['csv','xlsx','pdf']).parse(String(req.query.format??'csv').toLowerCase());
+    const reportNames:Record<string,string>={employees:'Employee Directory',attendance:'Attendance Records','attendance-summary':'Attendance Summary',leave:'Time Off & Leave',payroll:'Payroll Runs','payroll-items':'Employee Payroll','bank-payout':'Bank Payout','salary-payments':'Salary Payment Reconciliation',expenses:'Expense Claims',assets:'Asset Inventory',goals:'Performance Goals',candidates:'Recruitment Pipeline'};
+    const reportTitle='TCW HR - '+(reportNames[type]??type),stamp=new Date().toISOString().slice(0,10),baseName=('tcw-hr-'+type+'-'+stamp).replace(/[^a-z0-9._-]/gi,'-');
+    const sendFile=(bytes:Buffer|string,mime:string,extension:string)=>{
+      const length=Buffer.isBuffer(bytes)?bytes.length:Buffer.byteLength(bytes,'utf8');
+      res.setHeader('Content-Type',mime);
+      res.setHeader('Content-Disposition',`attachment; filename="${baseName}.${extension}"`);
+      res.setHeader('Content-Length',String(length));
+      res.setHeader('Cache-Control','private, no-store, max-age=0');
+      res.setHeader('Pragma','no-cache');
+      res.setHeader('X-Content-Type-Options','nosniff');
+      res.end(bytes);
+      return undefined;
+    };
+    if(format==='xlsx')return sendFile(toXlsx(clean,reportTitle),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','xlsx');
+    if(format==='pdf')return sendFile(toPdf(clean,reportTitle),'application/pdf','pdf');
+    return sendFile(toCsv(clean),'text/csv; charset=utf-8','csv');
+  }
+}
+@Controller('api')
+class RootController {
+  constructor(@Inject('API') private api:Api){}
+  @All('*path') async route(@Req()req:Request,@Res()res:Response){
+    try{const result=await this.api.handle(req,res);if(result!==undefined&&!res.headersSent)res.json(result);if(!['GET','HEAD'].includes(req.method)&&res.statusCode<400){try{const ctx=await authenticate(this.api.db,{...req,method:'GET'} as Request);this.api.io?.to(ctx.tenantId??'PLATFORM').emit('changed',{resource:req.path.split('/')[2]});}catch{}}}
+    catch(e:any){
+      if(res.headersSent)return;
+      let status=500,message='Something went wrong. Please try again.';
+      if(e instanceof ZodError){status=400;message=e.issues.map(i=>`${i.path.join('.')||'Input'}: ${i.message}`).join('; ');}
+      else if(e instanceof HttpException){status=e.getStatus();message=e.message;}
+      else if(e.code==='P2002'){status=409;message='A record with these details already exists.';}
+      else if(e.code==='P2003'){status=409;message='Cannot delete this record because it is already being used by other data. Remove or reassign the linked records first; nothing has been deleted.';}
+      else if(e.code==='P2025'){status=404;message='Record not found.';}
+      else if(e.code==='P2034'){status=409;message='This record changed during your request. Refresh and retry.';}
+      else if(e.code==='LIMIT_FILE_SIZE'){status=400;message='Maximum file size is 10 MB.';}
+      else if(e.message?.startsWith('Payroll cannot')||e.message==='Deductions exceed pay'){status=400;message=e.message;}
+      if(status===500)console.error('Request failed',process.env.NODE_ENV==='test'?e.message:(e.code??e.name));
+      res.status(status).json({message});
+    }
+  }
+}
+@Controller('iclock')
+class BiomaxPushController {
+  constructor(@Inject('API') private api:Api){}
+  @All('*path') async route(@Req()req:Request,@Res()res:Response){
+    const action=req.path.split('/').filter(Boolean).at(-1)??'';
+    const serial=String(req.query.SN??req.query.sn??'').trim();
+    const send=(status:number,text:string)=>{res.status(status).type('text/plain').send(text);};
+    try{
+      let result:{text:string;tenantId?:string;deviceId?:string}|undefined;
+      if(action==='cdata'&&req.method==='GET')result=await this.api.biometric.nativeOptions(serial,req.ip);
+      else if(action==='cdata'&&req.method==='POST')result=await this.api.biometric.nativeCdata(serial,String(req.query.table??''),typeof req.body==='string'?req.body:Buffer.isBuffer(req.body)?req.body.toString('utf8'):String(req.body??''),req.ip);
+      else if(action==='getrequest'&&['GET','POST'].includes(req.method))result=await this.api.biometric.nativePoll(serial,req.ip);
+      else if(action==='devicecmd'&&req.method==='POST')result=await this.api.biometric.nativeCommandAck(serial,typeof req.body==='string'?req.body:String(req.body??''),req.ip);
+      else if(action==='registry'&&['GET','POST'].includes(req.method))result=req.method==='GET'?await this.api.biometric.nativeOptions(serial,req.ip):await this.api.biometric.nativeRegistry(serial,typeof req.body==='string'?req.body:String(req.body??''),req.ip);
+      else if(action==='ping'&&['GET','POST'].includes(req.method))result=await this.api.biometric.nativePing(serial,req.ip);
+      else{send(404,'ERROR');return;}
+      if(result.tenantId)this.api.io?.to(result.tenantId).emit('changed',{resource:'attendance'});
+      send(200,result.text);
+    }catch(e:any){
+      const status=e instanceof HttpException?e.getStatus():500;
+      if(status===500)console.error('BioMax PUSH failed',e?.message??e);
+      send(status,status>=500?'ERROR':String(e?.message??'ERROR').slice(0,300));
+    }
+  }
+}
+export async function createApp(db:Database,releaseSource?:()=>Promise<ReleaseCandidate>){
+  const api=new Api(db,releaseSource);
+  @Module({controllers:[RootController,BiomaxPushController],providers:[{provide:'API',useValue:api}]})class AppModule{}
+  const app=await NestFactory.create(AppModule,{logger:process.env.NODE_ENV==='test'?false:['error','warn','log'],bodyParser:false});
+  app.use(helmet());app.use(cookieParser());app.use('/iclock',expressText({type:'*/*',limit:'2mb'}));app.use(json({limit:'8mb',verify:(req,_res,buffer)=>{if(req.url?.startsWith('/api/billing/razorpay/webhook/'))(req as any).rawBody=Buffer.from(buffer);}}));
+  // Edge Nginx adds an independent shared limit. This cap protects a local instance.
+  const windows=new Map<string,{start:number;count:number}>();
+  // The isolated browser suite shares one loopback IP across every synthetic user.
+  const requestLimit=process.env.NODE_ENV==='test'&&process.env.PEOPLEOS_E2E_ISOLATED==='true'?3000:300;
+  app.use((req:Request,res:Response,next:()=>void)=>{
+    const now=Date.now(),key=req.ip??'unknown',row=windows.get(key);
+    if(!row||now-row.start>60000){windows.set(key,{start:now,count:1});if(windows.size>10000)for(const[k,v]of windows)if(now-v.start>60000)windows.delete(k);}
+    else if(++row.count>requestLimit){res.status(429).json({message:'Too many requests. Try again in a minute.'});return;}
+    res.setHeader('Cache-Control','no-store');next();
+  });
+  await app.init();
+  if(process.env.NODE_ENV==='production'&&process.env.RELEASE_UPDATES_ENABLED==='true'&&String(process.env.RAILWAY_SERVICE_NAME??'')==='tcw-hr-software'){
+    const deployment=runningRelease();
+    if(deployment){
+      setTimeout(async()=>{
+        try{
+          if(!await claimReleaseNotice(db,deployment))return;
+          await sendPush(db,{userIds:await releaseRecipients(db),title:'TCW HR Software updated',body:'The requested software update is now live.',url:'/software-update',tag:'tcw-software-release-'+deployment});
+        }catch{}
+      },8000);
+    }
+  }
+  const io=new Server(app.getHttpServer(),{path:'/socket.io',cors:{origin:(origin,callback)=>{if(!origin||allowedAppOrigin(origin))callback(null,true);else callback(new Error('Origin not allowed'));},credentials:true}});api.io=io;
+  io.use(async(socket,next)=>{try{
+    const header=socket.handshake.headers.cookie??'';const cookies=Object.fromEntries(header.split(';').map(s=>s.trim().split('=')));
+    const headers={...socket.handshake.headers,...(process.env.NODE_ENV!=='production'&&socket.handshake.auth?.localSessionToken?{'x-tcw-local-session':String(socket.handshake.auth.localSessionToken)}:{})};
+    const ctx=await authenticate(db,{cookies,headers,method:'GET',ip:socket.handshake.address} as Request);
+    socket.data.ctx=ctx;next();
+  }catch{next(new Error('Authentication required.'));}});
+  io.on('connection',socket=>{const ctx:Context=socket.data.ctx;socket.join(ctx.tenantId??'PLATFORM');let timer:ReturnType<typeof setTimeout>|undefined;const scheduleExpiry=()=>{const delay=sessionExpiryTimerDelay(ctx.session.expiresAt);if(delay<=0){socket.disconnect(true);return;}timer=setTimeout(scheduleExpiry,delay);timer.unref();};scheduleExpiry();socket.on('disconnect',()=>{if(timer)clearTimeout(timer)});});
+  return {app,api,io};
+}
