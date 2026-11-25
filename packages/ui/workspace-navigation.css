@@ -81,3 +81,23 @@
 html body .navigation-design :is(.sidebar,.employee-desktop-sidebar,.sidebar-bottom,.account,.employee-desktop-account){background:var(--nav-bg)!important;border-color:var(--nav-line)!important}
 html body .app-shell.navigation-design .sidebar .nav-item.selected{background:var(--nav-active)!important;color:var(--nav-accent)!important;border-color:transparent!important;box-shadow:none!important}
 html body .app-shell.navigation-design .sidebar .nav-item.selected :is(svg,span){color:var(--nav-accent)!important}
+
+/* Employee profile actions remain reachable in both expanded and compact navigation. */
+.employee-app-header-actions{display:flex;align-items:center;gap:14px}
+.employee-profile-menu{position:relative;z-index:60}
+.employee-profile-menu>.employee-header-avatar{display:flex;align-items:center;justify-content:center;gap:5px;border:0;background:transparent;padding:4px;border-radius:999px;color:#667085;cursor:pointer}
+.employee-profile-menu>.employee-header-avatar .avatar{width:38px;height:38px;flex:0 0 38px}
+.employee-profile-popover{position:absolute;right:0;top:calc(100% + 10px);width:220px;padding:8px;background:#fff;border:1px solid #e8e3ef;border-radius:15px;box-shadow:0 14px 38px rgba(27,16,48,.16);z-index:90}
+.employee-profile-popover-user{padding:10px 11px 12px;border-bottom:1px solid #f0edf4;margin-bottom:5px;min-width:0}
+.employee-profile-popover-user strong,.employee-profile-popover-user small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.employee-profile-popover-user strong{font-size:13px;color:#241a32}.employee-profile-popover-user small{margin-top:3px;font-size:11px;color:#82758f}
+.employee-profile-popover>a,.employee-profile-popover>button{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:0 11px;border:0;border-radius:10px;background:transparent;color:#433653;text-decoration:none;font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.employee-profile-popover>a:hover,.employee-profile-popover>button:hover{background:#f5f1fa}
+.employee-profile-popover>button{color:#b42318}
+@media(min-width:769px){
+ .navigation-design .employee-desktop-account{margin-top:auto!important;flex-wrap:nowrap!important;min-height:54px;gap:8px!important}
+ .navigation-design[data-nav-collapsed=true] .employee-desktop-account{padding:12px 0 0!important;justify-content:center;gap:2px!important;flex-wrap:nowrap!important}
+ .navigation-design[data-nav-collapsed=true] .employee-desktop-account>.avatar{width:32px;height:32px;flex:0 0 32px}
+ .navigation-design[data-nav-collapsed=true] .employee-desktop-account>.icon-button{width:34px;height:34px;min-width:34px;padding:0!important}
+}
+@media(max-width:768px){.employee-profile-popover{position:fixed;right:12px;top:72px;width:min(240px,calc(100vw - 24px))}}

@@ -39,7 +39,7 @@
  .employee-app-shell .employee-home-dashboard{display:flex!important;flex-direction:column;gap:16px!important}
  .employee-app-shell .employee-home-hero{border-radius:22px!important;padding:20px 16px!important;background:linear-gradient(135deg,#5b21b6,#6d28d9)!important;color:white!important}
  .employee-app-shell .employee-home-person h1,.employee-app-shell .employee-home-person p,.employee-app-shell .employee-home-person span{color:#fff!important}
- .employee-app-shell .employee-home-face-button{min-height:56px!important;width:100%!important}
+ .employee-app-shell .employee-home-punch-button{min-height:56px!important;width:100%!important}
  .employee-app-shell .employee-home-quick{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
  .employee-app-shell .employee-home-quick a{min-height:82px!important}
  .employee-app-shell .employee-home-grid{display:flex!important;flex-direction:column;gap:16px!important}
