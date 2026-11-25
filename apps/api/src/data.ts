@@ -381,6 +381,7 @@ export class DataService {
     const newPassword=input.password??generatedPassword??undefined;
     const company=await this.db.tenant.findUnique({where:{id:tid},select:{name:true,code:true}});
     const loginUrl=new URL('/login',process.env.EMPLOYEE_URL??'https://employee.techcyberwarrior.in').toString();
+    const installUrl=new URL('/login?install=1',process.env.EMPLOYEE_URL??'https://employee.techcyberwarrior.in').toString();
     return this.db.$transaction(async tx=>{
       await tx.$queryRaw`SELECT id FROM employees WHERE tenant_id=${tid}::uuid AND id=${employee.id}::uuid FOR UPDATE`;
       if(input.operation==='RESET_FACE'||input.operation==='RESET_PASSWORD'||(input.operation==='SET_ACTIVE'&&!input.active))await closeFieldSessions(tx,tid,employee.id,'EMPLOYEE_ACCESS_CHANGED');
@@ -410,8 +411,8 @@ export class DataService {
         await audit(tx,ctx,input.active?'EMPLOYEE_APP_ACCESS_ENABLED':'EMPLOYEE_APP_ACCESS_DISABLED','users',user.id,existing,{employeeId:employee.id});
       }
       if(newPassword){
-        await tx.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{to:employee.email,subject:'Your TCW Employee login',tempPassword:newPassword,text:`Your TCW Employee account is ready. Company Code: ${company?.code??''}. Employee ID: ${employee.employeeCode}. Temporary Password: ${newPassword}. Login: ${loginUrl}. You will be asked to change this temporary password after first sign in.`}}});
-        if(employee.phone)await tx.outbox.create({data:{tenantId:tid,kind:'SMS',payload:{to:employee.phone,template:'EMPLOYEE_LOGIN',company:company?.name??'Your company',companyCode:company?.code??'',employeeCode:employee.employeeCode,tempPassword:newPassword,loginUrl,text:`TCW Employee login: Company ${company?.code??''}, Employee ID ${employee.employeeCode}, Temp Password ${newPassword}. Login ${loginUrl}.`}}});
+        await tx.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{to:employee.email,subject:'Your TCW Employee account and app access',tempPassword:newPassword,text:`Your TCW Employee account is ready.\n\nCompany: ${company?.name??'Your company'}\nCompany Code: ${company?.code??''}\nUser ID: ${user.loginId}\nEmployee ID: ${employee.employeeCode}\nTemporary password: ${newPassword}\n\nSign in: ${loginUrl}\nOpen/install the Employee app: ${installUrl}\n\nOn Android, open the app link and choose “Install app” in the browser. On iPhone, open it in Safari, tap Share, then Add to Home Screen. You will be asked to create a new password after your first sign-in. Your company has enabled employee self-service features such as attendance, leave and profile requests.`}}});
+        if(employee.phone)await tx.outbox.create({data:{tenantId:tid,kind:'SMS',payload:{to:employee.phone,template:'EMPLOYEE_LOGIN',company:company?.name??'Your company',companyCode:company?.code??'',employeeCode:employee.employeeCode,loginId:user.loginId,loginUrl,text:`TCW Employee app: User ID ${user.loginId}. Install/open: ${installUrl}. Sign in with your temporary password sent to your company email.`}}});
       }
       const currentFace=await tx.employeeFaceProfile.findUnique({where:{tenantId_employeeId:{tenantId:tid,employeeId:employee.id}},select:{enrolledAt:true,templateVersion:true,sampleCount:true,status:true,approvedAt:true}});
       return {employee,user:safe(user),faceEnrollment:faceEnrollmentSummary(currentFace),companyCode:company?.code??'',employeePortal:loginUrl,...(generatedPassword?{temporaryPassword:generatedPassword}:{})};

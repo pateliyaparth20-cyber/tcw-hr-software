@@ -71,6 +71,7 @@ export class AuthService {
     if(company){
       const employee=await this.db.employee.findFirst({where:{tenantId:company.id,deletedAt:null,employeeCode:{equals:input.email,mode:'insensitive'}},select:{id:true}});
       employeeLoginId=employee?.id??null;
+      if(!employeeLoginId){const digits=input.email.replace(/\D/g,'');if(digits.length>=10){const matches=await this.db.employee.findMany({where:{tenantId:company.id,deletedAt:null,phone:{contains:digits.slice(-10)}},select:{id:true},take:2});if(matches.length===1)employeeLoginId=matches[0].id;}}
     }
     const candidates=input.companyCode&&!company?[]:await this.db.user.findMany({where:{tenantId:company?.id??null,OR:[{email:input.email.toLowerCase()},{loginId:input.email.toUpperCase()},...(employeeLoginId?[{employeeId:employeeLoginId}]:[])]},include:{role:true},orderBy:{updatedAt:'desc'}});
     let user:any=null;
@@ -81,7 +82,7 @@ export class AuthService {
       if(row.failures>=5)await this.db.loginAttempt.update({where:{key},data:{lockedUntil:new Date(Date.now()+15*60000),failures:0}});
       await this.db.auditLog.create({data:{tenantId:company?.id,action:'LOGIN_FAILED',entity:'auth',ip:req.ip}});
       if(input.companyCode&&!company)throw new UnauthorizedException('Company Code not found. Check the code provided by your HR team.');
-      if(!candidates.length)throw new UnauthorizedException(input.companyCode?'User ID or email not found in this company. Check your Company Code and User ID or email.':'Admin User ID or email not found. Check your administrator sign-in details.');
+      if(!candidates.length)throw new UnauthorizedException(input.companyCode?'User ID, email or phone number not found in this company. Check your Company Code and sign-in details.':'Admin User ID or email not found. Check your administrator sign-in details.');
       if(!candidates.some(candidate=>candidate.active))throw new ForbiddenException('This user account is disabled. Contact your HR team or administrator.');
       throw new UnauthorizedException('Incorrect password. Try again or use Forgot password to reset it.');
     }
@@ -193,7 +194,7 @@ export class AuthService {
         await tx.auditLog.create({data:{tenantId:ctx.user.tenantId,actorId:ctx.user.id,action:'FIRST_PASSWORD_SET',entity:'auth',entityId:ctx.user.id}});
         return user;
       });
-      return {message:'Password changed. Continue with Face Setup.',user:this.publicUser(updated)};
+      return {message:'Password changed. Continue to your workspace.',user:this.publicUser(updated)};
     }
     await this.db.$transaction([this.db.user.update({where:{id:ctx.user.id},data:{passwordHash,mustChangePassword:false}}),this.db.session.deleteMany({where:{userId:ctx.user.id}})]);
     const names=ctx.user.role.scope==='PLATFORM'?[sessionCookieName('PLATFORM'),'tcw_admin_session','peopleos_session']:[sessionCookieName('TENANT'),'tcw_hr_session','peopleos_session'];for(const name of names)res.clearCookie(name,{path:'/'});return {message:'Password changed. Please sign in again.'};

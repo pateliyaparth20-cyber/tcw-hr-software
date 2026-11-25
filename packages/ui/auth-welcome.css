@@ -63,3 +63,7 @@ html body .auth-welcome.entry-signup .entry-card{max-width:510px}
  html body .auth-welcome .entry-legal-row{gap:10px 14px}
 }
 @media(max-width:360px){html body .auth-welcome .entry-main{padding-left:18px;padding-right:18px}html body .auth-welcome .entry-options{gap:10px;font-size:11px}html body .auth-welcome .entry-copy h1{font-size:29px}}
+
+/* Keep saved Company Code and User ID fields consistent with the sign-in design. */
+html body .auth-welcome .entry-form input:-webkit-autofill,html body .auth-welcome .entry-form input:-webkit-autofill:hover,html body .auth-welcome .entry-form input:-webkit-autofill:focus,html body .auth-welcome .entry-form input:-webkit-autofill:active{-webkit-box-shadow:0 0 0 1000px #fff inset!important;box-shadow:0 0 0 1000px #fff inset!important;-webkit-text-fill-color:#1f2937!important;caret-color:#1f2937;transition:background-color 99999s ease-out 0s}
+html body .auth-welcome .entry-form input{background-color:#fff!important}

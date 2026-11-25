@@ -4,7 +4,7 @@ import {useUrlTab} from './use-url-tab';
 import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {MapPin,Navigation,ShieldCheck,Square,Play,CheckCircle2,RefreshCw,Settings2,Route,Plus} from 'lucide-react';
-import {api,useApp,useData,Loading,Failure,Empty,Avatar,Badge} from './core';
+import {api,useApp,useData,Loading,Failure,Empty,Avatar,Badge,Modal} from './core';
 import {Row} from './config';
 import './field-work.css';
 import {FaceApprovalPanel} from './face';
@@ -13,6 +13,14 @@ import {LocationHelp} from './location-help';
 export {freshLocation} from './location';
 function pointLabel(p:Row){return `${Number(p.latitude).toFixed(5)}, ${Number(p.longitude).toFixed(5)}`;}
 function MapLink({point}:{point:Row}){return <a className="btn secondary small" href={`https://www.openstreetmap.org/?mlat=${point.latitude}&mlon=${point.longitude}#map=17/${point.latitude}/${point.longitude}`} target="_blank" rel="noopener noreferrer"><MapPin size={14}/>Open map</a>;}
+
+export function EmployeePunchModal({intent,onClose,onComplete}:{intent:'IN'|'OUT';onClose:()=>void;onComplete:()=>void}){
+ const{session}=useApp(),field=useData('field-work/session',session.user.role==='EMPLOYEE');const[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const locationRequired=!!field.data?.eligible;
+ async function punch(){setBusy(true);setError('');try{let point:Row|undefined;if(intent==='IN'&&locationRequired){if(!consent)throw new Error('Please agree to on-duty location sharing to check in.');point=await freshLocation();}await api('attendance/self-punch','POST',{clientNonce:crypto.randomUUID(),intent,...(point?{point,locationConsent:true}:{})},session.csrf);await onComplete();onClose();}catch(e:any){setError(e?.message??'Attendance could not be recorded. Please try again.')}finally{setBusy(false)}}
+ return <Modal title={intent==='IN'?'Check in for work':'Check out for today'} onClose={onClose}><div className="modal-body employee-punch-modal"><p>{intent==='IN'?'Record your workday start using your employee account.':'Record your workday end. Location sharing stops after checkout.'}</p>{intent==='IN'&&locationRequired&&<label className="field-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>I agree to share my precise location with my company during my shift. Sharing stops when I check out.</label>}{intent==='IN'&&locationRequired&&<small className="form-help">Keep TCW Employee open during your shift for reliable location updates. You can review the sharing status in Field Work.</small>}{intent==='IN'&&!locationRequired&&<small className="form-help">Location tracking is not enabled for your account. Your attendance punch will still be recorded.</small>}{error&&<p className="form-error" role="alert">{error}</p>}<div className="form-actions-end"><button className="btn secondary" type="button" onClick={onClose} disabled={busy}>Cancel</button><button className="btn primary" type="button" onClick={punch} disabled={busy||(intent==='IN'&&locationRequired&&!consent)}>{busy?'Recording…':intent==='IN'?'Confirm check in':'Confirm check out'}</button></div></div></Modal>;
+}
+
 // Mounted in the shell, so changing employee pages does not lose the GPS watcher.
 export function EmployeeFieldTracker(){
  const{session}=useApp(),q=useData('field-work/session',session.user.role==='EMPLOYEE'),[error,setError]=useState(''),[visible,setVisible]=useState(true),[lastSent,setLastSent]=useState('');const busy=useRef(false),last=useRef(0);const s=q.data?.session,interval=Number(q.data?.policy?.intervalSeconds??30);

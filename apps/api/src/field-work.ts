@@ -7,7 +7,7 @@ import {assertEmployee,audit,Context,employeeScope,requirePermission,tenant} fro
 export const fieldPolicySchema=z.object({enabled:z.boolean(),intervalSeconds:z.number().int().min(15).max(300),maxAccuracyMeters:z.number().int().min(20).max(500),maxSessionHours:z.number().int().min(1).max(12),employeeIds:z.array(z.string().uuid()).max(500)}).strict();
 export const fieldPointSchema=z.object({latitude:z.number().finite().min(-90).max(90),longitude:z.number().finite().min(-180).max(180),accuracy:z.number().finite().positive().max(5000),capturedAt:z.string().datetime()}).strict();
 type Point=z.infer<typeof fieldPointSchema>;
-const defaults={enabled:false,intervalSeconds:30,maxAccuracyMeters:100,maxSessionHours:10,employeeIds:[] as string[]};
+const defaults={enabled:true,intervalSeconds:30,maxAccuracyMeters:100,maxSessionHours:12,employeeIds:[] as string[]};
 export function metersBetween(a:{latitude:number;longitude:number},b:{latitude:number;longitude:number}){const rad=(v:number)=>v*Math.PI/180,dlat=rad(b.latitude-a.latitude),dlon=rad(b.longitude-a.longitude),h=Math.sin(dlat/2)**2+Math.cos(rad(a.latitude))*Math.cos(rad(b.latitude))*Math.sin(dlon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));}
 function openDutyPunch(punches:any[],now=new Date()){
  let open:any=null;for(const p of attendanceCalculationPunches(punches)){if(p.punchType==='IN'){if(!open)open=p;}else if(p.punchType==='OUT'&&open)open=null;}
