@@ -234,8 +234,22 @@ export class DataService {
       if(before&&input.monthlySalary!==before.monthlySalary&&await tx.salaryVersion.count({where:{tenantId:tid,employeeId:before.id}}))throw new ConflictException('Use Salary structure to record an effective salary revision.');
       await recordProfileSalaryChange(tx,ctx,before,input);
       const after=before?await tx.employee.update({where:{id:before.id},data:input}):await tx.employee.create({data:{tenantId:tid,...input}});
+      if(!before&&String(after.email??'').trim()){
+        const email=String(after.email).trim().toLowerCase();
+        const existingLogin=await tx.user.findFirst({where:{tenantId:tid,email}});
+        if(existingLogin)throw new ConflictException('This email already belongs to a login in this company. Use a unique employee email to create employee access.');
+        const role=await tx.role.findUnique({where:{code:'EMPLOYEE'}});
+        if(!role||role.scope!=='TENANT')throw new BadRequestException('Employee role is not configured.');
+        const company=await tx.tenant.findUniqueOrThrow({where:{id:tid},select:{name:true,code:true}});
+        const temporaryPassword=temporaryPassword8();
+        const loginId=await allocateShortLoginId(tx as unknown as Database,tid);
+        const user=await tx.user.create({data:{tenantId:tid,name:`${after.firstName} ${after.lastName}`.trim(),email,loginId,roleId:role.id,employeeId:after.id,active:true,passwordHash:await hashPassword(temporaryPassword),mustChangePassword:true}});
+        const loginUrl=new URL('/login',process.env.EMPLOYEE_URL??'https://employee.techcyberwarrior.in').toString();
+        const installUrl=new URL('/login?install=1',process.env.EMPLOYEE_URL??'https://employee.techcyberwarrior.in').toString();
+        await tx.outbox.create({data:{tenantId:tid,kind:'EMAIL',payload:{type:'EMPLOYEE_LOGIN',to:email,subject:`Welcome to ${company.name} — your TCW Employee login details`,company:company.name,employeeName:`${after.firstName} ${after.lastName}`.trim(),companyCode:company.code,loginId:user.loginId,employeeCode:after.employeeCode,email,employeePhone:after.phone??'',designation:after.designation??'',joiningDate:after.joiningDate?.toISOString?.().slice(0,10)??'',tempPassword:temporaryPassword,loginUrl,installUrl,text:`Welcome to ${company.name}, ${after.firstName} ${after.lastName}. Your TCW Employee account has been created.\n\nCompany: ${company.name}\nCompany Code: ${company.code}\nEmployee: ${after.firstName} ${after.lastName}\nEmployee ID: ${after.employeeCode}\nEmail: ${email}\nMobile: ${after.phone??'Not provided'}\nDesignation: ${after.designation??'Not provided'}\nJoining date: ${after.joiningDate?.toISOString?.().slice(0,10)??'Not provided'}\nUser ID: ${user.loginId}\nTemporary password: ${temporaryPassword}\n\nSign in: ${loginUrl}\nOpen or install the employee app: ${installUrl}\n\nFor security, create a private password after your first sign-in. You can use the employee workspace to check in and out, review attendance, submit leave requests, view payslips and update your profile. On Android, open the app link and select Install app. On iPhone, open it in Safari, tap Share, then Add to Home Screen.`}}});
+      }
       await audit(tx,ctx,before?'EMPLOYEE_UPDATED':'EMPLOYEE_CREATED','employees',after.id,before,after);
-      if(!before){const notice=await tx.notification.create({data:{tenantId:tid,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. Complete user access, documents and attendance mapping as needed.`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/employees',tag:'tcw-'+notice.id}).catch(()=>{});}
+      if(!before){const notice=await tx.notification.create({data:{tenantId:tid,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. Employee app access was created and a welcome email with sign-in details was queued.`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/employees',tag:'tcw-'+notice.id}).catch(()=>{});}
       return clean(after);
     });
   }
