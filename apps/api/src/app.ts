@@ -338,10 +338,10 @@ export class Api {
       requirePermission(ctx,'audit','VIEW');return {items:await this.db.auditLog.findMany({where:{tenantId:ctx.tenantId},orderBy:{createdAt:'desc'},take:200})};
     }
     if(resource==='notifications'){
-      const tid=tenant(ctx),where={tenantId:tid,OR:[{userId:ctx.user.id},{userId:null}]};
+      const tid=tenant(ctx),where={tenantId:tid,userId:ctx.user.id};
       if(method==='GET'){
         const clearBefore=new Date(Date.now()-24*60*60*1000);
-        await this.db.notification.deleteMany({where:{tenantId:tid,createdAt:{lte:clearBefore}}});
+        await this.db.notification.deleteMany({where:{tenantId:tid,userId:null,createdAt:{lte:clearBefore}}});await this.db.notification.deleteMany({where:{tenantId:tid,userId:ctx.user.id,createdAt:{lte:clearBefore}}});
         const items=await this.db.notification.findMany({where,orderBy:{createdAt:'desc'},take:200});
         return {items};
       }
@@ -421,10 +421,9 @@ export class Api {
       if(method!=='POST')throw new NotFoundException();
       const input=z.object({tenantId:id,title:z.string().trim().min(1).max(160),message:z.string().trim().min(1).max(2000)}).strict().parse(body);
       const company=await this.db.tenant.findUnique({where:{id:input.tenantId}});if(!company)throw new BadRequestException('Company was not found.');
-      const notice=await this.db.notification.create({data:{tenantId:company.id,title:input.title,message:input.message}});
-      sendPush(this.db,{tenantId:company.id,title:notice.title,body:notice.message,url:'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});
-      await audit(this.db,ctx,'COMPANY_UPDATE_SENT','notifications',notice.id,undefined,{tenantId:company.id,title:input.title});
-      return {ok:true,company:{id:company.id,name:company.name,code:company.code},notice};
+      const recipients=await this.db.user.findMany({where:{tenantId:company.id,active:true},select:{id:true}});const notices=await Promise.all(recipients.map(async recipient=>{const notice=await this.db.notification.create({data:{tenantId:company.id,userId:recipient.id,title:input.title,message:input.message}});sendPush(this.db,{tenantId:company.id,userId:recipient.id,title:notice.title,body:notice.message,url:'/notifications',tag:'tcw-'+notice.id}).catch(()=>{});return notice;}));const notice=notices[0]??null;
+      await audit(this.db,ctx,'COMPANY_UPDATE_SENT','notifications',notice?.id??company.id,undefined,{tenantId:company.id,title:input.title,recipients:notices.length});
+      return {ok:true,company:{id:company.id,name:company.name,code:company.code},notice,recipients:notices.length};
     }
     if(resource==='system'&&key==='ai-config'){
       platform(ctx);
