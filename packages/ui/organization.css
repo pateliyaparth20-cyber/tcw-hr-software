@@ -2,3 +2,11 @@
 @media(max-width:1050px){.org-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.org-navigation button{flex:0 1 auto}.org-hero-art{width:150px}}
 @media(max-width:650px){.org-hero{padding:23px;gap:12px;border-radius:17px}.org-hero h1{font-size:28px}.org-hero p{font-size:12px}.org-hero-art{display:none}.org-navigation{gap:4px;padding:6px}.org-navigation button{flex:1 1 calc(50% - 8px);padding:10px 8px;justify-content:flex-start;font-size:11px}.org-section-head{align-items:flex-start;flex-wrap:wrap;gap:14px}.org-section-head h2{font-size:22px}.org-section-head>.btn{width:100%;justify-content:center}.org-tools{flex-wrap:wrap;padding:10px;gap:8px}.org-search{flex:1 1 100%}.org-sort{flex:1}.org-sort select{flex:1;max-width:100%;width:100%}.org-card-grid{grid-template-columns:1fr;gap:12px}.org-card{padding:18px}.org-pagination{flex-wrap:wrap;justify-content:center}.org-results{flex-wrap:wrap}.org-form-intro{margin:16px 16px 0}.org-company{max-width:100%}.org-hero-copy{min-width:0}}
 @media(prefers-reduced-motion:reduce){.org-card{transition:none}}
+
+/* Organization sections use the same flat underline pattern as workspace tabs. */
+.org-navigation{display:flex;align-items:stretch;flex-wrap:nowrap;gap:24px;max-width:100%;padding:0 2px;border:0;border-bottom:1px solid #e5e7eb;border-radius:0;background:transparent;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.org-navigation::-webkit-scrollbar{display:none}
+.org-navigation button{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;min-height:48px;padding:12px 10px 13px;margin:0 0 -1px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:#667085;font-size:13px;font-weight:500;white-space:nowrap;box-shadow:none}
+.org-navigation button:hover{background:transparent;color:#344054}
+.org-navigation button.active{border-bottom-color:#7c3aed;background:transparent;color:#5b21b6;font-weight:650;box-shadow:none}
+@media(max-width:640px){.org-navigation{gap:16px;margin-bottom:20px}.org-navigation button{min-height:44px;padding:10px 8px 11px;font-size:12px}}
