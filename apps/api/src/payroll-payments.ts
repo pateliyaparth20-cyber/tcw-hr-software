@@ -69,7 +69,7 @@ export class PayrollPayments{
  }
  private async finish(schedule:any,status:string,error:string|null,now:Date){
   const result=await this.db.payrollPaymentSchedule.updateMany({where:{id:schedule.id,status:'RUNNING'},data:{status,error,finishedAt:now}});if(!result.count)return;
-  await this.db.notification.create({data:{tenantId:schedule.tenantId,title:status==='DISPATCHED'?'Scheduled salary payments submitted':'Salary payment schedule needs attention',message:`Salary payment schedule ${schedule.id}: ${status}. ${error??'Check bank statuses for final credit confirmation.'}`}});
+  await this.db.notification.create({data:{tenantId:schedule.tenantId,userId:schedule.approvedBy,title:status==='DISPATCHED'?'Scheduled salary payments submitted':'Salary payment schedule needs attention',message:`Salary payment schedule ${schedule.id}: ${status}. ${error??'Check bank statuses for final credit confirmation.'}`}});
   await this.db.auditLog.create({data:{tenantId:schedule.tenantId,actorId:schedule.approvedBy,action:'PAYROLL_PAYMENT_SCHEDULE_'+status,entity:'payroll',entityId:schedule.runId,after:{scheduleId:schedule.id,status,error}}});
  }
  async reconcilePending(){

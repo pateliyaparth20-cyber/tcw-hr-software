@@ -6,11 +6,22 @@ import {preparePayrollMonth} from './payroll-service';
 
 const previousMonth=(localToday:string)=>{const y=Number(localToday.slice(0,4)),m=Number(localToday.slice(5,7));const d=new Date(Date.UTC(y,m-2,1));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;};
 const AUTO_PAYROLL_FAILURE='Automatic payroll could not be prepared',AUTO_PAYROLL_REVIEW='Automatic payroll needs attendance review';
+const PAYROLL_NOTICE_ROLES=['COMPANY_OWNER','HR_ADMIN','PAYROLL_MANAGER','FINANCE_USER'];
+const ATTENDANCE_NOTICE_ROLES=['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'];
+async function notifyHrUsers(db:Pick<Database,'user'|'notification'>,tenantId:string,title:string,message:string,roleCodes:string[]){
+ const users=await db.user.findMany({where:{tenantId,active:true,role:{code:{in:roleCodes}}},select:{id:true}});
+ return Promise.all(users.map(user=>db.notification.create({data:{tenantId,userId:user.id,title,message}})));
+}
 async function createAutomationNoticeOnce(db:Database,tenantId:string,title:string,message:string,windowHours=24){
  const since=new Date(Date.now()-Math.max(1,windowHours)*3600_000);
- const existing=await db.notification.findFirst({where:{tenantId,title,message,createdAt:{gte:since}},select:{id:true}});
- if(existing)return existing;
- return db.notification.create({data:{tenantId,title,message}});
+ const users=await db.user.findMany({where:{tenantId,active:true,role:{code:{in:PAYROLL_NOTICE_ROLES}}},select:{id:true}});
+ const notices=[];
+ for(const user of users){
+  const existing=await db.notification.findFirst({where:{tenantId,userId:user.id,title,message,createdAt:{gte:since}},select:{id:true}});
+  if(existing)continue;
+  notices.push(await db.notification.create({data:{tenantId,userId:user.id,title,message}}));
+ }
+ return notices;
 }
 export async function repairPrematureCurrentMonthPayrollLocks(db:Database){
  const now=new Date(),companies=await db.tenant.findMany({where:{status:'ACTIVE'},select:{id:true,timezone:true}});
@@ -38,7 +49,7 @@ export async function repairPrematureCurrentMonthPayrollLocks(db:Database){
    await tx.attendanceDaily.updateMany({where:{tenantId:company.id,date:{gte:first,lt:next}},data:{lockedAt:null}});
    await tx.attendancePeriodLock.update({where:{id:lock.id},data:{status:'UNLOCKED',unlockedBy:'SYSTEM_CORRECTION',unlockedAt:now}});
    await tx.auditLog.create({data:{tenantId:company.id,action:'AUTO_PAYROLL_CURRENT_MONTH_REPAIRED',entity:'attendance',entityId:lock.id,before:{month:currentMonth,lockedBy:lock.lockedBy,payrollRunId:run?.id??null},after:{month:currentMonth,status:'UNLOCKED',reason:'Current month must remain open for attendance'}}});
-   await tx.notification.create({data:{tenantId:company.id,title:'Current attendance reopened',message:`${currentMonth} was locked early by automatic payroll and has been reopened. Automatic payroll now processes the previous completed month.`}});
+   await notifyHrUsers(tx,company.id,'Current attendance reopened',`${currentMonth} was locked early by automatic payroll and has been reopened. Automatic payroll now processes the previous completed month.`,ATTENDANCE_NOTICE_ROLES);
    return true;
   },{timeout:30000});
   if(fixed)repaired++;
@@ -67,7 +78,7 @@ export async function prepareScheduledPayroll(db:Database){
   }
   try{
    const run=await preparePayrollMonth(db,company.id,month,'SYSTEM_AUTOMATION');
-   await db.notification.create({data:{tenantId:company.id,title:'Payroll prepared automatically',message:`${month} attendance is closed and payroll is ready for review. No salary payout has been sent.`}});
+   await notifyHrUsers(db,company.id,'Payroll prepared automatically',`${month} attendance is closed and payroll is ready for review. No salary payout has been sent.`,PAYROLL_NOTICE_ROLES);
    await db.notification.deleteMany({where:{tenantId:company.id,title:{in:[AUTO_PAYROLL_FAILURE,AUTO_PAYROLL_REVIEW]},message:{contains:month}}});
    await db.auditLog.create({data:{tenantId:company.id,action:'PAYROLL_AUTO_PREPARED',entity:'payroll',entityId:run.id,after:{month,totalNet:run.totalNet,attendanceLockId:run.attendanceLockId}}});
   }catch(error:any){
@@ -135,7 +146,7 @@ export async function monitorAttendanceDevices(db:Database,offlineAfterMinutes=1
    if(!current||!current.lastSeenAt||current.lastSeenAt>=cutoff||current.status==='OFFLINE')return;
    await tx.attendanceDevice.update({where:{id:current.id},data:{status:'OFFLINE',lastError:`No heartbeat or punch received for ${Math.max(5,offlineAfterMinutes)} minutes.`}});
    await tx.deviceSyncLog.create({data:{tenantId:current.tenantId,deviceId:current.id,level:'WARN',action:'DEVICE_OFFLINE',message:`${current.name} (${current.serialNumber}) has not been seen since ${current.lastSeenAt.toISOString()}.`,details:{lastSeenAt:current.lastSeenAt,offlineAfterMinutes:Math.max(5,offlineAfterMinutes)}}});
-   await tx.notification.create({data:{tenantId:current.tenantId,title:'Attendance device offline',message:`${current.name} (${current.serialNumber}) has not sent a heartbeat or punch for ${Math.max(5,offlineAfterMinutes)} minutes. Attendance logs will sync when the device reconnects.`}});
+   await notifyHrUsers(tx,current.tenantId,'Attendance device offline',`${current.name} (${current.serialNumber}) has not sent a heartbeat or punch for ${Math.max(5,offlineAfterMinutes)} minutes. Attendance logs will sync when the device reconnects.`,ATTENDANCE_NOTICE_ROLES);
   });
  }
  return {checkedAt:new Date(),offlineMarked:devices.length};
