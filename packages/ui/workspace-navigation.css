@@ -231,3 +231,10 @@ html body .navigation-design :is(.tabs,.shift-v3-tabs,.device-v3-tabs,.timeoff-v
 .first-login-welcome>button:hover{background:#e9defa;color:#44216f}
 @keyframes tcw-welcome-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.first-login-welcome{animation:none!important}}
+
+
+/* Organization tabs keep the shared flat underline even when global button styles load later. */
+html body .navigation-design .org-navigation{display:flex!important;align-items:stretch!important;gap:24px!important;padding:0 2px!important;border:0!important;border-bottom:1px solid #e5e7eb!important;border-radius:0!important;background:transparent!important;overflow-x:auto!important;overflow-y:hidden!important}
+html body .navigation-design .org-navigation>button{position:relative!important;display:inline-flex!important;align-items:center!important;gap:8px!important;flex:0 0 auto!important;min-height:48px!important;margin:0 0 -1px!important;padding:12px 10px 13px!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:transparent!important;color:#667085!important;box-shadow:none!important}
+html body .navigation-design .org-navigation>button:hover{background:transparent!important;color:#344054!important}
+html body .navigation-design .org-navigation>button.active{border-bottom:2px solid #7c3aed!important;border-radius:0!important;background:transparent!important;color:#5b21b6!important;box-shadow:none!important}
