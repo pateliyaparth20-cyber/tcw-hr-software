@@ -142,3 +142,27 @@ html body .app-shell.navigation-design .sidebar .nav-item.selected :is(svg,span)
 @keyframes tcw-notice-enter{from{opacity:0;transform:translate3d(16px,-8px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
 @media(max-width:600px){.navigation-design .startup-notification-popup{top:calc(10px + env(safe-area-inset-top));right:10px;grid-template-columns:34px minmax(0,1fr) 26px;gap:9px;padding:13px}.startup-notification-icon{width:34px;height:34px}}
 @media(prefers-reduced-motion:reduce){.navigation-design .startup-notification-popup{animation:none}}
+
+/* Desktop icon rail expands only while the pointer is over navigation. */
+.navigation-design .nav-collapse-control{display:none!important}
+@media(min-width:951px){
+ .navigation-design.app-shell>.sidebar{transition:width .22s ease!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true].app-shell>.sidebar{width:254px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true].app-shell>.main-shell{margin-left:254px!important;width:calc(100% - 254px)!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar :is(.brand>span:last-child,.nav-group-label,.nav-item>span:not(.concept-more-dots),.sidebar-profile-link>span:not(.avatar),.account>.icon-button){display:flex!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar .nav-group-label{display:block!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar>.brand{padding:18px 22px!important;justify-content:flex-start}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar>nav{padding:20px 14px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar .nav-group{margin:0 0 24px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar .nav-item{justify-content:flex-start;padding:12px 14px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar .account{justify-content:flex-start;padding:12px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .sidebar .concept-settings-link{font-size:inherit;gap:14px;justify-content:flex-start}
+}
+@media(min-width:769px){
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true].employee-app-shell{padding-left:254px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .employee-desktop-sidebar{width:254px!important;padding:0 14px 16px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .employee-desktop-sidebar :is(.employee-desktop-brand strong,.employee-desktop-label,nav a span,.employee-desktop-account>div){display:initial!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .employee-desktop-brand{padding:18px 22px!important;justify-content:flex-start}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .employee-desktop-sidebar nav a{justify-content:flex-start;padding:12px 14px!important}
+ .navigation-design[data-nav-collapsed=true][data-nav-hovered=true] .employee-desktop-account{justify-content:flex-start}
+}
