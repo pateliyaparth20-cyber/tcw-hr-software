@@ -8,7 +8,7 @@ const previousMonth=(localToday:string)=>{const y=Number(localToday.slice(0,4)),
 const AUTO_PAYROLL_FAILURE='Automatic payroll could not be prepared',AUTO_PAYROLL_REVIEW='Automatic payroll needs attendance review';
 const PAYROLL_NOTICE_ROLES=['COMPANY_OWNER','HR_ADMIN','PAYROLL_MANAGER','FINANCE_USER'];
 const ATTENDANCE_NOTICE_ROLES=['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE'];
-async function notifyHrUsers(db:Database,tenantId:string,title:string,message:string,roleCodes:string[]){
+async function notifyHrUsers(db:Pick<Database,'user'|'notification'>,tenantId:string,title:string,message:string,roleCodes:string[]){
  const users=await db.user.findMany({where:{tenantId,active:true,role:{code:{in:roleCodes}}},select:{id:true}});
  return Promise.all(users.map(user=>db.notification.create({data:{tenantId,userId:user.id,title,message}})));
 }
