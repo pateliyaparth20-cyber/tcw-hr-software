@@ -81,7 +81,7 @@ export class DataService {
       hasPermission(ctx.user.role.permissions,'payroll','VIEW')?(employeeSelf&&ctx.user.employeeId?this.db.payrollItem.findFirst({where:{tenantId:tid,employeeId:ctx.user.employeeId,run:{status:'LOCKED'}},include:{run:{select:{month:true,status:true}}},orderBy:{createdAt:'desc'}}):this.db.payrollRun.findFirst({where:{tenantId:tid},orderBy:{month:'desc'}})):null,
       hasPermission(ctx.user.role.permissions,'devices','VIEW')?this.db.attendanceDevice.findMany({where:{tenantId:tid},select:{id:true,name:true,status:true,lastSeenAt:true}}):[],
       !employeeSelf&&hasPermission(ctx.user.role.permissions,'support','VIEW')?this.db.supportTicket.findMany({where:{tenantId:tid,status:{not:'RESOLVED'}},orderBy:{updatedAt:'desc'},take:8}):[],
-      this.db.notification.count({where:{tenantId:tid,readAt:null,OR:[{userId:ctx.user.id},{userId:null}]}}),
+      this.db.notification.count({where:{tenantId:tid,userId:ctx.user.id,readAt:null}}),
       employeeSelf&&ctx.user.employeeId&&hasPermission(ctx.user.role.permissions,'attendance','VIEW')?this.db.attendancePunch.findMany({where:{tenantId:tid,employeeId:ctx.user.employeeId},orderBy:{punchTime:'desc'},take:100,select:{id:true,punchType:true,punchTime:true,verificationType:true,rawPayload:true}}):[]]);
     const validPunchRows=(latestPunchRows as any[]).filter(p=>p.verificationType!=='FACE_SCAN'||['IN','OUT'].includes(String(p.rawPayload?.intent??''))),latestRaw=validPunchRows[0]??(latestPunchRows as any[])[0]??null,latestPunch=latestRaw?{id:latestRaw.id,punchType:latestRaw.punchType,punchTime:latestRaw.punchTime,verificationType:latestRaw.verificationType}:null;
     return {company,employees,attendance,leave,jobs,departments,events,activity,payroll,devices,support,unreadNotifications,latestPunch};
@@ -258,7 +258,7 @@ export class DataService {
         }
       }
       await audit(tx,ctx,before?'EMPLOYEE_UPDATED':'EMPLOYEE_CREATED','employees',after.id,before,after);
-      if(!before){const message=appAccessNote??'Employee app access was created and a welcome email with sign-in details was queued.';const notice=await tx.notification.create({data:{tenantId:tid,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. ${message}`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/employees',tag:'tcw-'+notice.id}).catch(()=>{});}
+      if(!before){const message=appAccessNote??'Employee app access was created and a welcome email with sign-in details was queued.';const notice=await tx.notification.create({data:{tenantId:tid,userId:ctx.user.id,title:'New employee added',message:`${after.firstName} ${after.lastName} (${after.employeeCode}) was added to the workforce. ${message}`}});sendPush(this.db,{tenantId:tid,userId:ctx.user.id,title:notice.title,body:notice.message,url:'/employees',tag:'tcw-'+notice.id}).catch(()=>{});}
       return {...clean(after),...(appAccessNote?{appAccessNote}:{})};
     });
   }
@@ -360,7 +360,7 @@ export class DataService {
         const slaDueAt=new Date(Date.now()+(priorityMinutes[input.priority]??1440)*60000);
         const after=await table.create({data:{tenantId:tid,...input,ticketNumber,slaDueAt}});
         await tx.supportTicketMessage.create({data:{tenantId:tid,ticketId:after.id,authorId:ctx.user.id,authorScope:'TENANT',authorName:ctx.user.name,message:input.message}});
-        const notice=await tx.notification.create({data:{tenantId:tid,title:`Support ticket ${ticketNumber} created`,message:`${input.subject} · ${input.priority} priority. TCW Support will update this ticket here.`}});sendPush(this.db,{tenantId:tid,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});
+        const notice=await tx.notification.create({data:{tenantId:tid,userId:ctx.user.id,title:`Support ticket ${ticketNumber} created`,message:`${input.subject} · ${input.priority} priority. TCW Support will update this ticket here.`}});sendPush(this.db,{tenantId:tid,userId:ctx.user.id,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});
         await audit(tx,ctx,'SUPPORT_TICKET_CREATED','support',after.id,before,after);return after;
       }
       const after=before?await table.update({where:{id:recordId},data:input}):await table.create({data:{tenantId:tid,...input}});
@@ -380,7 +380,7 @@ export class DataService {
     return this.db.$transaction(async tx=>{
       const row=await tx.supportTicketMessage.create({data:{tenantId:ticket.tenantId,ticketId:ticket.id,authorId:ctx.user.id,authorScope:isPlatform?'PLATFORM':'TENANT',authorName:ctx.user.name,message:input.message,internal}});
       const after=await tx.supportTicket.update({where:{id:ticket.id},data:{status:!isPlatform&&ticket.status==='RESOLVED'?'OPEN':ticket.status,closedAt:!isPlatform&&ticket.status==='RESOLVED'?null:ticket.closedAt}});
-      if(isPlatform&&!internal){const notice=await tx.notification.create({data:{tenantId:ticket.tenantId,title:`Support ticket ${ticket.ticketNumber} replied`,message:input.message.slice(0,300)}});sendPush(this.db,{tenantId:ticket.tenantId,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});}
+      if(isPlatform&&!internal){const requester=await tx.supportTicketMessage.findFirst({where:{tenantId:ticket.tenantId,ticketId:ticket.id,authorScope:'TENANT',authorId:{not:null}},orderBy:{createdAt:'asc'},select:{authorId:true}});if(requester?.authorId){const notice=await tx.notification.create({data:{tenantId:ticket.tenantId,userId:requester.authorId,title:`Support ticket ${ticket.ticketNumber} replied`,message:input.message.slice(0,300)}});sendPush(this.db,{tenantId:ticket.tenantId,userId:requester.authorId,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});}}
       await audit(tx,ctx,isPlatform?'TICKET_SUPPORT_REPLY':'TICKET_CUSTOMER_REPLY','support',ticket.id,ticket,after);return row;
     });
   }
@@ -525,10 +525,10 @@ export class DataService {
         const company=await tx.tenant.create({data:{name:input.name,code,plan:input.plan,employeeLimit:input.employeeLimit,status:'TRIAL',expiresAt:trialEndsAt,profile:{trialDays,trialStartedAt:new Date().toISOString(),trialOriginalEndsAt:trialEndsAt.toISOString(),trialFollowupStatus:'PENDING',trialNextFollowupAt:trialEndsAt.toISOString(),signupSource:'ADMIN_CREATED',ownerPhone:input.ownerPhone}}});
         const loginId=await allocateShortLoginId(tx as unknown as Database,company.id);
         const role=await tx.role.findUniqueOrThrow({where:{code:'COMPANY_OWNER'}});
-        await tx.user.create({data:{tenantId:company.id,name:input.ownerName,email:input.ownerEmail,loginId,passwordHash,roleId:role.id,mustChangePassword:true}});
+        const owner=await tx.user.create({data:{tenantId:company.id,name:input.ownerName,email:input.ownerEmail,loginId,passwordHash,roleId:role.id,mustChangePassword:true}});
         await tx.lead.create({data:{company:input.name,contactName:input.ownerName,email:input.ownerEmail,phone:input.ownerPhone,stage:'DEMO',value:0,nextFollowup:trialEndsAt,notes:`Admin-created ${trialDays}-day trial · ${code}`}});
         await tx.leaveType.createMany({data:[{tenantId:company.id,name:'Annual leave',annualDays:12},{tenantId:company.id,name:'Sick leave',annualDays:6},{tenantId:company.id,name:'Casual leave',annualDays:6}]});
-        await tx.notification.create({data:{tenantId:company.id,title:'Welcome to TCW HR Software',message:`Your ${trialDays}-day trial is active until ${trialEndsAt.toISOString().slice(0,10)}.`}});
+        await tx.notification.create({data:{tenantId:company.id,userId:owner.id,title:'Welcome to TCW HR Software',message:`Your ${trialDays}-day trial is active until ${trialEndsAt.toISOString().slice(0,10)}.`}});
         const loginUrl=new URL('/login',process.env.WEB_URL??'http://localhost:3000').toString();
         await tx.outbox.create({data:{tenantId:company.id,kind:'EMAIL',payload:{to:input.ownerEmail,subject:'Your TCW HR Software trial login',tempPassword:tempPassword,text:`Company Code: ${code}. User ID: ${loginId}. Temporary Password: ${tempPassword}. Login: ${loginUrl}. Change the temporary password after first sign in.`}}});
         if(input.ownerPhone)await tx.outbox.create({data:{tenantId:company.id,kind:'SMS',payload:{to:input.ownerPhone,template:'TRIAL_LOGIN',company:input.name,companyCode:code,loginId,tempPassword,loginUrl,text:`TCW HR trial: Company ${code}, User ${loginId}, Temp Password ${tempPassword}. Login ${loginUrl}. Change password after first sign in.`}}});
@@ -664,7 +664,7 @@ export class DataService {
       });
       await syncCompanyAccess(this.db,after.tenantId);return after;
     }
-    if(type==='support'&&recordId){const input=z.object({status:z.enum(['OPEN','IN_PROGRESS','RESOLVED']),response:z.string().max(5000),assignedTo:z.string().max(120).optional().nullable()}).strict().parse(body);return this.db.$transaction(async tx=>{const before=await tx.supportTicket.findUniqueOrThrow({where:{id:id.parse(recordId)}});const after=await tx.supportTicket.update({where:{id:recordId},data:{...input,closedAt:input.status==='RESOLVED'?new Date():null}});if(input.response.trim())await tx.supportTicketMessage.create({data:{tenantId:after.tenantId,ticketId:after.id,authorId:ctx.user.id,authorScope:'PLATFORM',authorName:input.assignedTo?.trim()||ctx.user.name,message:input.response.trim()}});await tx.notification.create({data:{tenantId:after.tenantId,title:`Support ticket ${after.ticketNumber} updated`,message:`Status: ${after.status}. ${after.response?after.response.slice(0,300):'TCW Support updated your request.'}`}});await audit(tx,ctx,'TICKET_UPDATED','support',recordId,before,after);return after;});}
+    if(type==='support'&&recordId){const input=z.object({status:z.enum(['OPEN','IN_PROGRESS','RESOLVED']),response:z.string().max(5000),assignedTo:z.string().max(120).optional().nullable()}).strict().parse(body);return this.db.$transaction(async tx=>{const before=await tx.supportTicket.findUniqueOrThrow({where:{id:id.parse(recordId)}});const after=await tx.supportTicket.update({where:{id:recordId},data:{...input,closedAt:input.status==='RESOLVED'?new Date():null}});if(input.response.trim())await tx.supportTicketMessage.create({data:{tenantId:after.tenantId,ticketId:after.id,authorId:ctx.user.id,authorScope:'PLATFORM',authorName:input.assignedTo?.trim()||ctx.user.name,message:input.response.trim()}});const requester=await tx.supportTicketMessage.findFirst({where:{tenantId:after.tenantId,ticketId:after.id,authorScope:'TENANT',authorId:{not:null}},orderBy:{createdAt:'asc'},select:{authorId:true}});if(requester?.authorId){const notice=await tx.notification.create({data:{tenantId:after.tenantId,userId:requester.authorId,title:`Support ticket ${after.ticketNumber} updated`,message:`Status: ${after.status}. ${after.response?after.response.slice(0,300):'TCW Support updated your request.'}`}});sendPush(this.db,{tenantId:after.tenantId,userId:requester.authorId,title:notice.title,body:notice.message,url:'/support',tag:'tcw-'+notice.id}).catch(()=>{});}await audit(tx,ctx,'TICKET_UPDATED','support',recordId,before,after);return after;});}
     throw new BadRequestException('Unsupported operation.');
   }
 }
