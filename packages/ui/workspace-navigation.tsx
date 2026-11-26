@@ -1,18 +1,14 @@
 'use client';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Plus,PanelLeft,Menu} from 'lucide-react';
+import {Plus,PanelLeft} from 'lucide-react';
 import './workspace-navigation.css';
 
 type Item=readonly string[];
 export function useNavigationAppearance(){
- const[collapsed,setCollapsed]=useState(false);
- useEffect(()=>{try{setCollapsed(localStorage.getItem('tcw:nav-collapsed')==='1');localStorage.removeItem('tcw:nav-dark')}catch{}},[]);
- const toggleCollapsed=()=>setCollapsed(value=>{try{localStorage.setItem('tcw:nav-collapsed',value?'0':'1')}catch{}return !value});
- return {collapsed,toggleCollapsed};
-}
-export function SidebarToggle({collapsed,onClick}:{collapsed:boolean;onClick:()=>void}){
- return <button type="button" className="nav-collapse-control" onClick={onClick} aria-expanded={!collapsed} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'} title={collapsed?'Expand sidebar':'Collapse sidebar'}><Menu size={21}/><span>Navigation</span></button>;
+ const[hovered,setHovered]=useState(false);
+ useEffect(()=>{try{localStorage.removeItem('tcw:nav-collapsed');localStorage.removeItem('tcw:nav-dark')}catch{}},[]);
+ return {collapsed:true,hovered,setHovered};
 }
 export function NavigationDock({items,keys,page,icons,menuOpen,onMenu,onNavigate,onQuick}:{items:ReadonlyArray<Item>;keys:string[];page:string;icons:Record<string,React.ElementType>;menuOpen:boolean;onMenu:()=>void;onNavigate:()=>void;onQuick:()=>void}){
  const slots=keys.map(key=>items.find(item=>item[0]===key)).filter((item):item is Item=>!!item).slice(0,3);
