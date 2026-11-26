@@ -2,7 +2,7 @@ const CACHE='tcw-shell-v1.16-neutral-logo';
 const FACE_CACHE='tcw-face-assets-v1.7.15';
 const STATIC=['/offline.html','/logo-placeholder.svg','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(
-  caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting())
+  caches.open(CACHE).then(cache=>cache.addAll(STATIC))
 ));
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
