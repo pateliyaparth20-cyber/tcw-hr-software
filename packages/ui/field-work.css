@@ -69,3 +69,55 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
   .field-settings form > .btn, .field-session-card .btn { width: 100%; }
   .field-sharing-banner { flex-wrap: wrap; }
 }
+
+/* Employee visits: clear hierarchy, comfortable form spacing and a useful empty state. */
+.employee-app-shell .field-work-page{width:min(100%,1080px);margin:0 auto;gap:18px}
+.employee-app-shell .field-hero{min-height:146px;align-items:center;padding:26px 30px!important;border-radius:22px!important}
+.employee-app-shell .field-hero>div:first-child>span{font-size:10px;letter-spacing:.14em}
+.employee-app-shell .field-hero h1{margin:10px 0 6px!important;font-size:clamp(24px,2.2vw,30px)!important;line-height:1.15}
+.employee-app-shell .field-hero p{max-width:560px;margin:0!important;font-size:13px;line-height:1.65}
+.employee-app-shell .field-hero-note{display:grid!important;min-width:205px;padding:16px 18px!important;gap:6px!important;border-radius:16px}
+.employee-app-shell .field-hero-note strong{font-size:13px}
+.employee-app-shell .field-hero-note small{font-size:11px;line-height:1.45}
+.employee-app-shell .field-tabs{width:max-content;max-width:100%;min-height:46px;align-items:center}
+.employee-app-shell .field-tabs button{min-width:74px;padding:10px 16px!important;font-weight:700!important}
+.employee-app-shell .employee-visit-planner{padding:24px 26px!important;border-radius:20px!important;background:#fff}
+.employee-visit-form .employee-visit-form-heading{display:flex;align-items:flex-start;gap:13px;margin-bottom:23px}
+.employee-visit-icon{width:42px;height:42px;display:grid;place-items:center;flex:0 0 42px;border-radius:13px;background:#f3edff;color:#7138e8}
+.employee-visit-form-heading .field-kicker{margin:1px 0 6px;color:#8a6db3;font-size:10px}
+.employee-visit-form-heading h2{margin:0!important;color:#2d2340;font-size:20px!important;line-height:1.3}
+.employee-visit-form-heading p{margin:4px 0 0;color:#7a7187;font-size:12px;line-height:1.55}
+.employee-app-shell .employee-visit-planner form{grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 18px;align-items:start}
+.employee-app-shell .field-visit-form label{gap:7px;color:#4c435d;font-size:12px;font-weight:650}
+.employee-app-shell .field-visit-form :is(input,textarea){border:1px solid #e1dbea!important;background:#fff!important;color:#2d2340!important;box-shadow:none!important;transition:border-color .15s,box-shadow .15s}
+.employee-app-shell .field-visit-form :is(input,textarea):focus{border-color:#8b5cf6!important;box-shadow:0 0 0 3px #8b5cf61a!important;outline:0}
+.employee-app-shell .field-visit-form input{min-height:46px!important;padding:0 13px!important}
+.employee-app-shell .field-visit-form input::placeholder,.employee-app-shell .field-visit-form textarea::placeholder{color:#a297b2}
+.employee-app-shell .field-visit-form .field-visit-notes{grid-column:1/-1}
+.employee-app-shell .field-visit-form textarea{min-height:96px;padding:12px 13px!important;resize:vertical}
+.employee-app-shell .field-visit-form .field-visit-submit{grid-column:1/-1;display:flex;justify-content:flex-end;border-top:1px solid #f0ebf6;padding-top:16px;margin-top:0}
+.employee-app-shell .field-visit-form .field-visit-submit .btn{min-height:44px;padding:0 19px;border-radius:11px;font-weight:700}
+.employee-app-shell .field-visits.employee-visits{grid-template-columns:1fr;gap:12px}
+.employee-visits-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:1px 2px}
+.employee-visits-heading .field-kicker{margin-bottom:4px;color:#8a6db3;font-size:10px}
+.employee-visits-heading h2{margin:0;color:#302442;font-size:18px}
+.employee-visit-count{padding:6px 10px;border:1px solid #e8e0f0;border-radius:999px;background:#fff;color:#786b8a;font-size:11px;font-weight:700}
+.employee-app-shell .employee-visits-empty{padding:18px 22px;border:1px dashed #d9cdec;border-radius:18px;background:linear-gradient(135deg,#fff,#faf8ff)}
+.employee-app-shell .employee-visits .field-visit-card{min-height:150px;padding:20px!important;border-radius:18px!important}
+@media(max-width:1000px){
+ .employee-app-shell .field-hero-note{display:grid!important}
+}
+@media(max-width:600px){
+ .employee-app-shell .field-work-page{gap:14px}
+ .employee-app-shell .field-hero{display:grid;gap:16px;padding:20px!important}
+ .employee-app-shell .field-hero-note{grid-template-columns:auto 1fr;min-width:0;padding:12px 14px!important}
+ .employee-app-shell .field-hero-note svg{grid-row:span 2;align-self:center}
+ .employee-app-shell .field-hero-note small{grid-column:2}
+ .employee-app-shell .field-tabs{width:max-content}
+ .employee-app-shell .employee-visit-planner{padding:19px 16px!important}
+ .employee-app-shell .employee-visit-form-heading{margin-bottom:19px}
+ .employee-app-shell .employee-visit-planner form{grid-template-columns:1fr;gap:14px}
+ .employee-app-shell .field-visit-form .field-visit-notes,.employee-app-shell .field-visit-form .field-visit-submit{grid-column:1}
+ .employee-app-shell .field-visit-form .field-visit-submit .btn{width:100%;justify-content:center}
+ .employee-app-shell .employee-visits-empty{padding:12px}
+}
