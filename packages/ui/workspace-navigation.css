@@ -118,3 +118,27 @@ html body .app-shell.navigation-design .sidebar .nav-item.selected :is(svg,span)
  .navigation-design[data-nav-collapsed=true] .employee-desktop-account>.employee-sidebar-profile .avatar{width:30px;height:30px}
  .navigation-design[data-nav-collapsed=true] .employee-desktop-account>div{display:none!important}
 }
+
+/* Red unread counts and compact notification popup across portals. */
+.navigation-design :is(.nav-item,.employee-desktop-sidebar nav a,.employee-more-links>a,.notification-button,.employee-header-icon){position:relative}
+.navigation-design .nav-notification-count,.navigation-design .notification-count-badge{
+ display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border:1px solid #fff;border-radius:999px;background:#e5484d!important;color:#fff!important;font-size:10px!important;font-weight:700!important;line-height:1!important;font-variant-numeric:tabular-nums;box-shadow:0 1px 3px rgba(175,25,38,.22)
+}
+.navigation-design .nav-notification-count{margin-left:auto;flex:0 0 auto}
+.navigation-design .notification-button .notification-count-badge,.navigation-design .employee-header-icon .notification-count-badge{position:absolute;top:-4px;right:-5px}
+.navigation-design .employee-more-links .nav-notification-count{margin-left:auto}
+.navigation-design .startup-notification-popup{
+ position:fixed;z-index:220;top:18px;right:20px;display:grid;grid-template-columns:38px minmax(0,1fr) 28px;gap:12px;width:min(400px,calc(100vw - 28px));padding:16px;border:1px solid #e5e7eb;border-top:3px solid #e5484d;border-radius:14px;background:#fff;color:#243047;box-shadow:0 16px 44px rgba(28,36,55,.2);animation:tcw-notice-enter .32s cubic-bezier(.2,.8,.2,1) both
+}
+.startup-notification-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#fff0f0;color:#d93742}
+.startup-notification-copy{min-width:0}
+.startup-notification-copy>small{display:block;margin:0 0 4px;color:#c3313b;font-size:9px;font-weight:700;letter-spacing:.1em}
+.startup-notification-copy>strong{display:block;color:#253149;font-size:13px;line-height:1.4}
+.startup-notification-copy>p{margin:5px 0 8px;color:#69758a;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.startup-notification-open{padding:0;border:0;background:transparent;color:#245cf4;font-size:12px;font-weight:650}
+.startup-notification-open:hover{text-decoration:underline}
+.startup-notification-close{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;color:#8c95a3}
+.startup-notification-close:hover{background:#f2f3f6}
+@keyframes tcw-notice-enter{from{opacity:0;transform:translate3d(16px,-8px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@media(max-width:600px){.navigation-design .startup-notification-popup{top:calc(10px + env(safe-area-inset-top));right:10px;grid-template-columns:34px minmax(0,1fr) 26px;gap:9px;padding:13px}.startup-notification-icon{width:34px;height:34px}}
+@media(prefers-reduced-motion:reduce){.navigation-design .startup-notification-popup{animation:none}}
