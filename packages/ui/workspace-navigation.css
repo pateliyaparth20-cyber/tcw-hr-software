@@ -213,3 +213,21 @@ html body .navigation-design :is(.tabs,.shift-v3-tabs,.device-v3-tabs,.timeoff-v
 .notification-popover-filter button i{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#e94e59;color:#fff;font-size:9px;font-style:normal}
 .notification-popover-list{scrollbar-width:none;-ms-overflow-style:none}
 .notification-popover-list::-webkit-scrollbar{display:none}
+
+
+/* Keep notification hover continuous from the trigger into the floating panel. */
+.navigation-design .notification-popover{top:100%!important}
+.navigation-design .notification-popover-filter{gap:10px!important;padding:0!important;border-radius:0!important;background:transparent!important}
+.navigation-design .notification-popover-filter button{min-height:30px!important;padding:4px 2px!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;border-bottom:2px solid transparent!important}
+.navigation-design .notification-popover-filter button.active{background:transparent!important;color:#5424c7!important;border-bottom-color:#7c3aed!important}
+.navigation-design .notification-popover-head-actions>button{background:transparent!important;border-radius:8px!important}
+.navigation-design .notification-popover-head-actions>button:hover{background:#f4f1fa!important}
+.first-login-welcome{display:flex;align-items:flex-start;gap:14px;margin:0 0 20px;padding:18px 20px;border:1px solid #e5d9ff;border-radius:16px;background:linear-gradient(110deg,#fbf8ff,#f2ebff);color:#34205b;box-shadow:0 8px 26px #5b21b612;animation:tcw-welcome-in .35s cubic-bezier(.2,.8,.2,1) both}
+.first-login-welcome-mark{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:13px;background:#ede4ff;color:#7135df}
+.first-login-welcome>div{flex:1;min-width:0}
+.first-login-welcome strong{font-size:15px;font-weight:650}
+.first-login-welcome p{margin:5px 0 0;color:#716482;font-size:13px;line-height:1.55}
+.first-login-welcome>button{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:9px;background:transparent;color:#817392;cursor:pointer}
+.first-login-welcome>button:hover{background:#e9defa;color:#44216f}
+@keyframes tcw-welcome-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.first-login-welcome{animation:none!important}}
