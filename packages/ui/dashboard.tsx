@@ -7,7 +7,7 @@ import {Users,UserCheck,Clock3,CalendarDays,ArrowUpRight,Plus,Briefcase,Building
 import {useApp,useData,api,Loading,Failure,PageTitle,Stat,Avatar,Badge,Empty,BrandLogo,currencyValue,displayDate} from './core';
 import {Row,readable} from './config';
 import {HROverview} from './hr-overview';
-import {EmployeePunchModal} from './field-work';
+import {freshLocation} from './field-work';
 import {attendanceDurationSeconds,attendanceLiveBreakState,attendanceLiveBreakUsage} from './attendance-format';
 function useTimeGreeting(timeZone?:string){
  const[greeting,setGreeting]=useState('GOOD MORNING');
@@ -80,10 +80,10 @@ function WorkingTimer({since,baseMinutes=0}:{since?:string|null;baseMinutes?:num
 }
 
 function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{session:any;currency:string;d:Row;calendarEvents?:Row[];onRefresh:()=>void}){
- const[punchOpen,setPunchOpen]=useState(false),[punchIntent,setPunchIntent]=useState<'IN'|'OUT'>('IN'),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarEvents??d.events??[]);
+ const[punchBusy,setPunchBusy]=useState(false),[punchError,setPunchError]=useState(''),[livePunch,setLivePunch]=useState<Row|null>(null);const employee:Row=d.employees?.[0]??{},attendance:Row[]=d.attendance??[],leave:Row[]=d.leave??[],events:Row[]=mergeUpcomingEvents(calendarEvents??d.events??[]);
  const timezone=d.company?.timezone??'Asia/Kolkata';
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const previousDay=new Date(Date.parse(today)-86400000).toISOString().slice(0,10),attendanceQ=useData(`attendance?from=${previousDay}&to=${today}&employeeId=${employee.id??''}`,!!employee.id,15000);
+ const previousDay=new Date(Date.parse(today)-86400000).toISOString().slice(0,10),attendanceQ=useData(`attendance?from=${previousDay}&to=${today}&employeeId=${employee.id??''}`,!!employee.id,15000),fieldSession=useData('field-work/session',session.user.role==='EMPLOYEE');
  const[now,setNow]=useState(Date.now());useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[]);
  const liveRecord=(attendanceQ.data?.items??[]).find((r:Row)=>r.employeeId===employee.id&&(String(r.date).slice(0,10)===today||new Date(r.shiftEndTime??0).getTime()>now));
  const serverTodayRecord=liveRecord??attendance.find(r=>String(r.date).slice(0,10)===today);
@@ -105,6 +105,19 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  const completed=!fullDayLeaveToday&&!onBreak&&!working&&!!todayRecord?.firstIn&&(currentPunch?.punchType==='OUT'||!!todayRecord?.lastOut);
  const workingSince=working?(currentPunch?.punchType==='IN'?currentPunch.punchTime:todayRecord?.firstIn):null;
  const attendanceLabel=fullDayLeaveToday?(leaveDayType==='APPROVED'?'On leave':readable(leaveDayType.toLowerCase())):onBreak?(breakState==='OVER_BREAK'?'Over Break':'Break'):working?'Working':completed?'Checked out':todayRecord?readable(String(todayRecord.status??'').toLowerCase()):'Not checked in';
+ async function recordPunch(intent:'IN'|'OUT'){
+  if(punchBusy||(intent==='IN'&&fieldSession.isLoading))return;
+  setPunchBusy(true);setPunchError('');
+  try{
+   const point=intent==='IN'&&fieldSession.data?.eligible?await freshLocation():undefined;
+   const localPunchTime=new Date().toISOString();
+   const result=await api('attendance/self-punch','POST',{clientNonce:crypto.randomUUID(),intent,...(point?{point,locationConsent:true}:{})},session.csrf);
+   setLivePunch({...result,punchType:result?.punchType??intent,punchTime:result?.punchTime??localPunchTime});
+   window.dispatchEvent(new Event('tcw-field-session'));
+   await Promise.all([onRefresh(),attendanceQ.refetch()]);
+  }catch(e:any){setPunchError(e?.message??'Attendance could not be recorded. Please try again.')}
+  finally{setPunchBusy(false)}
+ }
  const quick=[
   {href:'/leave',title:'Time off',sub:fullDayLeaveToday?'On leave today':pending.length?pending.length+' pending':'Apply leave',icon:<CalendarDays size={21}/>},
   {href:'/payroll',title:'Payslips',sub:payslip?.run?.month??'Salary records',icon:<Wallet size={21}/>},
@@ -114,14 +127,14 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  return <div className="employee-home-dashboard">
   <section className="employee-home-hero">
    <div className="employee-home-person"><Avatar name={session.user.name} src={session.user.avatar||employee.photo}/><div><span>{greeting}</span><h1>{firstName}</h1><p>{employee.designation||'Employee'}{employee.departmentName?' · '+employee.departmentName:''}</p></div></div>
-   <button className="employee-home-punch-button" type="button" disabled={fullDayLeaveToday} onClick={()=>{setPunchIntent(working?'OUT':'IN');setPunchOpen(true)}}><UserCheck size={22}/><span><strong>{fullDayLeaveToday?'On leave':working?'Check OUT':'Check IN'}</strong><small>{fullDayLeaveToday?'Approved leave today':working?'Record exact OUT time':'Start work timer now'}</small></span><ChevronRight size={18}/></button>
+   <button className="employee-home-punch-button" type="button" disabled={fullDayLeaveToday||punchBusy||(!working&&fieldSession.isLoading)} onClick={()=>void recordPunch(working?'OUT':'IN')}><UserCheck size={22}/><span><strong>{punchBusy?'Recording…':fullDayLeaveToday?'On leave':working?'Check OUT':'Check IN'}</strong><small>{fullDayLeaveToday?'Approved leave today':working?'Record exact OUT time':'Start work timer now'}</small></span><ChevronRight size={18}/></button>
   </section>
 
   <section className={'employee-work-status '+(fullDayLeaveToday?'leave':working?'working':completed?'complete':'idle')}>
    <div className="employee-work-status-main"><span className="employee-work-dot"/><div><small>TODAY</small><strong>{attendanceLabel}</strong><em>{fullDayLeaveToday?'HR-approved leave is active today.':workingSince?'Started '+new Date(workingSince).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):todayRecord?.firstIn?'Started '+new Date(todayRecord.firstIn).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:timezone}):'Check in to start your workday'}</em></div></div>
    <div className="employee-work-clock">{fullDayLeaveToday?<><small>TIME OFF</small><strong>On leave</strong></>:onBreak?<><small>{breakState==='OVER_BREAK'?'OVER BREAK':'BREAK · LIVE'}</small><strong>{attendanceDurationSeconds(breakState==='OVER_BREAK'?breakUsage?.overBreakSeconds:breakUsage?.breakSeconds)}</strong></>:working?<><small>WORKED TODAY · LIVE</small><strong><WorkingTimer since={workingSince} baseMinutes={Number(todayRecord?.workMinutes??0)}/></strong></>:completed?<><small>WORKED TODAY</small><strong>{Math.floor(Number(todayRecord?.workMinutes??0)/60)}h {Number(todayRecord?.workMinutes??0)%60}m</strong></>:<LiveClock timezone={timezone}/>}</div>
-   <button type="button" className="btn primary" disabled={fullDayLeaveToday||working} onClick={()=>{setPunchIntent('IN');setPunchOpen(true)}}><UserCheck size={18}/>{fullDayLeaveToday?'Leave active':'Check IN'}</button><button type="button" className="btn secondary" disabled={fullDayLeaveToday||!working} onClick={()=>{setPunchIntent('OUT');setPunchOpen(true)}}><UserCheck size={18}/>Check OUT</button>
-  </section>
+   <button type="button" className="btn primary" disabled={fullDayLeaveToday||working||punchBusy||fieldSession.isLoading} onClick={()=>void recordPunch('IN')}><UserCheck size={18}/>{punchBusy?'Recording…':fullDayLeaveToday?'Leave active':'Check IN'}</button><button type="button" className="btn secondary" disabled={fullDayLeaveToday||!working||punchBusy} onClick={()=>void recordPunch('OUT')}><UserCheck size={18}/>{punchBusy?'Recording…':'Check OUT'}</button>
+  </section>{punchError&&<p className="form-error employee-punch-inline-error" role="alert">{punchError}</p>}
 
   <div className="employee-home-quick">{quick.map(item=><Link href={item.href} key={item.href}><span>{item.icon}</span><div><strong>{item.title}</strong><small>{item.sub}</small></div><ChevronRight size={17}/></Link>)}</div>
 
@@ -131,7 +144,6 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
   </div>
 
   {events.length>1&&<section className="employee-home-card employee-home-events"><div className="employee-home-card-head"><div><small>COMPANY CALENDAR</small><h2>Upcoming</h2></div><Link href="/calendar">Open calendar <ArrowUpRight size={15}/></Link></div><div>{events.slice(0,4).map((e:Row)=><Link href="/calendar" key={e.id}><div className="event-date"><small>{new Date(e.date).toLocaleDateString('en',{month:'short'})}</small><strong>{new Date(e.date).getUTCDate()}</strong></div><span><strong>{e.title}</strong><small>{readable(String(e.kind??'HR_EVENT').toLowerCase())}</small></span><ChevronRight size={16}/></Link>)}</div></section>}
-  {punchOpen&&!fullDayLeaveToday&&<EmployeePunchModal intent={punchIntent} onClose={()=>setPunchOpen(false)} onComplete={async()=>{await onRefresh();await attendanceQ.refetch()}}/>}
  </div>;
 }
 
