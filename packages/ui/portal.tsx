@@ -1,5 +1,5 @@
 'use client';
-import {CloudDrive,CloudDriveSettings} from './cloud-drive';
+import {CloudDriveComingSoon} from './cloud-drive';
 import {NavigationDock,useNavigationAppearance} from './workspace-navigation';
 import {QuickActions} from './quick-actions';
 import {LoadingBoundary} from './loading-boundary';
@@ -31,7 +31,7 @@ import {AttendancePage,PayrollPage,CalendarPage,WorkforcePage} from './workflows
 import {FieldWorkPage,EmployeeFieldTracker} from './field-work';
 import {DeviceManagement} from './device-management';
 
-import {CompanySettings,CompanySettingsWorkspace,UsersPage,SecurityPage,ReportsPage,AuditPage,SystemPage,NotificationsPage,MyProfilePage,PlatformProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
+import {CompanySettings,CompanySettingsWorkspace,UsersPage,SecurityPage,ReportsPage,SystemPage,NotificationsPage,MyProfilePage,PlatformProfilePage,PlatformSettingsPage,SoftwareUpdatePage} from './settings';
 import {SupportPage} from './support';
 import {MEGHNA_AVATAR} from './meghna-avatar';
 import './auth-design.css';
@@ -137,6 +137,7 @@ function Shell({page}:{page:string}){
  const sidebarKey=sidebarPositionKey(session.user.scope,session.user.id,session.company?.id);
  const[moreNav,setMoreNav]=useState(()=>concept&&!primaryKeys.has(page)||readSidebarState(sidebarSessionStorage(),sidebarKey)?.expanded===true);
  const[mobile,setMobile]=useState(false),[logoutConfirm,setLogoutConfirm]=useState(false);
+ useEffect(()=>{const closeOverlays=(event:KeyboardEvent)=>{if(event.key!=='Escape')return;setNoticeOpen(false);setNoticePopup(null);setQuickOpen(false);setMobile(false);setProfileMenuOpen(false);setLogoutConfirm(false)};document.addEventListener('keydown',closeOverlays);return()=>document.removeEventListener('keydown',closeOverlays)},[]);
  const allNavigation=session.user.scope==='PLATFORM'?adminNavigation:session.user.role==='EMPLOYEE'?employeeNavigation:navigation;
  const nav=allNavigation.map(g=>({...g,items:g.items.filter(([key, ,p])=>can(p)&&(session.user.scope!=='TENANT'||planAllowsResource(session.company?.plan,key))&&!(session.user.role==='EMPLOYEE'&&p==='support'))})).filter(g=>g.items.length);
  const conceptNav=[{group:'Workspace',keys:['dashboard','employees','organization','calendar']},{group:'Time & work',keys:['attendance','workforce','leave']},{group:'Management',keys:['payroll','reports']}].map(g=>({group:g.group,items:nav.flatMap(s=>s.items).filter(([key])=>g.keys.includes(key)).sort((a,b)=>g.keys.indexOf(a[0])-g.keys.indexOf(b[0]))})).filter(g=>g.items.length);
@@ -185,10 +186,9 @@ function Shell({page}:{page:string}){
  else if(page==='software-update')content=<SoftwareUpdatePage/>;
  else if(page==='users')content=<UsersPage/>;
  else if(page==='security')content=<SecurityPage/>;
- else if(page==='documents')content=<CloudDrive/>;
- else if(page==='cloud-drive'&&session.user.scope==='PLATFORM')content=<CloudDriveSettings/>;
+ else if(page==='documents')content=<CloudDriveComingSoon/>;
+ else if(page==='cloud-drive'&&session.user.scope==='PLATFORM')content=<CloudDriveComingSoon/>;
  else if(page==='reports')content=<ReportsPage/>;
- else if(page==='audit')content=<AuditPage/>;
  else if(page==='profile')content=session.user.scope==='PLATFORM'&&can('system','EDIT')?<PlatformProfilePage/>:<MyProfilePage/>;
  else if(page==='system')content=<SystemPage/>;
  else if(page==='notifications')content=<NotificationsPage/>;
