@@ -121,3 +121,17 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
  .employee-app-shell .field-visit-form .field-visit-submit .btn{width:100%;justify-content:center}
  .employee-app-shell .employee-visits-empty{padding:12px}
 }
+/* Softer, regular typography for the employee visits screen. */
+.employee-app-shell .field-hero{min-height:126px;padding:24px 28px!important;background:linear-gradient(115deg,#f0ebff,#e9e0ff 68%,#dfd1ff)!important;border:1px solid #e2d8f5!important;box-shadow:0 8px 24px rgba(84,58,129,.06)!important}
+.employee-app-shell .field-hero h1{font-size:26px!important;font-weight:500!important;letter-spacing:-.02em;color:#554767!important}
+.employee-app-shell .field-hero>div:first-child>span,.employee-app-shell .employee-visit-form-heading .field-kicker,.employee-app-shell .employee-visits-heading .field-kicker{font-weight:500!important;color:#796b8c!important}
+.employee-app-shell .field-hero p{font-weight:400!important;color:#766b84!important}
+.employee-app-shell .field-work-page :is(h2,h3){font-weight:500!important;color:#51465f!important}
+.employee-app-shell .employee-visit-form-heading h2{font-size:19px!important;font-weight:500!important}
+.employee-app-shell .employee-visit-form-heading p{font-weight:400!important;color:#81778d!important}
+.employee-app-shell .field-tabs button{font-weight:500!important}
+.employee-app-shell .employee-visit-planner form label{font-weight:400!important;color:#625872!important}
+.employee-app-shell .employee-visit-form .field-visit-submit .btn{font-weight:500!important}
+.employee-app-shell .employee-visit-count{font-weight:400!important;color:#82768e!important}
+.employee-app-shell .employee-visits-empty :is(p,strong){font-weight:400!important;color:#80758d!important}
+.employee-app-shell .field-visits .field-visit-card :is(strong,h3,.field-kicker){font-weight:500!important;color:#5d5269}
