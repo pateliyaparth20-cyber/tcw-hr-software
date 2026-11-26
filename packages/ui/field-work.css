@@ -227,3 +227,5 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
 .field-work-page .field-employee-options>button:hover,.field-work-page .field-employee-options>button[aria-selected=true]{background:#f5f0ff;color:#6030c7}
 .field-work-page .field-employee-options>button small{color:#83778f;font-size:12px}
 .field-work-page .field-employee-options>p{margin:0;padding:12px;color:#83778f;font-size:13px}
+
+.field-visit-progress-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}.field-visit-progress-actions .btn{min-height:42px}
