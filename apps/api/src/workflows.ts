@@ -435,8 +435,8 @@ export class Workflows {
       const {run:after,changed}=await finalizePayrollMonth(this.db,tid,recordId,ctx.user.id);
       await audit(this.db,ctx,'PAYROLL_FINALIZED','payroll',recordId,before,after);
       if(changed){
-        const finalNotice=await this.db.notification.create({data:{tenantId:tid,title:`Payroll ${after.month} finalized`,message:'Payroll is finalized. Payslips and payout data now use this locked payroll.'}});
-        sendPush(this.db,{tenantId:tid,title:finalNotice.title,body:finalNotice.message,url:'/payroll',tag:'tcw-'+finalNotice.id}).catch(()=>{});
+        const finalNotice=await this.db.notification.create({data:{tenantId:tid,userId:ctx.user.id,title:`Payroll ${after.month} finalized`,message:'Payroll is finalized. Payslips and payout data now use this locked payroll.'}});
+        sendPush(this.db,{tenantId:tid,userId:ctx.user.id,title:finalNotice.title,body:finalNotice.message,url:'/payroll',tag:'tcw-'+finalNotice.id}).catch(()=>{});
         const items=after.items??[];
         const linked=await this.db.user.findMany({where:{tenantId:tid,employeeId:{in:items.map((i:any)=>i.employeeId)},active:true},select:{id:true,employeeId:true}});
         const netByEmployee=new Map(items.map((i:any)=>[i.employeeId,i.net]));
