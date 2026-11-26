@@ -214,3 +214,16 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
 .field-work-page .field-visit-map-tools .btn{min-height:38px}
 .field-work-page .field-visit-map-tools small{color:#7d718f;line-height:1.5}
 @media(max-width:760px){.field-work-page .field-visit-map-tools{grid-column:1;align-items:stretch}.field-work-page .field-visit-map-tools .btn{justify-content:center}.field-work-page .field-visit-map-tools small{flex-basis:100%}}
+
+.field-work-page .field-employee-search{position:relative;min-width:0}
+.field-work-page .field-employee-search-input{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 10px 0 13px;border:1px solid #ded7e8;border-radius:10px;background:#fff;color:#82758f;transition:border-color .16s ease,box-shadow .16s ease}
+.field-work-page .field-employee-search-input:focus-within{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+.field-work-page .field-employee-search-input input{flex:1;min-width:0;min-height:42px!important;padding:0!important;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
+.field-work-page .field-employee-search-input input::-webkit-search-cancel-button{-webkit-appearance:none}
+.field-work-page .field-employee-search-input>button{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border:0;border-radius:7px;background:transparent;color:#6d5c81;cursor:pointer}
+.field-work-page .field-employee-search-input>button:hover{background:#f5f1fa}
+.field-work-page .field-employee-options{position:absolute;z-index:30;top:calc(100% + 6px);left:0;right:0;max-height:260px;overflow:auto;padding:5px;border:1px solid #e5deed;border-radius:12px;background:#fff;box-shadow:0 12px 30px rgba(41,24,62,.14)}
+.field-work-page .field-employee-options>button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:0;border-radius:8px;background:#fff;color:#342a42;text-align:left;font:inherit;cursor:pointer}
+.field-work-page .field-employee-options>button:hover,.field-work-page .field-employee-options>button[aria-selected=true]{background:#f5f0ff;color:#6030c7}
+.field-work-page .field-employee-options>button small{color:#83778f;font-size:12px}
+.field-work-page .field-employee-options>p{margin:0;padding:12px;color:#83778f;font-size:13px}
