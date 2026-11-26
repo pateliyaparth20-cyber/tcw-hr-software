@@ -209,7 +209,7 @@ export class BiometricService{
     const now=new Date(),wasOnline=device.lastSeenAt&&Date.now()-+device.lastSeenAt<10*60_000,wasOffline=device.status==='OFFLINE';
     await this.db.attendanceDevice.update({where:{id:device.id},data:{status:'ONLINE',lastSeenAt:now,lastError:null}});
     if(!wasOnline||action==='REGISTER')await this.db.deviceSyncLog.create({data:{tenantId:device.tenantId,deviceId:device.id,action:action==='REGISTER'?'NATIVE_REGISTER':'DEVICE_ONLINE',message:`BioMax direct PUSH ${action.toLowerCase()} received${sourceIp?` from ${sourceIp}`:''}.`,details:{protocol:'ZK_PUSH',sourceIp}}});
-    if(wasOffline)await this.db.notification.create({data:{tenantId:device.tenantId,title:'Attendance device back online',message:`${device.name} (${device.serialNumber}) reconnected successfully. Pending device logs can now sync.`}}).catch(()=>{});
+    if(wasOffline){const recipients=await this.db.user.findMany({where:{tenantId:device.tenantId,active:true,role:{code:{in:['COMPANY_OWNER','HR_ADMIN','HR_EXECUTIVE']}}},select:{id:true}});await Promise.all(recipients.map(user=>this.db.notification.create({data:{tenantId:device.tenantId,userId:user.id,title:'Attendance device back online',message:`${device.name} (${device.serialNumber}) reconnected successfully. Pending device logs can now sync.`}}))).catch(()=>{});}
     return device;
   }
 
