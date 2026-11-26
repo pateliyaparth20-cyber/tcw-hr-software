@@ -154,7 +154,8 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
 .field-work-page .employee-visit-form-heading p{margin:0;color:#7d718f;font-size:13px;line-height:1.55}
 .field-work-page .field-visit-form :is(input,select,textarea){width:100%;min-height:44px;padding:10px 12px;border:1px solid #ded7e8;border-radius:10px;background:#fff;color:#302442;font:inherit;font-size:14px;box-sizing:border-box}
 .field-work-page .field-visit-form :is(input,select,textarea):focus{outline:0;border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
-.field-work-page .field-visit-form .field-visit-notes,.field-work-page .field-visit-form .field-visit-submit{grid-column:1/-1}
+.field-work-page .field-visit-form .field-visit-notes,.field-work-page .field-visit-form .field-visit-submit,.field-work-page .field-visit-site-grid{grid-column:1/-1}
+.field-work-page .field-visit-site-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .field-work-page .field-visit-form textarea{min-height:94px;resize:vertical}
 .field-work-page .field-visit-submit{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding-top:15px;border-top:1px solid #eee9f4}
 .field-work-page .field-visit-submit .btn{min-height:42px;border-radius:11px;font-weight:600}
@@ -174,6 +175,7 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
 .field-work-page .field-visit-management-actions .field-visit-delete:hover{background:#fff5f5;border-color:#e9b8bf}
 @media(max-width:760px){
   .field-work-page .field-visit-form form{grid-template-columns:1fr;gap:13px}
-  .field-work-page .field-visit-form .field-visit-notes,.field-work-page .field-visit-form .field-visit-submit{grid-column:1}
+  .field-work-page .field-visit-form .field-visit-notes,.field-work-page .field-visit-form .field-visit-submit,.field-work-page .field-visit-site-grid{grid-column:1}
+  .field-work-page .field-visit-site-grid{grid-template-columns:1fr}
   .field-work-page .field-visits{grid-template-columns:1fr}
 }
