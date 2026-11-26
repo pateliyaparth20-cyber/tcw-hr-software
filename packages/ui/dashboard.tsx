@@ -1,5 +1,6 @@
 'use client';
 import './platform-mobile-polish.css';
+import './employee-clock-weather.css';
 import {ClockWeather} from './clock-weather';
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
@@ -127,7 +128,7 @@ function EmployeeDashboard({session,currency,d,calendarEvents,onRefresh}:{sessio
  return <div className="employee-home-dashboard">
   <section className="employee-home-hero">
    <div className="employee-home-person"><Avatar name={session.user.name} src={session.user.avatar||employee.photo}/><div><span>{greeting}</span><h1>{firstName}</h1><p>{employee.designation||'Employee'}{employee.departmentName?' · '+employee.departmentName:''}</p></div></div>
-   <button className="employee-home-punch-button" type="button" disabled={fullDayLeaveToday||punchBusy||(!working&&fieldSession.isLoading)} onClick={()=>void recordPunch(working?'OUT':'IN')}><UserCheck size={22}/><span><strong>{punchBusy?'Recording…':fullDayLeaveToday?'On leave':working?'Check OUT':'Check IN'}</strong><small>{fullDayLeaveToday?'Approved leave today':working?'Record exact OUT time':'Start work timer now'}</small></span><ChevronRight size={18}/></button>
+   <div className="employee-home-clock-weather"><ClockWeather/></div>
   </section>
 
   <section className={'employee-work-status '+(fullDayLeaveToday?'leave':working?'working':completed?'complete':'idle')}>
