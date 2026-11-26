@@ -60,3 +60,32 @@ html body .company-payments-link { margin-top: 20px; padding: 24px; }
   .company-proxy-banner > .btn { width: 100%; }
   .company-proxy-banner > svg { display: none; }
 }
+
+.security-page{display:grid;gap:20px;max-width:1180px;margin:0 auto;color:#283447}
+.security-hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 28px;border:1px solid #e5ddf2;border-radius:18px;background:linear-gradient(110deg,#faf8ff,#f1edff 70%,#e9e2ff)}
+.security-hero-copy{display:flex;align-items:center;gap:15px;min-width:0}
+.security-hero-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:14px;background:#fff;color:#6d35ca;border:1px solid #e8def8}
+.security-hero-copy small{font-size:10px;font-weight:650;letter-spacing:.1em;color:#765d9a}
+.security-hero h1{margin:5px 0;font-size:25px;font-weight:650;letter-spacing:-.025em;color:#26344a}
+.security-hero p{margin:0;color:#78869a;font-size:12px;line-height:1.6}
+.security-hero-status{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid #d9d1e7;border-radius:11px;background:#ffffffbd;color:#625279;font-size:11px;white-space:nowrap}
+.security-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.security-card{min-width:0;padding:22px;border:1px solid #e4e8ef;border-radius:16px;background:#fff;box-shadow:0 4px 16px #1d29390a}
+.security-card-heading{display:flex;align-items:center;gap:12px;margin-bottom:19px}
+.security-card-heading>span{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:#f3effb;color:#7040bd}
+.security-card-heading h2{margin:0 0 4px;font-size:15px;font-weight:650;color:#29364a}
+.security-card-heading p{margin:0;color:#8792a2;font-size:11px;line-height:1.55}
+.security-two-factor>.hr-two-factor{margin:0;padding:20px 22px;border:1px solid #e4e8ef;border-radius:16px;background:#fff;box-shadow:0 4px 16px #1d29390a}
+.security-two-factor .hr-two-factor>.panel-heading{padding:0 0 14px;border-bottom:1px solid #eef0f4}
+.security-two-factor .hr-two-factor .modal-body{padding:15px 0 0}
+.security-sessions .session-row{display:grid;grid-template-columns:38px minmax(0,1fr) 36px;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid #edf0f4}
+.security-sessions .session-row:last-child{border-bottom:0;padding-bottom:0}
+.security-session-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:#f4f6f9;color:#63748a}
+.security-sessions .session-row>div{min-width:0}
+.security-sessions .session-row strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:#344054}
+.security-sessions .session-row small{display:block;margin-top:5px;color:#8994a3;font-size:10px}
+.security-sessions .session-row .badge{margin-top:6px}
+.security-sessions .session-row .icon-button{display:grid;place-items:center;width:34px;height:34px;border:1px solid #e4e8ef;border-radius:9px;background:#fff;color:#758196}
+.security-sessions .session-row .icon-button:hover{color:#b42318;border-color:#f3c4c0;background:#fff8f7}
+.security-empty{display:flex;align-items:center;gap:9px;padding:18px 0;color:#8490a0;font-size:12px}
+@media(max-width:760px){.security-hero{align-items:flex-start;padding:19px;flex-direction:column}.security-hero h1{font-size:22px}.security-grid{grid-template-columns:1fr}.security-card{padding:18px}.security-two-factor>.hr-two-factor{padding:18px}}
