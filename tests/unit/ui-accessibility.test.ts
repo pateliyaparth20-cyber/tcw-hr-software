@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-const require=createRequire(import.meta.url);
+const require=createRequire(`${process.cwd()}/tests/unit/ui-accessibility.test.ts`);
 require.extensions['.css']=()=>{};
 const loadCore=()=>import('../../packages/ui/core');
 
