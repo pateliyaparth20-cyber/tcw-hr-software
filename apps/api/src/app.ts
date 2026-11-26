@@ -340,8 +340,8 @@ export class Api {
     if(resource==='notifications'){
       const tid=tenant(ctx),where={tenantId:tid,OR:[{userId:ctx.user.id},{userId:null}]};
       if(method==='GET'){
-        const clearBefore=new Date(Date.now()-12*60*60*1000);
-        await this.db.notification.deleteMany({where:{tenantId:tid,readAt:{lte:clearBefore}}});
+        const clearBefore=new Date(Date.now()-24*60*60*1000);
+        await this.db.notification.deleteMany({where:{tenantId:tid,createdAt:{lte:clearBefore}}});
         const items=await this.db.notification.findMany({where,orderBy:{createdAt:'desc'},take:200});
         return {items};
       }
