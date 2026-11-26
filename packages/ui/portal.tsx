@@ -226,7 +226,7 @@ function Shell({page}:{page:string}){
   </div>;
  }
 
- return <div className={'app-shell workspace-unified-shell navigation-design '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')+(concept?' dashboard-concept-shell':'')} data-nav-collapsed={navAppearance.collapsed} style={{'--primary':concept?'#245cf4':primaryColor} as React.CSSProperties}>
+ return <div className={'app-shell workspace-unified-shell navigation-design '+(session.user.scope==='PLATFORM'?'platform-shell':'tenant-shell')+(concept?' dashboard-concept-shell':'')} data-nav-collapsed={navAppearance.collapsed} data-nav-hovered={navAppearance.hovered} style={{'--primary':concept?'#245cf4':primaryColor} as React.CSSProperties}>
  {mobile&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
  <aside id="workspace-sidebar" className={'sidebar '+(mobile?'open':'')} onPointerEnter={e=>{if(e.pointerType==='mouse')navAppearance.setHovered(true)}} onPointerLeave={e=>{if(e.pointerType==='mouse')navAppearance.setHovered(false)}}>
  
