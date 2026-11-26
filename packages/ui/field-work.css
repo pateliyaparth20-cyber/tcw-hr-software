@@ -179,3 +179,33 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
   .field-work-page .field-visit-site-grid{grid-template-columns:1fr}
   .field-work-page .field-visits{grid-template-columns:1fr}
 }
+
+
+/* Admin field visits: balanced full-width schedule and a calmer workspace surface. */
+.field-work-page{width:min(100%,1680px);margin-inline:auto}
+.field-work-page .field-visits:not(.employee-visits){grid-template-columns:minmax(0,1fr);gap:14px}
+.field-work-page .field-visits:not(.employee-visits)>.employee-visits-heading{width:100%;padding:4px 2px}
+.field-work-page .field-visits:not(.employee-visits)>.field-visit-card{width:100%;box-sizing:border-box}
+.field-work-page .field-visit-form{background:#fff}
+.field-work-page .field-visit-form form{gap:18px 20px}
+.field-work-page .field-visit-form label{color:#4c435d;font-weight:500;line-height:1.4}
+.field-work-page .field-visit-form :is(input,select,textarea){transition:border-color .16s ease,box-shadow .16s ease}
+.field-work-page .field-visit-form :is(input,select,textarea):hover{border-color:#c9b9df}
+.field-work-page .field-visit-form :is(input,select,textarea):focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+.field-work-page .field-visit-form .field-visit-submit{margin-top:2px}
+.field-work-page .field-visit-submit .btn{min-width:132px}
+.field-work-page .field-visit-card{box-sizing:border-box}
+.field-work-page .field-visit-card-head{align-items:center}
+.field-work-page .field-visit-card-head .field-kicker{font-size:10px;letter-spacing:.1em}
+.field-work-page .field-visit-card-head h3{font-size:19px;font-weight:500;line-height:1.35}
+.field-work-page .field-visit-card-head p{color:#71667e}
+.field-work-page .field-visit-card .badge{white-space:nowrap}
+.field-work-page .field-visit-management-actions .btn{min-height:40px;padding-inline:14px}
+.field-work-page .employee-visit-count{white-space:nowrap}
+@media(max-width:760px){
+ .field-work-page{width:100%}
+ .field-work-page .field-visits:not(.employee-visits){grid-template-columns:minmax(0,1fr)}
+ .field-work-page .field-visit-form form{gap:14px}
+ .field-work-page .field-visit-management-actions{flex-wrap:wrap}
+ .field-work-page .field-visit-management-actions .btn{flex:1;justify-content:center}
+}
