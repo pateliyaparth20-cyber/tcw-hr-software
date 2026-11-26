@@ -209,3 +209,8 @@ html body .field-visit-form .field-visit-submit { grid-column: 1 / -1; display: 
  .field-work-page .field-visit-management-actions{flex-wrap:wrap}
  .field-work-page .field-visit-management-actions .btn{flex:1;justify-content:center}
 }
+
+.field-work-page .field-visit-map-tools{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:-6px}
+.field-work-page .field-visit-map-tools .btn{min-height:38px}
+.field-work-page .field-visit-map-tools small{color:#7d718f;line-height:1.5}
+@media(max-width:760px){.field-work-page .field-visit-map-tools{grid-column:1;align-items:stretch}.field-work-page .field-visit-map-tools .btn{justify-content:center}.field-work-page .field-visit-map-tools small{flex-basis:100%}}
